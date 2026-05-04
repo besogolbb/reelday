@@ -622,6 +622,28 @@
 
     footer a { color: rgba(255,255,255,.5); text-decoration: none; }
     footer a:hover { color: var(--accent-light); }
+
+    .lang-toggle {
+      display: flex;
+      background: rgba(0,0,0,.12);
+      border-radius: 20px;
+      padding: 3px;
+      gap: 2px;
+    }
+    .lang-btn {
+      padding: .22rem .6rem;
+      border: none;
+      border-radius: 16px;
+      font-family: var(--body-font);
+      font-size: .72rem;
+      font-weight: 600;
+      letter-spacing: .05em;
+      cursor: pointer;
+      background: transparent;
+      color: rgba(255,255,255,.65);
+      transition: background .15s, color .15s;
+    }
+    .lang-btn.active { background: rgba(255,255,255,.9); color: var(--primary); }
   </style>
 </head>
 <body data-theme="wedding">
@@ -630,20 +652,27 @@
 <nav class="nav">
   <div class="nav-inner">
     <a href="/" class="nav-logo">Reelday ✦</a>
-    <a href="/create.html" class="nav-cta">Magsimula →</a>
+    <div style="display:flex;align-items:center;gap:.75rem">
+      <div class="lang-toggle" id="lang-toggle">
+        <button class="lang-btn active" data-lang="en">EN</button>
+        <button class="lang-btn" data-lang="fil">FIL</button>
+      </div>
+      <a href="/create" class="nav-cta" data-en="Get started →" data-fil="Magsimula →">Get started →</a>
+    </div>
   </div>
 </nav>
 
 <!-- Hero -->
 <section class="hero">
-  <div class="hero-eyebrow">✦ Para sa mga espesyal na sandali</div>
-  <h1>I-share ang bawat <em>alaala</em> ng inyong selebrasyon</h1>
-  <p>Mag-scan ng QR code, mag-upload ng photos, at panoorin ang buhay na live wall sa harap ng lahat ng bisita.</p>
+  <div class="hero-eyebrow" data-en="✦ For your most special moments" data-fil="✦ Para sa mga espesyal na sandali">✦ For your most special moments</div>
+  <h1 data-en="Share every &lt;em&gt;memory&lt;/em&gt; of your celebration" data-fil="I-share ang bawat alaala ng inyong selebrasyon">Share every <em>memory</em> of your celebration</h1>
+  <p data-en="Guests scan a QR code, upload photos, and watch a live cinematic wall in real time."
+     data-fil="Mag-scan ng QR code, mag-upload ng photos, at panoorin ang buhay na live wall sa harap ng lahat ng bisita.">Guests scan a QR code, upload photos, and watch a live cinematic wall in real time.</p>
   <div class="hero-actions">
-    <a href="/create.html" class="btn-hero-primary">🎉 Gumawa ng inyong Reel</a>
-    <a href="#paano" class="btn-hero-ghost">Paano gumagana? ↓</a>
+    <a href="/create" class="btn-hero-primary" data-en="🎉 Create your Reel" data-fil="🎉 Gumawa ng inyong Reel">🎉 Create your Reel</a>
+    <a href="#paano" class="btn-hero-ghost" data-en="How does it work? ↓" data-fil="Paano gumagana? ↓">How does it work? ↓</a>
   </div>
-  <p class="hero-note">Setup in 5 minutes · Walang app na i-download · QR code agad</p>
+  <p class="hero-note" data-en="Setup in 5 minutes · No app to download · QR code instantly" data-fil="Setup in 5 minutes · Walang app na i-download · QR code agad">Setup in 5 minutes · No app to download · QR code instantly</p>
 </section>
 
 <!-- Social proof strip -->
@@ -658,28 +687,32 @@
 
 <!-- How it works -->
 <section class="section section-center" id="paano">
-  <div class="section-eyebrow">Paano gumagana</div>
-  <h2 class="section-title">Tatlong hakbang lang</h2>
-  <p class="section-sub">Walang complicated. Walang app na i-download. Scan, share, at manood — ganun lang kasimple.</p>
+  <div class="section-eyebrow" data-en="How it works" data-fil="Paano gumagana">How it works</div>
+  <h2 class="section-title" data-en="Three steps only" data-fil="Tatlong hakbang lang">Three steps only</h2>
+  <p class="section-sub" data-en="No complexity. No app to download. Scan, share, and watch — that simple."
+     data-fil="Walang complicated. Walang app na i-download. Scan, share, at manood — ganun lang kasimple.">No complexity. No app to download. Scan, share, and watch — that simple.</p>
 
   <div class="how-grid">
     <div class="how-card">
       <div class="how-step-num">1</div>
       <div class="how-icon">✏️</div>
-      <h3 class="how-title">I-setup ang inyong event</h3>
-      <p class="how-desc">Isulat ang pangalan ng celebrant/s, piliin ang uri ng event, at bayaran ang plano. Tapos na!</p>
+      <h3 class="how-title" data-en="Set up your event" data-fil="I-setup ang inyong event">Set up your event</h3>
+      <p class="how-desc" data-en="Enter the celebrant name/s, choose the event type, and pay once. Done!"
+         data-fil="Isulat ang pangalan ng celebrant/s, piliin ang uri ng event, at bayaran ang plano. Tapos na!">Enter the celebrant name/s, choose the event type, and pay once. Done!</p>
     </div>
     <div class="how-card">
       <div class="how-step-num">2</div>
       <div class="how-icon">📲</div>
-      <h3 class="how-title">I-share ang QR code</h3>
-      <p class="how-desc">I-print o i-display ang QR code sa inyong event. Mag-scan ang mga bisita gamit ang camera nila — walang app.</p>
+      <h3 class="how-title" data-en="Share the QR code" data-fil="I-share ang QR code">Share the QR code</h3>
+      <p class="how-desc" data-en="Print or display the QR code at your event. Guests scan with their camera — no app needed."
+         data-fil="I-print o i-display ang QR code sa inyong event. Mag-scan ang mga bisita gamit ang camera nila — walang app.">Print or display the QR code at your event. Guests scan with their camera — no app needed.</p>
     </div>
     <div class="how-card">
       <div class="how-step-num">3</div>
       <div class="how-icon">🖥️</div>
-      <h3 class="how-title">Panoorin sa Live Wall</h3>
-      <p class="how-desc">Agad na lilitaw ang mga photos at videos sa cinematic live wall. Lahat ng bisita, isa lang ang alaala.</p>
+      <h3 class="how-title" data-en="Watch the Live Wall" data-fil="Panoorin sa Live Wall">Watch the Live Wall</h3>
+      <p class="how-desc" data-en="Photos and videos appear instantly on the cinematic live wall. One shared memory for all guests."
+         data-fil="Agad na lilitaw ang mga photos at videos sa cinematic live wall. Lahat ng bisita, isa lang ang alaala.">Photos and videos appear instantly on the cinematic live wall. One shared memory for all guests.</p>
     </div>
   </div>
 </section>
@@ -687,40 +720,47 @@
 <!-- Features -->
 <div class="features-section">
   <div class="features-inner section-center">
-    <div class="section-eyebrow">Mga feature</div>
-    <h2 class="section-title">Lahat ng kailangan ninyo</h2>
-    <p class="section-sub">Dinisenyo para sa Filipino celebrations — mula kasalan hanggang kaarawan.</p>
+    <div class="section-eyebrow" data-en="Features" data-fil="Mga feature">Features</div>
+    <h2 class="section-title" data-en="Everything you need" data-fil="Lahat ng kailangan ninyo">Everything you need</h2>
+    <p class="section-sub" data-en="Built for Filipino celebrations — from weddings to birthdays."
+       data-fil="Dinisenyo para sa Filipino celebrations — mula kasalan hanggang kaarawan.">Built for Filipino celebrations — from weddings to birthdays.</p>
 
     <div class="features-grid" style="margin-top:3rem">
       <div class="feature-card">
         <div class="feature-icon">📸</div>
-        <div class="feature-title">Walang limit na pag-upload</div>
-        <div class="feature-desc">Photos at videos — i-upload ng lahat ng bisita kahit ilan. Walang bayad sa bawat upload.</div>
+        <div class="feature-title" data-en="Unlimited uploads" data-fil="Walang limit na pag-upload">Unlimited uploads</div>
+        <div class="feature-desc" data-en="Photos and videos — all guests can upload as many as they want. No per-upload charge."
+             data-fil="Photos at videos — i-upload ng lahat ng bisita kahit ilan. Walang bayad sa bawat upload.">Photos and videos — all guests can upload as many as they want. No per-upload charge.</div>
       </div>
       <div class="feature-card">
         <div class="feature-icon">🎬</div>
-        <div class="feature-title">Cinematic Live Wall</div>
-        <div class="feature-desc">Ken Burns transitions, crossfades, at floating emojis. Parang movie ang dating ng inyong event.</div>
+        <div class="feature-title" data-en="Cinematic Live Wall" data-fil="Cinematic Live Wall">Cinematic Live Wall</div>
+        <div class="feature-desc" data-en="Ken Burns transitions, crossfades, and floating emojis. Your event feels like a movie."
+             data-fil="Ken Burns transitions, crossfades, at floating emojis. Parang movie ang dating ng inyong event.">Ken Burns transitions, crossfades, and floating emojis. Your event feels like a movie.</div>
       </div>
       <div class="feature-card">
         <div class="feature-icon">📱</div>
-        <div class="feature-title">QR Code na Luto</div>
-        <div class="feature-desc">I-scan, mag-upload agad. Walang app, walang sign-up. Kahit lolo at lola, kaya nila.</div>
+        <div class="feature-title" data-en="Instant QR Code" data-fil="QR Code na Luto">Instant QR Code</div>
+        <div class="feature-desc" data-en="Scan and upload immediately. No app, no sign-up. Even lolo and lola can do it."
+             data-fil="I-scan, mag-upload agad. Walang app, walang sign-up. Kahit lolo at lola, kaya nila.">Scan and upload immediately. No app, no sign-up. Even lolo and lola can do it.</div>
       </div>
       <div class="feature-card">
         <div class="feature-icon">🎥</div>
-        <div class="feature-title">Video Messages</div>
-        <div class="feature-desc">Hayaan ang mga bisita na mag-record ng 60-second video message para sa inyong selebrasyon.</div>
+        <div class="feature-title" data-en="Video Messages" data-fil="Video Messages">Video Messages</div>
+        <div class="feature-desc" data-en="Let guests record a 60-second video message for your celebration."
+             data-fil="Hayaan ang mga bisita na mag-record ng 60-second video message para sa inyong selebrasyon.">Let guests record a 60-second video message for your celebration.</div>
       </div>
       <div class="feature-card">
         <div class="feature-icon">✅</div>
-        <div class="feature-title">Moderation Dashboard</div>
-        <div class="feature-desc">I-approve o i-delete ang mga upload sa inyong dashboard bago lumabas sa live wall.</div>
+        <div class="feature-title" data-en="Moderation Dashboard" data-fil="Moderation Dashboard">Moderation Dashboard</div>
+        <div class="feature-desc" data-en="Approve or delete uploads in your dashboard before they appear on the live wall."
+             data-fil="I-approve o i-delete ang mga upload sa inyong dashboard bago lumabas sa live wall.">Approve or delete uploads in your dashboard before they appear on the live wall.</div>
       </div>
       <div class="feature-card">
         <div class="feature-icon">💾</div>
-        <div class="feature-title">I-download ang Lahat</div>
-        <div class="feature-desc">Sa dulo ng event, i-download ang lahat ng photos at videos sa isang click. Yours forever.</div>
+        <div class="feature-title" data-en="Download Everything" data-fil="I-download ang Lahat">Download Everything</div>
+        <div class="feature-desc" data-en="After the event, download all photos and videos in one click. Yours forever."
+             data-fil="Sa dulo ng event, i-download ang lahat ng photos at videos sa isang click. Yours forever.">After the event, download all photos and videos in one click. Yours forever.</div>
       </div>
     </div>
   </div>
@@ -728,9 +768,9 @@
 
 <!-- Pricing -->
 <section class="section section-center">
-  <div class="section-eyebrow">Presyo</div>
-  <h2 class="section-title">Isang bayad, habambuhay na alaala</h2>
-  <p class="section-sub">Walang monthly subscription. Bayaran isang beses, tamasahin habang buhay.</p>
+  <div class="section-eyebrow" data-en="Pricing" data-fil="Presyo">Pricing</div>
+  <h2 class="section-title" data-en="One payment, a lifetime of memories" data-fil="Isang bayad, habambuhay na alaala">One payment, a lifetime of memories</h2>
+  <p class="section-sub" data-en="No monthly subscription. Pay once, keep forever." data-fil="Walang monthly subscription. Bayaran isang beses, tamasahin habang buhay.">No monthly subscription. Pay once, keep forever.</p>
 
   <div class="pricing-grid">
 
@@ -746,7 +786,7 @@
         <li><span class="check">✓</span> Free QR templates</li>
         <li><span class="check">✓</span> Download lahat ng files</li>
       </ul>
-      <a href="/create.html" class="pricing-cta pricing-cta-outline">Piliin ang Libre</a>
+      <a href="/create" class="pricing-cta pricing-cta-outline">Piliin ang Libre</a>
     </div>
 
     <div class="pricing-card featured">
@@ -763,7 +803,7 @@
         <li><span class="check">✓</span> 12-month access</li>
         <li><span class="check">✓</span> Priority Viber support</li>
       </ul>
-      <a href="/create.html" class="pricing-cta pricing-cta-filled">Piliin ang Selebrasyon</a>
+      <a href="/create" class="pricing-cta pricing-cta-filled">Piliin ang Selebrasyon</a>
     </div>
 
     <div class="pricing-card">
@@ -779,13 +819,13 @@
         <li><span class="check">✓</span> 50 printed QR cards</li>
         <li><span class="check">✓</span> Custom branding</li>
       </ul>
-      <a href="/create.html" class="pricing-cta pricing-cta-outline">Piliin ang Pro</a>
+      <a href="/create" class="pricing-cta pricing-cta-outline">Piliin ang Pro</a>
     </div>
 
   </div>
 
   <p style="margin-top:2rem;font-size:.85rem;color:var(--text-soft);">
-    Hindi pa sigurado? <a href="/create.html" style="color:var(--accent);font-weight:600;">I-try muna nang libre →</a>
+    Hindi pa sigurado? <a href="/create" style="color:var(--accent);font-weight:600;">I-try muna nang libre →</a>
   </p>
 </section>
 
@@ -815,12 +855,16 @@
 
 <!-- Final CTA -->
 <section class="final-cta">
-  <h2>Handa na ba kayong mag-celebrate?</h2>
-  <p>Gumawa ng inyong Reelday ngayon at i-share ang bawat sandali ng inyong espesyal na okasyon.</p>
-  <a href="/create.html" class="btn-hero-primary" style="background:#fff;color:var(--accent-deep);border-color:#fff;">
-    🎉 Gumawa ng inyong Reel →
+  <h2 data-en="Ready to celebrate?" data-fil="Handa na ba kayong mag-celebrate?">Ready to celebrate?</h2>
+  <p data-en="Create your Reelday now and share every moment of your special occasion."
+     data-fil="Gumawa ng inyong Reelday ngayon at i-share ang bawat sandali ng inyong espesyal na okasyon.">Create your Reelday now and share every moment of your special occasion.</p>
+  <a href="/create" class="btn-hero-primary" style="background:#fff;color:var(--accent-deep);border-color:#fff;"
+     data-en="🎉 Create your Reel →" data-fil="🎉 Gumawa ng inyong Reel →">
+    🎉 Create your Reel →
   </a>
-  <p style="margin-top:1.25rem;font-size:.78rem;opacity:.65;">Setup in 5 minutes · QR code agad · Walang monthly fees</p>
+  <p style="margin-top:1.25rem;font-size:.78rem;opacity:.65;"
+     data-en="Setup in 5 minutes · QR code instantly · No monthly fees"
+     data-fil="Setup in 5 minutes · QR code agad · Walang monthly fees">Setup in 5 minutes · QR code instantly · No monthly fees</p>
 </section>
 
 <!-- Footer -->
@@ -831,8 +875,32 @@
     <a href="#">Privacy</a> &nbsp;·&nbsp;
     <a href="#">Support</a>
   </p>
-  <p>© 2025 Reelday. Made with ❤️ para sa mga Filipino celebrations.</p>
+  <p data-en="© 2025 Reelday. Made with ❤️ for Filipino celebrations."
+     data-fil="© 2025 Reelday. Made with ❤️ para sa mga Filipino celebrations.">© 2025 Reelday. Made with ❤️ for Filipino celebrations.</p>
 </footer>
 
+<script>
+  let indexLang = localStorage.getItem('reelday_lang') || 'en';
+
+  function applyIndexLang() {
+    document.documentElement.lang = indexLang;
+    document.querySelectorAll('[data-en]').forEach(el => {
+      el.textContent = el.dataset[indexLang] || el.dataset.en;
+    });
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.lang === indexLang);
+    });
+  }
+
+  document.getElementById('lang-toggle')?.addEventListener('click', e => {
+    const btn = e.target.closest('.lang-btn');
+    if (!btn) return;
+    indexLang = btn.dataset.lang;
+    localStorage.setItem('reelday_lang', indexLang);
+    applyIndexLang();
+  });
+
+  applyIndexLang();
+</script>
 </body>
 </html>

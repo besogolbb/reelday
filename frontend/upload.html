@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fil">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
@@ -37,6 +37,13 @@
       opacity: .6;
       margin-bottom: .75rem;
     }
+
+    a.hero-brand-link {
+      color: inherit;
+      text-decoration: none;
+      display: block;
+    }
+    a.hero-brand-link:hover { opacity: 1; }
 
     .hero-names {
       font-family: var(--heading-font);
@@ -420,7 +427,7 @@
     <button class="lang-btn"        data-lang="fil">FIL</button>
   </div>
 
-  <p class="hero-brand">Reelday ✦</p>
+  <a href="/" class="hero-brand hero-brand-link">Reelday ✦</a>
   <h1 class="hero-names" id="hero-names">…</h1>
   <p class="hero-date"   id="hero-date"></p>
 
@@ -954,7 +961,7 @@
 
   function stopRecorder() {
     if (mediaRecorder && isRecording) { mediaRecorder.stop(); isRecording = false; }
-    if (recorderStream) { recorderStream.getTracks().forEach(t => t.stop()); recorderStream = null; }
+    if (recorderStream) { recorderStream.getTracks().forEach(track => track.stop()); recorderStream = null; }
     clearInterval(countdownInt);
     timeLeft = 60; updateTimer();
     btnRecord.classList.remove('recording');

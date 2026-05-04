@@ -556,16 +556,43 @@
     .toast.error { background: #b91c1c; }
 
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    .lang-toggle {
+      display: flex;
+      background: rgba(255,255,255,.15);
+      border-radius: 20px;
+      padding: 3px;
+      gap: 2px;
+    }
+    .lang-btn {
+      padding: .22rem .6rem;
+      border: none;
+      border-radius: 16px;
+      font-family: var(--body-font, 'DM Sans', sans-serif);
+      font-size: .72rem;
+      font-weight: 600;
+      letter-spacing: .05em;
+      cursor: pointer;
+      background: transparent;
+      color: rgba(255,255,255,.65);
+      transition: background .15s, color .15s;
+    }
+    .lang-btn.active { background: rgba(255,255,255,.9); color: var(--primary, #e8735a); }
   </style>
 </head>
 <body data-theme="wedding">
 
 <!-- Page header -->
 <header class="create-header">
-  <div style="padding: 0 1.5rem;">
+  <div style="position:relative;padding: 0 1.5rem;">
+    <div class="lang-toggle" id="lang-toggle" style="position:absolute;top:0;right:1.5rem">
+      <button class="lang-btn active" data-lang="en">EN</button>
+      <button class="lang-btn" data-lang="fil">FIL</button>
+    </div>
     <a href="/" class="logo-link">Reelday ✦</a>
-    <h1>Gumawa ng iyong reel</h1>
-    <p>Setup in 5 minutes. Get your QR code instantly.</p>
+    <h1 data-en="Create your reel" data-fil="Gumawa ng iyong reel">Create your reel</h1>
+    <p data-en="Setup in 5 minutes. Get your QR code instantly."
+       data-fil="5 minuto lang. QR code agad pagkatapos.">Setup in 5 minutes. Get your QR code instantly.</p>
   </div>
 </header>
 
@@ -590,29 +617,29 @@
 
   <!-- ── STEP 1: Event Details ───────────────────────────── -->
   <div class="form-section" id="section-event">
-    <div class="form-section-title">Detalye ng Event</div>
-    <div class="form-section-sub">Isulat ang mga impormasyon tungkol sa inyong selebrasyon.</div>
+    <div class="form-section-title" data-en="Event Details" data-fil="Detalye ng Event">Event Details</div>
+    <div class="form-section-sub" data-en="Tell us about your celebration." data-fil="Isulat ang mga impormasyon tungkol sa inyong selebrasyon.">Tell us about your celebration.</div>
 
     <div class="field" id="field-names">
-      <label for="couple-names">Pangalan ng celebrant/s</label>
+      <label for="couple-names" data-en="Celebrant name/s" data-fil="Pangalan ng celebrant/s">Celebrant name/s</label>
       <input
         type="text"
         id="couple-names"
-        placeholder="hal. Andrea &amp; JM, Maria Santos"
+        placeholder="e.g. Andrea &amp; JM, Maria Santos"
         autocomplete="off"
         maxlength="200"
       />
-      <div class="field-error">Pakisulat ang pangalan ng celebrant.</div>
+      <div class="field-error" data-en="Please enter the celebrant name." data-fil="Pakisulat ang pangalan ng celebrant.">Please enter the celebrant name.</div>
     </div>
 
     <div class="field" id="field-date">
-      <label for="event-date">Petsa ng event</label>
+      <label for="event-date" data-en="Event date" data-fil="Petsa ng event">Event date</label>
       <input type="date" id="event-date" />
-      <div class="field-error">Pakipili ang petsa ng event.</div>
+      <div class="field-error" data-en="Please pick the event date." data-fil="Pakipili ang petsa ng event.">Please pick the event date.</div>
     </div>
 
     <div class="field">
-      <label>Uri ng event</label>
+      <label data-en="Event type" data-fil="Uri ng event">Event type</label>
       <div class="event-type-grid" id="event-type-grid">
         <button type="button" class="event-type-btn selected" data-type="wedding">
           <span class="et-emoji">💍</span>
@@ -652,8 +679,8 @@
 
   <!-- ── STEP 2: Plan Selection ──────────────────────────── -->
   <div class="form-section" id="section-plans">
-    <div class="form-section-title">Piliin ang inyong Plano</div>
-    <div class="form-section-sub">Lahat ng plano ay may kasamang unlimited QR sharing sa inyong event.</div>
+    <div class="form-section-title" data-en="Choose your Plan" data-fil="Piliin ang inyong Plano">Choose your Plan</div>
+    <div class="form-section-sub" data-en="All plans include unlimited QR sharing for your event." data-fil="Lahat ng plano ay may kasamang unlimited QR sharing sa inyong event.">All plans include unlimited QR sharing for your event.</div>
 
     <div class="plans-grid">
 
@@ -709,20 +736,20 @@
 
   <!-- ── STEP 3: Payment ─────────────────────────────────── -->
   <div class="form-section" id="section-payment">
-    <div class="form-section-title">Pagbabayad</div>
-    <div class="form-section-sub">Secure na pagbabayad. Matatanggap mo ang iyong QR code agad pagkatapos.</div>
+    <div class="form-section-title" data-en="Payment" data-fil="Pagbabayad">Payment</div>
+    <div class="form-section-sub" data-en="Secure payment. Your QR code will be ready instantly." data-fil="Secure na pagbabayad. Matatanggap mo ang iyong QR code agad pagkatapos.">Secure payment. Your QR code will be ready instantly.</div>
 
     <!-- Selected plan summary -->
     <div class="pay-summary" id="pay-summary">
       <div>
-        <div class="pay-summary-label">Napiling plano</div>
+        <div class="pay-summary-label" data-en="Selected plan" data-fil="Napiling plano">Selected plan</div>
         <div class="pay-summary-plan" id="summary-plan-name">Selebrasyon</div>
       </div>
       <div class="pay-summary-price" id="summary-plan-price">₱1,999</div>
     </div>
 
     <!-- Payment methods -->
-    <div class="pay-methods-label">Bayaran via</div>
+    <div class="pay-methods-label" data-en="Pay via" data-fil="Bayaran via">Pay via</div>
     <div class="pay-methods">
       <div class="pay-method-chip">💙 GCash</div>
       <div class="pay-method-chip">💜 Maya</div>
@@ -733,14 +760,14 @@
     <div class="submit-section">
       <button class="btn-pay" id="btn-pay" type="button">
         <div class="btn-spinner"></div>
-        <span class="btn-text">I-create ang aking reel →</span>
+        <span class="btn-text" data-en="Create my reel →" data-fil="I-create ang aking reel →">Create my reel →</span>
       </button>
 
-      <div class="trial-divider">o</div>
+      <div class="trial-divider" data-en="or" data-fil="o">or</div>
 
       <button class="btn-trial" id="btn-trial" type="button">
-        Hindi pa ready magbayad?
-        <strong>I-try muna nang libre →</strong>
+        <span data-en="Not ready to pay? " data-fil="Hindi pa ready magbayad? ">Not ready to pay? </span>
+        <strong data-en="Try for free first →" data-fil="I-try muna nang libre →">Try for free first →</strong>
       </button>
     </div>
 
@@ -955,10 +982,6 @@
   updateSummary();
   setStepActive(1);
 
-  // Set min date to today
-  const today = new Date().toISOString().split('T')[0];
-  dateInput.setAttribute('min', today);
-
   // Intersection observer: update step indicator as user scrolls
   const sections = [
     { el: document.getElementById('section-event'),   step: 1 },
@@ -976,6 +999,29 @@
   }, { threshold: .4 });
 
   sections.forEach(s => obs.observe(s.el));
+
+  // ── Language toggle ───────────────────────────────────────
+  let createLang = localStorage.getItem('reelday_lang') || 'en';
+
+  function applyCreateLang() {
+    document.documentElement.lang = createLang;
+    document.querySelectorAll('[data-en]').forEach(el => {
+      el.textContent = el.dataset[createLang] || el.dataset.en;
+    });
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.lang === createLang);
+    });
+  }
+
+  document.getElementById('lang-toggle')?.addEventListener('click', e => {
+    const btn = e.target.closest('.lang-btn');
+    if (!btn) return;
+    createLang = btn.dataset.lang;
+    localStorage.setItem('reelday_lang', createLang);
+    applyCreateLang();
+  });
+
+  applyCreateLang();
 </script>
 
 </body>

@@ -316,6 +316,43 @@
 
     .gallery-item:hover .gallery-item-overlay { opacity: 1; }
 
+    .btn-delete-item {
+      position: absolute;
+      top: .35rem;
+      right: .35rem;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: rgba(0,0,0,.55);
+      border: none;
+      color: #fff;
+      font-size: .75rem;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      z-index: 10;
+    }
+    .gallery-item:hover .btn-delete-item { display: flex; }
+
+    .btn-delete-vm {
+      background: none;
+      border: 1px solid rgba(var(--primary-rgb,232,115,90),.4);
+      color: var(--primary,#e8735a);
+      border-radius: 50%;
+      width: 28px;
+      height: 28px;
+      font-size: .75rem;
+      cursor: pointer;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: .4rem;
+    }
+    .btn-delete-vm:hover { background: var(--primary,#e8735a); color: #fff; }
+
     .item-name { font-size: .72rem; font-weight: 600; color: #fff; max-width: 70%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .item-time { font-size: .65rem; color: rgba(255,255,255,.8); }
 
@@ -583,16 +620,51 @@
       .stats-row { grid-template-columns: repeat(2, 1fr); gap: .6rem; }
       .stat-number { font-size: 1.6rem; }
     }
+
+    .lang-toggle {
+      display: flex;
+      background: rgba(255,255,255,.15);
+      border-radius: 20px;
+      padding: 3px;
+      gap: 2px;
+    }
+    .lang-btn {
+      padding: .22rem .6rem;
+      border: none;
+      border-radius: 16px;
+      font-family: var(--body-font, 'DM Sans', sans-serif);
+      font-size: .72rem;
+      font-weight: 600;
+      letter-spacing: .05em;
+      cursor: pointer;
+      background: transparent;
+      color: rgba(255,255,255,.65);
+      transition: background .15s, color .15s;
+    }
+    .lang-btn.active { background: rgba(255,255,255,.9); color: var(--primary, #e8735a); }
   </style>
 </head>
 <body>
+
+<!-- ── Mode banner (test / trial) ────────────────────────── -->
+<div id="mode-banner" style="display:none;background:var(--primary,#e8735a);color:#fff;text-align:center;padding:.6rem 1rem;font-size:.85rem;font-family:'DM Sans',sans-serif;position:sticky;top:0;z-index:999;gap:.5rem;align-items:center;justify-content:center">
+  <span id="mode-banner-text"></span>
+  <a href="/create" style="color:#fff;font-weight:700;margin-left:.75rem;text-decoration:underline">Mag-upgrade →</a>
+</div>
 
 <!-- ── Header ────────────────────────────────────────────── -->
 <header class="dash-header" id="dash-header" style="display:none">
   <div class="header-inner">
     <div class="header-top">
       <a href="/" class="logo">Reelday ✦</a>
-      <button class="btn-ghost-themed" id="btn-live-wall">📺 Open Live Wall</button>
+      <div style="display:flex;gap:.5rem;align-items:center">
+        <div class="lang-toggle" id="lang-toggle">
+          <button class="lang-btn active" data-lang="en">EN</button>
+          <button class="lang-btn" data-lang="fil">FIL</button>
+        </div>
+        <button class="btn-ghost-themed" id="btn-live-wall"
+          data-en="📺 Open Live Wall" data-fil="📺 Buksan ang Live Wall">📺 Open Live Wall</button>
+      </div>
     </div>
 
     <div class="header-body">
@@ -631,22 +703,22 @@
     <div class="stat-card">
       <div class="stat-icon">📸</div>
       <div class="stat-number" id="stat-total">0</div>
-      <div class="stat-label">Total</div>
+      <div class="stat-label" data-en="Total" data-fil="Lahat">Total</div>
     </div>
     <div class="stat-card">
       <div class="stat-icon">🖼️</div>
       <div class="stat-number" id="stat-photos">0</div>
-      <div class="stat-label">Photos</div>
+      <div class="stat-label" data-en="Photos" data-fil="Litrato">Photos</div>
     </div>
     <div class="stat-card">
       <div class="stat-icon">🎬</div>
       <div class="stat-number" id="stat-videos">0</div>
-      <div class="stat-label">Videos</div>
+      <div class="stat-label" data-en="Videos" data-fil="Videos">Videos</div>
     </div>
     <div class="stat-card">
       <div class="stat-icon">💌</div>
       <div class="stat-number" id="stat-vms">0</div>
-      <div class="stat-label">Messages</div>
+      <div class="stat-label" data-en="Messages" data-fil="Mensahe">Messages</div>
     </div>
   </div>
 
@@ -655,7 +727,7 @@
 
     <!-- QR card -->
     <div class="qr-card">
-      <p class="qr-card-title">🔗 Guest Upload Link</p>
+      <p class="qr-card-title" data-en="🔗 Guest Upload Link" data-fil="🔗 Link para sa Bisita">🔗 Guest Upload Link</p>
 
       <div class="qr-image-wrap" id="qr-wrap">
         <div class="spinner"></div>
@@ -664,10 +736,12 @@
       <div class="qr-url" id="qr-url">—</div>
 
       <div class="qr-actions">
-        <button class="btn-qr-action btn-qr-primary" id="btn-download-qr">
+        <button class="btn-qr-action btn-qr-primary" id="btn-download-qr"
+          data-en="📥 Download QR Code" data-fil="📥 I-download ang QR">
           📥 Download QR Code
         </button>
-        <button class="btn-qr-action btn-qr-outline" id="btn-copy-link">
+        <button class="btn-qr-action btn-qr-outline" id="btn-copy-link"
+          data-en="🔗 Copy Guest Link" data-fil="🔗 Kopyahin ang Link">
           🔗 Copy Guest Link
         </button>
       </div>
@@ -677,12 +751,12 @@
     <div class="gallery-panel">
       <div class="gallery-header">
         <div style="display:flex;align-items:center;gap:.5rem">
-          <span class="gallery-title">Gallery</span>
+          <span class="gallery-title" data-en="Gallery" data-fil="Gallery">Gallery</span>
           <span class="refresh-dot" title="Auto-refreshes every 10s"></span>
         </div>
         <div class="gallery-tabs">
-          <button class="g-tab active" data-tab="all">Lahat</button>
-          <button class="g-tab" data-tab="vm">Video Messages</button>
+          <button class="g-tab active" data-tab="all" data-en="All" data-fil="Lahat">All</button>
+          <button class="g-tab" data-tab="vm" data-en="Video Messages" data-fil="Video Messages">Video Messages</button>
         </div>
       </div>
 
@@ -692,7 +766,7 @@
           <div class="gallery-grid" id="gallery-grid"></div>
           <div class="gallery-empty" id="gallery-empty" style="display:none">
             <div class="gallery-empty-icon">📭</div>
-            <p>No uploads yet. Share the QR code with your guests!</p>
+            <p data-en="No uploads yet. Share the QR code with your guests!" data-fil="Wala pang uploads. I-share ang QR code sa inyong mga bisita!">No uploads yet. Share the QR code with your guests!</p>
           </div>
         </div>
 
@@ -701,15 +775,16 @@
           <div class="vm-list" id="vm-list"></div>
           <div class="gallery-empty" id="vm-empty" style="display:none">
             <div class="gallery-empty-icon">💌</div>
-            <p>No video messages yet.</p>
+            <p data-en="No video messages yet." data-fil="Wala pang video messages.">No video messages yet.</p>
           </div>
         </div>
 
         <!-- Download bar -->
         <div class="download-bar">
           <span class="download-count" id="download-count">0 files</span>
-          <button class="btn-download-all" id="btn-download-all">
-            📥 I-download lahat
+          <button class="btn-download-all" id="btn-download-all"
+            data-en="📥 Download All" data-fil="📥 I-download lahat">
+            📥 Download All
           </button>
         </div>
       </div>
@@ -754,7 +829,10 @@
                       'Hulyo','Agosto','Setyembre','Oktubre','Nobyembre','Disyembre'];
 
   // ── State ─────────────────────────────────────────────
-  const slug        = new URLSearchParams(location.search).get('slug');
+  const params      = new URLSearchParams(location.search);
+  const slug        = params.get('slug');
+  const isTestMode  = params.get('test_mode') === 'true';
+  const isTrial     = params.get('trial') === 'true';
   let allUploads    = [];
   let lbIndex       = 0;
   let lbItems       = [];   // items currently navigable in lightbox
@@ -836,7 +914,7 @@
     planBadge.className   = `plan-badge plan-${plan}`;
 
     $('btn-live-wall').onclick = () =>
-      window.open(`/wall.html?slug=${slug}`, '_blank');
+      window.open(`/wall/${slug}`, '_blank');
   }
 
   // ── Render QR ─────────────────────────────────────────
@@ -880,13 +958,25 @@
     downloadCount.textContent = `${n} file${n !== 1 ? 's' : ''}`;
   }
 
+  // ── Delete upload ─────────────────────────────────────
+  async function deleteUpload(id) {
+    if (!confirm('Burahin ang file na ito?')) return;
+    try {
+      const res = await fetch(`/api/uploads/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Delete failed');
+      allUploads = allUploads.filter(u => u.id !== id);
+      renderStats(allUploads);
+      renderGallery(allUploads);
+      showToast('File nabura na. 🗑️', 'success');
+    } catch {
+      showToast('Hindi nabura. Subukan ulit.', 'error');
+    }
+  }
+
   // ── Render gallery grid ───────────────────────────────
   function renderGallery(uploads) {
     allUploads = uploads;
 
-    // All-uploads tab (non-vm photos + videos)
-    const gridItems = uploads.filter(u => !u.is_video_message || u.file_type !== 'video' || true);
-    // Actually show all uploads in the Lahat tab
     lbItems = uploads;
 
     if (!uploads.length) {
@@ -906,18 +996,21 @@
           : `<img src="${escHtml(u.file_url)}" alt="${name}" loading="lazy" />`;
 
         return `
-          <div class="gallery-item" data-index="${i}">
+          <div class="gallery-item" data-index="${i}" data-id="${escHtml(u.id)}">
             ${media}
             ${vmMark}
             <div class="gallery-item-overlay">
               <span class="item-name">${name}</span>
               <span class="item-time">${time}</span>
             </div>
+            <button class="btn-delete-item" data-id="${escHtml(u.id)}" title="Burahin">✕</button>
           </div>`;
       }).join('');
 
       // Attach click via delegation
       galleryGrid.onclick = e => {
+        const delBtn = e.target.closest('.btn-delete-item');
+        if (delBtn) { deleteUpload(delBtn.dataset.id); return; }
         const item = e.target.closest('.gallery-item');
         if (item) openLightbox(Number(item.dataset.index));
       };
@@ -940,10 +1033,13 @@
               <div class="vm-meta">${timeAgo(u.created_at)}</div>
             </div>
             <button class="btn-play" data-index="${vmIndex}">▶ I-play</button>
+            <button class="btn-delete-vm" data-id="${escHtml(u.id)}" title="Burahin">✕</button>
           </div>`;
       }).join('');
 
       vmList.onclick = e => {
+        const delBtn = e.target.closest('.btn-delete-vm');
+        if (delBtn) { deleteUpload(delBtn.dataset.id); return; }
         const btn = e.target.closest('.btn-play');
         if (btn) openLightbox(Number(btn.dataset.index));
       };
@@ -1076,6 +1172,16 @@
       pageLoading.style.display  = 'none';
       dashHeader.style.display   = 'block';
       dashMain.style.display     = 'block';
+
+      // Show mode banner
+      const banner = $('mode-banner');
+      if (isTestMode) {
+        $('mode-banner-text').textContent = '⚠️ Test mode — bayad hindi pa nakumpirma. I-upgrade para maging live.';
+        banner.style.display = 'flex';
+      } else if (isTrial) {
+        $('mode-banner-text').textContent = '🎉 Libre trial — subukan mo ang Reelday! I-upgrade para sa buong features.';
+        banner.style.display = 'flex';
+      }
     } catch (err) {
       pageLoading.style.display   = 'none';
       $('page-error-msg').textContent = err.message || 'Failed to load event.';
@@ -1088,12 +1194,38 @@
       const res = await fetch(`/api/uploads/${slug}`);
       if (!res.ok) return;
       const { uploads } = await res.json();
-      if (uploads.length !== allUploads.length) {
+      const currentIds  = new Set(allUploads.map(u => u.id));
+      const hasChanges  = uploads.length !== allUploads.length ||
+                          uploads.some(u => !currentIds.has(u.id));
+      if (hasChanges) {
         renderStats(uploads);
         renderGallery(uploads);
       }
     } catch { /* silent */ }
   }
+
+  // ── Language toggle ───────────────────────────────────
+  let dashLang = localStorage.getItem('reelday_lang') || 'en';
+
+  function applyDashLang() {
+    document.documentElement.lang = dashLang;
+    document.querySelectorAll('[data-en]').forEach(el => {
+      el.textContent = el.dataset[dashLang] || el.dataset.en;
+    });
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.lang === dashLang);
+    });
+  }
+
+  $('lang-toggle')?.addEventListener('click', e => {
+    const btn = e.target.closest('.lang-btn');
+    if (!btn) return;
+    dashLang = btn.dataset.lang;
+    localStorage.setItem('reelday_lang', dashLang);
+    applyDashLang();
+  });
+
+  applyDashLang();
 
   // ── Init ──────────────────────────────────────────────
   loadAll();

@@ -438,7 +438,8 @@
   };
 
   // ── State ─────────────────────────────────────────────
-  const slug       = new URLSearchParams(location.search).get('slug');
+  const slug       = location.pathname.split('/').filter(Boolean).pop() ||
+                     new URLSearchParams(location.search).get('slug');
   let items        = [];      // filtered upload objects for slideshow
   let allUploads   = [];      // all uploads (for counter/ticker)
   let knownIds     = new Set();
