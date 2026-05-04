@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0a0a0a" />
+  <title>Reelday Live Wall</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500;600&family=DM+Serif+Display&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Pacifico&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/style.css" />
+  <style>
+    /* ── Base ─────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: #0a0a0a;
+      color: #fff;
+      font-family: var(--body-font, 'DM Sans', sans-serif);
+      cursor: none;
+    }
+
+    body.show-cursor { cursor: default; }
+
+    /* ── Slide layers ─────────────────────────────────── */
+    .slide-layer {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      overflow: hidden;
+      transition: opacity 2s ease;
+      will-change: opacity;
+    }
+
+    .slide-layer img,
+    .slide-layer video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      will-change: transform;
+    }
+
+    /* ── Ken Burns variants ───────────────────────────── */
+    @keyframes kb1 {
+      from { transform: scale(1)    translate(0,    0); }
+      to   { transform: scale(1.1)  translate(-1.5%, -1%); }
+    }
+    @keyframes kb2 {
+      from { transform: scale(1)    translate(0,    0); }
+      to   { transform: scale(1.1)  translate(1.5%, -1%); }
+    }
+    @keyframes kb3 {
+      from { transform: scale(1.05) translate(-1%,  0.5%); }
+      to   { transform: scale(1.12) translate(1%,  -1.5%); }
+    }
+    @keyframes kb4 {
+      from { transform: scale(1.08) translate(1%,   1%); }
+      to   { transform: scale(1)    translate(-1%,   0); }
+    }
+    @keyframes kb5 {
+      from { transform: scale(1)    translate(0.5%,  0); }
+      to   { transform: scale(1.09) translate(-0.5%, -1.5%); }
+    }
+
+    /* ── Top ticker ───────────────────────────────────── */
+    .ticker-strip {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 48px;
+      z-index: 100;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+    }
+
+    /* Semi-transparent accent background via pseudo-element
+       so text stays fully opaque */
+    .ticker-strip::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--accent, #e8735a);
+      opacity: .88;
+    }
+
+    .ticker-track {
+      display: flex;
+      white-space: nowrap;
+      align-items: center;
+      position: relative;
+      z-index: 1;
+      will-change: transform;
+    }
+
+    .ticker-segment {
+      padding-right: 4rem;
+      font-size: .9rem;
+      font-weight: 600;
+      letter-spacing: .04em;
+      color: #fff;
+      text-shadow: 0 1px 3px rgba(0,0,0,.3);
+    }
+
+    @keyframes tickerScroll {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-50%); }
+    }
+
+    /* ── Bottom overlay ───────────────────────────────── */
+    .overlay-bottom {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 220px;
+      z-index: 50;
+      background: linear-gradient(to bottom, transparent 0%, rgba(0,0,0,.78) 100%);
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      padding: 0 2.5rem 1.75rem;
+      pointer-events: none;
+    }
+
+    .overlay-left {
+      max-width: 55%;
+    }
+
+    .uploader-name {
+      font-size: clamp(1.1rem, 2.5vw, 1.5rem);
+      font-weight: 600;
+      text-shadow: 0 2px 8px rgba(0,0,0,.6);
+      margin-bottom: .35rem;
+      line-height: 1.3;
+    }
+
+    .uploader-message {
+      font-style: italic;
+      font-size: clamp(.85rem, 1.8vw, 1.1rem);
+      opacity: .85;
+      text-shadow: 0 1px 6px rgba(0,0,0,.5);
+      max-width: 480px;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .overlay-right {
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .live-counter {
+      font-size: clamp(1rem, 2vw, 1.3rem);
+      font-weight: 600;
+      text-shadow: 0 2px 8px rgba(0,0,0,.6);
+      margin-bottom: .35rem;
+    }
+
+    .event-label-overlay {
+      font-size: clamp(.75rem, 1.5vw, .95rem);
+      opacity: .75;
+      text-shadow: 0 1px 4px rgba(0,0,0,.5);
+      font-family: var(--heading-font, 'Playfair Display', serif);
+      font-style: italic;
+    }
+
+    .watermark {
+      position: fixed;
+      bottom: 1.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 51;
+      font-size: .7rem;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      opacity: .35;
+      color: #fff;
+      pointer-events: none;
+    }
+
+    /* ── Floating emojis ──────────────────────────────── */
+    #emoji-container {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .float-emoji {
+      position: absolute;
+      bottom: 0;
+      line-height: 1;
+      animation: floatUp linear forwards;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    @keyframes floatUp {
+      0%   { transform: translateY(0)      scale(1);   opacity: 1; }
+      70%  { opacity: 1; }
+      100% { transform: translateY(-95vh)  scale(1.6); opacity: 0; }
+    }
+
+    /* ── Upload toast ─────────────────────────────────── */
+    .upload-toast {
+      position: fixed;
+      bottom: 5rem;
+      right: 2rem;
+      background: rgba(10,10,10,.9);
+      border-left: 4px solid var(--accent, #e8735a);
+      color: #fff;
+      padding: 1rem 1.4rem;
+      border-radius: 10px;
+      font-size: .95rem;
+      font-weight: 500;
+      line-height: 1.4;
+      max-width: 280px;
+      z-index: 200;
+      transform: translateX(120%);
+      transition: transform .4s cubic-bezier(.22,.68,0,1.2);
+      pointer-events: none;
+      box-shadow: 0 4px 24px rgba(0,0,0,.4);
+    }
+
+    .upload-toast.show { transform: translateX(0); }
+
+    /* ── Pause indicator ──────────────────────────────── */
+    .pause-hud {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(.8);
+      background: rgba(0,0,0,.65);
+      border-radius: 50%;
+      width: 100px;
+      height: 100px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+      z-index: 300;
+      opacity: 0;
+      transition: opacity .25s, transform .25s;
+      pointer-events: none;
+    }
+
+    .pause-hud.show {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    /* ── Keyboard hint ────────────────────────────────── */
+    .kb-hint {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 2rem;
+      font-size: .65rem;
+      color: rgba(255,255,255,.3);
+      letter-spacing: .06em;
+      z-index: 200;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity .3s;
+    }
+
+    body:hover .kb-hint { opacity: 1; }
+
+    /* ── Empty state ──────────────────────────────────── */
+    .empty-state {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      background: linear-gradient(45deg, var(--primary, #3d1f2d) 0%, var(--primary-light, #5c3048) 50%, var(--accent, #e8735a) 100%);
+      background-size: 400% 400%;
+      animation: gradientShift 8s ease infinite;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 2rem;
+    }
+
+    .empty-state.visible { display: flex; }
+
+    @keyframes gradientShift {
+      0%   { background-position: 0%   50%; }
+      50%  { background-position: 100% 50%; }
+      100% { background-position: 0%   50%; }
+    }
+
+    .empty-event-name {
+      font-family: var(--heading-font, 'Playfair Display', serif);
+      font-size: clamp(2.5rem, 7vw, 5rem);
+      font-weight: 600;
+      margin-bottom: 1rem;
+      text-shadow: 0 4px 20px rgba(0,0,0,.4);
+    }
+
+    .empty-tagline {
+      font-size: clamp(1rem, 2.5vw, 1.5rem);
+      opacity: .85;
+      margin-bottom: 2.5rem;
+      letter-spacing: .06em;
+    }
+
+    .empty-qr-wrap {
+      background: #fff;
+      border-radius: 20px;
+      padding: 1.25rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 8px 40px rgba(0,0,0,.3);
+    }
+
+    #empty-qr {
+      display: block;
+      width: clamp(160px, 20vw, 240px);
+      height: clamp(160px, 20vw, 240px);
+      border-radius: 10px;
+    }
+
+    .empty-scan-label {
+      font-size: clamp(.9rem, 2vw, 1.1rem);
+      opacity: .9;
+      letter-spacing: .04em;
+      font-weight: 600;
+    }
+
+    /* Pulsing ring behind QR */
+    .qr-pulse {
+      position: relative;
+    }
+
+    .qr-pulse::before {
+      content: '';
+      position: absolute;
+      inset: -12px;
+      border-radius: 28px;
+      border: 2px solid rgba(255,255,255,.35);
+      animation: ringPulse 2.5s ease-in-out infinite;
+    }
+
+    @keyframes ringPulse {
+      0%,100% { opacity: .35; transform: scale(1); }
+      50%     { opacity: .7;  transform: scale(1.03); }
+    }
+
+    /* ── Slide counter (debug / coordinator) ──────────── */
+    .slide-indicator {
+      position: fixed;
+      top: 60px;
+      right: 1.5rem;
+      background: rgba(0,0,0,.5);
+      color: rgba(255,255,255,.5);
+      font-size: .65rem;
+      padding: .25rem .6rem;
+      border-radius: 999px;
+      z-index: 101;
+      pointer-events: none;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Zone 1 — Media layers -->
+<div class="slide-layer" id="layer-a"></div>
+<div class="slide-layer" id="layer-b" style="opacity:0"></div>
+
+<!-- Zone 3 — Top ticker -->
+<div class="ticker-strip" id="ticker-strip">
+  <div class="ticker-track" id="ticker-track">
+    <span class="ticker-segment" id="ticker-seg-a">Loading…</span>
+    <span class="ticker-segment" id="ticker-seg-b">Loading…</span>
+  </div>
+</div>
+
+<!-- Zone 2 — Bottom overlay -->
+<div class="overlay-bottom" id="overlay" style="display:none">
+  <div class="overlay-left">
+    <div class="uploader-name"    id="uploader-name"></div>
+    <div class="uploader-message" id="uploader-message"></div>
+  </div>
+  <div class="overlay-right">
+    <div class="live-counter"       id="live-counter"></div>
+    <div class="event-label-overlay" id="event-label-overlay"></div>
+  </div>
+</div>
+<div class="watermark">Reelday ✦</div>
+
+<!-- Floating emojis -->
+<div id="emoji-container"></div>
+
+<!-- Upload toast -->
+<div class="upload-toast" id="upload-toast"></div>
+
+<!-- Pause indicator -->
+<div class="pause-hud" id="pause-hud">⏸</div>
+
+<!-- Empty state -->
+<div class="empty-state" id="empty-state">
+  <div class="empty-event-name" id="empty-event-name"></div>
+  <div class="empty-tagline" id="empty-tagline">Scan para mag-share ng inyong photos!</div>
+  <div class="qr-pulse empty-qr-wrap">
+    <img id="empty-qr" alt="QR Code" />
+  </div>
+  <div class="empty-scan-label">📸 I-scan ang QR code</div>
+</div>
+
+<!-- Keyboard hint (visible on hover) -->
+<div class="kb-hint">Space/→ Next &nbsp;·&nbsp; ← Prev &nbsp;·&nbsp; F Fullscreen &nbsp;·&nbsp; P Pause</div>
+
+<script type="module">
+  // ── Constants ────────────────────────────────────────
+  const SLIDE_DURATION      = 5000;  // ms per slide
+  const TRANSITION_DURATION = 2000;  // crossfade duration (matches CSS 2s)
+  const KB_ANIMS = ['kb1','kb2','kb3','kb4','kb5'];
+
+  const THEME_META = {
+    wedding:          { emoji: ['💗','🎉','✨','🥂','💍','🌸','💒'], label: (n) => `${n} · Kasalan` },
+    debut:            { emoji: ['👑','💗','✨','🌹','💃','🎀','⭐'], label: (n) => `${n} · Debut` },
+    birthday:         { emoji: ['🎂','🎉','🎊','🎈','✨','💫','🥳'],  label: (n) => `${n} · Kaarawan` },
+    seventh_birthday: { emoji: ['🌟','🎊','🎈','⭐','✨','🎉','🎀'], label: (n) => `${n} · 7th Birthday` },
+    baptism:          { emoji: ['🕊️','✨','💙','🌊','🙏','🌿','🤍'], label: (n) => `${n} · Binyag` },
+    reunion:          { emoji: ['🎉','🥂','💗','✨','🎊','🤗','🍻'], label: (n) => `${n} · Reunion` },
+    corporate:        { emoji: ['👏','✨','🎉','⭐','🏆','💼','🎯'], label: (n) => n },
+    memorial:         { emoji: ['🕯️','🌹','💙','✨','🙏','🍃','🌿'],  label: (n) => `${n} · Memorial` },
+  };
+
+  // ── State ─────────────────────────────────────────────
+  const slug       = new URLSearchParams(location.search).get('slug');
+  let items        = [];      // filtered upload objects for slideshow
+  let allUploads   = [];      // all uploads (for counter/ticker)
+  let knownIds     = new Set();
+  let currentIdx   = 0;
+  let frontLayer   = document.getElementById('layer-a');
+  let backLayer    = document.getElementById('layer-b');
+  let slideTimer   = null;
+  let isPaused     = false;
+  let isRunning    = false;
+  let eventData    = null;
+  let themeMeta    = THEME_META.wedding;
+
+  // ── DOM refs ──────────────────────────────────────────
+  const overlay          = document.getElementById('overlay');
+  const uploaderName     = document.getElementById('uploader-name');
+  const uploaderMessage  = document.getElementById('uploader-message');
+  const liveCounter      = document.getElementById('live-counter');
+  const eventLabelEl     = document.getElementById('event-label-overlay');
+  const uploadToast      = document.getElementById('upload-toast');
+  const pauseHud         = document.getElementById('pause-hud');
+  const emptyState       = document.getElementById('empty-state');
+  const emptyEventName   = document.getElementById('empty-event-name');
+  const emptyQr          = document.getElementById('empty-qr');
+  const tickerTrack      = document.getElementById('ticker-track');
+  const tickerSegA       = document.getElementById('ticker-seg-a');
+  const tickerSegB       = document.getElementById('ticker-seg-b');
+
+  // ── Theme ─────────────────────────────────────────────
+  function applyTheme(eventType) {
+    const theme = Object.keys(THEME_META).includes(eventType) ? eventType : 'wedding';
+    document.body.setAttribute('data-theme', theme);
+    themeMeta = THEME_META[theme];
+  }
+
+  // ── Media loading ─────────────────────────────────────
+  function pickKB() {
+    return KB_ANIMS[Math.floor(Math.random() * KB_ANIMS.length)];
+  }
+
+  function loadMedia(layer, item) {
+    layer.innerHTML = '';
+    const anim     = pickKB();
+    const duration = ((SLIDE_DURATION + TRANSITION_DURATION) / 1000).toFixed(1);
+    const style    = `width:100%;height:100%;object-fit:cover;animation:${anim} ${duration}s ease-in-out forwards`;
+
+    if (item.file_type === 'video') {
+      const vid = document.createElement('video');
+      vid.src          = item.file_url;
+      vid.autoplay     = true;
+      vid.muted        = true;
+      vid.loop         = true;
+      vid.playsInline  = true;
+      vid.style.cssText = style;
+      layer.appendChild(vid);
+    } else {
+      const img = document.createElement('img');
+      img.src           = item.file_url;
+      img.alt           = item.uploader_name || '';
+      img.style.cssText = style;
+      layer.appendChild(img);
+    }
+  }
+
+  // ── Overlay update ────────────────────────────────────
+  function updateOverlay(item) {
+    const name = item.uploader_name || 'Panauhin';
+    uploaderName.textContent    = `📸 Kuha ni ${name}`;
+    uploaderMessage.textContent = item.message || '';
+  }
+
+  function updateCounter(count) {
+    liveCounter.textContent = `❤️ ${count.toLocaleString()} moment${count !== 1 ? 's' : ''} shared`;
+  }
+
+  function updateEventLabel() {
+    if (!eventData) return;
+    const fn = themeMeta.label;
+    eventLabelEl.textContent = typeof fn === 'function' ? fn(eventData.couple_names) : eventData.couple_names;
+  }
+
+  // ── Ticker ────────────────────────────────────────────
+  function buildTickerText(uploads) {
+    if (!uploads.length) return '📸 Waiting for guests to share…';
+    return uploads
+      .map(u => `📸 ${u.uploader_name || 'Panauhin'}`)
+      .join(' · ') + ' · ';
+  }
+
+  function updateTicker(uploads) {
+    const text = buildTickerText(uploads);
+    tickerSegA.textContent = text;
+    tickerSegB.textContent = text;
+
+    // Recalculate animation duration: 15px per char as rough estimate
+    const charsPerSeg = text.length;
+    const duration    = Math.max(20, charsPerSeg * 0.18); // seconds
+    tickerTrack.style.animation = `tickerScroll ${duration}s linear infinite`;
+  }
+
+  // ── Slideshow ─────────────────────────────────────────
+  function advance() {
+    if (items.length < 2) {
+      // Single item — just keep showing it
+      slideTimer = setTimeout(advance, SLIDE_DURATION);
+      return;
+    }
+
+    const nextIdx = (currentIdx + 1) % items.length;
+
+    // Preload next in back layer
+    loadMedia(backLayer, items[nextIdx]);
+
+    // Trigger crossfade
+    backLayer.style.opacity  = '1';
+    frontLayer.style.opacity = '0';
+
+    // After crossfade: swap layer refs, update state
+    setTimeout(() => {
+      const tmp = frontLayer;
+      frontLayer = backLayer;
+      backLayer  = tmp;
+      currentIdx = nextIdx;
+      updateOverlay(items[currentIdx]);
+    }, TRANSITION_DURATION);
+
+    if (!isPaused) {
+      slideTimer = setTimeout(advance, SLIDE_DURATION);
+    }
+  }
+
+  function startSlideshow() {
+    if (isRunning || items.length === 0) return;
+    isRunning = true;
+
+    currentIdx = 0;
+    loadMedia(frontLayer, items[0]);
+    frontLayer.style.opacity = '1';
+    updateOverlay(items[0]);
+    overlay.style.display = 'flex';
+    emptyState.classList.remove('visible');
+
+    if (items.length > 1) {
+      slideTimer = setTimeout(advance, SLIDE_DURATION);
+    }
+  }
+
+  function prevSlide() {
+    clearTimeout(slideTimer);
+    const prevIdx = (currentIdx - 1 + items.length) % items.length;
+    // Fake advance backward by overriding currentIdx so advance() picks prevIdx
+    currentIdx = (prevIdx - 1 + items.length) % items.length;
+    advance();
+  }
+
+  function nextSlide() {
+    clearTimeout(slideTimer);
+    advance();
+  }
+
+  function togglePause() {
+    isPaused = !isPaused;
+    pauseHud.classList.toggle('show', isPaused);
+    if (!isPaused) {
+      slideTimer = setTimeout(advance, SLIDE_DURATION);
+      setTimeout(() => pauseHud.classList.remove('show'), 800);
+    } else {
+      // Pause video if current slide is video
+      const vid = frontLayer.querySelector('video');
+      if (vid) vid.pause();
+    }
+  }
+
+  // ── Floating emojis ───────────────────────────────────
+  function spawnEmoji(count = 1) {
+    const pool = themeMeta.emoji;
+    for (let i = 0; i < count; i++) {
+      setTimeout(() => {
+        const el        = document.createElement('div');
+        el.className    = 'float-emoji';
+        el.textContent  = pool[Math.floor(Math.random() * pool.length)];
+        el.style.left   = `${5 + Math.random() * 88}%`;
+        el.style.fontSize = `${1.4 + Math.random() * 1.8}rem`;
+        const dur       = 3.5 + Math.random() * 2.5;
+        el.style.animationDuration = `${dur}s`;
+        el.style.animationTimingFunction = 'ease-out';
+        document.getElementById('emoji-container').appendChild(el);
+        el.addEventListener('animationend', () => el.remove());
+      }, i * 200);
+    }
+  }
+
+  function scheduleRandomEmoji() {
+    const delay = 8000 + Math.random() * 7000;
+    setTimeout(() => {
+      if (isRunning) spawnEmoji(2 + Math.floor(Math.random() * 2));
+      scheduleRandomEmoji();
+    }, delay);
+  }
+
+  // ── Toast ─────────────────────────────────────────────
+  let toastTimer;
+  function showToast(msg) {
+    clearTimeout(toastTimer);
+    uploadToast.textContent = msg;
+    uploadToast.classList.add('show');
+    toastTimer = setTimeout(() => uploadToast.classList.remove('show'), 3500);
+  }
+
+  // ── Keyboard controls ─────────────────────────────────
+  let cursorTimer;
+  document.addEventListener('mousemove', () => {
+    document.body.classList.add('show-cursor');
+    clearTimeout(cursorTimer);
+    cursorTimer = setTimeout(() => document.body.classList.remove('show-cursor'), 3000);
+  });
+
+  document.addEventListener('keydown', e => {
+    switch (e.key) {
+      case ' ':
+      case 'ArrowRight':
+        e.preventDefault();
+        if (isRunning) nextSlide();
+        break;
+      case 'ArrowLeft':
+        e.preventDefault();
+        if (isRunning) prevSlide();
+        break;
+      case 'f':
+      case 'F':
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        } else {
+          document.exitFullscreen();
+        }
+        break;
+      case 'p':
+      case 'P':
+        if (isRunning) togglePause();
+        break;
+    }
+  });
+
+  // ── Refresh & new upload detection ────────────────────
+  async function refreshUploads() {
+    try {
+      const res = await fetch(`/api/uploads/${slug}`);
+      if (!res.ok) return;
+      const { uploads } = await res.json();
+
+      allUploads = uploads;
+      const slideable = uploads.filter(u => !u.is_video_message);
+
+      // Detect new arrivals (skip on first load — knownIds will be populated then)
+      const newOnes = slideable.filter(u => !knownIds.has(u.id));
+
+      if (newOnes.length > 0 && isRunning) {
+        // Only show notifications after initial load
+        newOnes.forEach(u => knownIds.add(u.id));
+        const newest = newOnes[0];
+        const name   = newest.uploader_name || 'Panauhin';
+        showToast(`✨ ${name} just shared a moment!`);
+        spawnEmoji(3 + Math.floor(Math.random() * 2));
+
+        // Add new items to slideshow queue
+        items = slideable;
+      }
+
+      // Start slideshow if we were in empty state and now have items
+      if (!isRunning && slideable.length > 0) {
+        items = slideable;
+        slideable.forEach(u => knownIds.add(u.id));
+        startSlideshow();
+        scheduleRandomEmoji();
+      }
+
+      updateCounter(uploads.length);
+      updateTicker(uploads);
+    } catch { /* silent — wall should never crash */ }
+  }
+
+  // ── Empty state ───────────────────────────────────────
+  async function showEmptyState(event) {
+    emptyEventName.textContent = event.couple_names;
+    emptyState.classList.add('visible');
+
+    try {
+      const res = await fetch(`/api/events/${slug}/qr`);
+      const { qr_code } = await res.json();
+      emptyQr.src = qr_code;
+    } catch { /* QR optional */ }
+  }
+
+  // ── Init ──────────────────────────────────────────────
+  async function init() {
+    if (!slug) {
+      emptyEventName.textContent = 'Reelday';
+      document.getElementById('empty-tagline').textContent = 'No event slug in URL.';
+      emptyState.classList.add('visible');
+      return;
+    }
+
+    try {
+      const [eventRes, uploadsRes] = await Promise.all([
+        fetch(`/api/events/${slug}`),
+        fetch(`/api/uploads/${slug}`),
+      ]);
+
+      if (!eventRes.ok) throw new Error('Event not found');
+
+      const { event }   = await eventRes.json();
+      const { uploads } = await uploadsRes.json();
+
+      eventData  = event;
+      allUploads = uploads;
+
+      applyTheme(event.event_type);
+      updateEventLabel();
+      document.title = `Live Wall — ${event.couple_names}`;
+
+      const slideable = uploads.filter(u => !u.is_video_message);
+      slideable.forEach(u => knownIds.add(u.id));
+      items = slideable;
+
+      updateCounter(uploads.length);
+      updateTicker(uploads);
+
+      if (items.length > 0) {
+        startSlideshow();
+        scheduleRandomEmoji();
+      } else {
+        await showEmptyState(event);
+      }
+
+      // Poll for new uploads every 15s
+      setInterval(refreshUploads, 15000);
+
+    } catch (err) {
+      emptyEventName.textContent = 'Event not found';
+      document.getElementById('empty-tagline').textContent =
+        `Could not load: ${slug}`;
+      emptyState.classList.add('visible');
+    }
+  }
+
+  init();
+</script>
+</body>
+</html>

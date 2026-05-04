@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta name="theme-color" content="#3d1f2d" />
+  <title>Reelday</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500;600&family=DM+Serif+Display&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Pacifico&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/style.css" />
+  <style>
+    body {
+      min-height: 100dvh;
+      background: var(--bg);
+      font-family: var(--body-font);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ── Hero ─────────────────────────────────────────────── */
+    .hero {
+      width: 100%;
+      background: var(--primary);
+      color: #fff;
+      text-align: center;
+      padding: 2.5rem 1.5rem 3.5rem;
+      position: relative;
+    }
+
+    .hero-brand {
+      font-family: var(--heading-font);
+      font-size: .875rem;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      opacity: .6;
+      margin-bottom: .75rem;
+    }
+
+    .hero-names {
+      font-family: var(--heading-font);
+      font-size: clamp(1.75rem, 6vw, 2.75rem);
+      line-height: 1.2;
+      font-weight: 600;
+      margin-bottom: .5rem;
+    }
+
+    .hero-date { font-size: .875rem; opacity: .7; letter-spacing: .05em; }
+
+    .hero-divider {
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      width: 100%;
+      overflow: hidden;
+      line-height: 0;
+    }
+
+    .hero-divider svg { display: block; width: 100%; height: 40px; }
+
+    /* Language toggle */
+    .lang-toggle {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      display: flex;
+      background: rgba(255,255,255,.12);
+      border-radius: 20px;
+      padding: 3px;
+      gap: 2px;
+    }
+
+    .lang-btn {
+      padding: .25rem .7rem;
+      border: none;
+      border-radius: 16px;
+      font-family: var(--body-font);
+      font-size: .75rem;
+      font-weight: 600;
+      letter-spacing: .05em;
+      cursor: pointer;
+      background: transparent;
+      color: rgba(255,255,255,.6);
+      transition: background .15s, color .15s;
+    }
+
+    .lang-btn.active { background: #fff; color: var(--primary); }
+
+    /* ── Upload card ──────────────────────────────────────── */
+    .upload-card {
+      width: 100%;
+      max-width: 520px;
+      background: #fff;
+      border-radius: var(--border-radius);
+      box-shadow: 0 8px 40px rgba(0,0,0,.1);
+      padding: 2rem 1.5rem 2.5rem;
+      margin: -1.25rem 1rem 2rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .section-title {
+      font-family: var(--heading-font);
+      font-size: 1.1rem;
+      color: var(--primary);
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+    }
+
+    /* ── Drop zone ────────────────────────────────────────── */
+    .dropzone {
+      border: 2.5px dashed var(--accent-light);
+      border-radius: calc(var(--border-radius) * .85);
+      padding: 2.5rem 1rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      background: var(--bg);
+      position: relative;
+    }
+
+    .dropzone:hover, .dropzone.drag-over {
+      border-color: var(--accent);
+      background: rgba(0,0,0,.02);
+    }
+
+    .dropzone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    .dropzone-icon { font-size: 3rem; margin-bottom: .5rem; }
+    .dropzone-label { font-weight: 600; color: var(--primary); font-size: 1rem; margin-bottom: .25rem; }
+    .dropzone-sub   { font-size: .8rem; color: var(--text-soft); }
+
+    /* ── Preview ──────────────────────────────────────────── */
+    #preview-area {
+      display: none;
+      margin-top: 1rem;
+      border-radius: calc(var(--border-radius) * .75);
+      overflow: hidden;
+      position: relative;
+    }
+
+    #preview-area img,
+    #preview-area video {
+      width: 100%;
+      max-height: 280px;
+      object-fit: cover;
+      border-radius: calc(var(--border-radius) * .75);
+      display: block;
+    }
+
+    .preview-change {
+      position: absolute;
+      top: .6rem;
+      right: .6rem;
+      background: rgba(0,0,0,.6);
+      color: #fff;
+      border: none;
+      border-radius: 20px;
+      padding: .35rem .85rem;
+      font-size: .75rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: var(--body-font);
+    }
+
+    .file-warning {
+      margin-top: .5rem;
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      border-radius: 8px;
+      padding: .5rem .75rem;
+      font-size: .8rem;
+      color: #856404;
+      display: none;
+    }
+
+    /* ── Form ─────────────────────────────────────────────── */
+    .form-group { margin-top: 1.25rem; }
+
+    .form-group label {
+      display: block;
+      font-weight: 600;
+      font-size: .875rem;
+      color: var(--primary);
+      margin-bottom: .4rem;
+    }
+
+    .form-group input[type="text"],
+    .form-group textarea {
+      width: 100%;
+      padding: .8rem 1rem;
+      border: 1.5px solid var(--accent-light);
+      border-radius: calc(var(--border-radius) * .6);
+      font-family: var(--body-font);
+      font-size: 1rem;
+      color: var(--text);
+      background: var(--bg);
+      transition: border-color .15s;
+      outline: none;
+      resize: none;
+    }
+
+    .form-group input[type="text"]:focus,
+    .form-group textarea:focus { border-color: var(--accent); }
+
+    /* ── Video toggle ─────────────────────────────────────── */
+    .video-toggle {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      margin-top: 1.25rem;
+      padding: .875rem 1rem;
+      background: var(--bg2);
+      border: 1.5px solid var(--accent-light);
+      border-radius: calc(var(--border-radius) * .85);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .video-toggle input[type="checkbox"] {
+      width: 1.25rem;
+      height: 1.25rem;
+      accent-color: var(--accent);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .video-toggle-label { font-size: .9rem; font-weight: 600; color: var(--primary); }
+    .video-toggle-sub   { font-size: .75rem; color: var(--text-soft); margin-top: .1rem; }
+
+    /* ── Recorder ─────────────────────────────────────────── */
+    #recorder-section {
+      display: none;
+      margin-top: 1.25rem;
+      background: var(--primary);
+      border-radius: calc(var(--border-radius) * .85);
+      padding: 1.5rem;
+      text-align: center;
+      color: #fff;
+    }
+
+    #recorder-preview {
+      width: 100%;
+      max-height: 220px;
+      border-radius: calc(var(--border-radius) * .6);
+      background: #000;
+      margin-bottom: 1rem;
+      display: block;
+    }
+
+    .recorder-timer {
+      font-family: var(--heading-font);
+      font-size: 2rem;
+      margin-bottom: 1rem;
+      letter-spacing: .05em;
+    }
+
+    .recorder-timer.warning { color: var(--accent-light); }
+
+    .recorder-controls { display: flex; gap: .75rem; justify-content: center; flex-wrap: wrap; }
+
+    .btn-record {
+      width: 68px;
+      height: 68px;
+      border-radius: 50%;
+      border: 3.5px solid var(--accent-light);
+      background: var(--accent);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform .1s;
+      flex-shrink: 0;
+    }
+
+    .btn-record:active { transform: scale(.93); }
+
+    .btn-record .dot {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #fff;
+    }
+
+    .btn-record.recording .dot { border-radius: 6px; width: 22px; height: 22px; }
+
+    .btn-record.recording {
+      border-color: #ff4040;
+      animation: pulse 1.2s infinite;
+    }
+
+    @keyframes pulse {
+      0%,100% { box-shadow: 0 0 0 0 rgba(255,64,64,.4); }
+      50%      { box-shadow: 0 0 0 10px rgba(255,64,64,0); }
+    }
+
+    #recorded-preview-section { display: none; margin-top: 1rem; }
+    #recorded-video { width: 100%; border-radius: calc(var(--border-radius) * .6); margin-bottom: .75rem; }
+
+    /* ── Progress ─────────────────────────────────────────── */
+    .progress-wrap { display: none; margin-top: 1.5rem; }
+
+    .progress-label { font-size: .85rem; color: var(--text-soft); margin-bottom: .4rem; }
+
+    .progress-bar-bg {
+      height: 8px;
+      background: var(--bg2);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-light), var(--accent));
+      border-radius: 4px;
+      transition: width .3s;
+      width: 0%;
+    }
+
+    /* ── Submit ───────────────────────────────────────────── */
+    .btn-submit {
+      margin-top: 1.75rem;
+      width: 100%;
+      padding: 1rem 1.5rem;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-deep) 100%);
+      color: #fff;
+      border: none;
+      border-radius: var(--border-radius);
+      font-family: var(--body-font);
+      font-size: 1.05rem;
+      font-weight: 600;
+      cursor: pointer;
+      min-height: 56px;
+      transition: opacity .15s, transform .1s;
+      letter-spacing: .01em;
+    }
+
+    .btn-submit:active  { transform: scale(.98); }
+    .btn-submit:disabled { opacity: .55; cursor: not-allowed; transform: none; }
+
+    /* ── Success ──────────────────────────────────────────── */
+    #success-screen {
+      display: none;
+      width: 100%;
+      max-width: 520px;
+      background: #fff;
+      border-radius: var(--border-radius);
+      box-shadow: 0 8px 40px rgba(0,0,0,.1);
+      padding: 3rem 1.5rem;
+      margin: -1.25rem 1rem 2rem;
+      text-align: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    .success-emoji { font-size: 4rem; margin-bottom: 1rem; animation: pop .4s ease; }
+
+    @keyframes pop {
+      0%   { transform: scale(.5); opacity: 0; }
+      80%  { transform: scale(1.15); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .success-title {
+      font-family: var(--heading-font);
+      font-size: 1.6rem;
+      color: var(--primary);
+      margin-bottom: .5rem;
+    }
+
+    .success-sub { color: var(--text-soft); font-size: .95rem; line-height: 1.5; margin-bottom: 1.75rem; }
+
+    .btn-another {
+      display: inline-block;
+      padding: .75rem 2rem;
+      background: transparent;
+      border: 2px solid var(--accent);
+      color: var(--accent);
+      border-radius: calc(var(--border-radius) * .7);
+      font-family: var(--body-font);
+      font-weight: 600;
+      font-size: .95rem;
+      cursor: pointer;
+      transition: background .15s, color .15s;
+    }
+
+    .btn-another:hover { background: var(--accent); color: #fff; }
+
+    /* ── Error / Loading ──────────────────────────────────── */
+    #error-screen {
+      display: none;
+      width: 100%;
+      max-width: 520px;
+      text-align: center;
+      padding: 4rem 2rem;
+      color: var(--primary);
+    }
+
+    .error-emoji { font-size: 3rem; margin-bottom: 1rem; }
+
+    #loading-state { padding: 4rem 0; }
+  </style>
+</head>
+<body>
+
+<!-- ── Hero ──────────────────────────────────────────────── -->
+<div class="hero" id="hero">
+  <div class="lang-toggle" id="lang-toggle" aria-label="Choose language">
+    <button class="lang-btn active" data-lang="en">EN</button>
+    <button class="lang-btn"        data-lang="fil">FIL</button>
+  </div>
+
+  <p class="hero-brand">Reelday ✦</p>
+  <h1 class="hero-names" id="hero-names">…</h1>
+  <p class="hero-date"   id="hero-date"></p>
+
+  <div class="hero-divider">
+    <svg viewBox="0 0 1200 40" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <path id="hero-wave" d="M0,40 C300,0 900,0 1200,40 L1200,40 L0,40 Z" style="fill: var(--bg)" />
+    </svg>
+  </div>
+</div>
+
+<!-- ── Loading ───────────────────────────────────────────── -->
+<div id="loading-state"><div class="spinner"></div></div>
+
+<!-- ── Error ─────────────────────────────────────────────── -->
+<div id="error-screen">
+  <div class="error-emoji">😔</div>
+  <p id="error-msg" style="color:var(--text-soft);font-size:.95rem;margin-top:.5rem"></p>
+</div>
+
+<!-- ── Upload card ───────────────────────────────────────── -->
+<div class="upload-card" id="upload-card" style="display:none">
+
+  <p class="section-title" id="section-title">📸 Share your memory</p>
+
+  <div class="dropzone" id="dropzone">
+    <input type="file" id="file-input" accept="image/*,video/*" />
+    <div class="dropzone-icon">📷</div>
+    <p class="dropzone-label" id="dropzone-label">Tap to pick a photo or video</p>
+    <p class="dropzone-sub">JPG, PNG, HEIC, MP4 · max 500 MB</p>
+  </div>
+
+  <div id="preview-area">
+    <img id="preview-img" alt="" style="display:none" />
+    <video id="preview-vid" controls playsinline style="display:none"></video>
+    <button class="preview-change" id="preview-change-btn" data-i18n="changeFile">Change ✕</button>
+  </div>
+
+  <div class="file-warning" id="file-warning" data-i18n="fileWarning">
+    ⚠️ Large file detected. Make sure you have a strong connection before uploading.
+  </div>
+
+  <div class="form-group">
+    <label for="uploader-name">
+      <span data-i18n="nameLabel">What's your name?</span>
+      <span style="color:var(--accent)"> *</span>
+    </label>
+    <input type="text" id="uploader-name"
+      data-i18n-placeholder="namePlaceholder"
+      placeholder="Enter your name"
+      maxlength="100" autocomplete="name" />
+  </div>
+
+  <div class="form-group">
+    <label for="message" id="message-label" data-i18n="messageLabel">Message for the couple</label>
+    <textarea id="message" rows="3"
+      data-i18n-placeholder="messagePlaceholder"
+      placeholder="Leave them a message… (optional)"
+      maxlength="500"></textarea>
+  </div>
+
+  <label class="video-toggle">
+    <input type="checkbox" id="video-msg-toggle" />
+    <div>
+      <div class="video-toggle-label" id="video-toggle-label" data-i18n="videoToggleLabel">Record a video message for them 💌</div>
+      <div class="video-toggle-sub"   data-i18n="videoToggleSub">Record a special message (max 60 seconds)</div>
+    </div>
+  </label>
+
+  <div id="recorder-section">
+    <video id="recorder-preview" autoplay muted playsinline></video>
+    <div class="recorder-timer" id="recorder-timer">1:00</div>
+    <div class="recorder-controls">
+      <button class="btn-record" id="btn-record"><div class="dot"></div></button>
+    </div>
+    <div id="recorded-preview-section">
+      <video id="recorded-video" controls playsinline></video>
+      <button class="btn-another" id="btn-rerecord"
+        style="font-size:.85rem;padding:.5rem 1.25rem"
+        data-i18n="rerecordBtn">🔄 Record again</button>
+    </div>
+    <p id="recorder-hint" style="margin-top:.75rem;font-size:.8rem;opacity:.7"
+      data-i18n="recorderHintIdle">Press the button to start recording</p>
+  </div>
+
+  <div class="progress-wrap" id="progress-wrap">
+    <p class="progress-label">
+      <span data-i18n="uploadingLabel">Uploading… </span>
+      <span id="progress-pct">0%</span>
+    </p>
+    <div class="progress-bar-bg">
+      <div class="progress-bar-fill" id="progress-bar"></div>
+    </div>
+  </div>
+
+  <button class="btn-submit" id="btn-submit" disabled data-i18n="submitNoFile">
+    Pick a photo first ✦
+  </button>
+
+</div>
+
+<!-- ── Success ───────────────────────────────────────────── -->
+<div id="success-screen">
+  <div class="success-emoji" id="success-emoji">✦</div>
+  <h2 class="success-title" id="success-title"></h2>
+  <p  class="success-sub"   id="success-sub"></p>
+  <button class="btn-another" id="btn-upload-another" data-i18n="uploadAnother">
+    📸 Upload another one
+  </button>
+</div>
+
+<!-- ── Toast ─────────────────────────────────────────────── -->
+<div class="toast" id="toast"></div>
+
+<script type="module">
+  // ── Translations (base UI strings) ─────────────────────
+  const STRINGS = {
+    en: {
+      changeFile:        'Change ✕',
+      fileWarning:       '⚠️ Large file detected. Make sure you have a strong connection before uploading.',
+      nameLabel:         "What's your name?",
+      namePlaceholder:   'Enter your name',
+      messageLabel:      'Message for the couple',
+      messagePlaceholder:'Leave them a message… (optional)',
+      videoToggleSub:    'Record a special message (max 60 seconds)',
+      rerecordBtn:       '🔄 Record again',
+      recorderHintIdle:  'Press the button to start recording',
+      recorderHintActive:'Recording… press again to stop',
+      recorderHintDone:  'Recorded! Watch it back before submitting.',
+      uploadingLabel:    'Uploading… ',
+      submitNoFile:      'Pick a photo first ✦',
+      submitNeedsRecord: 'Record your video message first ✦',
+      uploadAnother:     '📸 Upload another one',
+      errorNotFound:     "This event couldn't be found. Make sure you have the right link.",
+      toastOnlyMedia:    'Only photos and videos are accepted.',
+      toastNeedName:     'Please enter your name first.',
+      toastCameraFail:   "Can't access your camera. Please allow camera permission.",
+      toastUploadFail:   'Upload failed. Please try again.',
+      toastNetworkError: 'Network error. Please try again.',
+      dateLocale:        'en-PH',
+    },
+    fil: {
+      changeFile:        'Palitan ✕',
+      fileWarning:       '⚠️ Malaking file ito. Tiyaking malakas ang iyong koneksyon bago mag-upload.',
+      nameLabel:         'Ano ang pangalan mo?',
+      namePlaceholder:   'Ilagay ang iyong pangalan',
+      messageLabel:      'Mensahe para sa kanila',
+      messagePlaceholder:'Mag-iwan ng mensahe para sa kanila… (optional)',
+      videoToggleSub:    'I-record ang isang espesyal na mensahe (max 60 segundo)',
+      rerecordBtn:       '🔄 I-record ulit',
+      recorderHintIdle:  'Pindutin ang pindutan para magsimula ng recording',
+      recorderHintActive:'Nagre-record… pindutin ulit para ihinto',
+      recorderHintDone:  'Na-record na! Manood muna bago mag-submit.',
+      uploadingLabel:    'Sine-send na… ',
+      submitNoFile:      'Pumili muna ng larawan ✦',
+      submitNeedsRecord: 'I-record muna ang video message ✦',
+      uploadAnother:     '📸 Mag-upload pa ng isa',
+      errorNotFound:     'Hindi mahanap ang event na ito. Siguraduhing tama ang link.',
+      toastOnlyMedia:    'Tanggap lang ang mga larawan at video.',
+      toastNeedName:     'Ilagay muna ang iyong pangalan.',
+      toastCameraFail:   'Hindi ma-access ang camera. I-allow ang permission.',
+      toastUploadFail:   'Hindi na-upload. Subukang muli.',
+      toastNetworkError: 'Network error. Subukang muli.',
+      dateLocale:        'fil-PH',
+    },
+  };
+
+  // ── Event-type copy (per-language, per-event-type) ─────
+  const EVENT_COPY = {
+    en: {
+      wedding: {
+        title:       '📸 Share your memory',
+        button:      (n) => `Share with ${n} ✦`,
+        success:     (n) => `Your moment has been shared with ${n}. They'll love it! 💕`,
+        placeholder: 'Leave them a message… (optional)',
+        videoLabel:  'Record a video message for them 💌',
+        emoji:       '💍',
+      },
+      debut: {
+        title:       '📸 Share your memory',
+        button:      (n) => `Share at ${n}'s Debut 👑`,
+        success:     (n) => `Thank you! You're now part of ${n}'s debut. 👑`,
+        placeholder: 'Leave a message for the debutante… (optional)',
+        videoLabel:  'Record a video message for the debutante 👑',
+        emoji:       '👑',
+      },
+      birthday: {
+        title:       '🎂 Share the celebration!',
+        button:      (n) => `Share at ${n}'s Birthday 🎂`,
+        success:     (n) => `Thank you! ${n}'s birthday is extra special because of you! 🎉`,
+        placeholder: 'Leave a birthday greeting… (optional)',
+        videoLabel:  'Record a video greeting for the celebrant 🎂',
+        emoji:       '🎂',
+      },
+      seventh_birthday: {
+        title:       '🌟 Join the party!',
+        button:      (n) => `Share at ${n}'s 7th Birthday 🌟`,
+        success:     (n) => `Thank you! ${n}'s day is so special! 🌟`,
+        placeholder: 'Leave a message for the birthday child… (optional)',
+        videoLabel:  'Record a video message for the child 🌟',
+        emoji:       '🌟',
+      },
+      baptism: {
+        title:       '🕊️ Share this blessing',
+        button:      (n) => `Share at ${n}'s Baptism 🕊️`,
+        success:     (n) => `Thank you! We are all blessed on this day. 🕊️`,
+        placeholder: 'Leave a message or blessing… (optional)',
+        videoLabel:  'Record a video blessing 🕊️',
+        emoji:       '🕊️',
+      },
+      reunion: {
+        title:       '🎉 Share the moment!',
+        button:      () => 'Share to our Reunion 🎉',
+        success:     () => 'Thank you! So wonderful to have everyone together! 🎉',
+        placeholder: 'Leave a message for everyone… (optional)',
+        videoLabel:  'Record a video message for the group 🎉',
+        emoji:       '🎉',
+      },
+      corporate: {
+        title:       '📸 Share your moment',
+        button:      () => 'Share to the event gallery 📸',
+        success:     () => 'Thank you! Your photo has been added to the gallery.',
+        placeholder: 'Leave a message… (optional)',
+        videoLabel:  'Record a video message 🎤',
+        emoji:       '🏢',
+      },
+      memorial: {
+        title:       '🕯️ Share your memory',
+        button:      (n) => `Share your memory of ${n} 🕯️`,
+        success:     (n) => `Thank you. Your memory of ${n} will be cherished forever. 🕯️`,
+        placeholder: 'Leave a message or memory… (optional)',
+        videoLabel:  'Record your message 🕯️',
+        emoji:       '🕯️',
+      },
+    },
+    fil: {
+      wedding: {
+        title:       '📸 I-share ang iyong alaala',
+        button:      (n) => `I-share kay ${n} ✦`,
+        success:     (n) => `Na-share mo na ang iyong momento kay ${n}. Mahal nila ito! 💕`,
+        placeholder: 'Mag-iwan ng mensahe para sa kanila… (optional)',
+        videoLabel:  'Video message para sa kanila 💌',
+        emoji:       '💍',
+      },
+      debut: {
+        title:       '📸 I-share ang iyong alaala',
+        button:      (n) => `I-share sa debut ni ${n} 👑`,
+        success:     (n) => `Salamat! Bahagi ka na ng debut ni ${n}. 👑`,
+        placeholder: 'Mag-iwan ng mensahe para sa debutante… (optional)',
+        videoLabel:  'Video message para sa debutante 👑',
+        emoji:       '👑',
+      },
+      birthday: {
+        title:       '📸 I-share ang iyong alaala',
+        button:      (n) => `I-share sa birthday ni ${n} 🎂`,
+        success:     (n) => `Salamat! Mas masaya ang birthday ni ${n} dahil sa iyo! 🎉`,
+        placeholder: 'Mag-iwan ng birthday greeting… (optional)',
+        videoLabel:  'Video greeting para sa celebrant 🎂',
+        emoji:       '🎂',
+      },
+      seventh_birthday: {
+        title:       '📸 I-share ang iyong alaala',
+        button:      (n) => `I-share sa 7th birthday ni ${n} 🌟`,
+        success:     (n) => `Salamat! Espesyal na espesyal ang araw ni ${n}! 🌟`,
+        placeholder: 'Mag-iwan ng mensahe para sa bata… (optional)',
+        videoLabel:  'Video message para sa bata 🌟',
+        emoji:       '🌟',
+      },
+      baptism: {
+        title:       '📸 I-share ang iyong alaala',
+        button:      (n) => `I-share sa binyag ni ${n} 🕊️`,
+        success:     () => `Salamat! Pinagpala tayo sa araw na ito. 🕊️`,
+        placeholder: 'Mag-iwan ng mensahe o pagbati… (optional)',
+        videoLabel:  'Video blessing 🕊️',
+        emoji:       '🕊️',
+      },
+      reunion: {
+        title:       '📸 I-share ang iyong alaala',
+        button:      () => 'I-share sa ating reunion 🎉',
+        success:     () => 'Salamat! Masayang makita kayong lahat! 🎉',
+        placeholder: 'Mag-iwan ng mensahe para sa lahat… (optional)',
+        videoLabel:  'Video message para sa grupo 🎉',
+        emoji:       '🎉',
+      },
+      corporate: {
+        title:       'I-share ang iyong momento',
+        button:      () => 'I-share sa event gallery 📸',
+        success:     () => 'Salamat! Naidagdag na ang iyong litrato sa gallery.',
+        placeholder: 'Mag-iwan ng mensahe… (optional)',
+        videoLabel:  'I-record ang iyong mensahe 🎤',
+        emoji:       '🏢',
+      },
+      memorial: {
+        title:       '📸 I-share ang iyong alaala',
+        button:      (n) => `I-share ang iyong alaala kay ${n} 🕯️`,
+        success:     (n) => `Salamat. Ang iyong alaala ay maiingatan magpakailanman. 🕯️`,
+        placeholder: 'Mag-iwan ng mensahe o alaala… (optional)',
+        videoLabel:  'I-record ang iyong mensahe 🕯️',
+        emoji:       '🕯️',
+      },
+    },
+  };
+
+  // ── Theme map ──────────────────────────────────────────
+  const THEME_MAP = {
+    wedding: 'wedding', debut: 'debut', birthday: 'birthday',
+    seventh_birthday: 'seventh_birthday', baptism: 'baptism',
+    reunion: 'reunion', corporate: 'corporate', memorial: 'memorial',
+  };
+
+  // ── App state ──────────────────────────────────────────
+  const slug          = location.pathname.split('/').filter(Boolean).pop();
+  let lang            = localStorage.getItem('reelday_lang') || 'en';
+  let eventData       = null;
+  let selectedFile    = null;
+  let recordedBlob    = null;
+  let mediaRecorder   = null;
+  let recorderStream  = null;
+  let countdownInt    = null;
+  let timeLeft        = 60;
+  let isRecording     = false;
+
+  const $ = id => document.getElementById(id);
+
+  const loadingState     = $('loading-state');
+  const errorScreen      = $('error-screen');
+  const uploadCard       = $('upload-card');
+  const successScreen    = $('success-screen');
+  const heroNames        = $('hero-names');
+  const heroDate         = $('hero-date');
+  const fileInput        = $('file-input');
+  const dropzone         = $('dropzone');
+  const previewArea      = $('preview-area');
+  const previewImg       = $('preview-img');
+  const previewVid       = $('preview-vid');
+  const fileWarning      = $('file-warning');
+  const uploaderName     = $('uploader-name');
+  const messageField     = $('message');
+  const videoToggle      = $('video-msg-toggle');
+  const recorderSection  = $('recorder-section');
+  const recorderPreview  = $('recorder-preview');
+  const recorderTimer    = $('recorder-timer');
+  const btnRecord        = $('btn-record');
+  const recordedSection  = $('recorded-preview-section');
+  const recordedVideo    = $('recorded-video');
+  const recorderHint     = $('recorder-hint');
+  const progressWrap     = $('progress-wrap');
+  const progressBar      = $('progress-bar');
+  const progressPct      = $('progress-pct');
+  const btnSubmit        = $('btn-submit');
+  const successTitle     = $('success-title');
+  const successSub       = $('success-sub');
+  const successEmoji     = $('success-emoji');
+  const btnUploadAnother = $('btn-upload-another');
+  const toast            = $('toast');
+
+  // ── Helpers ───────────────────────────────────────────
+  function t(key) { return STRINGS[lang]?.[key] ?? STRINGS.en[key] ?? key; }
+
+  function eventCopy() {
+    const type = eventData?.event_type ?? 'wedding';
+    return (EVENT_COPY[lang]?.[type] || EVENT_COPY[lang]?.wedding ||
+            EVENT_COPY.en[type]      || EVENT_COPY.en.wedding);
+  }
+
+  let toastTimer;
+  function showToast(msg, variant = '') {
+    clearTimeout(toastTimer);
+    toast.textContent = msg;
+    toast.className   = `toast${variant ? ' ' + variant : ''}`;
+    requestAnimationFrame(() => toast.classList.add('show'));
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 3500);
+  }
+
+  // ── Theme ─────────────────────────────────────────────
+  function applyTheme(eventType) {
+    const theme = THEME_MAP[eventType] || 'wedding';
+    document.body.setAttribute('data-theme', theme);
+  }
+
+  // ── Translations ──────────────────────────────────────
+  function applyTranslations() {
+    document.documentElement.lang = lang;
+
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const val = t(el.dataset.i18n);
+      if (typeof val === 'string') el.textContent = val;
+    });
+
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+      const val = t(el.dataset.i18nPlaceholder);
+      if (typeof val === 'string') el.placeholder = val;
+    });
+
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.lang === lang);
+    });
+  }
+
+  function applyEventCopy() {
+    if (!eventData) return;
+    const copy   = eventCopy();
+    const names  = eventData.couple_names;
+
+    $('section-title').textContent   = copy.title;
+    $('dropzone-label').textContent  = t('dropzoneLabel') || 'Tap to pick a photo or video';
+    $('message-label').textContent   = copy.placeholder
+      ? copy.placeholder.split('…')[0].replace('optional)', '').replace('(', '').trim()
+      : t('messageLabel');
+    messageField.placeholder         = copy.placeholder;
+    $('video-toggle-label').textContent = copy.videoLabel;
+    successEmoji.textContent         = copy.emoji;
+
+    updateSubmitState();
+
+    if (!isRecording && !recordedBlob) recorderHint.textContent = t('recorderHintIdle');
+    else if (isRecording)              recorderHint.textContent = t('recorderHintActive');
+    else                               recorderHint.textContent = t('recorderHintDone');
+
+    if (eventData.event_date) {
+      heroDate.textContent = new Date(eventData.event_date)
+        .toLocaleDateString(t('dateLocale'), { year: 'numeric', month: 'long', day: 'numeric' });
+    }
+  }
+
+  // ── Load event ────────────────────────────────────────
+  async function loadEvent() {
+    try {
+      const res = await fetch(`/api/events/${slug}`);
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      eventData = data.event;
+
+      applyTheme(eventData.event_type);
+      heroNames.textContent  = eventData.couple_names;
+      document.title         = `Reelday — ${eventData.couple_names}`;
+
+      loadingState.style.display = 'none';
+      uploadCard.style.display   = 'block';
+
+      applyTranslations();
+      applyEventCopy();
+    } catch {
+      loadingState.style.display = 'none';
+      $('error-msg').textContent = t('errorNotFound');
+      errorScreen.style.display  = 'block';
+    }
+  }
+
+  // ── Language toggle ───────────────────────────────────
+  $('lang-toggle').addEventListener('click', e => {
+    const btn = e.target.closest('.lang-btn');
+    if (!btn || btn.dataset.lang === lang) return;
+    lang = btn.dataset.lang;
+    localStorage.setItem('reelday_lang', lang);
+    applyTranslations();
+    applyEventCopy();
+  });
+
+  // ── File handling ─────────────────────────────────────
+  function handleFile(file) {
+    if (!file) return;
+    if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+      showToast(t('toastOnlyMedia'), 'error');
+      return;
+    }
+
+    selectedFile = file;
+    recordedBlob = null;
+
+    fileWarning.style.display = file.size > 100 * 1024 * 1024 ? 'block' : 'none';
+
+    const url = URL.createObjectURL(file);
+    previewImg.style.display = 'none';
+    previewVid.style.display = 'none';
+
+    if (file.type.startsWith('image/')) {
+      previewImg.src = url; previewImg.style.display = 'block';
+    } else {
+      previewVid.src = url; previewVid.style.display = 'block';
+    }
+
+    dropzone.style.display    = 'none';
+    previewArea.style.display = 'block';
+    updateSubmitState();
+  }
+
+  fileInput.addEventListener('change', () => handleFile(fileInput.files[0]));
+
+  $('preview-change-btn').addEventListener('click', () => {
+    selectedFile              = null;
+    fileInput.value           = '';
+    previewArea.style.display = 'none';
+    dropzone.style.display    = 'block';
+    previewImg.src = previewVid.src = '';
+    fileWarning.style.display = 'none';
+    updateSubmitState();
+  });
+
+  dropzone.addEventListener('dragover',  e => { e.preventDefault(); dropzone.classList.add('drag-over'); });
+  dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
+  dropzone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropzone.classList.remove('drag-over');
+    handleFile(e.dataTransfer.files[0]);
+  });
+
+  // ── Recorder ──────────────────────────────────────────
+  videoToggle.addEventListener('change', async () => {
+    if (videoToggle.checked) {
+      recorderSection.style.display = 'block';
+      await startCamera();
+    } else {
+      recorderSection.style.display = 'none';
+      stopRecorder();
+      recordedBlob = null;
+      recordedSection.style.display = 'none';
+    }
+    updateSubmitState();
+  });
+
+  async function startCamera() {
+    try {
+      recorderStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: true });
+      recorderPreview.srcObject = recorderStream;
+    } catch {
+      showToast(t('toastCameraFail'), 'error');
+      videoToggle.checked = false;
+      recorderSection.style.display = 'none';
+    }
+  }
+
+  function stopRecorder() {
+    if (mediaRecorder && isRecording) { mediaRecorder.stop(); isRecording = false; }
+    if (recorderStream) { recorderStream.getTracks().forEach(t => t.stop()); recorderStream = null; }
+    clearInterval(countdownInt);
+    timeLeft = 60; updateTimer();
+    btnRecord.classList.remove('recording');
+    recorderHint.textContent = t('recorderHintIdle');
+  }
+
+  function updateTimer() {
+    const m = Math.floor(timeLeft / 60), s = timeLeft % 60;
+    recorderTimer.textContent = `${m}:${String(s).padStart(2, '0')}`;
+    recorderTimer.classList.toggle('warning', timeLeft <= 10);
+  }
+
+  btnRecord.addEventListener('click', () => isRecording ? mediaRecorder.stop() : startRecording());
+
+  function startRecording() {
+    if (!recorderStream) return;
+    const chunks = [];
+    mediaRecorder = new MediaRecorder(recorderStream, { mimeType: getSupportedMime() });
+    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+    mediaRecorder.onstop = () => {
+      isRecording = false;
+      clearInterval(countdownInt);
+      btnRecord.classList.remove('recording');
+      timeLeft = 60; updateTimer();
+      recordedBlob = new Blob(chunks, { type: mediaRecorder.mimeType });
+      recordedVideo.src = URL.createObjectURL(recordedBlob);
+      recordedSection.style.display = 'block';
+      recorderHint.textContent = t('recorderHintDone');
+      updateSubmitState();
+    };
+    mediaRecorder.start();
+    isRecording = true;
+    btnRecord.classList.add('recording');
+    recorderHint.textContent = t('recorderHintActive');
+    countdownInt = setInterval(() => { timeLeft--; updateTimer(); if (timeLeft <= 0) mediaRecorder.stop(); }, 1000);
+  }
+
+  function getSupportedMime() {
+    const types = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4'];
+    return types.find(type => MediaRecorder.isTypeSupported(type)) || '';
+  }
+
+  $('btn-rerecord').addEventListener('click', async () => {
+    recordedBlob = null;
+    recordedSection.style.display = 'none';
+    timeLeft = 60; updateTimer();
+    recorderHint.textContent = t('recorderHintIdle');
+    if (!recorderStream) await startCamera();
+    updateSubmitState();
+  });
+
+  // ── Submit state ──────────────────────────────────────
+  function updateSubmitState() {
+    const hasFile     = !!selectedFile;
+    const needsRecord = videoToggle.checked && !recordedBlob;
+    btnSubmit.disabled = !hasFile || needsRecord;
+
+    if (!hasFile) {
+      btnSubmit.textContent = t('submitNoFile');
+    } else if (needsRecord) {
+      btnSubmit.textContent = t('submitNeedsRecord');
+    } else if (eventData) {
+      const fn = eventCopy().button;
+      btnSubmit.textContent = typeof fn === 'function' ? fn(eventData.couple_names) : fn;
+    }
+  }
+
+  // ── Upload ────────────────────────────────────────────
+  btnSubmit.addEventListener('click', doUpload);
+
+  async function doUpload() {
+    const name = uploaderName.value.trim();
+    if (!name) { showToast(t('toastNeedName'), 'error'); uploaderName.focus(); return; }
+
+    const fd = new FormData();
+    fd.append('file',             selectedFile);
+    fd.append('uploader_name',    name);
+    fd.append('message',          messageField.value.trim());
+    fd.append('is_video_message', videoToggle.checked ? 'true' : 'false');
+    if (videoToggle.checked && recordedBlob) {
+      const ext = recordedBlob.type.includes('mp4') ? '.mp4' : '.webm';
+      fd.append('video_message', recordedBlob, `video-message${ext}`);
+    }
+
+    btnSubmit.disabled         = true;
+    progressWrap.style.display = 'block';
+    setProgress(0);
+
+    try {
+      const res  = await uploadWithProgress(`/api/uploads/${slug}`, fd, setProgress);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || t('toastUploadFail'));
+      showSuccess(name);
+    } catch (err) {
+      showToast(err.message || t('toastUploadFail'), 'error');
+      btnSubmit.disabled         = false;
+      progressWrap.style.display = 'none';
+    }
+  }
+
+  function setProgress(pct) {
+    progressBar.style.width = `${pct}%`;
+    progressPct.textContent = `${Math.round(pct)}%`;
+  }
+
+  function uploadWithProgress(url, formData, onProgress) {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', url);
+      xhr.upload.onprogress = e => { if (e.lengthComputable) onProgress((e.loaded / e.total) * 100); };
+      xhr.onload  = () => resolve({ ok: xhr.status < 400, json: () => JSON.parse(xhr.responseText), status: xhr.status });
+      xhr.onerror = () => reject(new Error(t('toastNetworkError')));
+      xhr.send(formData);
+    });
+  }
+
+  function showSuccess(name) {
+    uploadCard.style.display    = 'none';
+    progressWrap.style.display  = 'none';
+    successScreen.style.display = 'block';
+    const copy = eventCopy();
+    const titleFn = `Thank you, ${name}!`;
+    successTitle.textContent = lang === 'fil' ? `Salamat, ${name}!` : `Thank you, ${name}!`;
+    const subFn = copy.success;
+    successSub.textContent = typeof subFn === 'function' ? subFn(eventData?.couple_names ?? '') : subFn;
+    stopRecorder();
+  }
+
+  btnUploadAnother.addEventListener('click', () => {
+    successScreen.style.display = 'none';
+    uploadCard.style.display    = 'block';
+    selectedFile = recordedBlob = null;
+    fileInput.value = uploaderName.value = messageField.value = '';
+    videoToggle.checked = false;
+    recorderSection.style.display = recordedSection.style.display = 'none';
+    previewArea.style.display     = 'none';
+    dropzone.style.display        = 'block';
+    progressWrap.style.display    = fileWarning.style.display = 'none';
+    previewImg.src = previewVid.src = '';
+    setProgress(0);
+    updateSubmitState();
+  });
+
+  // ── Init ──────────────────────────────────────────────
+  applyTranslations();
+  loadEvent();
+</script>
+</body>
+</html>

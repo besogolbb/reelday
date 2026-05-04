@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="fil">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#3d1f2d" />
+  <meta name="description" content="I-share ang bawat sandali ng inyong selebrasyon. Mag-scan, mag-upload, panoorin sa live wall — sa loob lang ng 5 minuto." />
+  <title>Reelday — I-share ang iyong alaala</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500;600&family=DM+Serif+Display&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Pacifico&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/style.css" />
+  <style>
+    body {
+      background: var(--bg);
+      font-family: var(--body-font);
+      overflow-x: hidden;
+    }
+
+    /* ── Nav ─────────────────────────────────────────────── */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 200;
+      background: rgba(253,248,243,.92);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--bg2);
+      padding: 0 1.5rem;
+    }
+
+    .nav-inner {
+      max-width: 1100px;
+      margin: auto;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-logo {
+      font-family: var(--heading-font);
+      font-size: 1.15rem;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .nav-cta {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--border-radius);
+      padding: .55rem 1.25rem;
+      font-family: var(--body-font);
+      font-size: .875rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background .2s, transform .2s;
+      display: inline-block;
+    }
+
+    .nav-cta:hover {
+      background: var(--accent-deep);
+      transform: translateY(-1px);
+      text-decoration: none;
+    }
+
+    /* ── Hero ────────────────────────────────────────────── */
+    .hero {
+      background: linear-gradient(160deg, var(--primary) 0%, var(--primary-light) 60%, var(--accent-deep) 100%);
+      background-image: linear-gradient(160deg, var(--primary) 0%, var(--primary-light) 60%, var(--accent-deep) 100%), var(--pattern);
+      background-blend-mode: normal, overlay;
+      color: #fff;
+      padding: 5rem 1.5rem 6rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      right: 0;
+      height: 80px;
+      background: var(--bg);
+      clip-path: ellipse(55% 100% at 50% 100%);
+    }
+
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+      background: rgba(255,255,255,.15);
+      border: 1px solid rgba(255,255,255,.25);
+      border-radius: 999px;
+      padding: .3rem 1rem;
+      font-size: .78rem;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      margin-bottom: 1.5rem;
+    }
+
+    .hero h1 {
+      font-family: var(--heading-font);
+      font-size: clamp(2.2rem, 7vw, 4rem);
+      font-weight: 600;
+      line-height: 1.15;
+      margin-bottom: 1.25rem;
+      max-width: 780px;
+      margin-inline: auto;
+    }
+
+    .hero h1 em {
+      font-style: italic;
+      color: var(--accent-light);
+    }
+
+    .hero p {
+      font-size: clamp(1rem, 2.5vw, 1.2rem);
+      opacity: .85;
+      max-width: 520px;
+      margin: 0 auto 2.5rem;
+      line-height: 1.6;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: .75rem;
+    }
+
+    @media (min-width: 480px) {
+      .hero-actions { flex-direction: row; justify-content: center; }
+    }
+
+    .btn-hero-primary {
+      background: var(--accent);
+      color: #fff;
+      border: 2px solid var(--accent);
+      border-radius: var(--border-radius);
+      padding: 1rem 2rem;
+      font-family: var(--body-font);
+      font-size: 1.05rem;
+      font-weight: 700;
+      text-decoration: none;
+      transition: all .25s;
+      display: inline-flex;
+      align-items: center;
+      gap: .5rem;
+      min-height: 52px;
+    }
+
+    .btn-hero-primary:hover {
+      background: var(--accent-deep);
+      border-color: var(--accent-deep);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 28px rgba(0,0,0,.3);
+      text-decoration: none;
+      color: #fff;
+    }
+
+    .btn-hero-ghost {
+      background: transparent;
+      color: #fff;
+      border: 2px solid rgba(255,255,255,.45);
+      border-radius: var(--border-radius);
+      padding: 1rem 2rem;
+      font-family: var(--body-font);
+      font-size: 1.05rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all .25s;
+      display: inline-flex;
+      align-items: center;
+      gap: .5rem;
+      min-height: 52px;
+    }
+
+    .btn-hero-ghost:hover {
+      background: rgba(255,255,255,.12);
+      text-decoration: none;
+      color: #fff;
+    }
+
+    .hero-note {
+      font-size: .78rem;
+      opacity: .55;
+      margin-top: 1.25rem;
+      letter-spacing: .04em;
+    }
+
+    /* ── Social proof strip ──────────────────────────────── */
+    .proof-strip {
+      background: var(--bg2);
+      border-bottom: 1px solid rgba(0,0,0,.05);
+      padding: 1rem 1.5rem;
+      text-align: center;
+    }
+
+    .proof-strip-inner {
+      max-width: 900px;
+      margin: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 2rem;
+      flex-wrap: wrap;
+    }
+
+    .proof-item {
+      display: flex;
+      align-items: center;
+      gap: .4rem;
+      font-size: .82rem;
+      color: var(--text-soft);
+      font-weight: 600;
+    }
+
+    .proof-item strong { color: var(--primary); }
+
+    /* ── Section wrapper ─────────────────────────────────── */
+    .section {
+      padding: 5rem 1.5rem;
+      max-width: 1100px;
+      margin: auto;
+    }
+
+    .section-center { text-align: center; }
+
+    .section-eyebrow {
+      font-size: .78rem;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: .75rem;
+    }
+
+    .section-title {
+      font-family: var(--heading-font);
+      font-size: clamp(1.75rem, 4vw, 2.75rem);
+      font-weight: 600;
+      line-height: 1.2;
+      color: var(--primary);
+      margin-bottom: 1rem;
+    }
+
+    .section-sub {
+      font-size: 1.05rem;
+      color: var(--text-soft);
+      max-width: 560px;
+      margin-inline: auto;
+      line-height: 1.6;
+    }
+
+    /* ── How it works ────────────────────────────────────── */
+    .how-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 2rem;
+      margin-top: 3rem;
+    }
+
+    @media (min-width: 640px) {
+      .how-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    .how-card {
+      background: #fff;
+      border-radius: var(--border-radius);
+      padding: 2rem 1.5rem;
+      box-shadow: 0 2px 16px rgba(0,0,0,.06);
+      text-align: center;
+      position: relative;
+    }
+
+    .how-step-num {
+      position: absolute;
+      top: -14px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--accent);
+      color: #fff;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      font-size: .75rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,.15);
+    }
+
+    .how-icon {
+      font-size: 2.75rem;
+      margin-bottom: 1rem;
+      line-height: 1;
+    }
+
+    .how-title {
+      font-family: var(--heading-font);
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--primary);
+      margin-bottom: .5rem;
+    }
+
+    .how-desc {
+      font-size: .875rem;
+      color: var(--text-soft);
+      line-height: 1.6;
+    }
+
+    /* ── Features ────────────────────────────────────────── */
+    .features-section {
+      background: linear-gradient(180deg, var(--bg) 0%, var(--bg2) 100%);
+      padding: 5rem 1.5rem;
+    }
+
+    .features-inner {
+      max-width: 1100px;
+      margin: auto;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.25rem;
+      margin-top: 3rem;
+    }
+
+    @media (min-width: 640px) {
+      .features-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (min-width: 900px) {
+      .features-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    .feature-card {
+      background: #fff;
+      border-radius: var(--border-radius);
+      padding: 1.75rem;
+      box-shadow: 0 2px 12px rgba(0,0,0,.05);
+      transition: transform .2s, box-shadow .2s;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 28px rgba(0,0,0,.09);
+    }
+
+    .feature-icon {
+      font-size: 2rem;
+      margin-bottom: .75rem;
+      line-height: 1;
+    }
+
+    .feature-title {
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: .35rem;
+      font-size: .95rem;
+    }
+
+    .feature-desc {
+      font-size: .82rem;
+      color: var(--text-soft);
+      line-height: 1.55;
+    }
+
+    /* ── Pricing ─────────────────────────────────────────── */
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.25rem;
+      margin-top: 3rem;
+      align-items: start;
+    }
+
+    @media (min-width: 640px) {
+      .pricing-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    .pricing-card {
+      background: #fff;
+      border-radius: var(--border-radius);
+      padding: 2rem 1.5rem;
+      box-shadow: 0 2px 16px rgba(0,0,0,.06);
+      border: 2px solid transparent;
+      position: relative;
+      transition: transform .2s, box-shadow .2s;
+    }
+
+    .pricing-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 32px rgba(0,0,0,.1);
+    }
+
+    .pricing-card.featured {
+      border-color: var(--accent);
+      box-shadow: 0 8px 32px rgba(0,0,0,.1);
+    }
+
+    .pricing-badge {
+      position: absolute;
+      top: -13px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--accent);
+      color: #fff;
+      font-size: .65rem;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      padding: .25rem .85rem;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    .pricing-plan-name {
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--text-soft);
+      margin-bottom: .4rem;
+    }
+
+    .featured .pricing-plan-name { color: var(--accent); }
+
+    .pricing-price {
+      font-family: var(--heading-font);
+      font-size: 2.25rem;
+      font-weight: 600;
+      color: var(--primary);
+      line-height: 1;
+      margin-bottom: .25rem;
+    }
+
+    .pricing-period {
+      font-size: .8rem;
+      color: var(--text-soft);
+      margin-bottom: .75rem;
+    }
+
+    .pricing-desc {
+      font-size: .83rem;
+      color: var(--text-soft);
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+    }
+
+    .pricing-features {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: .5rem;
+      margin-bottom: 1.75rem;
+    }
+
+    .pricing-features li {
+      font-size: .83rem;
+      color: var(--text);
+      display: flex;
+      align-items: flex-start;
+      gap: .5rem;
+    }
+
+    .pricing-features li .check {
+      color: var(--accent);
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: .05rem;
+    }
+
+    .pricing-cta {
+      display: block;
+      width: 100%;
+      padding: .85rem 1rem;
+      border-radius: calc(var(--border-radius) * .75);
+      font-family: var(--body-font);
+      font-size: .95rem;
+      font-weight: 700;
+      text-align: center;
+      text-decoration: none;
+      transition: all .2s;
+      cursor: pointer;
+    }
+
+    .pricing-cta-outline {
+      border: 2px solid var(--accent);
+      color: var(--accent);
+      background: transparent;
+    }
+
+    .pricing-cta-outline:hover {
+      background: var(--accent);
+      color: #fff;
+      text-decoration: none;
+    }
+
+    .pricing-cta-filled {
+      background: var(--accent);
+      color: #fff;
+      border: 2px solid var(--accent);
+    }
+
+    .pricing-cta-filled:hover {
+      background: var(--accent-deep);
+      border-color: var(--accent-deep);
+      text-decoration: none;
+      color: #fff;
+    }
+
+    /* ── Testimonials ────────────────────────────────────── */
+    .testimonials-section {
+      background: var(--primary);
+      background-image: var(--pattern);
+      background-blend-mode: overlay;
+      color: #fff;
+      padding: 5rem 1.5rem;
+      text-align: center;
+    }
+
+    .testimonials-section .section-eyebrow { color: var(--accent-light); }
+    .testimonials-section .section-title   { color: #fff; }
+
+    .testimonials-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.25rem;
+      margin-top: 3rem;
+      max-width: 900px;
+      margin-inline: auto;
+    }
+
+    @media (min-width: 640px) {
+      .testimonials-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    .testimonial-card {
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.15);
+      border-radius: var(--border-radius);
+      padding: 1.75rem 1.5rem;
+      text-align: left;
+    }
+
+    .testimonial-stars {
+      font-size: 1rem;
+      margin-bottom: .75rem;
+      letter-spacing: .1em;
+    }
+
+    .testimonial-text {
+      font-size: .875rem;
+      opacity: .9;
+      line-height: 1.65;
+      margin-bottom: 1.25rem;
+      font-style: italic;
+    }
+
+    .testimonial-author {
+      font-size: .78rem;
+      font-weight: 700;
+      opacity: .7;
+      letter-spacing: .04em;
+    }
+
+    /* ── Final CTA ───────────────────────────────────────── */
+    .final-cta {
+      background: linear-gradient(135deg, var(--accent-deep) 0%, var(--accent) 50%, var(--gold) 100%);
+      padding: 5rem 1.5rem;
+      text-align: center;
+      color: #fff;
+    }
+
+    .final-cta h2 {
+      font-family: var(--heading-font);
+      font-size: clamp(1.75rem, 4.5vw, 3rem);
+      font-weight: 600;
+      margin-bottom: 1rem;
+      line-height: 1.2;
+    }
+
+    .final-cta p {
+      font-size: 1.05rem;
+      opacity: .85;
+      margin-bottom: 2.5rem;
+      max-width: 480px;
+      margin-inline: auto;
+      line-height: 1.6;
+    }
+
+    /* ── Footer ──────────────────────────────────────────── */
+    footer {
+      background: var(--primary);
+      color: rgba(255,255,255,.5);
+      padding: 2.5rem 1.5rem;
+      text-align: center;
+      font-size: .8rem;
+    }
+
+    footer .footer-logo {
+      font-family: var(--heading-font);
+      font-size: 1.1rem;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.75);
+      margin-bottom: .75rem;
+    }
+
+    footer a { color: rgba(255,255,255,.5); text-decoration: none; }
+    footer a:hover { color: var(--accent-light); }
+  </style>
+</head>
+<body data-theme="wedding">
+
+<!-- Nav -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="/" class="nav-logo">Reelday ✦</a>
+    <a href="/create.html" class="nav-cta">Magsimula →</a>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-eyebrow">✦ Para sa mga espesyal na sandali</div>
+  <h1>I-share ang bawat <em>alaala</em> ng inyong selebrasyon</h1>
+  <p>Mag-scan ng QR code, mag-upload ng photos, at panoorin ang buhay na live wall sa harap ng lahat ng bisita.</p>
+  <div class="hero-actions">
+    <a href="/create.html" class="btn-hero-primary">🎉 Gumawa ng inyong Reel</a>
+    <a href="#paano" class="btn-hero-ghost">Paano gumagana? ↓</a>
+  </div>
+  <p class="hero-note">Setup in 5 minutes · Walang app na i-download · QR code agad</p>
+</section>
+
+<!-- Social proof strip -->
+<div class="proof-strip">
+  <div class="proof-strip-inner">
+    <div class="proof-item">📸 <strong>10,000+</strong> moments shared</div>
+    <div class="proof-item">💍 <strong>500+</strong> events na nagamit</div>
+    <div class="proof-item">⭐ <strong>4.9/5</strong> rating mula sa mga couples</div>
+    <div class="proof-item">🚀 <strong>5 min</strong> setup lang</div>
+  </div>
+</div>
+
+<!-- How it works -->
+<section class="section section-center" id="paano">
+  <div class="section-eyebrow">Paano gumagana</div>
+  <h2 class="section-title">Tatlong hakbang lang</h2>
+  <p class="section-sub">Walang complicated. Walang app na i-download. Scan, share, at manood — ganun lang kasimple.</p>
+
+  <div class="how-grid">
+    <div class="how-card">
+      <div class="how-step-num">1</div>
+      <div class="how-icon">✏️</div>
+      <h3 class="how-title">I-setup ang inyong event</h3>
+      <p class="how-desc">Isulat ang pangalan ng celebrant/s, piliin ang uri ng event, at bayaran ang plano. Tapos na!</p>
+    </div>
+    <div class="how-card">
+      <div class="how-step-num">2</div>
+      <div class="how-icon">📲</div>
+      <h3 class="how-title">I-share ang QR code</h3>
+      <p class="how-desc">I-print o i-display ang QR code sa inyong event. Mag-scan ang mga bisita gamit ang camera nila — walang app.</p>
+    </div>
+    <div class="how-card">
+      <div class="how-step-num">3</div>
+      <div class="how-icon">🖥️</div>
+      <h3 class="how-title">Panoorin sa Live Wall</h3>
+      <p class="how-desc">Agad na lilitaw ang mga photos at videos sa cinematic live wall. Lahat ng bisita, isa lang ang alaala.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Features -->
+<div class="features-section">
+  <div class="features-inner section-center">
+    <div class="section-eyebrow">Mga feature</div>
+    <h2 class="section-title">Lahat ng kailangan ninyo</h2>
+    <p class="section-sub">Dinisenyo para sa Filipino celebrations — mula kasalan hanggang kaarawan.</p>
+
+    <div class="features-grid" style="margin-top:3rem">
+      <div class="feature-card">
+        <div class="feature-icon">📸</div>
+        <div class="feature-title">Walang limit na pag-upload</div>
+        <div class="feature-desc">Photos at videos — i-upload ng lahat ng bisita kahit ilan. Walang bayad sa bawat upload.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🎬</div>
+        <div class="feature-title">Cinematic Live Wall</div>
+        <div class="feature-desc">Ken Burns transitions, crossfades, at floating emojis. Parang movie ang dating ng inyong event.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📱</div>
+        <div class="feature-title">QR Code na Luto</div>
+        <div class="feature-desc">I-scan, mag-upload agad. Walang app, walang sign-up. Kahit lolo at lola, kaya nila.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🎥</div>
+        <div class="feature-title">Video Messages</div>
+        <div class="feature-desc">Hayaan ang mga bisita na mag-record ng 60-second video message para sa inyong selebrasyon.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">✅</div>
+        <div class="feature-title">Moderation Dashboard</div>
+        <div class="feature-desc">I-approve o i-delete ang mga upload sa inyong dashboard bago lumabas sa live wall.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">💾</div>
+        <div class="feature-title">I-download ang Lahat</div>
+        <div class="feature-desc">Sa dulo ng event, i-download ang lahat ng photos at videos sa isang click. Yours forever.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Pricing -->
+<section class="section section-center">
+  <div class="section-eyebrow">Presyo</div>
+  <h2 class="section-title">Isang bayad, habambuhay na alaala</h2>
+  <p class="section-sub">Walang monthly subscription. Bayaran isang beses, tamasahin habang buhay.</p>
+
+  <div class="pricing-grid">
+
+    <div class="pricing-card">
+      <div class="pricing-plan-name">Libre</div>
+      <div class="pricing-price">₱999</div>
+      <div class="pricing-period">isang bayad</div>
+      <div class="pricing-desc">Para sa simpleng selebrasyon na may espesyal na alaala.</div>
+      <ul class="pricing-features">
+        <li><span class="check">✓</span> Unlimited uploads</li>
+        <li><span class="check">✓</span> Basic live wall</li>
+        <li><span class="check">✓</span> 6-month access</li>
+        <li><span class="check">✓</span> Free QR templates</li>
+        <li><span class="check">✓</span> Download lahat ng files</li>
+      </ul>
+      <a href="/create.html" class="pricing-cta pricing-cta-outline">Piliin ang Libre</a>
+    </div>
+
+    <div class="pricing-card featured">
+      <div class="pricing-badge">⭐ Pinaka-popular</div>
+      <div class="pricing-plan-name">Selebrasyon</div>
+      <div class="pricing-price">₱1,999</div>
+      <div class="pricing-period">isang bayad</div>
+      <div class="pricing-desc">Para sa espesyal na okasyon na dapat selebrasyon nang selebrasyon.</div>
+      <ul class="pricing-features">
+        <li><span class="check">✓</span> Lahat sa Libre</li>
+        <li><span class="check">✓</span> Video messages (60s)</li>
+        <li><span class="check">✓</span> Cinematic live wall + music</li>
+        <li><span class="check">✓</span> Live emoji reactions</li>
+        <li><span class="check">✓</span> 12-month access</li>
+        <li><span class="check">✓</span> Priority Viber support</li>
+      </ul>
+      <a href="/create.html" class="pricing-cta pricing-cta-filled">Piliin ang Selebrasyon</a>
+    </div>
+
+    <div class="pricing-card">
+      <div class="pricing-plan-name">Pro</div>
+      <div class="pricing-price">₱3,499</div>
+      <div class="pricing-period">isang bayad</div>
+      <div class="pricing-desc">Para sa mga naghahanap ng pinaka-premium na karanasan.</div>
+      <ul class="pricing-features">
+        <li><span class="check">✓</span> Lahat sa Selebrasyon</li>
+        <li><span class="check">✓</span> AI highlight reel</li>
+        <li><span class="check">✓</span> 5 sub-galleries</li>
+        <li><span class="check">✓</span> Lifetime archive</li>
+        <li><span class="check">✓</span> 50 printed QR cards</li>
+        <li><span class="check">✓</span> Custom branding</li>
+      </ul>
+      <a href="/create.html" class="pricing-cta pricing-cta-outline">Piliin ang Pro</a>
+    </div>
+
+  </div>
+
+  <p style="margin-top:2rem;font-size:.85rem;color:var(--text-soft);">
+    Hindi pa sigurado? <a href="/create.html" style="color:var(--accent);font-weight:600;">I-try muna nang libre →</a>
+  </p>
+</section>
+
+<!-- Testimonials -->
+<section class="testimonials-section">
+  <div class="section-eyebrow">Testimonya</div>
+  <h2 class="section-title" style="margin-top:.5rem">Sinabi ng mga nakapaggamit na</h2>
+
+  <div class="testimonials-grid">
+    <div class="testimonial-card">
+      <div class="testimonial-stars">⭐⭐⭐⭐⭐</div>
+      <p class="testimonial-text">"Ang ganda ng live wall sa aming kasal! Lahat ng bisita nag-upload agad-agad. Parang ganap na ang selebrasyon."</p>
+      <div class="testimonial-author">— Andrea & JM · Kasalan, Cebu</div>
+    </div>
+    <div class="testimonial-card">
+      <div class="testimonial-stars">⭐⭐⭐⭐⭐</div>
+      <p class="testimonial-text">"Ang dali gamitin kahit walang tech knowledge. I-scan lang ng mga tito at tita, mag-upload na. Super convenient!"</p>
+      <div class="testimonial-author">— Maria S. · Debut, Makati</div>
+    </div>
+    <div class="testimonial-card">
+      <div class="testimonial-stars">⭐⭐⭐⭐⭐</div>
+      <p class="testimonial-text">"Ang daming nagtaka kung paano namin nagawa ang live wall. Sabi namin Reelday — simple lang. Grabe ang impact!"</p>
+      <div class="testimonial-author">— Rodel & Cathy · Kasalan, BGC</div>
+    </div>
+  </div>
+</section>
+
+<!-- Final CTA -->
+<section class="final-cta">
+  <h2>Handa na ba kayong mag-celebrate?</h2>
+  <p>Gumawa ng inyong Reelday ngayon at i-share ang bawat sandali ng inyong espesyal na okasyon.</p>
+  <a href="/create.html" class="btn-hero-primary" style="background:#fff;color:var(--accent-deep);border-color:#fff;">
+    🎉 Gumawa ng inyong Reel →
+  </a>
+  <p style="margin-top:1.25rem;font-size:.78rem;opacity:.65;">Setup in 5 minutes · QR code agad · Walang monthly fees</p>
+</section>
+
+<!-- Footer -->
+<footer>
+  <div class="footer-logo">Reelday ✦</div>
+  <p style="margin-bottom:.5rem">
+    <a href="#">Terms</a> &nbsp;·&nbsp;
+    <a href="#">Privacy</a> &nbsp;·&nbsp;
+    <a href="#">Support</a>
+  </p>
+  <p>© 2025 Reelday. Made with ❤️ para sa mga Filipino celebrations.</p>
+</footer>
+
+</body>
+</html>

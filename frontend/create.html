@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="fil">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#3d1f2d" />
+  <title>Reelday — Gumawa ng iyong reel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500;600&family=DM+Serif+Display&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Pacifico&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/style.css" />
+  <style>
+    body {
+      background: var(--bg);
+      font-family: var(--body-font);
+      min-height: 100dvh;
+    }
+
+    /* ── Page header ─────────────────────────────────────── */
+    .create-header {
+      background: linear-gradient(160deg, var(--primary) 0%, var(--primary-light) 100%);
+      background-image: linear-gradient(160deg, var(--primary) 0%, var(--primary-light) 100%), var(--pattern);
+      background-blend-mode: normal, overlay;
+      color: #fff;
+      padding: 1.5rem 0 3rem;
+      text-align: center;
+    }
+
+    .create-header .logo-link {
+      display: inline-block;
+      font-family: var(--heading-font);
+      font-size: 1rem;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.65);
+      text-decoration: none;
+      margin-bottom: 2rem;
+    }
+
+    .create-header h1 {
+      font-family: var(--heading-font);
+      font-size: clamp(1.8rem, 5vw, 2.8rem);
+      font-weight: 600;
+      margin-bottom: .6rem;
+      line-height: 1.2;
+    }
+
+    .create-header p {
+      font-size: clamp(.9rem, 2.5vw, 1.1rem);
+      opacity: .8;
+      letter-spacing: .02em;
+    }
+
+    /* ── Steps indicator ─────────────────────────────────── */
+    .steps-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      padding: 2rem 1rem 0;
+      max-width: 420px;
+      margin: 0 auto;
+    }
+
+    .step-dot {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: .35rem;
+      flex: 1;
+      position: relative;
+    }
+
+    .step-dot::before {
+      content: '';
+      position: absolute;
+      top: 16px;
+      left: calc(50% + 16px);
+      right: calc(-50% + 16px);
+      height: 2px;
+      background: var(--bg2);
+    }
+
+    .step-dot:last-child::before { display: none; }
+
+    .step-num {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 2px solid var(--bg2);
+      background: var(--bg);
+      color: var(--text-soft);
+      font-size: .8rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      z-index: 1;
+      transition: all .3s;
+    }
+
+    .step-dot.active .step-num {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      box-shadow: 0 0 0 4px var(--accent-light);
+    }
+
+    .step-dot.done .step-num {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+
+    .step-dot.done::before { background: var(--primary-light); }
+
+    .step-label {
+      font-size: .65rem;
+      font-weight: 600;
+      color: var(--text-soft);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      white-space: nowrap;
+    }
+
+    .step-dot.active .step-label { color: var(--accent); }
+    .step-dot.done  .step-label  { color: var(--primary); }
+
+    /* ── Main form card ──────────────────────────────────── */
+    .create-body {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 2rem 1rem 4rem;
+    }
+
+    .form-section {
+      background: #fff;
+      border-radius: var(--border-radius);
+      padding: 1.75rem;
+      box-shadow: 0 2px 20px rgba(0,0,0,.07);
+      margin-bottom: 1.5rem;
+    }
+
+    .form-section-title {
+      font-family: var(--heading-font);
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: .25rem;
+      color: var(--primary);
+    }
+
+    .form-section-sub {
+      font-size: .85rem;
+      color: var(--text-soft);
+      margin-bottom: 1.5rem;
+    }
+
+    /* ── Form fields ─────────────────────────────────────── */
+    .field {
+      margin-bottom: 1.25rem;
+    }
+
+    .field label {
+      display: block;
+      font-size: .875rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: .45rem;
+    }
+
+    .field input[type="text"],
+    .field input[type="date"] {
+      width: 100%;
+      padding: .8rem 1rem;
+      border: 1.5px solid var(--bg2);
+      border-radius: calc(var(--border-radius) * .65);
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--body-font);
+      font-size: 1rem;
+      transition: border-color .2s, box-shadow .2s;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    .field input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-light);
+      background: #fff;
+    }
+
+    .field input::placeholder { color: var(--text-soft); opacity: .7; }
+
+    /* ── Event type selector ─────────────────────────────── */
+    .event-type-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: .6rem;
+    }
+
+    @media (min-width: 480px) {
+      .event-type-grid { grid-template-columns: repeat(4, 1fr); }
+    }
+
+    .event-type-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: .35rem;
+      padding: .75rem .5rem;
+      border: 1.5px solid var(--bg2);
+      border-radius: calc(var(--border-radius) * .65);
+      background: var(--bg);
+      cursor: pointer;
+      transition: all .2s;
+      font-family: var(--body-font);
+    }
+
+    .event-type-btn:hover {
+      border-color: var(--accent-light);
+      background: #fff;
+    }
+
+    .event-type-btn.selected {
+      border-color: var(--accent);
+      background: #fff;
+      box-shadow: 0 0 0 3px var(--accent-light);
+    }
+
+    .event-type-btn .et-emoji {
+      font-size: 1.5rem;
+      line-height: 1;
+    }
+
+    .event-type-btn .et-label {
+      font-size: .72rem;
+      font-weight: 600;
+      color: var(--text);
+      text-align: center;
+      line-height: 1.2;
+    }
+
+    .event-type-btn.selected .et-label { color: var(--accent); }
+
+    /* ── Plan cards ──────────────────────────────────────── */
+    .plans-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+
+    @media (min-width: 560px) {
+      .plans-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    .plan-card {
+      position: relative;
+      border: 2px solid var(--bg2);
+      border-radius: var(--border-radius);
+      padding: 1.5rem 1.25rem;
+      background: var(--bg);
+      cursor: pointer;
+      transition: all .25s;
+    }
+
+    .plan-card:hover {
+      border-color: var(--accent-light);
+      background: #fff;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 24px rgba(0,0,0,.08);
+    }
+
+    .plan-card.selected {
+      border-color: var(--accent);
+      background: #fff;
+      box-shadow: 0 0 0 3px var(--accent-light), 0 8px 32px rgba(0,0,0,.1);
+      transform: translateY(-2px);
+    }
+
+    .plan-popular-badge {
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--accent);
+      color: #fff;
+      font-size: .65rem;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      padding: .25rem .75rem;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    .plan-name {
+      font-size: .75rem;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--text-soft);
+      margin-bottom: .4rem;
+    }
+
+    .plan-card.selected .plan-name { color: var(--accent); }
+
+    .plan-price {
+      font-family: var(--heading-font);
+      font-size: 1.75rem;
+      font-weight: 600;
+      color: var(--primary);
+      margin-bottom: .25rem;
+      line-height: 1;
+    }
+
+    .plan-price span {
+      font-size: .9rem;
+      font-weight: 400;
+      font-family: var(--body-font);
+      color: var(--text-soft);
+    }
+
+    .plan-tagline {
+      font-size: .8rem;
+      color: var(--text-soft);
+      margin-bottom: 1rem;
+    }
+
+    .plan-features {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: .4rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .plan-features li {
+      font-size: .8rem;
+      color: var(--text);
+      display: flex;
+      gap: .5rem;
+      align-items: flex-start;
+    }
+
+    .plan-features li::before {
+      content: '✓';
+      color: var(--accent);
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: .05rem;
+    }
+
+    .plan-select-btn {
+      width: 100%;
+      padding: .65rem 1rem;
+      border: 2px solid var(--accent);
+      border-radius: calc(var(--border-radius) * .65);
+      background: transparent;
+      color: var(--accent);
+      font-family: var(--body-font);
+      font-size: .875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .2s;
+    }
+
+    .plan-select-btn:hover,
+    .plan-card.selected .plan-select-btn {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    /* ── Payment summary ─────────────────────────────────── */
+    .pay-summary {
+      background: var(--bg2);
+      border-radius: calc(var(--border-radius) * .65);
+      padding: 1.1rem 1.25rem;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .pay-summary-label {
+      font-size: .875rem;
+      color: var(--text-soft);
+      margin-bottom: .15rem;
+    }
+
+    .pay-summary-plan {
+      font-weight: 700;
+      color: var(--primary);
+      font-size: 1rem;
+    }
+
+    .pay-summary-price {
+      font-family: var(--heading-font);
+      font-size: 1.6rem;
+      font-weight: 600;
+      color: var(--accent);
+      white-space: nowrap;
+    }
+
+    .pay-methods {
+      display: flex;
+      gap: .5rem;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 1.25rem;
+    }
+
+    .pay-method-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: .3rem;
+      background: #fff;
+      border: 1.5px solid var(--bg2);
+      border-radius: 8px;
+      padding: .35rem .7rem;
+      font-size: .78rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .pay-methods-label {
+      font-size: .8rem;
+      color: var(--text-soft);
+      margin-bottom: .5rem;
+    }
+
+    /* ── Submit / CTA ────────────────────────────────────── */
+    .submit-section {
+      display: flex;
+      flex-direction: column;
+      gap: .75rem;
+    }
+
+    .btn-pay {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--border-radius);
+      padding: 1.1rem 2rem;
+      font-family: var(--body-font);
+      font-size: 1.05rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all .25s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: .5rem;
+      min-height: 56px;
+      width: 100%;
+      letter-spacing: .02em;
+    }
+
+    .btn-pay:hover {
+      background: var(--accent-deep);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 28px rgba(0,0,0,.15);
+    }
+
+    .btn-pay:active  { transform: translateY(0); }
+    .btn-pay:disabled { opacity: .55; cursor: not-allowed; transform: none; }
+
+    .btn-pay .btn-spinner {
+      width: 20px;
+      height: 20px;
+      border: 2.5px solid rgba(255,255,255,.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+      display: none;
+    }
+
+    .btn-pay.loading .btn-spinner { display: block; }
+    .btn-pay.loading .btn-text    { display: none; }
+
+    /* ── Free trial link ─────────────────────────────────── */
+    .trial-divider {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      font-size: .78rem;
+      color: var(--text-soft);
+    }
+
+    .trial-divider::before,
+    .trial-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--bg2);
+    }
+
+    .btn-trial {
+      background: transparent;
+      border: 1.5px dashed var(--accent-light);
+      border-radius: var(--border-radius);
+      padding: .85rem 1.5rem;
+      font-family: var(--body-font);
+      font-size: .9rem;
+      font-weight: 600;
+      color: var(--text-soft);
+      cursor: pointer;
+      transition: all .2s;
+      text-align: center;
+      width: 100%;
+    }
+
+    .btn-trial:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(0,0,0,.02);
+    }
+
+    .btn-trial strong { color: var(--accent); }
+
+    /* ── Error state ─────────────────────────────────────── */
+    .field-error {
+      font-size: .78rem;
+      color: #b91c1c;
+      margin-top: .35rem;
+      display: none;
+    }
+
+    .field.has-error input { border-color: #b91c1c; }
+    .field.has-error .field-error { display: block; }
+
+    /* ── Toast ───────────────────────────────────────────── */
+    .toast {
+      position: fixed;
+      bottom: 1.5rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--primary);
+      color: #fff;
+      padding: .8rem 1.5rem;
+      border-radius: 24px;
+      font-size: .9rem;
+      font-weight: 500;
+      box-shadow: 0 4px 20px rgba(0,0,0,.2);
+      transition: transform .3s ease;
+      white-space: nowrap;
+      z-index: 9999;
+      pointer-events: none;
+      max-width: 90vw;
+      text-align: center;
+    }
+
+    .toast.show  { transform: translateX(-50%) translateY(0); }
+    .toast.error { background: #b91c1c; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body data-theme="wedding">
+
+<!-- Page header -->
+<header class="create-header">
+  <div style="padding: 0 1.5rem;">
+    <a href="/" class="logo-link">Reelday ✦</a>
+    <h1>Gumawa ng iyong reel</h1>
+    <p>Setup in 5 minutes. Get your QR code instantly.</p>
+  </div>
+</header>
+
+<!-- Steps indicator -->
+<div class="steps-bar" id="steps-bar">
+  <div class="step-dot active" data-step="1">
+    <div class="step-num">1</div>
+    <div class="step-label">Event</div>
+  </div>
+  <div class="step-dot" data-step="2">
+    <div class="step-num">2</div>
+    <div class="step-label">Plano</div>
+  </div>
+  <div class="step-dot" data-step="3">
+    <div class="step-num">3</div>
+    <div class="step-label">Bayad</div>
+  </div>
+</div>
+
+<!-- Main content -->
+<main class="create-body">
+
+  <!-- ── STEP 1: Event Details ───────────────────────────── -->
+  <div class="form-section" id="section-event">
+    <div class="form-section-title">Detalye ng Event</div>
+    <div class="form-section-sub">Isulat ang mga impormasyon tungkol sa inyong selebrasyon.</div>
+
+    <div class="field" id="field-names">
+      <label for="couple-names">Pangalan ng celebrant/s</label>
+      <input
+        type="text"
+        id="couple-names"
+        placeholder="hal. Andrea &amp; JM, Maria Santos"
+        autocomplete="off"
+        maxlength="200"
+      />
+      <div class="field-error">Pakisulat ang pangalan ng celebrant.</div>
+    </div>
+
+    <div class="field" id="field-date">
+      <label for="event-date">Petsa ng event</label>
+      <input type="date" id="event-date" />
+      <div class="field-error">Pakipili ang petsa ng event.</div>
+    </div>
+
+    <div class="field">
+      <label>Uri ng event</label>
+      <div class="event-type-grid" id="event-type-grid">
+        <button type="button" class="event-type-btn selected" data-type="wedding">
+          <span class="et-emoji">💍</span>
+          <span class="et-label">Kasalan</span>
+        </button>
+        <button type="button" class="event-type-btn" data-type="debut">
+          <span class="et-emoji">👑</span>
+          <span class="et-label">Debut</span>
+        </button>
+        <button type="button" class="event-type-btn" data-type="birthday">
+          <span class="et-emoji">🎂</span>
+          <span class="et-label">Kaarawan</span>
+        </button>
+        <button type="button" class="event-type-btn" data-type="seventh_birthday">
+          <span class="et-emoji">🌟</span>
+          <span class="et-label">7th Birthday</span>
+        </button>
+        <button type="button" class="event-type-btn" data-type="baptism">
+          <span class="et-emoji">🕊️</span>
+          <span class="et-label">Binyag</span>
+        </button>
+        <button type="button" class="event-type-btn" data-type="reunion">
+          <span class="et-emoji">🎉</span>
+          <span class="et-label">Reunion</span>
+        </button>
+        <button type="button" class="event-type-btn" data-type="corporate">
+          <span class="et-emoji">🏢</span>
+          <span class="et-label">Corporate</span>
+        </button>
+        <button type="button" class="event-type-btn" data-type="memorial">
+          <span class="et-emoji">🕯️</span>
+          <span class="et-label">Memorial</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── STEP 2: Plan Selection ──────────────────────────── -->
+  <div class="form-section" id="section-plans">
+    <div class="form-section-title">Piliin ang inyong Plano</div>
+    <div class="form-section-sub">Lahat ng plano ay may kasamang unlimited QR sharing sa inyong event.</div>
+
+    <div class="plans-grid">
+
+      <!-- Libre -->
+      <div class="plan-card" data-plan="libre" data-price="99900">
+        <div class="plan-name">Libre</div>
+        <div class="plan-price">₱999 <span>isang beses</span></div>
+        <div class="plan-tagline">Para sa simpleng selebrasyon</div>
+        <ul class="plan-features">
+          <li>Unlimited uploads</li>
+          <li>Basic live wall</li>
+          <li>6-month access</li>
+          <li>Free QR templates</li>
+        </ul>
+        <button class="plan-select-btn" type="button">Piliin ang Libre</button>
+      </div>
+
+      <!-- Selebrasyon -->
+      <div class="plan-card selected" data-plan="selebrasyon" data-price="199900">
+        <div class="plan-popular-badge">⭐ Pinaka-popular</div>
+        <div class="plan-name">Selebrasyon</div>
+        <div class="plan-price">₱1,999 <span>isang beses</span></div>
+        <div class="plan-tagline">Para sa espesyal na okasyon</div>
+        <ul class="plan-features">
+          <li>Lahat sa Libre plan</li>
+          <li>Video messages (60s)</li>
+          <li>Cinematic live wall + music</li>
+          <li>Live emoji reactions</li>
+          <li>12-month access</li>
+          <li>Priority Viber support</li>
+        </ul>
+        <button class="plan-select-btn" type="button">Piliin ang Selebrasyon</button>
+      </div>
+
+      <!-- Pro -->
+      <div class="plan-card" data-plan="pro" data-price="349900">
+        <div class="plan-name">Pro</div>
+        <div class="plan-price">₱3,499 <span>isang beses</span></div>
+        <div class="plan-tagline">Para sa premium na karanasan</div>
+        <ul class="plan-features">
+          <li>Lahat sa Selebrasyon plan</li>
+          <li>AI highlight reel</li>
+          <li>5 sub-galleries</li>
+          <li>Lifetime archive</li>
+          <li>50 printed QR cards</li>
+          <li>Custom branding</li>
+        </ul>
+        <button class="plan-select-btn" type="button">Piliin ang Pro</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── STEP 3: Payment ─────────────────────────────────── -->
+  <div class="form-section" id="section-payment">
+    <div class="form-section-title">Pagbabayad</div>
+    <div class="form-section-sub">Secure na pagbabayad. Matatanggap mo ang iyong QR code agad pagkatapos.</div>
+
+    <!-- Selected plan summary -->
+    <div class="pay-summary" id="pay-summary">
+      <div>
+        <div class="pay-summary-label">Napiling plano</div>
+        <div class="pay-summary-plan" id="summary-plan-name">Selebrasyon</div>
+      </div>
+      <div class="pay-summary-price" id="summary-plan-price">₱1,999</div>
+    </div>
+
+    <!-- Payment methods -->
+    <div class="pay-methods-label">Bayaran via</div>
+    <div class="pay-methods">
+      <div class="pay-method-chip">💙 GCash</div>
+      <div class="pay-method-chip">💜 Maya</div>
+      <div class="pay-method-chip">💳 Card</div>
+    </div>
+
+    <!-- CTA -->
+    <div class="submit-section">
+      <button class="btn-pay" id="btn-pay" type="button">
+        <div class="btn-spinner"></div>
+        <span class="btn-text">I-create ang aking reel →</span>
+      </button>
+
+      <div class="trial-divider">o</div>
+
+      <button class="btn-trial" id="btn-trial" type="button">
+        Hindi pa ready magbayad?
+        <strong>I-try muna nang libre →</strong>
+      </button>
+    </div>
+
+    <p style="font-size:.72rem;color:var(--text-soft);text-align:center;margin-top:1rem;line-height:1.5;">
+      Sa pag-click ng "I-create ang aking reel" sumasang-ayon ka sa aming
+      <a href="#" style="color:var(--accent);">Terms of Service</a> at
+      <a href="#" style="color:var(--accent);">Privacy Policy</a>.
+      Lahat ng transaksyon ay secure at encrypted.
+    </p>
+  </div>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+  // ── Theme map ─────────────────────────────────────────────
+  const THEMES = ['wedding','debut','birthday','seventh_birthday',
+                  'baptism','reunion','corporate','memorial'];
+
+  function applyTheme(type) {
+    const t = THEMES.includes(type) ? type : 'wedding';
+    document.body.setAttribute('data-theme', t);
+    document.querySelector('meta[name="theme-color"]')
+      ?.setAttribute('content', getComputedStyle(document.body)
+        .getPropertyValue('--primary').trim() || '#3d1f2d');
+  }
+
+  // ── State ─────────────────────────────────────────────────
+  let selectedType = 'wedding';
+  let selectedPlan = 'selebrasyon';
+  let selectedPrice = 199900;
+
+  // ── DOM ───────────────────────────────────────────────────
+  const namesInput    = document.getElementById('couple-names');
+  const dateInput     = document.getElementById('event-date');
+  const fieldNames    = document.getElementById('field-names');
+  const fieldDate     = document.getElementById('field-date');
+  const summaryName   = document.getElementById('summary-plan-name');
+  const summaryPrice  = document.getElementById('summary-plan-price');
+  const btnPay        = document.getElementById('btn-pay');
+  const btnTrial      = document.getElementById('btn-trial');
+  const toastEl       = document.getElementById('toast');
+  const stepsBar      = document.getElementById('steps-bar');
+
+  // ── Helpers ───────────────────────────────────────────────
+  let toastTimer;
+  function showToast(msg, type = '') {
+    clearTimeout(toastTimer);
+    toastEl.textContent = msg;
+    toastEl.className   = `toast show ${type}`;
+    toastTimer = setTimeout(() => toastEl.classList.remove('show'), 3500);
+  }
+
+  function formatPrice(centavos) {
+    return '₱' + (centavos / 100).toLocaleString('en-PH', { minimumFractionDigits: 0 });
+  }
+
+  function setStepActive(step) {
+    document.querySelectorAll('.step-dot').forEach(dot => {
+      const n = parseInt(dot.dataset.step);
+      dot.classList.remove('active', 'done');
+      if (n < step)  dot.classList.add('done');
+      if (n === step) dot.classList.add('active');
+    });
+  }
+
+  // ── Event type selection ──────────────────────────────────
+  document.getElementById('event-type-grid').addEventListener('click', e => {
+    const btn = e.target.closest('.event-type-btn');
+    if (!btn) return;
+
+    document.querySelectorAll('.event-type-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    selectedType = btn.dataset.type;
+    applyTheme(selectedType);
+  });
+
+  // ── Plan selection ────────────────────────────────────────
+  document.querySelectorAll('.plan-card').forEach(card => {
+    card.addEventListener('click', () => {
+      document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      selectedPlan  = card.dataset.plan;
+      selectedPrice = parseInt(card.dataset.price);
+      updateSummary();
+      setStepActive(3);
+    });
+  });
+
+  function updateSummary() {
+    const labels = { libre: 'Libre', selebrasyon: 'Selebrasyon', pro: 'Pro' };
+    summaryName.textContent  = labels[selectedPlan] ?? selectedPlan;
+    summaryPrice.textContent = formatPrice(selectedPrice);
+  }
+
+  // ── Validation ────────────────────────────────────────────
+  function validate() {
+    let ok = true;
+
+    if (!namesInput.value.trim()) {
+      fieldNames.classList.add('has-error');
+      ok = false;
+    } else {
+      fieldNames.classList.remove('has-error');
+    }
+
+    if (!dateInput.value) {
+      fieldDate.classList.add('has-error');
+      ok = false;
+    } else {
+      fieldDate.classList.remove('has-error');
+    }
+
+    if (!ok) {
+      namesInput.closest('.form-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    return ok;
+  }
+
+  namesInput.addEventListener('input', () => {
+    if (namesInput.value.trim()) {
+      fieldNames.classList.remove('has-error');
+      setStepActive(2);
+    }
+  });
+
+  dateInput.addEventListener('change', () => {
+    if (dateInput.value) {
+      fieldDate.classList.remove('has-error');
+    }
+  });
+
+  // ── Create event helper ───────────────────────────────────
+  async function createEvent(plan) {
+    const res = await fetch('/api/events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        couple_names: namesInput.value.trim(),
+        event_type:   selectedType,
+        event_date:   dateInput.value || null,
+        plan,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.message || 'Hindi ma-create ang event.');
+    }
+
+    return data; // { event, qr_code }
+  }
+
+  // ── Pay button ────────────────────────────────────────────
+  btnPay.addEventListener('click', async () => {
+    if (!validate()) return;
+
+    btnPay.disabled = true;
+    btnPay.classList.add('loading');
+
+    try {
+      // 1. Create event
+      const { event } = await createEvent(selectedPlan);
+      const slug = event.slug;
+
+      // 2. Create checkout session
+      const payRes = await fetch('/api/payments/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug, plan: selectedPlan }),
+      });
+
+      const payData = await payRes.json();
+
+      if (payData.test_mode || !payData.checkout_url) {
+        // Test mode — skip payment, go straight to dashboard
+        location.href = `/dashboard?slug=${slug}&test_mode=true`;
+        return;
+      }
+
+      // 3. Redirect to PayMongo checkout
+      location.href = payData.checkout_url;
+
+    } catch (err) {
+      showToast(err.message || 'May naganap na error. Subukan ulit.', 'error');
+      btnPay.disabled = false;
+      btnPay.classList.remove('loading');
+    }
+  });
+
+  // ── Free trial button ─────────────────────────────────────
+  btnTrial.addEventListener('click', async () => {
+    if (!validate()) return;
+
+    btnTrial.disabled = true;
+    btnTrial.textContent = 'Gumagawa…';
+
+    try {
+      const { event } = await createEvent('libre');
+      location.href = `/dashboard?slug=${event.slug}&trial=true`;
+    } catch (err) {
+      showToast(err.message || 'May naganap na error. Subukan ulit.', 'error');
+      btnTrial.disabled = false;
+      btnTrial.innerHTML = 'Hindi pa ready magbayad? <strong>I-try muna nang libre →</strong>';
+    }
+  });
+
+  // ── Init ──────────────────────────────────────────────────
+  updateSummary();
+  setStepActive(1);
+
+  // Set min date to today
+  const today = new Date().toISOString().split('T')[0];
+  dateInput.setAttribute('min', today);
+
+  // Intersection observer: update step indicator as user scrolls
+  const sections = [
+    { el: document.getElementById('section-event'),   step: 1 },
+    { el: document.getElementById('section-plans'),   step: 2 },
+    { el: document.getElementById('section-payment'), step: 3 },
+  ];
+
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const match = sections.find(s => s.el === entry.target);
+        if (match) setStepActive(match.step);
+      }
+    });
+  }, { threshold: .4 });
+
+  sections.forEach(s => obs.observe(s.el));
+</script>
+
+</body>
+</html>

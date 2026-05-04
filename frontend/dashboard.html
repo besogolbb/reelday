@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#3d1f2d" />
+  <title>Reelday — Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500;600&family=DM+Serif+Display&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Pacifico&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/style.css" />
+  <style>
+    body {
+      background: var(--bg);
+      font-family: var(--body-font);
+      min-height: 100dvh;
+    }
+
+    /* ── Header ───────────────────────────────────────── */
+    .dash-header {
+      background: linear-gradient(160deg, var(--primary) 0%, var(--primary-light) 100%);
+      background-image: linear-gradient(160deg, var(--primary) 0%, var(--primary-light) 100%), var(--pattern);
+      background-blend-mode: normal, overlay;
+      color: #fff;
+      padding: 1.5rem 0 3.5rem;
+      position: relative;
+    }
+
+    .header-inner {
+      max-width: 1100px;
+      margin-inline: auto;
+      padding-inline: 1.5rem;
+    }
+
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2rem;
+    }
+
+    .logo {
+      font-family: var(--heading-font);
+      font-size: 1.1rem;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      opacity: .75;
+      color: #fff;
+      text-decoration: none;
+    }
+
+    .header-body {
+      display: flex;
+      flex-direction: column;
+      gap: .5rem;
+    }
+
+    .event-type-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+      background: rgba(255,255,255,.15);
+      border: 1px solid rgba(255,255,255,.25);
+      border-radius: 999px;
+      padding: .25rem .85rem;
+      font-size: .78rem;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      width: fit-content;
+    }
+
+    .event-names {
+      font-family: var(--heading-font);
+      font-size: clamp(1.8rem, 5vw, 3rem);
+      line-height: 1.15;
+      font-weight: 600;
+    }
+
+    .event-meta {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-top: .25rem;
+    }
+
+    .event-date { font-size: .9rem; opacity: .75; }
+
+    .plan-badge {
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      padding: .2rem .7rem;
+      border-radius: 999px;
+    }
+
+    .plan-libre       { background: rgba(255,255,255,.15); color: rgba(255,255,255,.85); }
+    .plan-selebrasyon { background: var(--gold); color: var(--primary); }
+    .plan-pro         { background: var(--accent); color: #fff; }
+
+    .header-divider {
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      width: 100%;
+      overflow: hidden;
+      line-height: 0;
+    }
+
+    .header-divider svg { display: block; width: 100%; height: 48px; }
+
+    /* ── Main layout ──────────────────────────────────── */
+    .dash-main {
+      max-width: 1100px;
+      margin-inline: auto;
+      padding: 2rem 1.5rem 4rem;
+    }
+
+    /* ── Stats row ────────────────────────────────────── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.75rem;
+    }
+
+    .stat-card {
+      background: #fff;
+      border-radius: var(--border-radius);
+      padding: 1.25rem 1rem;
+      box-shadow: 0 2px 12px rgba(0,0,0,.06);
+      text-align: center;
+      transition: transform .2s, box-shadow .2s;
+    }
+
+    .stat-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,.1); }
+
+    .stat-icon { font-size: 1.75rem; margin-bottom: .35rem; line-height: 1; }
+
+    .stat-number {
+      font-family: var(--heading-font);
+      font-size: 2rem;
+      font-weight: 600;
+      color: var(--primary);
+      line-height: 1;
+      margin-bottom: .2rem;
+    }
+
+    .stat-label { font-size: .75rem; font-weight: 600; color: var(--text-soft); text-transform: uppercase; letter-spacing: .05em; }
+
+    /* ── Two-column layout (QR + gallery) ─────────────── */
+    .dash-grid {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 1.5rem;
+      align-items: start;
+    }
+
+    /* ── QR card ──────────────────────────────────────── */
+    .qr-card {
+      background: #fff;
+      border-radius: var(--border-radius);
+      box-shadow: 0 2px 12px rgba(0,0,0,.06);
+      padding: 1.75rem;
+      position: sticky;
+      top: 1.5rem;
+    }
+
+    .qr-card-title {
+      font-family: var(--heading-font);
+      font-size: 1.05rem;
+      color: var(--primary);
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+    }
+
+    .qr-image-wrap {
+      background: var(--bg);
+      border-radius: calc(var(--border-radius) * .75);
+      padding: 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1rem;
+      min-height: 180px;
+    }
+
+    #qr-img {
+      width: 100%;
+      max-width: 200px;
+      border-radius: 8px;
+    }
+
+    .qr-url {
+      text-align: center;
+      font-size: .78rem;
+      color: var(--text-soft);
+      word-break: break-all;
+      margin-bottom: 1.25rem;
+      padding: .5rem .75rem;
+      background: var(--bg2);
+      border-radius: 6px;
+    }
+
+    .qr-actions { display: flex; flex-direction: column; gap: .65rem; }
+
+    .btn-qr-action {
+      width: 100%;
+      padding: .7rem 1rem;
+      border-radius: calc(var(--border-radius) * .65);
+      font-family: var(--body-font);
+      font-size: .9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: .5rem;
+      border: 2px solid var(--accent);
+      min-height: 44px;
+    }
+
+    .btn-qr-primary { background: var(--accent); color: #fff; }
+    .btn-qr-primary:hover { background: var(--accent-deep); border-color: var(--accent-deep); }
+
+    .btn-qr-outline { background: transparent; color: var(--accent); }
+    .btn-qr-outline:hover { background: var(--accent); color: #fff; }
+
+    /* ── Gallery panel ────────────────────────────────── */
+    .gallery-panel {
+      background: #fff;
+      border-radius: var(--border-radius);
+      box-shadow: 0 2px 12px rgba(0,0,0,.06);
+      overflow: hidden;
+    }
+
+    .gallery-header {
+      padding: 1.25rem 1.5rem 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .gallery-title {
+      font-family: var(--heading-font);
+      font-size: 1.05rem;
+      color: var(--primary);
+    }
+
+    .gallery-tabs { display: flex; gap: .25rem; background: var(--bg2); border-radius: 10px; padding: 3px; }
+
+    .g-tab {
+      padding: .45rem 1rem;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text-soft);
+      font-family: var(--body-font);
+      font-weight: 600;
+      font-size: .83rem;
+      cursor: pointer;
+      transition: all .18s;
+      white-space: nowrap;
+    }
+
+    .g-tab.active { background: #fff; color: var(--primary); box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+
+    .gallery-body { padding: 1.25rem 1.5rem 1.5rem; }
+
+    /* ── Photo/video grid ─────────────────────────────── */
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: .75rem;
+    }
+
+    .gallery-item {
+      position: relative;
+      aspect-ratio: 1;
+      border-radius: calc(var(--border-radius) * .6);
+      overflow: hidden;
+      cursor: pointer;
+      background: var(--bg2);
+    }
+
+    .gallery-item img,
+    .gallery-item video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform .3s;
+    }
+
+    .gallery-item:hover img,
+    .gallery-item:hover video { transform: scale(1.04); }
+
+    .gallery-item-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(0,0,0,.65) 0%, transparent 50%);
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      padding: .5rem .6rem;
+      opacity: 0;
+      transition: opacity .2s;
+    }
+
+    .gallery-item:hover .gallery-item-overlay { opacity: 1; }
+
+    .item-name { font-size: .72rem; font-weight: 600; color: #fff; max-width: 70%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .item-time { font-size: .65rem; color: rgba(255,255,255,.8); }
+
+    .play-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,.25);
+    }
+
+    .play-btn-circle {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      padding-left: 3px;
+    }
+
+    .vm-badge {
+      position: absolute;
+      top: .4rem;
+      right: .4rem;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 999px;
+      padding: .1rem .45rem;
+      font-size: .65rem;
+      font-weight: 700;
+    }
+
+    .gallery-empty {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--text-soft);
+    }
+
+    .gallery-empty-icon { font-size: 3rem; margin-bottom: .75rem; }
+    .gallery-empty p { font-size: .9rem; }
+
+    /* ── Video messages list ──────────────────────────── */
+    .vm-list { display: flex; flex-direction: column; gap: .75rem; }
+
+    .vm-item {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem;
+      background: var(--bg);
+      border-radius: calc(var(--border-radius) * .75);
+      transition: background .15s;
+    }
+
+    .vm-item:hover { background: var(--bg2); }
+
+    .vm-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent-light), var(--accent));
+      color: #fff;
+      font-weight: 700;
+      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .vm-info { flex: 1; min-width: 0; }
+    .vm-name { font-weight: 600; font-size: .9rem; color: var(--primary); margin-bottom: .15rem; }
+    .vm-meta { font-size: .75rem; color: var(--text-soft); }
+
+    .btn-play {
+      padding: .45rem 1rem;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 999px;
+      font-family: var(--body-font);
+      font-size: .8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .btn-play:hover { background: var(--accent-deep); }
+
+    /* ── Download bar ─────────────────────────────────── */
+    .download-bar {
+      margin-top: 1.25rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--bg2);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: .75rem;
+    }
+
+    .download-count { font-size: .85rem; color: var(--text-soft); }
+
+    .btn-download-all {
+      padding: .6rem 1.25rem;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: calc(var(--border-radius) * .65);
+      font-family: var(--body-font);
+      font-size: .88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity .15s;
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+    }
+
+    .btn-download-all:hover { opacity: .85; }
+
+    /* ── Refresh indicator ────────────────────────────── */
+    .refresh-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent-light);
+      display: inline-block;
+      margin-left: .4rem;
+      animation: blink 2s infinite;
+    }
+
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+
+    /* ── Lightbox ─────────────────────────────────────── */
+    .lightbox {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.92);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .lightbox.open { display: flex; }
+
+    .lb-close {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.15);
+      border: none;
+      color: #fff;
+      font-size: 1.4rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1001;
+      transition: background .15s;
+    }
+
+    .lb-close:hover { background: rgba(255,255,255,.28); }
+
+    .lb-nav {
+      position: fixed;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.12);
+      border: none;
+      color: #fff;
+      font-size: 1.4rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background .15s;
+      z-index: 1001;
+    }
+
+    .lb-nav:hover { background: rgba(255,255,255,.25); }
+    .lb-prev { left: .75rem; }
+    .lb-next { right: .75rem; }
+
+    .lb-body {
+      max-width: 900px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    #lb-media {
+      width: 100%;
+      max-height: 75vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #lb-media img,
+    #lb-media video {
+      max-width: 100%;
+      max-height: 75vh;
+      border-radius: 8px;
+      object-fit: contain;
+      display: block;
+    }
+
+    .lb-meta {
+      text-align: center;
+      color: #fff;
+    }
+
+    .lb-uploader { font-weight: 600; font-size: 1rem; margin-bottom: .25rem; }
+    .lb-message  { font-size: .875rem; opacity: .7; max-width: 500px; line-height: 1.5; }
+    .lb-counter  { font-size: .75rem; opacity: .5; margin-top: .25rem; }
+
+    /* ── Loading + error states ───────────────────────── */
+    .page-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 60vh;
+    }
+
+    .page-error {
+      display: none;
+      text-align: center;
+      padding: 6rem 2rem;
+      color: var(--text-soft);
+    }
+
+    .page-error-icon { font-size: 3rem; margin-bottom: 1rem; }
+
+    /* ── Responsive ───────────────────────────────────── */
+    @media (max-width: 900px) {
+      .dash-grid { grid-template-columns: 1fr; }
+      .qr-card { position: static; }
+    }
+
+    @media (max-width: 640px) {
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      .gallery-grid { grid-template-columns: repeat(2, 1fr); }
+      .header-inner { padding-inline: 1rem; }
+      .dash-main { padding-inline: 1rem; }
+    }
+
+    @media (max-width: 380px) {
+      .stats-row { grid-template-columns: repeat(2, 1fr); gap: .6rem; }
+      .stat-number { font-size: 1.6rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ────────────────────────────────────────────── -->
+<header class="dash-header" id="dash-header" style="display:none">
+  <div class="header-inner">
+    <div class="header-top">
+      <a href="/" class="logo">Reelday ✦</a>
+      <button class="btn-ghost-themed" id="btn-live-wall">📺 Open Live Wall</button>
+    </div>
+
+    <div class="header-body">
+      <div class="event-type-badge" id="event-type-badge">💍 Kasalan</div>
+      <h1 class="event-names" id="event-names">—</h1>
+      <div class="event-meta">
+        <span class="event-date" id="event-date"></span>
+        <span class="plan-badge" id="plan-badge">Libre</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="header-divider">
+    <svg viewBox="0 0 1200 48" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0,48 C400,0 800,0 1200,48 L1200,48 L0,48 Z" style="fill:var(--bg)" />
+    </svg>
+  </div>
+</header>
+
+<!-- ── Page loading ──────────────────────────────────────── -->
+<div class="page-loading" id="page-loading">
+  <div class="spinner"></div>
+</div>
+
+<!-- ── Page error ────────────────────────────────────────── -->
+<div class="page-error" id="page-error">
+  <div class="page-error-icon">😔</div>
+  <p id="page-error-msg" style="font-size:.95rem">Event not found.</p>
+</div>
+
+<!-- ── Main ──────────────────────────────────────────────── -->
+<main class="dash-main" id="dash-main" style="display:none">
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-icon">📸</div>
+      <div class="stat-number" id="stat-total">0</div>
+      <div class="stat-label">Total</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">🖼️</div>
+      <div class="stat-number" id="stat-photos">0</div>
+      <div class="stat-label">Photos</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">🎬</div>
+      <div class="stat-number" id="stat-videos">0</div>
+      <div class="stat-label">Videos</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">💌</div>
+      <div class="stat-number" id="stat-vms">0</div>
+      <div class="stat-label">Messages</div>
+    </div>
+  </div>
+
+  <!-- Two-col grid -->
+  <div class="dash-grid">
+
+    <!-- QR card -->
+    <div class="qr-card">
+      <p class="qr-card-title">🔗 Guest Upload Link</p>
+
+      <div class="qr-image-wrap" id="qr-wrap">
+        <div class="spinner"></div>
+      </div>
+
+      <div class="qr-url" id="qr-url">—</div>
+
+      <div class="qr-actions">
+        <button class="btn-qr-action btn-qr-primary" id="btn-download-qr">
+          📥 Download QR Code
+        </button>
+        <button class="btn-qr-action btn-qr-outline" id="btn-copy-link">
+          🔗 Copy Guest Link
+        </button>
+      </div>
+    </div>
+
+    <!-- Gallery panel -->
+    <div class="gallery-panel">
+      <div class="gallery-header">
+        <div style="display:flex;align-items:center;gap:.5rem">
+          <span class="gallery-title">Gallery</span>
+          <span class="refresh-dot" title="Auto-refreshes every 10s"></span>
+        </div>
+        <div class="gallery-tabs">
+          <button class="g-tab active" data-tab="all">Lahat</button>
+          <button class="g-tab" data-tab="vm">Video Messages</button>
+        </div>
+      </div>
+
+      <div class="gallery-body">
+        <!-- All uploads grid -->
+        <div id="tab-all">
+          <div class="gallery-grid" id="gallery-grid"></div>
+          <div class="gallery-empty" id="gallery-empty" style="display:none">
+            <div class="gallery-empty-icon">📭</div>
+            <p>No uploads yet. Share the QR code with your guests!</p>
+          </div>
+        </div>
+
+        <!-- Video messages list -->
+        <div id="tab-vm" style="display:none">
+          <div class="vm-list" id="vm-list"></div>
+          <div class="gallery-empty" id="vm-empty" style="display:none">
+            <div class="gallery-empty-icon">💌</div>
+            <p>No video messages yet.</p>
+          </div>
+        </div>
+
+        <!-- Download bar -->
+        <div class="download-bar">
+          <span class="download-count" id="download-count">0 files</span>
+          <button class="btn-download-all" id="btn-download-all">
+            📥 I-download lahat
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<!-- ── Lightbox ───────────────────────────────────────────── -->
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true">
+  <button class="lb-close" id="lb-close" aria-label="Close">✕</button>
+  <button class="lb-nav lb-prev" id="lb-prev" aria-label="Previous">‹</button>
+  <button class="lb-nav lb-next" id="lb-next" aria-label="Next">›</button>
+
+  <div class="lb-body">
+    <div id="lb-media"></div>
+    <div class="lb-meta">
+      <div class="lb-uploader" id="lb-uploader"></div>
+      <div class="lb-message"  id="lb-message"></div>
+      <div class="lb-counter"  id="lb-counter"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Toast ─────────────────────────────────────────────── -->
+<div class="toast" id="toast"></div>
+
+<script type="module">
+  // ── Theme map ────────────────────────────────────────
+  const THEME_MAP = {
+    wedding:          { theme: 'wedding',          emoji: '💍', label: 'Kasalan' },
+    debut:            { theme: 'debut',            emoji: '👑', label: 'Debut' },
+    birthday:         { theme: 'birthday',         emoji: '🎂', label: 'Kaarawan' },
+    seventh_birthday: { theme: 'seventh_birthday', emoji: '🌟', label: '7th Birthday' },
+    baptism:          { theme: 'baptism',          emoji: '🕊️', label: 'Binyag' },
+    reunion:          { theme: 'reunion',          emoji: '🎉', label: 'Reunion' },
+    corporate:        { theme: 'corporate',        emoji: '🏢', label: 'Corporate Event' },
+    memorial:         { theme: 'memorial',         emoji: '🕯️', label: 'Memorial' },
+  };
+
+  const FIL_MONTHS = ['Enero','Pebrero','Marso','Abril','Mayo','Hunyo',
+                      'Hulyo','Agosto','Setyembre','Oktubre','Nobyembre','Disyembre'];
+
+  // ── State ─────────────────────────────────────────────
+  const slug        = new URLSearchParams(location.search).get('slug');
+  let allUploads    = [];
+  let lbIndex       = 0;
+  let lbItems       = [];   // items currently navigable in lightbox
+  let qrDataUrl     = '';
+  let activeTab     = 'all';
+
+  // ── DOM refs ──────────────────────────────────────────
+  const $ = id => document.getElementById(id);
+
+  const dashHeader    = $('dash-header');
+  const pageLoading   = $('page-loading');
+  const pageError     = $('page-error');
+  const dashMain      = $('dash-main');
+  const eventNames    = $('event-names');
+  const eventDate     = $('event-date');
+  const eventTypeBadge = $('event-type-badge');
+  const planBadge     = $('plan-badge');
+  const qrWrap        = $('qr-wrap');
+  const qrUrl         = $('qr-url');
+  const galleryGrid   = $('gallery-grid');
+  const galleryEmpty  = $('gallery-empty');
+  const vmList        = $('vm-list');
+  const vmEmpty       = $('vm-empty');
+  const downloadCount = $('download-count');
+  const lightbox      = $('lightbox');
+  const lbMedia       = $('lb-media');
+  const lbUploader    = $('lb-uploader');
+  const lbMessage     = $('lb-message');
+  const lbCounter     = $('lb-counter');
+  const toast         = $('toast');
+
+  // ── Helpers ───────────────────────────────────────────
+  function timeAgo(dateStr) {
+    const s = Math.floor((Date.now() - new Date(dateStr)) / 1000);
+    if (s < 60)             return 'just now';
+    const m = Math.floor(s / 60);
+    if (m < 60)             return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24)             return `${h}h ago`;
+    return `${Math.floor(h / 24)}d ago`;
+  }
+
+  function formatDate(dateStr) {
+    const d = new Date(dateStr);
+    return `${FIL_MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
+  }
+
+  function initial(name) {
+    return (name || '?').trim().charAt(0).toUpperCase();
+  }
+
+  let toastTimer;
+  function showToast(msg, variant = '') {
+    clearTimeout(toastTimer);
+    toast.textContent = msg;
+    toast.className   = `toast${variant ? ' ' + variant : ''}`;
+    requestAnimationFrame(() => toast.classList.add('show'));
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 3000);
+  }
+
+  function applyTheme(eventType) {
+    const meta = THEME_MAP[eventType] || THEME_MAP.wedding;
+    document.body.setAttribute('data-theme', meta.theme);
+    eventTypeBadge.textContent = `${meta.emoji} ${meta.label}`;
+    return meta;
+  }
+
+  // ── Render header ─────────────────────────────────────
+  function renderHeader(event) {
+    eventNames.textContent = event.couple_names;
+    document.title         = `Reelday — ${event.couple_names}`;
+
+    if (event.event_date) {
+      eventDate.textContent = formatDate(event.event_date);
+    }
+
+    const plan = event.plan || 'libre';
+    planBadge.textContent = plan.charAt(0).toUpperCase() + plan.slice(1);
+    planBadge.className   = `plan-badge plan-${plan}`;
+
+    $('btn-live-wall').onclick = () =>
+      window.open(`/wall.html?slug=${slug}`, '_blank');
+  }
+
+  // ── Render QR ─────────────────────────────────────────
+  function renderQR(dataUrl) {
+    qrDataUrl = dataUrl;
+    const uploadUrl = `${location.protocol}//${location.host}/upload/${slug}`;
+
+    qrWrap.innerHTML = `<img id="qr-img" src="${dataUrl}" alt="QR Code" />`;
+    qrUrl.textContent = uploadUrl;
+
+    $('btn-download-qr').onclick = () => {
+      const a = document.createElement('a');
+      a.href     = dataUrl;
+      a.download = `reelday-qr-${slug}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    };
+
+    $('btn-copy-link').onclick = () => {
+      navigator.clipboard.writeText(uploadUrl).then(() => {
+        showToast('Link copied! 🔗', 'success');
+      }).catch(() => {
+        showToast('Copy failed — try manually.', 'error');
+      });
+    };
+  }
+
+  // ── Render stats ──────────────────────────────────────
+  function renderStats(uploads) {
+    const photos  = uploads.filter(u => !u.is_video_message && u.file_type === 'photo').length;
+    const videos  = uploads.filter(u => !u.is_video_message && u.file_type === 'video').length;
+    const vms     = uploads.filter(u => u.is_video_message).length;
+
+    $('stat-total').textContent  = uploads.length;
+    $('stat-photos').textContent = photos;
+    $('stat-videos').textContent = videos;
+    $('stat-vms').textContent    = vms;
+
+    const n = uploads.length;
+    downloadCount.textContent = `${n} file${n !== 1 ? 's' : ''}`;
+  }
+
+  // ── Render gallery grid ───────────────────────────────
+  function renderGallery(uploads) {
+    allUploads = uploads;
+
+    // All-uploads tab (non-vm photos + videos)
+    const gridItems = uploads.filter(u => !u.is_video_message || u.file_type !== 'video' || true);
+    // Actually show all uploads in the Lahat tab
+    lbItems = uploads;
+
+    if (!uploads.length) {
+      galleryGrid.innerHTML = '';
+      galleryEmpty.style.display = 'block';
+    } else {
+      galleryEmpty.style.display = 'none';
+      galleryGrid.innerHTML = uploads.map((u, i) => {
+        const isVideo = u.file_type === 'video';
+        const name    = escHtml(u.uploader_name || 'Guest');
+        const time    = timeAgo(u.created_at);
+        const vmMark  = u.is_video_message ? '<div class="vm-badge">💌</div>' : '';
+
+        const media = isVideo
+          ? `<div class="play-overlay"><div class="play-btn-circle">▶</div></div>
+             <video src="${escHtml(u.file_url)}" preload="none" style="width:100%;height:100%;object-fit:cover"></video>`
+          : `<img src="${escHtml(u.file_url)}" alt="${name}" loading="lazy" />`;
+
+        return `
+          <div class="gallery-item" data-index="${i}">
+            ${media}
+            ${vmMark}
+            <div class="gallery-item-overlay">
+              <span class="item-name">${name}</span>
+              <span class="item-time">${time}</span>
+            </div>
+          </div>`;
+      }).join('');
+
+      // Attach click via delegation
+      galleryGrid.onclick = e => {
+        const item = e.target.closest('.gallery-item');
+        if (item) openLightbox(Number(item.dataset.index));
+      };
+    }
+
+    // Video messages tab
+    const vms = uploads.filter(u => u.is_video_message);
+    if (!vms.length) {
+      vmList.innerHTML = '';
+      vmEmpty.style.display = 'block';
+    } else {
+      vmEmpty.style.display = 'none';
+      vmList.innerHTML = vms.map((u, i) => {
+        const vmIndex = uploads.indexOf(u);
+        return `
+          <div class="vm-item">
+            <div class="vm-avatar">${escHtml(initial(u.uploader_name))}</div>
+            <div class="vm-info">
+              <div class="vm-name">${escHtml(u.uploader_name || 'Guest')}</div>
+              <div class="vm-meta">${timeAgo(u.created_at)}</div>
+            </div>
+            <button class="btn-play" data-index="${vmIndex}">▶ I-play</button>
+          </div>`;
+      }).join('');
+
+      vmList.onclick = e => {
+        const btn = e.target.closest('.btn-play');
+        if (btn) openLightbox(Number(btn.dataset.index));
+      };
+    }
+  }
+
+  function escHtml(str) {
+    return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Tab switching ─────────────────────────────────────
+  document.querySelectorAll('.g-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      activeTab = btn.dataset.tab;
+      document.querySelectorAll('.g-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      $('tab-all').style.display = activeTab === 'all' ? 'block' : 'none';
+      $('tab-vm').style.display  = activeTab === 'vm'  ? 'block' : 'none';
+    });
+  });
+
+  // ── Lightbox ──────────────────────────────────────────
+  function openLightbox(index) {
+    lbIndex = Math.max(0, Math.min(index, allUploads.length - 1));
+    renderLightboxSlide();
+    lightbox.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function renderLightboxSlide() {
+    const u = allUploads[lbIndex];
+    if (!u) return;
+
+    // Stop any previous video
+    const prevVideo = lbMedia.querySelector('video');
+    if (prevVideo) prevVideo.pause();
+
+    if (u.file_type === 'video') {
+      lbMedia.innerHTML = `<video src="${escHtml(u.file_url)}" controls autoplay playsinline style="max-height:75vh;border-radius:8px;max-width:100%"></video>`;
+    } else {
+      lbMedia.innerHTML = `<img src="${escHtml(u.file_url)}" alt="${escHtml(u.uploader_name || '')}" style="max-height:75vh;border-radius:8px;max-width:100%;object-fit:contain" />`;
+    }
+
+    lbUploader.textContent = u.uploader_name || 'Anonymous';
+    lbMessage.textContent  = u.message || '';
+    lbCounter.textContent  = `${lbIndex + 1} of ${allUploads.length}`;
+  }
+
+  function closeLightbox() {
+    const video = lbMedia.querySelector('video');
+    if (video) video.pause();
+    lightbox.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  $('lb-close').onclick = closeLightbox;
+
+  $('lb-prev').onclick = () => {
+    lbIndex = (lbIndex - 1 + allUploads.length) % allUploads.length;
+    renderLightboxSlide();
+  };
+
+  $('lb-next').onclick = () => {
+    lbIndex = (lbIndex + 1) % allUploads.length;
+    renderLightboxSlide();
+  };
+
+  lightbox.addEventListener('click', e => {
+    if (e.target === lightbox) closeLightbox();
+  });
+
+  document.addEventListener('keydown', e => {
+    if (!lightbox.classList.contains('open')) return;
+    if (e.key === 'Escape')     closeLightbox();
+    if (e.key === 'ArrowLeft')  { lbIndex = (lbIndex - 1 + allUploads.length) % allUploads.length; renderLightboxSlide(); }
+    if (e.key === 'ArrowRight') { lbIndex = (lbIndex + 1) % allUploads.length; renderLightboxSlide(); }
+  });
+
+  // ── Download all ──────────────────────────────────────
+  $('btn-download-all').onclick = async () => {
+    if (!allUploads.length) { showToast('No files to download.'); return; }
+    try {
+      const res  = await fetch(`/api/uploads/${slug}/download`);
+      const data = await res.json();
+      data.files.forEach((f, i) => {
+        setTimeout(() => {
+          const a = document.createElement('a');
+          a.href     = f.url;
+          a.target   = '_blank';
+          a.rel      = 'noopener';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        }, i * 300);
+      });
+      showToast(`Opening ${data.files.length} files… 📥`, 'success');
+    } catch {
+      showToast('Could not load files.', 'error');
+    }
+  };
+
+  // ── Data loading ──────────────────────────────────────
+  async function loadAll() {
+    if (!slug) {
+      pageLoading.style.display = 'none';
+      $('page-error-msg').textContent = 'No event slug in URL. Add ?slug=your-slug';
+      pageError.style.display = 'block';
+      return;
+    }
+
+    try {
+      const [eventRes, uploadsRes, qrRes] = await Promise.all([
+        fetch(`/api/events/${slug}`),
+        fetch(`/api/uploads/${slug}`),
+        fetch(`/api/events/${slug}/qr`),
+      ]);
+
+      if (!eventRes.ok) throw new Error('Event not found');
+
+      const { event }   = await eventRes.json();
+      const { uploads } = await uploadsRes.json();
+      const { qr_code } = await qrRes.json();
+
+      applyTheme(event.event_type);
+      renderHeader(event);
+      renderQR(qr_code);
+      renderStats(uploads);
+      renderGallery(uploads);
+
+      pageLoading.style.display  = 'none';
+      dashHeader.style.display   = 'block';
+      dashMain.style.display     = 'block';
+    } catch (err) {
+      pageLoading.style.display   = 'none';
+      $('page-error-msg').textContent = err.message || 'Failed to load event.';
+      pageError.style.display     = 'block';
+    }
+  }
+
+  async function refreshUploads() {
+    try {
+      const res = await fetch(`/api/uploads/${slug}`);
+      if (!res.ok) return;
+      const { uploads } = await res.json();
+      if (uploads.length !== allUploads.length) {
+        renderStats(uploads);
+        renderGallery(uploads);
+      }
+    } catch { /* silent */ }
+  }
+
+  // ── Init ──────────────────────────────────────────────
+  loadAll();
+  setInterval(refreshUploads, 10000);
+</script>
+</body>
+</html>

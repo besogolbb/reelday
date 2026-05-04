@@ -1,0 +1,31 @@
+import fp from 'fastify-plugin';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+
+async function storagePlugin(fastify) {
+  const s3 = new S3Client({
+    endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+    region: 'auto',
+    credentials: {
+      accessKeyId:     process.env.R2_ACCESS_KEY_ID,
+      secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+    },
+  });
+
+  async function uploadFile(buffer, filename, contentType) {
+    const key = `uploads/${Date.now()}-${filename}`;
+
+    await s3.send(new PutObjectCommand({
+      Bucket:      process.env.R2_BUCKET_NAME,
+      Key:         key,
+      Body:        buffer,
+      ContentType: contentType,
+    }));
+
+    return `${process.env.R2_PUBLIC_URL}/${key}`;
+  }
+
+  fastify.decorate('storage', s3);
+  fastify.decorate('uploadFile', uploadFile);
+}
+
+export default fp(storagePlugin, { name: 'storage' });
