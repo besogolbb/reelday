@@ -35,12 +35,13 @@ export default async function paymentRoutes(fastify) {
     }
 
     const eventId  = eventRows[0].id;
-    const appUrl   = process.env.APP_URL || 'http://localhost:3000';
+    const proto  = request.headers['x-forwarded-proto'] || 'https';
+    const host   = request.headers['x-forwarded-host'] || request.headers.host || 'reelday.ph';
+    const appUrl = process.env.APP_URL || `${proto}://${host}`;
 
     // ── PayMongo checkout session ─────────────────────────
     let checkoutUrl = null;
     let paymentIntentId = null;
-    let testMode = false;
 
     try {
       const checkoutRes = await fetch('https://api.paymongo.com/v1/checkout_sessions', {
@@ -75,26 +76,25 @@ export default async function paymentRoutes(fastify) {
         paymentIntentId = checkoutData.data?.id ?? null;
       } else {
         const errBody = await checkoutRes.json().catch(() => ({}));
-        fastify.log.warn({ errBody }, 'PayMongo checkout session failed — test mode fallback');
-        testMode = true;
+        fastify.log.error({ errBody }, 'PayMongo checkout session failed');
+        return reply.status(502).send({ error: true, message: 'Payment gateway error. Please try again.' });
       }
     } catch (networkErr) {
-      fastify.log.warn({ networkErr }, 'PayMongo unreachable — test mode fallback');
-      testMode = true;
+      fastify.log.error({ networkErr }, 'PayMongo unreachable');
+      return reply.status(502).send({ error: true, message: 'Payment gateway unreachable. Please try again.' });
     }
 
     // ── Record payment in DB ──────────────────────────────
     await fastify.db.query(
       `INSERT INTO payments (event_id, paymongo_payment_id, amount, plan, status)
        VALUES ($1, $2, $3, $4, $5)`,
-      [eventId, paymentIntentId, planConfig.price, plan, testMode ? 'test' : 'pending'],
+      [eventId, paymentIntentId, planConfig.price, plan, 'pending'],
     );
 
     return reply.status(201).send({
       checkout_url:      checkoutUrl,
       payment_intent_id: paymentIntentId,
       amount:            planConfig.price,
-      test_mode:         testMode,
     });
   });
 

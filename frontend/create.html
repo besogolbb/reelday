@@ -1101,10 +1101,8 @@
         });
         const payData = await payRes.json();
 
-        if (payData.test_mode || !payData.checkout_url) {
-          location.href = `/dashboard?slug=${slug}&test_mode=true`;
-          return;
-        }
+        if (!payRes.ok) throw new Error(payData.message || 'Payment gateway error. Please try again.');
+        if (!payData.checkout_url) throw new Error('No checkout URL returned. Please try again.');
         location.href = payData.checkout_url;
       }
 
