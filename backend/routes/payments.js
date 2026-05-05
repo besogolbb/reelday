@@ -35,9 +35,9 @@ export default async function paymentRoutes(fastify) {
     }
 
     const eventId  = eventRows[0].id;
-    const proto  = request.headers['x-forwarded-proto'] || 'https';
-    const host   = request.headers['x-forwarded-host'] || request.headers.host || 'reelday.ph';
-    const appUrl = process.env.APP_URL || `${proto}://${host}`;
+    const proto  = (request.headers['x-forwarded-proto'] || 'https').split(',')[0].trim();
+    const host   = (request.headers['x-forwarded-host'] || request.headers.host || 'reelday.ph').split(',')[0].trim();
+    const appUrl = (process.env.APP_URL || `${proto}://${host}`).replace(/\/+$/, '');
 
     // ── PayMongo checkout session ─────────────────────────
     let checkoutUrl = null;
@@ -77,8 +77,11 @@ export default async function paymentRoutes(fastify) {
       } else {
         const errBody = await checkoutRes.json().catch(() => ({}));
         fastify.log.error({ errBody }, 'PayMongo checkout session failed');
-        const detail = errBody?.errors?.[0]?.detail ?? errBody?.message ?? 'Payment gateway error. Please try again.';
-        return reply.status(502).send({ error: true, message: detail, raw: errBody });
+        const pmErr  = errBody?.errors?.[0];
+        const detail = pmErr?.detail ?? errBody?.message ?? 'Payment gateway error. Please try again.';
+        const field  = pmErr?.source?.pointer ?? 'unknown field';
+        fastify.log.error({ field, detail, appUrl, slug }, 'PayMongo field validation failed');
+        return reply.status(502).send({ error: true, message: `PayMongo: ${field} — ${detail}`, raw: errBody });
       }
     } catch (networkErr) {
       fastify.log.error({ networkErr }, 'PayMongo unreachable');
