@@ -3,2225 +3,598 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#080808" />
+  <meta name="theme-color" content="#fbf5ec" />
   <meta name="description" content="Every shot from your celebration. One QR code. Instantly. The cinematic photo-sharing platform for Filipino weddings, debuts, and celebrations." />
   <title>Reelday — Every Shot. One QR. Instantly.</title>
-
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-
+  <link rel="stylesheet" href="/css/shared.css" />
   <style>
-    /* ── Reset & base ────────────────────────────────────────── */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --bg:        #080808;
-      --bg2:       #111111;
-      --bg3:       #1a1a1a;
-      --surface:   rgba(255,255,255,.05);
-      --surface2:  rgba(255,255,255,.08);
-      --border:    rgba(255,255,255,.1);
-      --border2:   rgba(255,255,255,.06);
-      --text:      #f0ebe4;
-      --text-soft: rgba(240,235,228,.55);
-      --text-faint:rgba(240,235,228,.3);
-      --amber:     #f59e0b;
-      --coral:     #e8735a;
-      --coral-light:#f2a7a0;
-      --gold:      #d4a853;
-      --plum:      #3d1f2d;
-      --glow-coral: rgba(232,115,90,.25);
-      --glow-amber: rgba(245,158,11,.2);
-      --font-display: 'Playfair Display', Georgia, serif;
-      --font-body:    'DM Sans', system-ui, sans-serif;
-      --font-mono:    'JetBrains Mono', monospace;
-      --radius:    16px;
-      --radius-lg: 24px;
-      --radius-xl: 40px;
-    }
-
-    html { scroll-behavior: smooth; }
-
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: var(--font-body);
-      font-size: 16px;
-      line-height: 1.6;
-      overflow-x: hidden;
-      -webkit-font-smoothing: antialiased;
-    }
-
-    img { display: block; max-width: 100%; }
-    a { color: inherit; text-decoration: none; }
-    button { cursor: pointer; font-family: inherit; }
-
-    /* ── Scrollbar ───────────────────────────────────────────── */
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: var(--bg); }
-    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.15); border-radius: 3px; }
-
-    /* ── Utility ─────────────────────────────────────────────── */
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 0 1.5rem;
-    }
-
-    .sr-only {
-      position: absolute; width: 1px; height: 1px;
-      overflow: hidden; clip: rect(0,0,0,0);
-    }
-
-    /* ── Reveal animation ────────────────────────────────────── */
-    .reveal {
-      opacity: 0;
-      transform: translateY(32px);
-      transition: opacity .7s cubic-bezier(.22,1,.36,1),
-                  transform .7s cubic-bezier(.22,1,.36,1);
-    }
-    .reveal.visible { opacity: 1; transform: translateY(0); }
-    .reveal-delay-1 { transition-delay: .1s; }
-    .reveal-delay-2 { transition-delay: .2s; }
-    .reveal-delay-3 { transition-delay: .3s; }
-    .reveal-delay-4 { transition-delay: .4s; }
-    .reveal-delay-5 { transition-delay: .5s; }
-
-    /* ── Gradient text ───────────────────────────────────────── */
-    .grad-text {
-      background: linear-gradient(135deg, var(--text) 0%, var(--coral-light) 50%, var(--amber) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    /* ── Eyebrow ─────────────────────────────────────────────── */
-    .eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: .5rem;
-      font-family: var(--font-mono);
-      font-size: .72rem;
-      font-weight: 500;
-      letter-spacing: .14em;
-      text-transform: uppercase;
-      color: var(--amber);
-      background: rgba(245,158,11,.1);
-      border: 1px solid rgba(245,158,11,.2);
-      border-radius: 20px;
-      padding: .3rem .85rem;
-      margin-bottom: 1.5rem;
-    }
-
-    /* ── ═══════════════════════════════════════════════════════ */
-    /* ── NAV ─────────────────────────────────────────────────── */
-    /* ── ═══════════════════════════════════════════════════════ */
-    .nav {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      z-index: 500;
-      padding: 1rem 1.5rem;
-      transition: background .3s, border-color .3s;
-    }
-    .nav.scrolled {
-      background: rgba(8,8,8,.88);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border-bottom: 1px solid var(--border2);
-    }
-    .nav-inner {
-      max-width: 1200px;
-      margin: 0 auto;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-    }
-    .nav-logo {
-      font-family: var(--font-display);
-      font-size: 1.1rem;
-      letter-spacing: .1em;
-      text-transform: uppercase;
-      color: var(--text);
-      flex-shrink: 0;
-    }
-    .nav-logo span { color: var(--coral); }
-
-    .nav-links {
-      display: flex;
-      align-items: center;
-      gap: 2rem;
-      list-style: none;
-    }
-    .nav-links a {
-      font-size: .875rem;
-      font-weight: 500;
-      color: var(--text-soft);
-      transition: color .2s;
-    }
-    .nav-links a:hover { color: var(--text); }
-
-    .nav-right {
-      display: flex;
-      align-items: center;
-      gap: .75rem;
-      flex-shrink: 0;
-    }
-
-    .nav-lang {
-      display: flex;
-      background: rgba(255,255,255,.08);
-      border-radius: 20px;
-      padding: 3px;
-      gap: 2px;
-    }
-    .nav-lang button {
-      padding: .22rem .65rem;
-      border: none;
-      border-radius: 16px;
-      font-size: .7rem;
-      font-weight: 600;
-      letter-spacing: .06em;
-      background: transparent;
-      color: var(--text-soft);
-      transition: background .15s, color .15s;
-    }
-    .nav-lang button.active {
-      background: rgba(255,255,255,.15);
-      color: var(--text);
-    }
-
-    .btn-nav {
-      display: inline-flex;
-      align-items: center;
-      gap: .4rem;
-      background: var(--coral);
-      color: #fff;
-      border: none;
-      border-radius: var(--radius);
-      padding: .6rem 1.25rem;
-      font-size: .875rem;
-      font-weight: 600;
-      transition: background .2s, transform .15s, box-shadow .2s;
-    }
-    .btn-nav:hover {
-      background: #d4634c;
-      transform: translateY(-1px);
-      box-shadow: 0 8px 24px var(--glow-coral);
-    }
-
-    @media (max-width: 768px) {
-      .nav-links { display: none; }
-    }
-
-    /* ── ═══════════════════════════════════════════════════════ */
-    /* ── HERO ────────────────────────────────────────────────── */
-    /* ── ═══════════════════════════════════════════════════════ */
-    .hero {
-      position: relative;
-      min-height: 100svh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 8rem 1.5rem 5rem;
-      overflow: hidden;
-      text-align: center;
-    }
-
-    /* Animated gradient mesh background */
-    .hero-bg {
-      position: absolute;
-      inset: 0;
-      z-index: 0;
-      background: var(--bg);
-      overflow: hidden;
-    }
-    .hero-bg::before {
-      content: '';
-      position: absolute;
-      top: -20%;
-      left: -20%;
-      width: 60%;
-      height: 60%;
-      background: radial-gradient(ellipse, rgba(232,115,90,.18) 0%, transparent 70%);
-      animation: meshDrift1 12s ease-in-out infinite alternate;
-    }
-    .hero-bg::after {
-      content: '';
-      position: absolute;
-      bottom: -20%;
-      right: -20%;
-      width: 60%;
-      height: 60%;
-      background: radial-gradient(ellipse, rgba(245,158,11,.12) 0%, transparent 70%);
-      animation: meshDrift2 15s ease-in-out infinite alternate;
-    }
-    .hero-bg-mid {
-      position: absolute;
-      top: 40%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 80%;
-      height: 60%;
-      background: radial-gradient(ellipse, rgba(61,31,45,.5) 0%, transparent 70%);
+    /* ── Hero ════════════════════════════════════════════════ */
+    .hero { padding: 60px 28px 100px; position: relative; overflow: hidden; }
+    .hero::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(216,160,90,.18), transparent 70%);
       pointer-events: none;
     }
-    @keyframes meshDrift1 {
-      from { transform: translate(0, 0) scale(1); }
-      to   { transform: translate(8%, 12%) scale(1.15); }
+    .hero-inner {
+      max-width: 1240px; margin: 0 auto;
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 48px; align-items: center; position: relative;
     }
-    @keyframes meshDrift2 {
-      from { transform: translate(0, 0) scale(1); }
-      to   { transform: translate(-10%, -8%) scale(1.2); }
+    .hero-text { position: relative; z-index: 3; }
+    .hero h1 {
+      font-family: var(--display); font-weight: 400;
+      font-size: clamp(56px, 7.5vw, 110px);
+      line-height: .96; letter-spacing: -0.03em;
+      margin: 28px 0 24px; color: var(--ink);
+    }
+    .hero h1 em { font-style: italic; color: var(--accent); font-weight: 400; }
+    .hero h1 .underline { position: relative; display: inline-block; }
+    .hero h1 .underline::after {
+      content: ''; position: absolute; left: 0; right: 0; bottom: -6px;
+      height: 8px; background: var(--gold); opacity: .6;
+      border-radius: 8px; transform: skewX(-2deg);
+    }
+    .hero p { font-size: 19px; color: var(--ink-soft); line-height: 1.55; max-width: 38ch; margin-bottom: 28px; }
+    .hero-cta { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 32px; }
+    .hero-trust { display: flex; align-items: center; gap: 16px; font-size: 13px; color: var(--ink-soft); }
+    .hero-trust .avatars { display: flex; }
+    .hero-trust .avatars > div {
+      width: 32px; height: 32px; border-radius: 50%;
+      border: 2px solid var(--paper); margin-left: -8px;
+    }
+    .hero-trust .avatars > div:first-child { margin-left: 0; }
+    .hero-trust .stars { color: var(--gold); font-size: 14px; letter-spacing: 2px; }
+
+    /* Polaroid pile */
+    .polaroid-stage { position: relative; aspect-ratio: 1; perspective: 1400px; }
+    .polaroid {
+      position: absolute; background: #fff;
+      padding: 12px 12px 44px; border-radius: 4px;
+      box-shadow: var(--shadow-card);
+      transition: transform .4s cubic-bezier(.22,1,.36,1);
+      transform-origin: center;
+    }
+    .polaroid .pic { width: 220px; height: 220px; border-radius: 2px; }
+    .polaroid .caption {
+      position: absolute; bottom: 12px; left: 12px; right: 12px;
+      font-family: var(--display); font-style: italic;
+      font-size: 14px; color: var(--ink); text-align: center;
+    }
+    .polaroid:hover { transform: translate(var(--tx,0), var(--ty,0)) rotate(0deg) scale(1.05); z-index: 20 !important; }
+    .pol-1 { top: 4%;  left: 8%;   transform: translate(0,0) rotate(-8deg); z-index: 3; }
+    .pol-2 { top: 0%;  right: 6%;  transform: translate(0,0) rotate(6deg);  z-index: 5; }
+    .pol-3 { bottom: 14%; left: 0%; transform: translate(0,0) rotate(-3deg); z-index: 4; }
+    .pol-4 { bottom: 4%; right: 12%; transform: translate(0,0) rotate(8deg); z-index: 6; }
+    .pol-5 { top: 38%; left: 32%; transform: translate(0,0) rotate(-2deg); z-index: 7; }
+
+    .sticker {
+      position: absolute; background: var(--gold); color: var(--ink);
+      padding: 10px 16px; border-radius: 999px;
+      font-family: var(--mono); font-size: 11px; letter-spacing: .14em;
+      text-transform: uppercase; box-shadow: var(--shadow-soft);
+      z-index: 10; transform: rotate(-6deg);
+    }
+    .sticker.s1 { top: 10%; right: 38%; background: var(--accent); color: #fff; }
+    .sticker.s2 { bottom: 30%; right: 4%; }
+
+    /* Stats strip */
+    .hero-strip {
+      background: var(--ink); color: var(--paper);
+      border-radius: var(--r-xl);
+      padding: 36px 48px;
+      max-width: 1100px; margin: 80px auto 0;
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px;
+    }
+    .strip-stat .num {
+      font-family: var(--display); font-size: 56px; font-weight: 400;
+      line-height: 1; letter-spacing: -.02em; margin-bottom: 8px;
+    }
+    .strip-stat .num em { color: var(--accent-soft); font-style: italic; }
+    .strip-stat .lbl {
+      font-family: var(--mono); font-size: 11px; letter-spacing: .14em;
+      text-transform: uppercase; color: rgba(251,245,236,.6);
     }
 
-    /* CSS-only floating particles */
-    .particles {
-      position: absolute;
-      inset: 0;
-      z-index: 0;
-      pointer-events: none;
-      overflow: hidden;
+    /* ── How it works ══════════════════════════════════════ */
+    .how { padding: 120px 28px; }
+    .how-head { max-width: 1100px; margin: 0 auto 64px; text-align: center; }
+    .how-head h2 {
+      font-family: var(--display); font-size: clamp(48px, 6vw, 88px);
+      font-weight: 400; line-height: 1.02; letter-spacing: -.025em; color: var(--ink);
     }
-    .particle {
-      position: absolute;
-      border-radius: 50%;
-      opacity: 0;
-      animation: particleFloat linear infinite;
-    }
-    .particle:nth-child(1)  { width:3px;height:3px;background:var(--coral);left:15%;animation-duration:14s;animation-delay:0s; }
-    .particle:nth-child(2)  { width:2px;height:2px;background:var(--amber);left:28%;animation-duration:18s;animation-delay:2s; }
-    .particle:nth-child(3)  { width:4px;height:4px;background:var(--coral-light);left:42%;animation-duration:12s;animation-delay:4s; }
-    .particle:nth-child(4)  { width:2px;height:2px;background:var(--amber);left:60%;animation-duration:20s;animation-delay:1s; }
-    .particle:nth-child(5)  { width:3px;height:3px;background:var(--coral);left:75%;animation-duration:16s;animation-delay:6s; }
-    .particle:nth-child(6)  { width:2px;height:2px;background:var(--coral-light);left:88%;animation-duration:22s;animation-delay:3s; }
-    .particle:nth-child(7)  { width:5px;height:5px;background:rgba(245,158,11,.4);left:8%;animation-duration:19s;animation-delay:8s; }
-    .particle:nth-child(8)  { width:2px;height:2px;background:var(--coral);left:52%;animation-duration:13s;animation-delay:5s; }
-    .particle:nth-child(9)  { width:3px;height:3px;background:var(--amber);left:35%;animation-duration:17s;animation-delay:9s; }
-    .particle:nth-child(10) { width:2px;height:2px;background:var(--coral-light);left:70%;animation-duration:21s;animation-delay:7s; }
-    @keyframes particleFloat {
-      0%   { opacity: 0; transform: translateY(100vh) rotate(0deg); }
-      10%  { opacity: .7; }
-      90%  { opacity: .7; }
-      100% { opacity: 0; transform: translateY(-10vh) rotate(360deg); }
-    }
-
-    /* Hero content */
-    .hero-content {
-      position: relative;
-      z-index: 10;
-      max-width: 820px;
-      margin: 0 auto;
-    }
-
-    .hero-eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: .5rem;
-      font-family: var(--font-mono);
-      font-size: .72rem;
-      font-weight: 500;
-      letter-spacing: .14em;
-      text-transform: uppercase;
-      color: var(--amber);
-      background: rgba(245,158,11,.1);
-      border: 1px solid rgba(245,158,11,.2);
-      border-radius: 20px;
-      padding: .32rem .9rem;
-      margin-bottom: 1.75rem;
-    }
-    .hero-eyebrow::before {
-      content: '';
-      width: 6px; height: 6px;
-      background: var(--amber);
-      border-radius: 50%;
-      animation: pulse 2s ease-in-out infinite;
-    }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50%       { opacity: .4; transform: scale(.7); }
-    }
-
-    .hero-headline {
-      font-family: var(--font-display);
-      font-size: clamp(2.6rem, 7vw, 5.5rem);
-      font-weight: 700;
-      line-height: 1.08;
-      letter-spacing: -.02em;
-      margin-bottom: 1.5rem;
-      color: var(--text);
-    }
-    .hero-headline em {
-      font-style: italic;
-      background: linear-gradient(135deg, var(--coral) 0%, var(--amber) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .hero-sub {
-      font-size: clamp(1rem, 2.5vw, 1.2rem);
-      color: var(--text-soft);
-      max-width: 540px;
-      margin: 0 auto 2.5rem;
-      line-height: 1.65;
-    }
-
-    .hero-actions {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 1rem;
-      flex-wrap: wrap;
-      margin-bottom: 2rem;
-    }
-
-    .btn-primary {
-      display: inline-flex;
-      align-items: center;
-      gap: .5rem;
-      background: var(--coral);
-      color: #fff;
-      border: none;
-      border-radius: var(--radius);
-      padding: .9rem 2rem;
-      font-size: 1rem;
-      font-weight: 700;
-      transition: background .2s, transform .2s, box-shadow .2s;
-      position: relative;
-      overflow: hidden;
-    }
-    .btn-primary::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(135deg, rgba(255,255,255,.15) 0%, transparent 60%);
-      pointer-events: none;
-    }
-    .btn-primary:hover {
-      background: #d4634c;
-      transform: translateY(-2px) scale(1.02);
-      box-shadow: 0 12px 32px var(--glow-coral);
-    }
-    .btn-primary:active { transform: translateY(0) scale(.99); }
-
-    .btn-ghost {
-      display: inline-flex;
-      align-items: center;
-      gap: .5rem;
-      background: transparent;
-      color: var(--text-soft);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: .9rem 1.75rem;
-      font-size: 1rem;
-      font-weight: 600;
-      transition: border-color .2s, color .2s, background .2s, transform .2s;
-    }
-    .btn-ghost:hover {
-      border-color: rgba(255,255,255,.3);
-      color: var(--text);
-      background: rgba(255,255,255,.05);
-      transform: translateY(-1px);
-    }
-
-    /* Live counter */
-    .hero-counter {
-      display: inline-flex;
-      align-items: center;
-      gap: .6rem;
-      font-family: var(--font-mono);
-      font-size: .8rem;
-      color: var(--text-faint);
-      letter-spacing: .04em;
-    }
-    .counter-dot {
-      width: 7px; height: 7px;
-      background: #22c55e;
-      border-radius: 50%;
-      animation: counterPulse 2s ease-in-out infinite;
-    }
-    @keyframes counterPulse {
-      0%, 100% { box-shadow: 0 0 0 0 rgba(34,197,94,.6); }
-      50%       { box-shadow: 0 0 0 5px rgba(34,197,94,0); }
-    }
-    .counter-num {
-      color: var(--text);
-      font-weight: 600;
-    }
-
-    /* ── Phone mockups ───────────────────────────────────────── */
-    .phones-wrap {
-      position: relative;
-      z-index: 5;
-      display: flex;
-      align-items: flex-end;
-      justify-content: center;
-      gap: 2.5rem;
-      margin: 3.5rem auto 0;
-      max-width: 700px;
-      perspective: 1200px;
-    }
-
-    .phone {
-      position: relative;
-      width: 200px;
-      flex-shrink: 0;
-      transition: transform .5s cubic-bezier(.34,1.56,.64,1);
-    }
-    .phone:hover { transform: none !important; }
-
-    .phone-left  { transform: perspective(1200px) rotateY(-16deg) rotateX(6deg) translateY(-10px); }
-    .phone-right { transform: perspective(1200px) rotateY(16deg) rotateX(6deg) translateY(-10px); }
-
-    .phone-frame {
-      width: 200px;
-      border-radius: 38px;
-      background: #1c1c1e;
-      border: 2px solid rgba(255,255,255,.15);
-      box-shadow:
-        0 0 0 1px rgba(255,255,255,.06),
-        0 24px 48px rgba(0,0,0,.7),
-        0 8px 16px rgba(0,0,0,.5),
-        inset 0 1px 0 rgba(255,255,255,.12);
-      overflow: hidden;
-      position: relative;
-    }
-
-    /* Phone notch */
-    .phone-notch {
-      position: absolute;
-      top: 12px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 70px;
-      height: 8px;
-      background: #000;
-      border-radius: 4px;
-      z-index: 10;
-    }
-
-    /* Phone screen */
-    .phone-screen {
-      aspect-ratio: 9/19.5;
-      background: #f2ede7;
-      padding: 2rem .75rem 1rem;
-      overflow: hidden;
-      position: relative;
-    }
-
-    /* Upload screen content */
-    .ps-brand {
-      font-family: var(--font-display);
-      font-size: .6rem;
-      letter-spacing: .12em;
-      text-transform: uppercase;
-      color: #e8735a;
-      text-align: center;
-      margin-bottom: .3rem;
-      opacity: .7;
-    }
-    .ps-title {
-      font-family: var(--font-display);
-      font-size: .85rem;
-      font-weight: 600;
-      color: #3d1f2d;
-      text-align: center;
-      line-height: 1.2;
-      margin-bottom: .2rem;
-    }
-    .ps-date {
-      font-size: .52rem;
-      color: #a0877e;
-      text-align: center;
-      margin-bottom: .6rem;
-    }
-    .ps-divider {
-      height: 1px;
-      background: linear-gradient(90deg, transparent, #e8735a44, transparent);
-      margin-bottom: .65rem;
-    }
-    .ps-dropzone {
-      border: 1.5px dashed #e8a090;
-      border-radius: 10px;
-      padding: .6rem .5rem;
-      text-align: center;
-      background: rgba(232,115,90,.05);
-      margin-bottom: .5rem;
-    }
-    .ps-dropzone-icon { font-size: 1.2rem; display: block; margin-bottom: .2rem; }
-    .ps-dropzone-text { font-size: .5rem; color: #b0887e; line-height: 1.3; }
-    .ps-field {
-      background: #fff;
-      border: 1px solid #e8d5ce;
-      border-radius: 7px;
-      padding: .35rem .5rem;
-      font-size: .52rem;
-      color: #b0887e;
-      margin-bottom: .45rem;
-    }
-    .ps-btn {
-      width: 100%;
-      background: #e8735a;
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      padding: .42rem;
-      font-size: .55rem;
-      font-weight: 700;
-      text-align: center;
-    }
-
-    /* Wall screen content */
-    .pw-bg {
-      position: absolute;
-      inset: 0;
-      background: #0a0a0a;
-      overflow: hidden;
-    }
-    .pw-photo {
-      position: absolute;
-      border-radius: 8px;
-      overflow: hidden;
-      background: linear-gradient(135deg, #2a1520, #1a0a10);
-    }
-    .pw-photo-1 { top: 30%; left: 5%; width: 55%; height: 38%; background: linear-gradient(135deg,#e8735a,#f2a7a0); opacity: .9; }
-    .pw-photo-2 { top: 10%; right: 2%; width: 40%; height: 28%; background: linear-gradient(135deg,#d4a853,#f59e0b); opacity: .8; }
-    .pw-photo-3 { top: 52%; right: 5%; width: 42%; height: 32%; background: linear-gradient(135deg,#3d1f2d,#7a3f58); opacity: .85; }
-    .pw-photo-4 { bottom: 4%; left: 4%; width: 48%; height: 28%; background: linear-gradient(135deg,#1a4a3a,#2d7a5a); opacity: .7; }
-    .pw-brand {
-      position: absolute;
-      top: 12%;
-      left: 50%;
-      transform: translateX(-50%);
-      font-family: var(--font-display);
-      font-size: .55rem;
-      letter-spacing: .1em;
-      text-transform: uppercase;
-      color: rgba(255,255,255,.6);
-      white-space: nowrap;
-    }
-    .pw-names {
-      position: absolute;
-      bottom: 14%;
-      left: 50%;
-      transform: translateX(-50%);
-      font-family: var(--font-display);
-      font-size: .7rem;
-      font-style: italic;
-      color: rgba(255,255,255,.85);
-      white-space: nowrap;
-      text-shadow: 0 2px 8px rgba(0,0,0,.8);
-    }
-    .pw-ticker {
-      position: absolute;
-      bottom: 6%;
-      left: 0; right: 0;
-      background: rgba(0,0,0,.5);
-      padding: .18rem .5rem;
-      font-size: .42rem;
-      color: rgba(255,255,255,.5);
-      overflow: hidden;
-      white-space: nowrap;
-    }
-    .pw-emoji {
-      position: absolute;
-      font-size: .9rem;
-      animation: emojiFloat 3s ease-in-out infinite;
-    }
-    .pw-emoji-1 { top: 20%; left: 10%; animation-delay: 0s; }
-    .pw-emoji-2 { top: 60%; right: 10%; animation-delay: 1s; }
-    .pw-emoji-3 { top: 42%; left: 50%; animation-delay: 1.5s; }
-    @keyframes emojiFloat {
-      0%,100% { transform: translateY(0) rotate(-5deg); opacity: .8; }
-      50%      { transform: translateY(-6px) rotate(5deg); opacity: 1; }
-    }
-
-    /* Phone glow */
-    .phone-left .phone-frame::after {
-      content: '';
-      position: absolute;
-      inset: -2px;
-      border-radius: 40px;
-      background: linear-gradient(135deg, rgba(232,115,90,.3), transparent 50%);
-      pointer-events: none;
-      z-index: -1;
-    }
-    .phone-right .phone-frame::after {
-      content: '';
-      position: absolute;
-      inset: -2px;
-      border-radius: 40px;
-      background: linear-gradient(315deg, rgba(245,158,11,.25), transparent 50%);
-      pointer-events: none;
-      z-index: -1;
-    }
-
-    /* Phone ambient glow under */
-    .phone-left::before {
-      content: '';
-      position: absolute;
-      bottom: -30px;
-      left: 10%;
-      right: 10%;
-      height: 60px;
-      background: radial-gradient(ellipse, rgba(232,115,90,.35), transparent 70%);
-      filter: blur(12px);
-    }
-    .phone-right::before {
-      content: '';
-      position: absolute;
-      bottom: -30px;
-      left: 10%;
-      right: 10%;
-      height: 60px;
-      background: radial-gradient(ellipse, rgba(245,158,11,.28), transparent 70%);
-      filter: blur(12px);
-    }
-
-    @media (max-width: 640px) {
-      .phones-wrap { gap: 1rem; }
-      .phone { width: 150px; }
-      .phone-frame { width: 150px; border-radius: 28px; }
-      .phone-left  { transform: perspective(900px) rotateY(-12deg) rotateX(4deg) translateY(-8px); }
-      .phone-right { transform: perspective(900px) rotateY(12deg) rotateX(4deg) translateY(-8px); }
-    }
-    @media (max-width: 400px) {
-      .phone { width: 120px; }
-      .phone-frame { width: 120px; border-radius: 22px; }
-      .phones-wrap { gap: .75rem; }
-    }
-
-    /* ── ═══════════════════════════════════════════════════════ */
-    /* ── PROOF MARQUEE ───────────────────────────────────────── */
-    /* ── ═══════════════════════════════════════════════════════ */
-    .proof-wrap {
-      border-top: 1px solid var(--border2);
-      border-bottom: 1px solid var(--border2);
-      background: rgba(255,255,255,.025);
-      padding: 1.1rem 0;
-      overflow: hidden;
-    }
-    .proof-track {
-      display: flex;
-      gap: 3rem;
-      animation: marqueeScroll 28s linear infinite;
-      white-space: nowrap;
-      width: max-content;
-    }
-    .proof-track:hover { animation-play-state: paused; }
-    @keyframes marqueeScroll {
-      from { transform: translateX(0); }
-      to   { transform: translateX(-50%); }
-    }
-    .proof-item {
-      display: inline-flex;
-      align-items: center;
-      gap: .6rem;
-      font-size: .875rem;
-      color: var(--text-soft);
-      flex-shrink: 0;
-    }
-    .proof-item strong { color: var(--text); font-weight: 600; }
-    .proof-sep {
-      display: inline-block;
-      width: 4px; height: 4px;
-      background: var(--coral);
-      border-radius: 50%;
-      opacity: .5;
-    }
-
-    /* ── ═══════════════════════════════════════════════════════ */
-    /* ── HOW IT WORKS ────────────────────────────────────────── */
-    /* ── ═══════════════════════════════════════════════════════ */
-    .how-section {
-      padding: 7rem 1.5rem;
-      position: relative;
-    }
-    .section-header {
-      text-align: center;
-      margin-bottom: 4rem;
-    }
-    .section-title {
-      font-family: var(--font-display);
-      font-size: clamp(2rem, 5vw, 3.25rem);
-      font-weight: 700;
-      line-height: 1.15;
-      letter-spacing: -.02em;
-      margin-bottom: .75rem;
-    }
-    .section-sub {
-      font-size: 1.05rem;
-      color: var(--text-soft);
-      max-width: 500px;
-      margin: 0 auto;
-      line-height: 1.65;
-    }
-
-    .how-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 1.5rem;
-      max-width: 900px;
-      margin: 0 auto;
-      position: relative;
-    }
-
-    /* Dotted connector */
-    .how-grid::before {
-      content: '';
-      position: absolute;
-      top: 44px;
-      left: calc(16.66% + 1px);
-      right: calc(16.66% + 1px);
-      height: 1px;
-      background: repeating-linear-gradient(
-        90deg,
-        var(--coral) 0, var(--coral) 5px,
-        transparent 5px, transparent 14px
-      );
-      opacity: .4;
-    }
-
+    .how-head h2 em { font-style: italic; color: var(--accent); }
+    .how-grid { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; }
     .how-card {
-      background: var(--surface);
-      border: 1px solid var(--border2);
-      border-radius: var(--radius-lg);
-      padding: 2rem 1.5rem;
-      text-align: center;
-      position: relative;
-      transition: border-color .3s, background .3s, transform .3s;
-    }
-    .how-card:hover {
-      border-color: rgba(232,115,90,.3);
-      background: rgba(232,115,90,.05);
-      transform: translateY(-4px);
-    }
-
-    .how-step-num {
-      font-family: var(--font-mono);
-      font-size: 3.5rem;
-      font-weight: 700;
-      color: var(--coral);
-      opacity: .18;
-      line-height: 1;
-      margin-bottom: .75rem;
-    }
-
-    .how-icon-wrap {
-      width: 56px; height: 56px;
-      margin: 0 auto 1.25rem;
-      border-radius: 16px;
-      background: rgba(232,115,90,.12);
-      border: 1px solid rgba(232,115,90,.2);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.5rem;
-      position: relative;
-    }
-
-    /* CSS animated scan icon for step 1 */
-    .icon-scan::after {
-      content: '';
-      position: absolute;
-      top: 6px; left: 6px; right: 6px;
-      height: 2px;
-      background: var(--coral);
-      opacity: .8;
-      animation: scanLine 2s ease-in-out infinite;
-    }
-    @keyframes scanLine {
-      0%, 100% { top: 8px; }
-      50%       { top: calc(100% - 10px); }
-    }
-
-    .how-title {
-      font-family: var(--font-display);
-      font-size: 1.15rem;
-      font-weight: 600;
-      margin-bottom: .6rem;
-      color: var(--text);
-    }
-    .how-desc {
-      font-size: .9rem;
-      color: var(--text-soft);
-      line-height: 1.6;
-    }
-
-    @media (max-width: 640px) {
-      .how-grid { grid-template-columns: 1fr; gap: 1rem; }
-      .how-grid::before { display: none; }
-    }
-
-    /* ── ═══════════════════════════════════════════════════════ */
-    /* ── BENTO FEATURES ──────────────────────────────────────── */
-    /* ── ═══════════════════════════════════════════════════════ */
-    .bento-section {
-      padding: 2rem 1.5rem 7rem;
-    }
-    .bento-grid {
-      display: grid;
-      grid-template-columns: repeat(12, 1fr);
-      grid-template-rows: auto;
-      gap: 1rem;
-      max-width: 1100px;
-      margin: 0 auto;
-    }
-
-    .bento-card {
-      background: var(--surface);
-      border: 1px solid var(--border2);
-      border-radius: var(--radius-lg);
-      padding: 1.75rem;
-      position: relative;
-      overflow: hidden;
-      transition: border-color .3s, transform .3s, box-shadow .3s;
-    }
-    .bento-card:hover {
-      border-color: rgba(232,115,90,.25);
-      transform: translateY(-3px);
-      box-shadow: 0 16px 40px rgba(0,0,0,.4);
-    }
-    .bento-card::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(135deg, rgba(232,115,90,.04) 0%, transparent 60%);
-      pointer-events: none;
-    }
-
-    /* Glassmorphism on hover */
-    .bento-card:hover {
-      background: rgba(255,255,255,.07);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-    }
-
-    .b-hero  { grid-column: span 7; grid-row: span 2; }
-    .b-vm    { grid-column: span 5; }
-    .b-wall  { grid-column: span 5; }
-    .b-qr    { grid-column: span 4; }
-    .b-dl    { grid-column: span 4; }
-    .b-priv  { grid-column: span 4; }
-
-    @media (max-width: 900px) {
-      .b-hero  { grid-column: span 12; }
-      .b-vm    { grid-column: span 6; }
-      .b-wall  { grid-column: span 6; }
-      .b-qr    { grid-column: span 4; }
-      .b-dl    { grid-column: span 4; }
-      .b-priv  { grid-column: span 4; }
-    }
-    @media (max-width: 640px) {
-      .bento-grid { grid-template-columns: 1fr 1fr; }
-      .b-hero, .b-vm, .b-wall { grid-column: span 2; }
-      .b-qr, .b-dl, .b-priv   { grid-column: span 1; }
-    }
-    @media (max-width: 420px) {
-      .bento-grid { grid-template-columns: 1fr; }
-      .b-hero, .b-vm, .b-wall, .b-qr, .b-dl, .b-priv { grid-column: span 1; }
-    }
-
-    .bento-icon {
-      font-size: 1.75rem;
-      margin-bottom: 1rem;
-    }
-    .bento-label {
-      font-family: var(--font-mono);
-      font-size: .65rem;
-      letter-spacing: .12em;
-      text-transform: uppercase;
-      color: var(--amber);
-      margin-bottom: .5rem;
-    }
-    .bento-title {
-      font-family: var(--font-display);
-      font-size: 1.4rem;
-      font-weight: 600;
-      line-height: 1.25;
-      margin-bottom: .6rem;
-      color: var(--text);
-    }
-    .b-hero .bento-title {
-      font-size: clamp(1.5rem, 3vw, 2rem);
-    }
-    .bento-desc {
-      font-size: .9rem;
-      color: var(--text-soft);
-      line-height: 1.6;
-    }
-
-    /* QR Scan animation inside bento hero card */
-    .qr-demo {
-      margin-top: 1.5rem;
-      display: flex;
-      align-items: center;
-      gap: 1.25rem;
-    }
-    .qr-box {
-      width: 64px; height: 64px;
-      border: 2px solid var(--coral);
-      border-radius: 10px;
-      position: relative;
-      flex-shrink: 0;
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 2px;
-      padding: 6px;
-    }
-    .qr-pixel {
-      border-radius: 1px;
-      background: var(--coral);
-    }
-    .qr-pixel:nth-child(3n+1) { opacity: 1; }
-    .qr-pixel:nth-child(3n+2) { opacity: .5; }
-    .qr-pixel:nth-child(3n)   { opacity: .2; }
-    .qr-scan-line {
-      position: absolute;
-      left: 4px; right: 4px;
-      height: 2px;
-      background: var(--coral);
-      box-shadow: 0 0 8px var(--coral);
-      animation: qrScanAnim 2.5s ease-in-out infinite;
-    }
-    @keyframes qrScanAnim {
-      0%, 100% { top: 8px; }
-      50%       { top: calc(100% - 10px); }
-    }
-
-    .qr-arrow {
-      font-size: 1.25rem;
-      color: var(--text-soft);
-      animation: arrowBounce 1.2s ease-in-out infinite;
-    }
-    @keyframes arrowBounce {
-      0%,100% { transform: translateX(0); }
-      50%      { transform: translateX(6px); }
-    }
-
-    .qr-result {
-      flex: 1;
-    }
-    .qr-result-bar {
-      height: 8px;
-      border-radius: 4px;
-      background: var(--surface2);
-      overflow: hidden;
-      margin-bottom: .5rem;
-    }
-    .qr-result-fill {
-      height: 100%;
-      background: linear-gradient(90deg, var(--coral), var(--amber));
-      border-radius: 4px;
-      animation: fillUp 2.5s ease-in-out infinite;
-    }
-    @keyframes fillUp {
-      0%, 15%  { width: 0%; }
-      60%      { width: 100%; }
-      100%     { width: 100%; }
-    }
-    .qr-result-text {
-      font-family: var(--font-mono);
-      font-size: .65rem;
-      color: var(--text-faint);
-    }
-    .qr-counter {
-      font-family: var(--font-mono);
-      font-size: .75rem;
-      color: var(--amber);
-      margin-top: .35rem;
-    }
-    .qr-counter-num {
-      animation: countUp 2.5s ease-out infinite;
-      display: inline-block;
-    }
-    @keyframes countUp {
-      0%   { content: '0'; }
-      100% { content: '12'; }
-    }
-
-    /* ── ═══════════════════════════════════════════════════════ */
-    /* ── COMPARISON TABLE ────────────────────────────────────── */
-    /* ── ═══════════════════════════════════════════════════════ */
-    .compare-section {
-      padding: 7rem 1.5rem;
-      background: rgba(255,255,255,.015);
-      border-top: 1px solid var(--border2);
-      border-bottom: 1px solid var(--border2);
-    }
-    .compare-table-wrap {
-      max-width: 800px;
-      margin: 0 auto;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-    }
-    .compare-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: .9rem;
-    }
-    .compare-table th {
-      padding: 1rem 1.25rem;
-      text-align: left;
-      font-size: .75rem;
-      font-weight: 700;
-      letter-spacing: .06em;
-      text-transform: uppercase;
-      color: var(--text-soft);
-      border-bottom: 1px solid var(--border2);
-    }
-    .compare-table th.col-reelday {
-      color: var(--coral);
-      background: rgba(232,115,90,.06);
-      border-radius: 8px 8px 0 0;
-    }
-    .compare-table td {
-      padding: .9rem 1.25rem;
-      border-bottom: 1px solid var(--border2);
-      color: var(--text-soft);
-      vertical-align: middle;
-    }
-    .compare-table td:first-child {
-      color: var(--text);
-      font-weight: 500;
-    }
-    .compare-table td.col-reelday {
-      background: rgba(232,115,90,.04);
-      text-align: center;
-    }
-    .compare-table td.col-other {
-      text-align: center;
-      color: var(--text-faint);
-    }
-    .compare-table tr:hover td { background: rgba(255,255,255,.02); }
-    .compare-table tr:hover td.col-reelday { background: rgba(232,115,90,.07); }
-
-    .check-yes {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 26px; height: 26px;
-      background: rgba(34,197,94,.12);
-      border: 1px solid rgba(34,197,94,.25);
-      border-radius: 50%;
-      color: #22c55e;
-      font-size: .85rem;
-      font-weight: 700;
-    }
-    .check-no {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 26px; height: 26px;
-      background: rgba(239,68,68,.1);
-      border: 1px solid rgba(239,68,68,.2);
-      border-radius: 50%;
-      color: #ef4444;
-      font-size: .85rem;
-    }
-    .check-part {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 26px; height: 26px;
-      background: rgba(245,158,11,.1);
-      border: 1px solid rgba(245,158,11,.2);
-      border-radius: 50%;
-      color: var(--amber);
-      font-size: .7rem;
-      font-weight: 600;
-    }
-
-    /* ── ═══════════════════════════════════════════════════════ */
-    /* ── PRICING ─────────────────────────────────────────────── */
-    /* ── ═══════════════════════════════════════════════════════ */
-    .pricing-section {
-      padding: 7rem 1.5rem;
-    }
-    .pricing-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 1.25rem;
-      max-width: 920px;
-      margin: 0 auto;
-    }
-    @media (max-width: 768px) {
-      .pricing-grid { grid-template-columns: 1fr; max-width: 400px; }
-    }
-
-    .pricing-card {
-      background: var(--surface);
-      border: 1px solid var(--border2);
-      border-radius: var(--radius-lg);
-      padding: 2rem 1.75rem;
-      position: relative;
-      transition: transform .3s, box-shadow .3s, border-color .3s;
-    }
-    .pricing-card:hover {
-      transform: translateY(-6px);
-      box-shadow: 0 24px 48px rgba(0,0,0,.5);
-    }
-    .pricing-card.featured {
-      border-color: var(--coral);
-      box-shadow: 0 0 0 1px rgba(232,115,90,.3),
-                  0 20px 60px rgba(232,115,90,.15);
-      background: rgba(232,115,90,.06);
-    }
-    .pricing-card.featured:hover {
-      box-shadow: 0 0 0 1px rgba(232,115,90,.5),
-                  0 28px 72px rgba(232,115,90,.25);
-    }
-
-    .pricing-badge {
-      display: inline-block;
-      background: var(--coral);
-      color: #fff;
-      font-size: .68rem;
-      font-weight: 700;
-      letter-spacing: .06em;
-      text-transform: uppercase;
-      padding: .28rem .75rem;
-      border-radius: 20px;
-      margin-bottom: 1.25rem;
-    }
-    .pricing-name {
-      font-family: var(--font-display);
-      font-size: 1.6rem;
-      font-weight: 700;
-      color: var(--text);
-      margin-bottom: .4rem;
-    }
-    .pricing-price {
-      font-size: 2.5rem;
-      font-weight: 700;
-      color: var(--text);
-      line-height: 1;
-      margin-bottom: .2rem;
-    }
-    .pricing-price sup { font-size: 1rem; vertical-align: super; color: var(--text-soft); }
-    .pricing-period {
-      font-size: .8rem;
-      color: var(--text-soft);
-      margin-bottom: 1.25rem;
-    }
-    .pricing-desc {
-      font-size: .875rem;
-      color: var(--text-soft);
-      line-height: 1.5;
-      margin-bottom: 1.5rem;
-    }
-    .pricing-feats {
-      list-style: none;
-      margin-bottom: 1.75rem;
-    }
-    .pricing-feats li {
-      display: flex;
-      align-items: flex-start;
-      gap: .6rem;
-      font-size: .875rem;
-      color: var(--text-soft);
-      padding: .4rem 0;
-      border-bottom: 1px solid var(--border2);
-    }
-    .pricing-feats li:last-child { border-bottom: none; }
-    .pricing-feats li::before {
-      content: '✓';
-      color: var(--coral);
-      font-weight: 700;
-      flex-shrink: 0;
-      margin-top: .05rem;
-    }
-
-    .btn-pricing {
-      display: block;
-      width: 100%;
-      text-align: center;
-      padding: .85rem;
-      border-radius: var(--radius);
-      font-size: .95rem;
-      font-weight: 700;
-      border: 1px solid var(--border);
-      color: var(--text);
-      background: transparent;
-      transition: background .2s, border-color .2s, color .2s, transform .15s;
-    }
-    .btn-pricing:hover {
-      background: rgba(255,255,255,.08);
-      border-color: rgba(255,255,255,.2);
-      transform: translateY(-1px);
-    }
-    .btn-pricing.featured {
-      background: var(--coral);
-      border-color: var(--coral);
-      color: #fff;
-    }
-    .btn-pricing.featured:hover {
-      background: #d4634c;
-      border-color: #d4634c;
-      box-shadow: 0 8px 24px var(--glow-coral);
-    }
-
-    .pricing-note {
-      text-align: center;
-      margin-top: 2rem;
-      font-size: .85rem;
-      color: var(--text-faint);
-    }
-    .pricing-note strong { color: var(--text-soft); }
-
-    /* ── ═══════════════════════════════════════════════════════ */
-    /* ── TESTIMONIAL ─────────────────────────────────────────── */
-    /* ── ═══════════════════════════════════════════════════════ */
-    .testi-section {
-      padding: 7rem 1.5rem;
-      background: rgba(232,115,90,.04);
-      border-top: 1px solid rgba(232,115,90,.1);
-      border-bottom: 1px solid rgba(232,115,90,.1);
-      text-align: center;
-      position: relative;
-      overflow: hidden;
-    }
-    .testi-section::before {
-      content: '"';
-      position: absolute;
-      top: -1rem;
-      left: 50%;
-      transform: translateX(-50%);
-      font-family: var(--font-display);
-      font-size: 20rem;
-      color: rgba(232,115,90,.04);
-      line-height: 1;
-      pointer-events: none;
-      user-select: none;
-    }
-
-    .testi-quote {
-      font-family: var(--font-display);
-      font-size: clamp(1.4rem, 4vw, 2.2rem);
-      font-style: italic;
-      font-weight: 400;
-      line-height: 1.45;
-      color: var(--text);
-      max-width: 760px;
-      margin: 0 auto 2rem;
-      position: relative;
-    }
-
-    .testi-author {
-      display: inline-flex;
-      align-items: center;
-      gap: 1rem;
-    }
-    .testi-avatar {
-      width: 48px; height: 48px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, var(--coral), var(--amber));
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-family: var(--font-display);
-      font-size: 1.1rem;
-      font-style: italic;
-      color: #fff;
-    }
-    .testi-meta { text-align: left; }
-    .testi-name {
-      font-weight: 600;
-      color: var(--text);
-      font-size: .95rem;
-    }
-    .testi-event {
-      font-size: .8rem;
-      color: var(--text-soft);
-    }
-    .testi-stars {
-      color: var(--amber);
-      font-size: .85rem;
-      letter-spacing: .05em;
-      margin-top: .15rem;
-    }
-
-    /* ── ═══════════════════════════════════════════════════════ */
-    /* ── FAQ ─────────────────────────────────────────────────── */
-    /* ── ═══════════════════════════════════════════════════════ */
-    .faq-section {
-      padding: 7rem 1.5rem;
-    }
-    .faq-list {
-      max-width: 680px;
-      margin: 0 auto;
-    }
-    .faq-item {
-      border-bottom: 1px solid var(--border2);
-      overflow: hidden;
-    }
-    .faq-q {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-      padding: 1.25rem 0;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: .975rem;
-      color: var(--text);
-      transition: color .2s;
-      list-style: none;
-      user-select: none;
-    }
-    .faq-q::-webkit-details-marker { display: none; }
-    .faq-q:hover { color: var(--coral); }
-    .faq-chevron {
-      width: 22px; height: 22px;
-      border-radius: 50%;
-      background: var(--surface2);
+      background: #fff; border-radius: var(--r-xl);
+      padding: 40px 32px 32px; border: 1px solid var(--line);
+    }
+    .how-card .big-num {
+      font-family: var(--display); font-size: 120px; font-weight: 400;
+      font-style: italic; line-height: 1; color: var(--accent-soft);
+      letter-spacing: -.04em; margin-bottom: 16px; opacity: .5;
+    }
+    .how-card h3 {
+      font-family: var(--display); font-size: 26px; line-height: 1.15;
+      letter-spacing: -.01em; margin-bottom: 12px; color: var(--ink);
+    }
+    .how-card p { color: var(--ink-soft); font-size: 15px; line-height: 1.6; }
+    .how-card .demo {
+      aspect-ratio: 4/3; border-radius: var(--r); overflow: hidden;
+      background: var(--paper-2); margin-top: 24px;
       display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-      font-size: .75rem;
-      transition: transform .3s, background .2s;
-      color: var(--text-soft);
-    }
-    details[open] .faq-chevron {
-      transform: rotate(180deg);
-      background: rgba(232,115,90,.15);
-      color: var(--coral);
-    }
-    .faq-a {
-      padding: 0 0 1.25rem;
-      font-size: .9rem;
-      color: var(--text-soft);
-      line-height: 1.7;
-      animation: faqOpen .25s ease;
-    }
-    @keyframes faqOpen {
-      from { opacity: 0; transform: translateY(-8px); }
-      to   { opacity: 1; transform: translateY(0); }
+      font-family: var(--mono); font-size: 11px; letter-spacing: .14em;
+      text-transform: uppercase; color: var(--ink-faint);
     }
 
-    /* ── ═══════════════════════════════════════════════════════ */
-    /* ── FINAL CTA ───────────────────────────────────────────── */
-    /* ── ═══════════════════════════════════════════════════════ */
-    .cta-section {
-      padding: 7rem 1.5rem;
-      position: relative;
-      overflow: hidden;
+    /* ── Quote ═════════════════════════════════════════════ */
+    .quote { padding: 120px 28px; background: var(--paper-2); position: relative; overflow: hidden; }
+    .quote::before {
+      content: '"'; position: absolute; font-family: var(--display);
+      font-style: italic; font-size: 600px; line-height: 1;
+      color: var(--accent); opacity: .06; top: -80px; left: 60px;
+    }
+    .quote-inner { max-width: 900px; margin: 0 auto; text-align: center; position: relative; }
+    .quote blockquote {
+      font-family: var(--display); font-style: italic;
+      font-size: clamp(28px, 3.5vw, 42px); line-height: 1.3;
+      letter-spacing: -.01em; color: var(--ink); font-weight: 400; margin-bottom: 32px;
+    }
+    .quote-attr { display: flex; align-items: center; justify-content: center; gap: 16px; }
+    .quote-avatar {
+      width: 56px; height: 56px; border-radius: 50%;
+      background: linear-gradient(135deg, #f0d8c8, #d8a892);
+    }
+    .quote-name { font-weight: 600; font-size: 15px; color: var(--ink); }
+    .quote-meta { font-family: var(--mono); font-size: 11px; color: var(--ink-faint); letter-spacing: .12em; text-transform: uppercase; }
+
+    /* ── Features ══════════════════════════════════════════ */
+    .features { padding: 120px 28px; }
+    .features-head { max-width: 1100px; margin: 0 auto 56px; }
+    .features-head h2 {
+      font-family: var(--display); font-weight: 400;
+      font-size: clamp(40px, 5vw, 72px); line-height: 1.04; letter-spacing: -.025em;
+      max-width: 18ch; color: var(--ink);
+    }
+    .features-head h2 em { color: var(--accent); font-style: italic; }
+    .features-grid {
+      max-width: 1100px; margin: 0 auto;
+      display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px;
+    }
+    .feat {
+      background: #fff; border: 1px solid var(--line); border-radius: var(--r-xl);
+      padding: 28px; display: flex; flex-direction: column; gap: 16px;
+    }
+    .feat-1 { grid-column: span 4; aspect-ratio: 16/9; background: var(--ink); color: var(--paper); border-color: var(--ink); }
+    .feat-2 { grid-column: span 2; }
+    .feat-3 { grid-column: span 2; }
+    .feat-4 { grid-column: span 4; aspect-ratio: 16/9; background: var(--accent); color: #fff; border-color: var(--accent); }
+    .feat h3 { font-family: var(--display); font-size: 22px; line-height: 1.2; letter-spacing: -.01em; }
+    .feat h3 em { font-style: italic; }
+    .feat p { font-size: 14px; line-height: 1.55; opacity: .75; }
+    .feat .feat-pill {
+      display: inline-flex; padding: 4px 10px; background: var(--paper-2);
+      border-radius: 999px; font-family: var(--mono); font-size: 10px;
+      letter-spacing: .12em; text-transform: uppercase; color: var(--ink-soft); width: fit-content;
+    }
+    .feat-1 .feat-pill, .feat-4 .feat-pill { background: rgba(255,255,255,.15); color: rgba(255,255,255,.8); }
+    .feat-demo {
+      flex: 1; min-height: 80px; border-radius: var(--r);
+      background: rgba(255,255,255,.1);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
+    }
+
+    /* ── Pricing ═══════════════════════════════════════════ */
+    .pricing { padding: 120px 28px; background: var(--paper-2); }
+    .pricing-head { max-width: 800px; margin: 0 auto 56px; text-align: center; }
+    .pricing-head h2 {
+      font-family: var(--display); font-weight: 400;
+      font-size: clamp(40px, 5vw, 72px); letter-spacing: -.025em; line-height: 1.05; color: var(--ink);
+    }
+    .pricing-head h2 em { font-style: italic; color: var(--accent); }
+    .pricing-head p { color: var(--ink-soft); font-size: 17px; margin-top: 16px; }
+    .pricing-grid {
+      max-width: 1000px; margin: 0 auto;
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+    }
+    .price-card {
+      background: #fff; border: 1px solid var(--line); border-radius: var(--r-xl);
+      padding: 32px; display: flex; flex-direction: column;
+    }
+    .price-card.featured {
+      background: var(--ink); color: var(--paper);
+      border-color: var(--ink); transform: translateY(-12px);
+    }
+    .price-card .tier {
+      font-family: var(--mono); font-size: 11px; letter-spacing: .16em;
+      text-transform: uppercase; color: var(--ink-soft); margin-bottom: 12px;
+    }
+    .price-card.featured .tier { color: var(--accent-soft); }
+    .price-card .price {
+      font-family: var(--display); font-size: 56px; font-weight: 400;
+      line-height: 1; letter-spacing: -.03em; margin-bottom: 8px; color: var(--ink);
+    }
+    .price-card.featured .price { color: var(--paper); }
+    .price-card .price sub { font-family: var(--sans); font-size: 13px; color: var(--ink-faint); font-weight: 400; }
+    .price-card.featured .price sub { color: rgba(251,245,236,.5); }
+    .price-card .desc {
+      font-size: 13px; color: var(--ink-soft); margin-bottom: 24px;
+      padding-bottom: 20px; border-bottom: 1px solid var(--line);
+    }
+    .price-card.featured .desc { color: rgba(251,245,236,.6); border-color: rgba(255,255,255,.12); }
+    .price-card ul { list-style: none; display: grid; gap: 8px; font-size: 14px; flex: 1; color: var(--ink-soft); }
+    .price-card.featured ul { color: rgba(251,245,236,.75); }
+    .price-card li { display: flex; gap: 8px; }
+    .price-card li::before { content: '✓'; color: var(--accent); font-weight: 700; }
+    .price-card.featured li::before { color: var(--accent-soft); }
+    .price-card .btn { margin-top: 24px; width: 100%; justify-content: center; }
+
+    /* ── FAQ ═══════════════════════════════════════════════ */
+    .faq { padding: 120px 28px; }
+    .faq-inner { max-width: 800px; margin: 0 auto; }
+    .faq-inner > h2 {
+      font-family: var(--display); font-weight: 400;
+      font-size: clamp(40px, 5vw, 64px); text-align: center; margin-bottom: 56px;
+      letter-spacing: -.025em; color: var(--ink);
+    }
+    .faq-inner > h2 em { color: var(--accent); font-style: italic; }
+    .faq-item { border-top: 1px solid var(--line-2); padding: 28px 0; }
+    .faq-item:last-child { border-bottom: 1px solid var(--line-2); }
+    .faq-item summary {
+      cursor: pointer; font-family: var(--display); font-size: 22px;
+      font-weight: 500; letter-spacing: -.01em; list-style: none;
+      display: flex; justify-content: space-between; align-items: center;
+      color: var(--ink);
+    }
+    .faq-item summary::-webkit-details-marker { display: none; }
+    .faq-item summary::after {
+      content: '+'; font-family: var(--display); font-size: 28px;
+      font-weight: 300; transition: transform .3s ease; color: var(--accent);
+    }
+    .faq-item[open] summary::after { transform: rotate(45deg); }
+    .faq-item p { margin-top: 16px; color: var(--ink-soft); line-height: 1.65; }
+
+    /* ── Final CTA ═════════════════════════════════════════ */
+    .final-cta {
+      padding: 120px 28px;
+      background: radial-gradient(ellipse 60% 80% at 50% 0%, rgba(216,160,90,.25), transparent 70%),
+                  var(--paper);
       text-align: center;
-      background: linear-gradient(160deg, #1a0b0b 0%, #180a08 40%, #0d0810 100%);
-      border-top: 1px solid var(--border2);
     }
-    .cta-section::before {
-      content: '';
-      position: absolute;
-      top: -50%;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 80%;
-      height: 100%;
-      background: radial-gradient(ellipse, rgba(232,115,90,.15) 0%, transparent 70%);
-      pointer-events: none;
+    .final-cta h2 {
+      font-family: var(--display); font-weight: 400;
+      font-size: clamp(48px, 7vw, 100px); line-height: .98;
+      letter-spacing: -.03em; max-width: 14ch; margin: 0 auto 32px; color: var(--ink);
     }
+    .final-cta h2 em { font-style: italic; color: var(--accent); }
 
-    .cta-content {
-      position: relative;
-      z-index: 1;
-      max-width: 620px;
-      margin: 0 auto;
-    }
-    .cta-title {
-      font-family: var(--font-display);
-      font-size: clamp(2rem, 5vw, 3.5rem);
-      font-weight: 700;
-      line-height: 1.15;
-      letter-spacing: -.02em;
-      margin-bottom: 1rem;
-      color: var(--text);
-    }
-    .cta-sub {
-      font-size: 1.05rem;
-      color: var(--text-soft);
-      margin-bottom: 2.5rem;
-      line-height: 1.6;
-    }
-    .cta-actions {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 1rem;
-      flex-wrap: wrap;
-      margin-bottom: 1.5rem;
-    }
-    .cta-note {
-      font-family: var(--font-mono);
-      font-size: .72rem;
-      color: var(--text-faint);
-      letter-spacing: .04em;
-    }
-    .cta-note span { color: var(--text-soft); }
-
-    /* ── ═══════════════════════════════════════════════════════ */
-    /* ── FOOTER ──────────────────────────────────────────────── */
-    /* ── ═══════════════════════════════════════════════════════ */
-    footer {
-      padding: 2.5rem 1.5rem;
-      border-top: 1px solid var(--border2);
-      background: var(--bg);
-    }
-    .footer-inner {
-      max-width: 1100px;
-      margin: 0 auto;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1.5rem;
-      flex-wrap: wrap;
-    }
-    .footer-logo {
-      font-family: var(--font-display);
-      font-size: .95rem;
-      letter-spacing: .12em;
-      text-transform: uppercase;
-      color: var(--text-soft);
-    }
-    .footer-links {
-      display: flex;
-      gap: 1.75rem;
-      list-style: none;
-    }
-    .footer-links a {
-      font-size: .825rem;
-      color: var(--text-faint);
-      transition: color .2s;
-    }
-    .footer-links a:hover { color: var(--text-soft); }
-    .footer-copy {
-      font-size: .8rem;
-      color: var(--text-faint);
+    /* ── Responsive ════════════════════════════════════════ */
+    @media (max-width: 900px) {
+      .hero-inner { grid-template-columns: 1fr; }
+      .polaroid-stage { display: none; }
+      .hero-strip { grid-template-columns: repeat(2, 1fr); padding: 28px 24px; }
+      .how-grid { grid-template-columns: 1fr; }
+      .features-grid { grid-template-columns: 1fr; }
+      .feat-1, .feat-2, .feat-3, .feat-4 { grid-column: span 1; aspect-ratio: auto; }
+      .pricing-grid { grid-template-columns: 1fr; }
+      .price-card.featured { transform: none; }
     }
     @media (max-width: 600px) {
-      .footer-inner { flex-direction: column; text-align: center; gap: 1rem; }
-      .footer-links { justify-content: center; }
-    }
-
-    /* ── Glow divider ────────────────────────────────────────── */
-    .glow-divider {
-      height: 1px;
-      background: linear-gradient(90deg, transparent, var(--coral), var(--amber), transparent);
-      opacity: .35;
+      .hero { padding: 40px 20px 72px; }
+      .hero h1 { font-size: clamp(44px, 12vw, 72px); }
+      .hero-strip { grid-template-columns: repeat(2, 1fr); margin-top: 48px; }
+      .strip-stat .num { font-size: 36px; }
+      .how { padding: 80px 20px; }
+      .features, .pricing, .faq, .final-cta { padding: 80px 20px; }
     }
   </style>
 </head>
-
 <body>
 
-<!-- ── NAV ─────────────────────────────────────────────────── -->
-<nav class="nav" id="nav">
-  <div class="nav-inner">
-    <a href="/" class="nav-logo">Reel<span>day</span> ✦</a>
+<header class="site-header">
+  <div class="site-header-inner">
+    <a class="brand" href="/">REELDAY<sup>★</sup></a>
+    <nav class="site-nav">
+      <a href="#how">How it works</a>
+      <a href="#features">Features</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <div class="site-actions">
+      <a class="btn btn-ghost" href="/login" style="padding:10px 18px;font-size:.875rem">Log in</a>
+      <a class="btn btn-accent" href="/create" style="padding:10px 18px;font-size:.875rem">Start free →</a>
+    </div>
+  </div>
+</header>
 
-    <ul class="nav-links">
-      <li><a href="#paano">How it works</a></li>
-      <li><a href="#features">Features</a></li>
-      <li><a href="#pricing">Pricing</a></li>
-      <li><a href="#faq">FAQ</a></li>
-    </ul>
-
-    <div class="nav-right">
-      <div class="nav-lang" id="lang-toggle">
-        <button class="active" data-lang="en">EN</button>
-        <button data-lang="fil">FIL</button>
+<!-- ── Hero ────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-text">
+      <div class="chip"><span class="chip-dot"></span>Built for Filipino celebrations</div>
+      <h1>Every shot.<br/><em>Every guest.</em><br/><span class="underline">One QR.</span></h1>
+      <p>Guests scan one code and upload photos straight to your live cinematic wall — no app, no sign-up, no missed moments.</p>
+      <div class="hero-cta">
+        <a class="btn btn-accent" href="/create">Start free →</a>
+        <a class="btn btn-ghost" href="#how">See how it works</a>
       </div>
-      <a href="/create" class="btn-nav" data-en="Start Free →" data-fil="Magsimula →">Start Free →</a>
-    </div>
-  </div>
-</nav>
-
-<!-- ── HERO ─────────────────────────────────────────────────── -->
-<section class="hero" id="hero">
-  <div class="hero-bg">
-    <div class="hero-bg-mid"></div>
-  </div>
-  <div class="particles" aria-hidden="true">
-    <div class="particle"></div><div class="particle"></div>
-    <div class="particle"></div><div class="particle"></div>
-    <div class="particle"></div><div class="particle"></div>
-    <div class="particle"></div><div class="particle"></div>
-    <div class="particle"></div><div class="particle"></div>
-  </div>
-
-  <div class="hero-content reveal">
-    <div class="hero-eyebrow" data-en="✦ Built for Filipino Celebrations" data-fil="✦ Para sa mga Filipino Celebrations">✦ Built for Filipino Celebrations</div>
-
-    <h1 class="hero-headline">
-      <span data-en="Every shot from your" data-fil="Bawat litrato ng inyong">Every shot from your</span><br>
-      <em data-en="celebration." data-fil="selebrasyon.">celebration.</em><br>
-      <span data-en="One QR. Instantly." data-fil="Isang QR. Agad.">One QR. Instantly.</span>
-    </h1>
-
-    <p class="hero-sub"
-       data-en="Guests scan one QR code and upload photos straight to your live cinematic wall — no app, no sign-up."
-       data-fil="Mag-scan ang mga bisita ng isang QR code at mag-upload ng photos sa inyong live cinematic wall — walang app, walang sign-up.">
-      Guests scan one QR code and upload photos straight to your live cinematic wall — no app, no sign-up.
-    </p>
-
-    <div class="hero-actions">
-      <a href="/create" class="btn-primary"
-         data-en="🎉 Start Free →" data-fil="🎉 Magsimula nang Libre →">🎉 Start Free →</a>
-      <a href="#paano" class="btn-ghost"
-         data-en="See how it works" data-fil="Paano gumagana?">See how it works</a>
-    </div>
-
-    <div class="hero-counter">
-      <span class="counter-dot"></span>
-      <span data-en="Live — " data-fil="Live — ">Live — </span>
-      <span class="counter-num" id="counter-num">847</span>
-      <span data-en="&nbsp;moments shared today" data-fil="&nbsp;sandali ang na-share ngayon">&nbsp;moments shared today</span>
-    </div>
-  </div>
-
-  <!-- Phone mockups -->
-  <div class="phones-wrap" aria-hidden="true">
-
-    <!-- Left phone: Upload screen -->
-    <div class="phone phone-left reveal reveal-delay-2">
-      <div class="phone-frame">
-        <div class="phone-notch"></div>
-        <div class="phone-screen">
-          <div class="ps-brand">Reelday ✦</div>
-          <div class="ps-title">Andrea & JM</div>
-          <div class="ps-date">June 14, 2025 · Manila</div>
-          <div class="ps-divider"></div>
-          <div class="ps-dropzone">
-            <span class="ps-dropzone-icon">📸</span>
-            <span class="ps-dropzone-text">Tap to upload<br>your photo or video</span>
-          </div>
-          <div class="ps-field">Your name (optional)</div>
-          <div class="ps-field">Leave a message…</div>
-          <div class="ps-btn">Share your photo 🎉</div>
+      <div class="hero-trust">
+        <div class="avatars">
+          <div class="placeholder--coral" style="width:32px;height:32px;border-radius:50%;border:2px solid var(--paper)"></div>
+          <div class="placeholder--ochre" style="width:32px;height:32px;border-radius:50%;border:2px solid var(--paper);margin-left:-8px"></div>
+          <div class="placeholder--sage"  style="width:32px;height:32px;border-radius:50%;border:2px solid var(--paper);margin-left:-8px"></div>
+          <div class="placeholder--clay"  style="width:32px;height:32px;border-radius:50%;border:2px solid var(--paper);margin-left:-8px"></div>
+        </div>
+        <div>
+          <div class="stars">★★★★★</div>
+          <div>Trusted by 2,140+ celebrations across PH</div>
         </div>
       </div>
     </div>
 
-    <!-- Right phone: Live wall screen -->
-    <div class="phone phone-right reveal reveal-delay-3">
-      <div class="phone-frame">
-        <div class="phone-notch"></div>
-        <div class="phone-screen" style="padding:0;background:#0a0a0a">
-          <div class="pw-bg">
-            <div class="pw-photo pw-photo-1"></div>
-            <div class="pw-photo pw-photo-2"></div>
-            <div class="pw-photo pw-photo-3"></div>
-            <div class="pw-photo pw-photo-4"></div>
-            <div class="pw-brand">Reelday ✦</div>
-            <div class="pw-names">Andrea &amp; JM</div>
-            <div class="pw-emoji pw-emoji-1">💍</div>
-            <div class="pw-emoji pw-emoji-2">🎊</div>
-            <div class="pw-emoji pw-emoji-3">✨</div>
-            <div class="pw-ticker">📸 Maria uploaded a photo · Juan shared a moment · 47 guests</div>
-          </div>
-        </div>
+    <div class="polaroid-stage">
+      <div class="sticker s1">★ Live now</div>
+      <div class="sticker s2">847 today</div>
+      <div class="polaroid pol-1">
+        <div class="pic placeholder placeholder--coral" style="width:220px;height:220px"></div>
+        <div class="caption">Tito's mga kuya, finally on the floor</div>
+      </div>
+      <div class="polaroid pol-2">
+        <div class="pic placeholder placeholder--ochre" style="width:220px;height:220px"></div>
+        <div class="caption">Ate Andrea's bouquet toss ✦</div>
+      </div>
+      <div class="polaroid pol-3">
+        <div class="pic placeholder placeholder--sage" style="width:220px;height:220px"></div>
+        <div class="caption">Lolo's speech, 1962 → today</div>
+      </div>
+      <div class="polaroid pol-4">
+        <div class="pic placeholder placeholder--clay" style="width:220px;height:220px"></div>
+        <div class="caption">Tinapay table looks unreal</div>
+      </div>
+      <div class="polaroid pol-5">
+        <div class="pic placeholder placeholder--paper" style="width:220px;height:220px;color:var(--ink)"></div>
+        <div class="caption">First kiss, Sta. Cruz</div>
       </div>
     </div>
+  </div>
 
+  <div class="hero-strip">
+    <div class="strip-stat"><div class="num"><em>2,140</em></div><div class="lbl">Events hosted</div></div>
+    <div class="strip-stat"><div class="num"><em>180k</em></div><div class="lbl">Photos uploaded</div></div>
+    <div class="strip-stat"><div class="num"><em>52s</em></div><div class="lbl">Setup time avg</div></div>
+    <div class="strip-stat"><div class="num"><em>4.9★</em></div><div class="lbl">Couple rating</div></div>
   </div>
 </section>
 
-<!-- ── PROOF MARQUEE ─────────────────────────────────────────── -->
-<div class="proof-wrap">
-  <div class="proof-track">
-    <!-- Duplicated for seamless loop -->
-    <span class="proof-item">📸 <strong>10,000+</strong> moments shared</span>
-    <span class="proof-sep"></span>
-    <span class="proof-item">💍 <strong>500+</strong> Filipino events</span>
-    <span class="proof-sep"></span>
-    <span class="proof-item">⭐ <strong>4.9/5</strong> average rating</span>
-    <span class="proof-sep"></span>
-    <span class="proof-item">🚀 <strong>5 min</strong> setup only</span>
-    <span class="proof-sep"></span>
-    <span class="proof-item">💙 <strong>GCash</strong> accepted</span>
-    <span class="proof-sep"></span>
-    <span class="proof-item">🎬 Weddings · Debuts · Birthdays</span>
-    <span class="proof-sep"></span>
-    <span class="proof-item">🔒 No app download needed</span>
-    <span class="proof-sep"></span>
-    <!-- Duplicate -->
-    <span class="proof-item">📸 <strong>10,000+</strong> moments shared</span>
-    <span class="proof-sep"></span>
-    <span class="proof-item">💍 <strong>500+</strong> Filipino events</span>
-    <span class="proof-sep"></span>
-    <span class="proof-item">⭐ <strong>4.9/5</strong> average rating</span>
-    <span class="proof-sep"></span>
-    <span class="proof-item">🚀 <strong>5 min</strong> setup only</span>
-    <span class="proof-sep"></span>
-    <span class="proof-item">💙 <strong>GCash</strong> accepted</span>
-    <span class="proof-sep"></span>
-    <span class="proof-item">🎬 Weddings · Debuts · Birthdays</span>
-    <span class="proof-sep"></span>
-    <span class="proof-item">🔒 No app download needed</span>
-    <span class="proof-sep"></span>
+<!-- ── How it works ─────────────────────────────────────────── -->
+<section class="how" id="how">
+  <div class="how-head">
+    <div class="eyebrow" style="margin-bottom:16px;text-align:center">— How it works</div>
+    <h2>Three steps.<br/>Done before <em>cocktail hour.</em></h2>
   </div>
-</div>
-
-<!-- ── HOW IT WORKS ──────────────────────────────────────────── -->
-<section class="how-section" id="paano">
-  <div class="container">
-    <div class="section-header reveal">
-      <div class="eyebrow" data-en="How it works" data-fil="Paano gumagana">How it works</div>
-      <h2 class="section-title" data-en="Three steps. That's it." data-fil="Tatlong hakbang. Tapos na.">Three steps. That's it.</h2>
-      <p class="section-sub"
-         data-en="No tech skills needed. Works on any phone. Ready for your event in under 5 minutes."
-         data-fil="Hindi kailangan ng tech skills. Gumagana sa kahit anong phone. Handa sa loob ng 5 minuto.">
-        No tech skills needed. Works on any phone. Ready for your event in under 5 minutes.
-      </p>
+  <div class="how-grid">
+    <div class="how-card">
+      <div class="big-num">1</div>
+      <h3>Create your event</h3>
+      <p>Set names, date, type. Choose a plan. Get your QR code in under 5 minutes.</p>
+      <div class="demo">Event setup screen</div>
     </div>
+    <div class="how-card">
+      <div class="big-num">2</div>
+      <h3>Guests scan & share</h3>
+      <p>One tap opens the upload page. Pick photos, add a caption, send. No app, no login.</p>
+      <div class="demo">Guest upload screen</div>
+    </div>
+    <div class="how-card">
+      <div class="big-num">3</div>
+      <h3>Wall goes live</h3>
+      <p>Photos appear on screen within seconds. Ken Burns pans, music, captions, the works.</p>
+      <div class="demo">Live wall preview</div>
+    </div>
+  </div>
+</section>
 
-    <div class="how-grid">
-      <div class="how-card reveal reveal-delay-1">
-        <div class="how-step-num">01</div>
-        <div class="how-icon-wrap icon-scan">✏️</div>
-        <h3 class="how-title" data-en="Create your event" data-fil="I-setup ang inyong event">Create your event</h3>
-        <p class="how-desc"
-           data-en="Enter celebrant names, pick event type, choose a plan. Takes under 3 minutes."
-           data-fil="Isulat ang pangalan ng celebrant, piliin ang uri ng event, pumili ng plano. 3 minuto lang.">
-          Enter celebrant names, pick event type, choose a plan. Takes under 3 minutes.
-        </p>
-      </div>
-
-      <div class="how-card reveal reveal-delay-2">
-        <div class="how-step-num">02</div>
-        <div class="how-icon-wrap">📲</div>
-        <h3 class="how-title" data-en="Share the QR code" data-fil="I-share ang QR code">Share the QR code</h3>
-        <p class="how-desc"
-           data-en="Print it, display it on a screen, or text the link. Guests scan — no app, no login."
-           data-fil="I-print, i-display sa screen, o i-text ang link. Mag-scan ang mga bisita — walang app, walang login.">
-          Print it, display it on a screen, or text the link. Guests scan — no app, no login.
-        </p>
-      </div>
-
-      <div class="how-card reveal reveal-delay-3">
-        <div class="how-step-num">03</div>
-        <div class="how-icon-wrap">🎬</div>
-        <h3 class="how-title" data-en="Watch the Live Wall" data-fil="Panoorin ang Live Wall">Watch the Live Wall</h3>
-        <p class="how-desc"
-           data-en="Photos appear instantly on a cinematic wall with Ken Burns effects and floating emojis. Pure magic."
-           data-fil="Lilitaw agad ang mga photos sa cinematic wall na may Ken Burns effects at floating emojis. Kamangha-mangha.">
-          Photos appear instantly on a cinematic wall with Ken Burns effects and floating emojis. Pure magic.
-        </p>
+<!-- ── Testimonial ──────────────────────────────────────────── -->
+<section class="quote">
+  <div class="quote-inner">
+    <div class="eyebrow" style="margin-bottom:16px">— What couples say</div>
+    <blockquote>"By the end of the night we had 412 photos we'd never have seen otherwise. Tita Marivic's <em>blurry first dance</em> shot is still my favorite frame in the whole reel."</blockquote>
+    <div class="quote-attr">
+      <div class="quote-avatar"></div>
+      <div style="text-align:left">
+        <div class="quote-name">Andrea & JM Cabrera</div>
+        <div class="quote-meta">Manila · June 2025</div>
       </div>
     </div>
   </div>
 </section>
 
-<div class="glow-divider"></div>
-
-<!-- ── BENTO FEATURES ────────────────────────────────────────── -->
-<section class="bento-section" id="features">
-  <div class="container">
-    <div class="section-header reveal">
-      <div class="eyebrow" data-en="Features" data-fil="Mga Feature">Features</div>
-      <h2 class="section-title" data-en="Everything for your big day." data-fil="Lahat para sa inyong espesyal na araw.">Everything for your big day.</h2>
+<!-- ── Features ─────────────────────────────────────────────── -->
+<section class="features" id="features">
+  <div class="features-head">
+    <div class="eyebrow" style="margin-bottom:16px">— What's inside</div>
+    <h2>A wedding video<br/>directed by your <em>guests.</em></h2>
+  </div>
+  <div class="features-grid">
+    <div class="feat feat-1">
+      <span class="feat-pill">Headline feature</span>
+      <h3>Cinematic <em>live wall</em></h3>
+      <p>Ken Burns pans, crossfades, captions, ambient music — automatic, beautiful.</p>
+      <div class="feat-demo">Live wall preview</div>
     </div>
-
-    <div class="bento-grid">
-
-      <!-- Hero card: QR demo -->
-      <div class="bento-card b-hero reveal">
-        <div class="bento-label" data-en="Core feature" data-fil="Pangunahing Feature">Core feature</div>
-        <div class="bento-title" data-en="One QR.<br>Every memory." data-fil="Isang QR.<br>Lahat ng alaala.">One QR.<br>Every memory.</div>
-        <div class="bento-desc"
-             data-en="One QR code. All your guests. All their photos. No friction — grandma can do it."
-             data-fil="Isang QR code. Lahat ng bisita. Lahat ng kanilang photos. Kahit lola, kaya nila.">
-          One QR code. All your guests. All their photos. No friction — grandma can do it.
-        </div>
-        <div class="qr-demo">
-          <div class="qr-box">
-            <div class="qr-scan-line"></div>
-            <!-- 25 pixels for 5×5 grid -->
-            <div class="qr-pixel"></div><div class="qr-pixel"></div><div class="qr-pixel"></div><div class="qr-pixel"></div><div class="qr-pixel"></div>
-            <div class="qr-pixel"></div><div class="qr-pixel"></div><div class="qr-pixel"></div><div class="qr-pixel"></div><div class="qr-pixel"></div>
-            <div class="qr-pixel"></div><div class="qr-pixel"></div><div class="qr-pixel"></div><div class="qr-pixel"></div><div class="qr-pixel"></div>
-            <div class="qr-pixel"></div><div class="qr-pixel"></div><div class="qr-pixel"></div><div class="qr-pixel"></div><div class="qr-pixel"></div>
-            <div class="qr-pixel"></div><div class="qr-pixel"></div><div class="qr-pixel"></div><div class="qr-pixel"></div><div class="qr-pixel"></div>
-          </div>
-          <div class="qr-arrow">→</div>
-          <div class="qr-result">
-            <div class="qr-result-bar"><div class="qr-result-fill"></div></div>
-            <div class="qr-result-text">uploading photo...</div>
-            <div class="qr-counter">+<span id="qr-counter-num">12</span> <span data-en="photos this minute" data-fil="photos ngayong minuto">photos this minute</span></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Video messages -->
-      <div class="bento-card b-vm reveal reveal-delay-1">
-        <div class="bento-icon">💌</div>
-        <div class="bento-label" data-en="Pro feature" data-fil="Pro Feature">Pro feature</div>
-        <div class="bento-title" data-en="Video Messages" data-fil="Video Messages">Video Messages</div>
-        <div class="bento-desc"
-             data-en="Guests record 60-second video greetings right from the browser. No app needed."
-             data-fil="Mag-record ang mga bisita ng 60-second video greeting mula sa browser. Walang app.">
-          Guests record 60-second video greetings right from the browser. No app needed.
-        </div>
-      </div>
-
-      <!-- Live wall -->
-      <div class="bento-card b-wall reveal reveal-delay-2">
-        <div class="bento-icon">🎬</div>
-        <div class="bento-label" data-en="Cinematic" data-fil="Sinematiko">Cinematic</div>
-        <div class="bento-title" data-en="Live Wall" data-fil="Live Wall">Live Wall</div>
-        <div class="bento-desc"
-             data-en="Ken Burns parallax, crossfade layers, floating emojis, ticker strip. Your guests will gasp."
-             data-fil="Ken Burns parallax, crossfade layers, floating emojis. Mabibighani ang lahat.">
-          Ken Burns parallax, crossfade layers, floating emojis, ticker strip. Your guests will gasp.
-        </div>
-      </div>
-
-      <!-- QR code -->
-      <div class="bento-card b-qr reveal reveal-delay-1">
-        <div class="bento-icon">📱</div>
-        <div class="bento-title" data-en="Instant QR" data-fil="Instant QR">Instant QR</div>
-        <div class="bento-desc"
-             data-en="Auto-generated QR code. Download, print, display on screen."
-             data-fil="Auto-generated QR code. I-download, i-print, i-display.">
-          Auto-generated QR code. Download, print, display on screen.
-        </div>
-      </div>
-
-      <!-- Download all -->
-      <div class="bento-card b-dl reveal reveal-delay-2">
-        <div class="bento-icon">💾</div>
-        <div class="bento-title" data-en="Download All" data-fil="I-download Lahat">Download All</div>
-        <div class="bento-desc"
-             data-en="After the event, download every photo and video in one click."
-             data-fil="Pagkatapos ng event, i-download ang lahat ng photos at videos sa isang click.">
-          After the event, download every photo and video in one click.
-        </div>
-      </div>
-
-      <!-- Privacy / moderation -->
-      <div class="bento-card b-priv reveal reveal-delay-3">
-        <div class="bento-icon">✅</div>
-        <div class="bento-title" data-en="Moderation" data-fil="Moderation">Moderation</div>
-        <div class="bento-desc"
-             data-en="Approve or delete uploads before they hit the live wall."
-             data-fil="I-approve o i-delete ang uploads bago lumabas sa live wall.">
-          Approve or delete uploads before they hit the live wall.
-        </div>
-      </div>
-
+    <div class="feat feat-2">
+      <span class="feat-pill">EN · FIL</span>
+      <h3><em>Bilingual</em> upload</h3>
+      <p>Guests pick their language. Tita & Tito get TL, kids get EN.</p>
+    </div>
+    <div class="feat feat-3">
+      <span class="feat-pill">1-tap</span>
+      <h3>Phone <em>moderation</em></h3>
+      <p>Approve, hide, or feature uploads from your phone.</p>
+    </div>
+    <div class="feat feat-4">
+      <span class="feat-pill">Forever</span>
+      <h3>Full-quality <em>archive.</em></h3>
+      <p>Download every photo and video as a .zip. Yours forever.</p>
+      <div class="feat-demo">Download archive</div>
     </div>
   </div>
 </section>
 
-<!-- ── COMPARISON TABLE ──────────────────────────────────────── -->
-<section class="compare-section">
-  <div class="container">
-    <div class="section-header reveal">
-      <div class="eyebrow" data-en="Why Reelday" data-fil="Bakit Reelday">Why Reelday</div>
-      <h2 class="section-title" data-en="The clear choice." data-fil="Malinaw na pagpipilian.">The clear choice.</h2>
-      <p class="section-sub"
-         data-en="We built the only platform designed specifically for Filipino celebrations."
-         data-fil="Kami lang ang platform na ginawa para sa mga Filipino celebrations.">
-        We built the only platform designed specifically for Filipino celebrations.
-      </p>
+<!-- ── Pricing ───────────────────────────────────────────────── -->
+<section class="pricing" id="pricing">
+  <div class="pricing-head">
+    <div class="eyebrow" style="margin-bottom:16px">— Simple pricing</div>
+    <h2>One payment.<br/><em>Sulit forever.</em></h2>
+    <p>No subscription. No surprise charges. Pick the tier that matches your celebration.</p>
+  </div>
+  <div class="pricing-grid">
+    <div class="price-card">
+      <div class="tier">Libre</div>
+      <div class="price">₱999<sub> / event</sub></div>
+      <p class="desc">For simple celebrations — despedidas, baptisms, reunions.</p>
+      <ul>
+        <li>Unlimited uploads</li>
+        <li>Basic live wall, 24h</li>
+        <li>Free QR templates</li>
+        <li>6-month archive</li>
+      </ul>
+      <a class="btn btn-ghost" href="/create">Get started</a>
     </div>
-
-    <div class="compare-table-wrap reveal">
-      <table class="compare-table">
-        <thead>
-          <tr>
-            <th>Feature</th>
-            <th class="col-reelday">Reelday ✦</th>
-            <th>PhotoShare.ph</th>
-            <th>Wedibox</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td data-en="GCash / Maya payment" data-fil="GCash / Maya payment">GCash / Maya payment</td>
-            <td class="col-reelday"><span class="check-yes">✓</span></td>
-            <td class="col-other"><span class="check-no">✕</span></td>
-            <td class="col-other"><span class="check-no">✕</span></td>
-          </tr>
-          <tr>
-            <td data-en="60s video messages" data-fil="60s video messages">60s video messages</td>
-            <td class="col-reelday"><span class="check-yes">✓</span></td>
-            <td class="col-other"><span class="check-no">✕</span></td>
-            <td class="col-other"><span class="check-part">~</span></td>
-          </tr>
-          <tr>
-            <td data-en="Cinematic live wall" data-fil="Cinematic live wall">Cinematic live wall</td>
-            <td class="col-reelday"><span class="check-yes">✓</span></td>
-            <td class="col-other"><span class="check-part">~</span></td>
-            <td class="col-other"><span class="check-no">✕</span></td>
-          </tr>
-          <tr>
-            <td data-en="Taglish / Filipino UI" data-fil="Taglish / Filipino UI">Taglish / Filipino UI</td>
-            <td class="col-reelday"><span class="check-yes">✓</span></td>
-            <td class="col-other"><span class="check-no">✕</span></td>
-            <td class="col-other"><span class="check-no">✕</span></td>
-          </tr>
-          <tr>
-            <td data-en="No app download for guests" data-fil="No app download para sa bisita">No app download for guests</td>
-            <td class="col-reelday"><span class="check-yes">✓</span></td>
-            <td class="col-other"><span class="check-no">✕</span></td>
-            <td class="col-other"><span class="check-part">~</span></td>
-          </tr>
-          <tr>
-            <td data-en="One-time payment (no subscription)" data-fil="Isang bayad (walang subscription)">One-time payment (no subscription)</td>
-            <td class="col-reelday"><span class="check-yes">✓</span></td>
-            <td class="col-other"><span class="check-no">✕</span></td>
-            <td class="col-other"><span class="check-no">✕</span></td>
-          </tr>
-          <tr>
-            <td data-en="8 Filipino event themes" data-fil="8 Filipino event themes">8 Filipino event themes</td>
-            <td class="col-reelday"><span class="check-yes">✓</span></td>
-            <td class="col-other"><span class="check-no">✕</span></td>
-            <td class="col-other"><span class="check-no">✕</span></td>
-          </tr>
-        </tbody>
-      </table>
+    <div class="price-card featured">
+      <div class="tier">★ Selebrasyon</div>
+      <div class="price">₱1,999<sub> / event</sub></div>
+      <p class="desc">For weddings, debuts, and big birthdays.</p>
+      <ul>
+        <li>Everything in Libre</li>
+        <li>Cinematic wall + music</li>
+        <li>Video messages (60s)</li>
+        <li>Live emoji reactions</li>
+        <li>12-month archive</li>
+        <li>Priority Viber support</li>
+      </ul>
+      <a class="btn btn-accent" href="/create">Choose Selebrasyon →</a>
+    </div>
+    <div class="price-card">
+      <div class="tier">Pro</div>
+      <div class="price">₱3,499<sub> / event</sub></div>
+      <p class="desc">Premium experience with lifetime archive.</p>
+      <ul>
+        <li>Everything in Selebrasyon</li>
+        <li>AI highlight reel</li>
+        <li>5 sub-galleries</li>
+        <li>Lifetime archive</li>
+        <li>50 printed QR cards</li>
+        <li>Custom branding</li>
+      </ul>
+      <a class="btn btn-ghost" href="/create">Choose Pro</a>
     </div>
   </div>
 </section>
 
-<!-- ── PRICING ───────────────────────────────────────────────── -->
-<section class="pricing-section" id="pricing">
-  <div class="container">
-    <div class="section-header reveal">
-      <div class="eyebrow" data-en="Pricing" data-fil="Presyo">Pricing</div>
-      <h2 class="section-title" data-en="One payment. Forever." data-fil="Isang bayad. Habambuhay.">One payment. Forever.</h2>
-      <p class="section-sub"
-         data-en="No monthly fees. No surprise charges. Pay once, use for your entire event."
-         data-fil="Walang monthly fees. Walang hidden charges. Bayaran isang beses para sa inyong buong event.">
-        No monthly fees. No surprise charges. Pay once, use for your entire event.
-      </p>
-    </div>
-
-    <div class="pricing-grid">
-
-      <!-- Libre -->
-      <div class="pricing-card reveal reveal-delay-1">
-        <div class="pricing-name">Libre</div>
-        <div class="pricing-price"><sup>₱</sup>999</div>
-        <div class="pricing-period" data-en="one-time · 6 months access" data-fil="isang bayad · 6 buwan access">one-time · 6 months access</div>
-        <div class="pricing-desc"
-             data-en="Perfect for intimate celebrations."
-             data-fil="Para sa simpleng selebrasyon.">Perfect for intimate celebrations.</div>
-        <ul class="pricing-feats">
-          <li data-en="Unlimited guest uploads" data-fil="Unlimited uploads ng bisita">Unlimited guest uploads</li>
-          <li data-en="Live wall (basic)" data-fil="Live wall (basic)">Live wall (basic)</li>
-          <li data-en="QR code generation" data-fil="QR code generation">QR code generation</li>
-          <li data-en="Download all files" data-fil="I-download ang lahat ng files">Download all files</li>
-          <li data-en="Free QR templates" data-fil="Libreng QR templates">Free QR templates</li>
-        </ul>
-        <a href="/create" class="btn-pricing" data-en="Get Libre →" data-fil="Piliin ang Libre →">Get Libre →</a>
-      </div>
-
-      <!-- Selebrasyon (featured) -->
-      <div class="pricing-card featured reveal reveal-delay-2">
-        <div class="pricing-badge" data-en="⭐ Most popular" data-fil="⭐ Pinaka-popular">⭐ Most popular</div>
-        <div class="pricing-name">Selebrasyon</div>
-        <div class="pricing-price"><sup>₱</sup>1,999</div>
-        <div class="pricing-period" data-en="one-time · 12 months access" data-fil="isang bayad · 12 buwan access">one-time · 12 months access</div>
-        <div class="pricing-desc"
-             data-en="The full experience. Perfect for weddings and debuts."
-             data-fil="Ang buong experience. Para sa kasalan at debut.">The full experience. Perfect for weddings and debuts.</div>
-        <ul class="pricing-feats">
-          <li data-en="Everything in Libre" data-fil="Lahat sa Libre">Everything in Libre</li>
-          <li data-en="Video messages (60s)" data-fil="Video messages (60s)">Video messages (60s)</li>
-          <li data-en="Cinematic live wall + music" data-fil="Cinematic live wall + music">Cinematic live wall + music</li>
-          <li data-en="Live emoji reactions" data-fil="Live emoji reactions">Live emoji reactions</li>
-          <li data-en="Priority Viber support" data-fil="Priority Viber support">Priority Viber support</li>
-          <li data-en="8 event themes" data-fil="8 event themes">8 event themes</li>
-        </ul>
-        <a href="/create" class="btn-pricing featured" data-en="Get Selebrasyon →" data-fil="Piliin ang Selebrasyon →">Get Selebrasyon →</a>
-      </div>
-
-      <!-- Pro -->
-      <div class="pricing-card reveal reveal-delay-3">
-        <div class="pricing-name">Reelday Pro</div>
-        <div class="pricing-price"><sup>₱</sup>3,499</div>
-        <div class="pricing-period" data-en="one-time · lifetime access" data-fil="isang bayad · lifetime access">one-time · lifetime access</div>
-        <div class="pricing-desc"
-             data-en="For event coordinators and venues."
-             data-fil="Para sa event coordinators at venues.">For event coordinators and venues.</div>
-        <ul class="pricing-feats">
-          <li data-en="Everything in Selebrasyon" data-fil="Lahat sa Selebrasyon">Everything in Selebrasyon</li>
-          <li data-en="Lifetime event access" data-fil="Lifetime event access">Lifetime event access</li>
-          <li data-en="Custom branding" data-fil="Custom branding">Custom branding</li>
-          <li data-en="Multiple events" data-fil="Multiple events">Multiple events</li>
-          <li data-en="Dedicated support" data-fil="Dedicated support">Dedicated support</li>
-        </ul>
-        <a href="/create" class="btn-pricing" data-en="Get Pro →" data-fil="Piliin ang Pro →">Get Pro →</a>
-      </div>
-
-    </div>
-
-    <p class="pricing-note">
-      <span data-en="Not sure yet?" data-fil="Hindi pa sigurado?">Not sure yet?</span>
-      <strong>&nbsp;</strong>
-      <a href="/create" style="color:var(--coral)" data-en="Try for free first →" data-fil="I-try muna nang libre →">Try for free first →</a>
-    </p>
+<!-- ── FAQ ──────────────────────────────────────────────────── -->
+<section class="faq" id="faq">
+  <div class="faq-inner">
+    <div class="eyebrow" style="margin-bottom:16px;text-align:center">— Common questions</div>
+    <h2>Mga <em>tanong</em>?</h2>
+    <details class="faq-item" open>
+      <summary>Do guests need to download an app?</summary>
+      <p>No. They scan the QR, the upload page opens in any browser, and they share. That's the whole point.</p>
+    </details>
+    <details class="faq-item">
+      <summary>What if the venue Wi-Fi is bad?</summary>
+      <p>Guests can upload over mobile data. There's no Wi-Fi dependency — the upload page works on any connection.</p>
+    </details>
+    <details class="faq-item">
+      <summary>Can we screen photos before they go live?</summary>
+      <p>Yes. One-tap moderation from your phone. Approve, hide, or feature. Defaults to auto-approve so you can stay present.</p>
+    </details>
+    <details class="faq-item">
+      <summary>Do we keep the photos forever?</summary>
+      <p>Yes. Download a full-resolution .zip any time from your dashboard. Pro events stay archived for life.</p>
+    </details>
+    <details class="faq-item">
+      <summary>Paano mag-bayad? (How do we pay?)</summary>
+      <p>We accept GCash, Maya, and credit/debit cards via PayMongo. GCash payments are verified within 1 hour.</p>
+    </details>
+    <details class="faq-item">
+      <summary>Pwede ba namin gamitin sa Filipino?</summary>
+      <p>Oo naman. The guest upload page is fully bilingual — guests pick EN or FIL when they open it.</p>
+    </details>
   </div>
 </section>
 
-<!-- ── TESTIMONIAL ────────────────────────────────────────────── -->
-<section class="testi-section">
-  <div class="container">
-    <blockquote class="testi-quote reveal">
-      "<span data-en="Hindi kami makapaniwala — lahat ng bisita namin ay nag-upload ng photos in real time. Kitang-kita namin sa screen ang bawat sandali ng aming kasalan. Reelday is a must for every Filipino couple."
-             data-fil="Hindi kami makapaniwala — lahat ng bisita namin ay nag-upload ng photos in real time. Kitang-kita namin sa screen ang bawat sandali ng aming kasalan. Reelday is a must for every Filipino couple.">Hindi kami makapaniwala — lahat ng bisita namin ay nag-upload ng photos in real time. Kitang-kita namin sa screen ang bawat sandali ng aming kasalan. Reelday is a must for every Filipino couple.</span>"
-    </blockquote>
-    <div class="testi-author">
-      <div class="testi-avatar">A</div>
-      <div class="testi-meta">
-        <div class="testi-name">Andrea &amp; JM Reyes</div>
-        <div class="testi-event" data-en="Wedding · Makati, June 2025" data-fil="Kasalan · Makati, Hunyo 2025">Wedding · Makati, June 2025</div>
-        <div class="testi-stars">★★★★★</div>
-      </div>
-    </div>
-  </div>
+<!-- ── Final CTA ─────────────────────────────────────────────── -->
+<section class="final-cta">
+  <div class="eyebrow" style="margin-bottom:24px">— Start today, free</div>
+  <h2>Your day. Every <em>angle.</em></h2>
+  <a class="btn btn-accent" href="/create" style="font-size:1rem;padding:16px 32px">Start free — no card needed →</a>
 </section>
 
-<!-- ── FAQ ───────────────────────────────────────────────────── -->
-<section class="faq-section" id="faq">
-  <div class="container">
-    <div class="section-header reveal">
-      <div class="eyebrow">FAQ</div>
-      <h2 class="section-title" data-en="Common questions." data-fil="Mga karaniwang tanong.">Common questions.</h2>
+<footer class="site-footer">
+  <div class="site-footer-inner">
+    <div>
+      <div class="brand" style="margin-bottom:14px">REELDAY<sup>★</sup></div>
+      <p style="color:var(--ink-soft);font-size:14px;max-width:32ch;line-height:1.6">The cinematic photo wall for Filipino celebrations. Made in Manila.</p>
     </div>
-
-    <div class="faq-list reveal">
-
-      <details class="faq-item">
-        <summary class="faq-q">
-          <span data-en="Do guests need to download an app?" data-fil="Kailangan bang mag-download ng app ang mga bisita?">Do guests need to download an app?</span>
-          <span class="faq-chevron">▾</span>
-        </summary>
-        <div class="faq-a"
-             data-en="No. Guests just scan the QR code with their phone camera. The upload page opens in any browser — works on iPhone, Android, kahit lumang phone."
-             data-fil="Hindi. Mag-scan lang ang mga bisita gamit ang camera ng kanilang phone. Magbubukas ang upload page sa kahit anong browser — gumagana sa iPhone, Android, kahit lumang phone.">
-          No. Guests just scan the QR code with their phone camera. The upload page opens in any browser — works on iPhone, Android, kahit lumang phone.
-        </div>
-      </details>
-
-      <details class="faq-item">
-        <summary class="faq-q">
-          <span data-en="Can I pay with GCash or Maya?" data-fil="Pwede bang magbayad gamit ang GCash o Maya?">Can I pay with GCash or Maya?</span>
-          <span class="faq-chevron">▾</span>
-        </summary>
-        <div class="faq-a"
-             data-en="Yes! We accept GCash, Maya, and credit/debit cards via PayMongo. 100% secure and encrypted."
-             data-fil="Oo! Tinatanggap namin ang GCash, Maya, at credit/debit cards via PayMongo. 100% secure at encrypted.">
-          Yes! We accept GCash, Maya, and credit/debit cards via PayMongo. 100% secure and encrypted.
-        </div>
-      </details>
-
-      <details class="faq-item">
-        <summary class="faq-q">
-          <span data-en="How many photos can guests upload?" data-fil="Ilang photos ang pwedeng i-upload ng mga bisita?">How many photos can guests upload?</span>
-          <span class="faq-chevron">▾</span>
-        </summary>
-        <div class="faq-a"
-             data-en="Unlimited. All plans include unlimited uploads from all guests — photos and videos included. No per-upload charges ever."
-             data-fil="Unlimited. Lahat ng plano ay may unlimited uploads mula sa lahat ng bisita — photos at videos. Walang per-upload charges.">
-          Unlimited. All plans include unlimited uploads from all guests — photos and videos included. No per-upload charges ever.
-        </div>
-      </details>
-
-      <details class="faq-item">
-        <summary class="faq-q">
-          <span data-en="How long after the event can I download photos?" data-fil="Gaano katagal pagkatapos ng event pwede pa naming i-download ang photos?">How long after the event can I download photos?</span>
-          <span class="faq-chevron">▾</span>
-        </summary>
-        <div class="faq-a"
-             data-en="Libre plan: 6 months. Selebrasyon: 12 months. Pro: lifetime. Download anytime within your access window."
-             data-fil="Libre plan: 6 buwan. Selebrasyon: 12 buwan. Pro: habambuhay. I-download kahit kailan sa loob ng inyong access period.">
-          Libre plan: 6 months. Selebrasyon: 12 months. Pro: lifetime. Download anytime within your access window.
-        </div>
-      </details>
-
-      <details class="faq-item">
-        <summary class="faq-q">
-          <span data-en="What types of events does Reelday support?" data-fil="Anong uri ng event ang suportado ng Reelday?">What types of events does Reelday support?</span>
-          <span class="faq-chevron">▾</span>
-        </summary>
-        <div class="faq-a"
-             data-en="Weddings, debuts, birthdays, 7th birthdays, baptisms, reunions, corporate events, and memorials — each with its own cinematic theme and Taglish UI."
-             data-fil="Kasalan, debut, kaarawan, 7th birthday, binyag, reunions, corporate events, at memorials — bawat isa ay may sariling cinematic theme at Taglish UI.">
-          Weddings, debuts, birthdays, 7th birthdays, baptisms, reunions, corporate events, and memorials — each with its own cinematic theme and Taglish UI.
-        </div>
-      </details>
-
-      <details class="faq-item">
-        <summary class="faq-q">
-          <span data-en="Can I moderate what appears on the live wall?" data-fil="Pwede ko bang kontrolin ang lalabas sa live wall?">Can I moderate what appears on the live wall?</span>
-          <span class="faq-chevron">▾</span>
-        </summary>
-        <div class="faq-a"
-             data-en="Yes. From your dashboard you can approve or delete any upload before it appears on the wall — full control at all times."
-             data-fil="Oo. Mula sa inyong dashboard pwede ninyong i-approve o i-delete ang kahit anong upload bago lumabas sa wall — buong kontrol sa lahat ng oras.">
-          Yes. From your dashboard you can approve or delete any upload before it appears on the wall — full control at all times.
-        </div>
-      </details>
-
+    <div>
+      <h4>Product</h4>
+      <ul>
+        <li><a href="#how">How it works</a></li>
+        <li><a href="#pricing">Pricing</a></li>
+        <li><a href="#features">Features</a></li>
+        <li><a href="/create">Create event</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>Account</h4>
+      <ul>
+        <li><a href="/login">Log in</a></li>
+        <li><a href="/register">Sign up</a></li>
+        <li><a href="/my-events">My Events</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>Legal</h4>
+      <ul>
+        <li><a href="#">Privacy</a></li>
+        <li><a href="#">Terms</a></li>
+        <li><a href="#">Refunds</a></li>
+      </ul>
     </div>
   </div>
-</section>
-
-<!-- ── FINAL CTA ──────────────────────────────────────────────── -->
-<section class="cta-section">
-  <div class="cta-content reveal">
-    <div class="eyebrow" data-en="Ready?" data-fil="Handa na?">Ready?</div>
-    <h2 class="cta-title"
-        data-en="Make your celebration unforgettable."
-        data-fil="Gawing hindi malilimutang selebrasyon ang inyong espesyal na araw.">Make your celebration unforgettable.</h2>
-    <p class="cta-sub"
-       data-en="Set up in 5 minutes. Every guest, every moment, one beautiful wall."
-       data-fil="Setup sa 5 minuto. Bawat bisita, bawat sandali, isang magandang wall.">
-      Set up in 5 minutes. Every guest, every moment, one beautiful wall.
-    </p>
-    <div class="cta-actions">
-      <a href="/create" class="btn-primary"
-         data-en="🎉 Start Free →" data-fil="🎉 Magsimula nang Libre →">🎉 Start Free →</a>
-      <a href="/create" class="btn-ghost"
-         data-en="View plans" data-fil="Tingnan ang mga plano">View plans</a>
-    </div>
-    <p class="cta-note">
-      <span data-en="No credit card required" data-fil="Hindi kailangan ng credit card">No credit card required</span> ·
-      <span data-en="GCash accepted" data-fil="GCash accepted">GCash accepted</span> ·
-      <span data-en="Setup in 5 minutes" data-fil="Setup sa 5 minuto">Setup in 5 minutes</span>
-    </p>
-  </div>
-</section>
-
-<!-- ── FOOTER ────────────────────────────────────────────────── -->
-<footer>
-  <div class="footer-inner">
-    <div class="footer-logo">Reelday ✦</div>
-    <ul class="footer-links">
-      <li><a href="#paano" data-en="How it works" data-fil="Paano gumagana">How it works</a></li>
-      <li><a href="#pricing" data-en="Pricing" data-fil="Presyo">Pricing</a></li>
-      <li><a href="#faq">FAQ</a></li>
-      <li><a href="#" data-en="Terms" data-fil="Terms">Terms</a></li>
-      <li><a href="#" data-en="Privacy" data-fil="Privacy">Privacy</a></li>
-    </ul>
-    <p class="footer-copy"
-       data-en="© 2025 Reelday. Made with ❤️ for Filipino celebrations."
-       data-fil="© 2025 Reelday. Ginawa para sa mga Filipino celebrations.">
-      © 2025 Reelday. Made with ❤️ for Filipino celebrations.
-    </p>
+  <div class="footer-meta">
+    <span>© 2026 Reelday · Made in Manila</span>
+    <span>★ EVERY SHOT · ONE QR · INSTANTLY</span>
   </div>
 </footer>
 
 <script>
-  // ── Nav scroll state ──────────────────────────────────────
-  const nav = document.getElementById('nav');
-  window.addEventListener('scroll', () => {
-    nav.classList.toggle('scrolled', window.scrollY > 40);
-  }, { passive: true });
+  // Reveal on scroll
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); } });
+  }, { threshold: .1 });
+  document.querySelectorAll('.how-card, .feat, .price-card').forEach(el => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(24px)';
+    el.style.transition = 'opacity .6s ease, transform .6s ease';
+    observer.observe(el);
+  });
+  document.querySelectorAll('.how-card.visible, .feat.visible, .price-card.visible').forEach(el => {
+    el.style.opacity = '1'; el.style.transform = 'translateY(0)';
+  });
 
-  // ── Scroll reveal ─────────────────────────────────────────
-  const revealEls = document.querySelectorAll('.reveal');
-  const revealObs = new IntersectionObserver(entries => {
+  const io = new IntersectionObserver(entries => {
     entries.forEach(e => {
       if (e.isIntersecting) {
-        e.target.classList.add('visible');
-        revealObs.unobserve(e.target);
+        e.target.style.opacity = '1';
+        e.target.style.transform = 'translateY(0)';
+        io.unobserve(e.target);
       }
     });
-  }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
-  revealEls.forEach(el => revealObs.observe(el));
-
-  // ── Live counter animation ────────────────────────────────
-  const counterEl = document.getElementById('counter-num');
-  const TARGET = 847;
-  let displayed = 0;
-  const duration = 2200;
-  const startTime = performance.now();
-  function animCounter(ts) {
-    const elapsed = ts - startTime;
-    const progress = Math.min(elapsed / duration, 1);
-    const eased = 1 - Math.pow(1 - progress, 3);
-    displayed = Math.round(eased * TARGET);
-    counterEl.textContent = displayed.toLocaleString();
-    if (progress < 1) requestAnimationFrame(animCounter);
-    else {
-      // Slowly increment after animation
-      setInterval(() => {
-        displayed += Math.floor(Math.random() * 3);
-        counterEl.textContent = displayed.toLocaleString();
-      }, 4500);
-    }
-  }
-  requestAnimationFrame(animCounter);
-
-  // ── QR counter animation ──────────────────────────────────
-  const qrCounterEl = document.getElementById('qr-counter-num');
-  let qrCount = 0;
-  function animQrCounter() {
-    const end = 12;
-    const step = () => {
-      if (qrCount < end) {
-        qrCount++;
-        qrCounterEl.textContent = qrCount;
-        setTimeout(step, 200);
-      } else {
-        setTimeout(() => { qrCount = 0; animQrCounter(); }, 2000);
-      }
-    };
-    step();
-  }
-  setTimeout(animQrCounter, 1000);
-
-  // ── Language toggle ───────────────────────────────────────
-  let currentLang = localStorage.getItem('reelday_lang') || 'en';
-
-  function applyLang(lang) {
-    currentLang = lang;
-    document.documentElement.lang = lang;
-    localStorage.setItem('reelday_lang', lang);
-
-    document.querySelectorAll('[data-en]').forEach(el => {
-      const val = el.dataset[lang] || el.dataset.en;
-      if (!val) return;
-      // Only update leaf text nodes — skip elements that have child elements
-      // (their children each have data-en/data-fil and are handled individually)
-      if (el.children.length === 0) {
-        el.textContent = val;
-      }
-    });
-
-    document.querySelectorAll('[data-lang]').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.lang === lang);
-    });
-  }
-
-  document.getElementById('lang-toggle').addEventListener('click', e => {
-    const btn = e.target.closest('button[data-lang]');
-    if (btn) applyLang(btn.dataset.lang);
-  });
-
-  applyLang(currentLang);
-
-  // ── Magnetic button effect ────────────────────────────────
-  document.querySelectorAll('.btn-primary, .btn-nav').forEach(btn => {
-    btn.addEventListener('mousemove', e => {
-      const rect = btn.getBoundingClientRect();
-      const x = e.clientX - rect.left - rect.width / 2;
-      const y = e.clientY - rect.top - rect.height / 2;
-      btn.style.transform = `translate(${x * 0.18}px, ${y * 0.18}px) translateY(-2px) scale(1.02)`;
-    });
-    btn.addEventListener('mouseleave', () => {
-      btn.style.transform = '';
-    });
-  });
+  }, { threshold: .1 });
+  document.querySelectorAll('.how-card, .feat, .price-card').forEach(el => io.observe(el));
 </script>
 
 </body>

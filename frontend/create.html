@@ -3,53 +3,47 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#080808" />
+  <meta name="theme-color" content="#fbf5ec" />
   <title>Reelday — Create your reel</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500;600&family=DM+Serif+Display&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Pacifico&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="stylesheet" href="/css/shared.css" />
   <style>
-    body {
-      background: var(--bg);
-      font-family: var(--body-font);
-      min-height: 100dvh;
-    }
+    body { min-height: 100dvh; }
 
     /* ── Page header ─────────────────────────────────────── */
     .create-header {
-      background: linear-gradient(160deg, var(--primary) 0%, var(--primary-light) 100%);
-      background-image: linear-gradient(160deg, var(--primary) 0%, var(--primary-light) 100%), var(--pattern);
-      background-blend-mode: normal, overlay;
+      background: var(--ink);
       color: #fff;
       padding: 1.5rem 0 3rem;
       text-align: center;
+      position: relative;
     }
 
     .create-header .logo-link {
       display: inline-block;
-      font-family: var(--heading-font);
-      font-size: 1rem;
+      font-family: var(--display);
+      font-size: .95rem;
       letter-spacing: .16em;
       text-transform: uppercase;
-      color: rgba(255,255,255,.65);
+      color: rgba(255,255,255,.6);
       text-decoration: none;
       margin-bottom: 2rem;
     }
 
     .create-header h1 {
-      font-family: var(--heading-font);
+      font-family: var(--display);
       font-size: clamp(1.8rem, 5vw, 2.8rem);
       font-weight: 600;
       margin-bottom: .6rem;
       line-height: 1.2;
+      color: #fff;
     }
 
     .create-header p {
       font-size: clamp(.9rem, 2.5vw, 1.1rem);
-      opacity: .8;
+      opacity: .75;
       letter-spacing: .02em;
+      color: #fff;
     }
 
     /* ── Steps indicator ─────────────────────────────────── */
@@ -79,7 +73,7 @@
       left: calc(50% + 16px);
       right: calc(-50% + 16px);
       height: 2px;
-      background: var(--bg2);
+      background: var(--line);
     }
 
     .step-dot:last-child::before { display: none; }
@@ -88,9 +82,9 @@
       width: 32px;
       height: 32px;
       border-radius: 50%;
-      border: 2px solid var(--bg2);
-      background: var(--bg);
-      color: var(--text-soft);
+      border: 2px solid var(--line-2);
+      background: var(--paper);
+      color: var(--ink-soft);
       font-size: .8rem;
       font-weight: 700;
       display: flex;
@@ -105,28 +99,29 @@
       background: var(--accent);
       border-color: var(--accent);
       color: #fff;
-      box-shadow: 0 0 0 4px var(--accent-light);
+      box-shadow: 0 0 0 4px rgba(196,90,58,.18);
     }
 
     .step-dot.done .step-num {
-      background: var(--primary);
-      border-color: var(--primary);
+      background: var(--ink);
+      border-color: var(--ink);
       color: #fff;
     }
 
-    .step-dot.done::before { background: var(--primary-light); }
+    .step-dot.done::before { background: var(--ink); }
 
     .step-label {
-      font-size: .65rem;
+      font-family: var(--mono);
+      font-size: .62rem;
       font-weight: 600;
-      color: var(--text-soft);
+      color: var(--ink-faint);
       text-transform: uppercase;
-      letter-spacing: .06em;
+      letter-spacing: .1em;
       white-space: nowrap;
     }
 
     .step-dot.active .step-label { color: var(--accent); }
-    .step-dot.done  .step-label  { color: var(--primary); }
+    .step-dot.done  .step-label  { color: var(--ink-soft); }
 
     /* ── Main form card ──────────────────────────────────── */
     .create-body {
@@ -137,36 +132,35 @@
 
     .form-section {
       background: #fff;
-      border-radius: var(--border-radius);
+      border: 1px solid var(--line);
+      border-radius: var(--r-xl);
       padding: 1.75rem;
-      box-shadow: 0 2px 20px rgba(0,0,0,.07);
+      box-shadow: var(--shadow-soft);
       margin-bottom: 1.5rem;
     }
 
     .form-section-title {
-      font-family: var(--heading-font);
+      font-family: var(--display);
       font-size: 1.25rem;
       font-weight: 600;
       margin-bottom: .25rem;
-      color: var(--primary);
+      color: var(--ink);
     }
 
     .form-section-sub {
       font-size: .85rem;
-      color: var(--text-soft);
+      color: var(--ink-soft);
       margin-bottom: 1.5rem;
     }
 
     /* ── Form fields ─────────────────────────────────────── */
-    .field {
-      margin-bottom: 1.25rem;
-    }
+    .field { margin-bottom: 1.25rem; }
 
     .field label {
       display: block;
       font-size: .875rem;
       font-weight: 600;
-      color: var(--text);
+      color: var(--ink);
       margin-bottom: .45rem;
     }
 
@@ -174,25 +168,24 @@
     .field input[type="date"] {
       width: 100%;
       padding: .8rem 1rem;
-      border: 1.5px solid var(--bg2);
-      border-radius: calc(var(--border-radius) * .65);
-      background: var(--bg);
-      color: var(--text);
-      font-family: var(--body-font);
+      border: 1.5px solid var(--line-2);
+      border-radius: var(--r);
+      background: #fff;
+      color: var(--ink);
+      font-family: var(--sans);
       font-size: 1rem;
       transition: border-color .2s, box-shadow .2s;
       -webkit-appearance: none;
       appearance: none;
+      outline: none;
     }
 
     .field input:focus {
-      outline: none;
       border-color: var(--accent);
-      box-shadow: 0 0 0 3px var(--accent-light);
-      background: #fff;
+      box-shadow: 0 0 0 3px rgba(196,90,58,.12);
     }
 
-    .field input::placeholder { color: var(--text-soft); opacity: .7; }
+    .field input::placeholder { color: var(--ink-faint); }
 
     /* ── Event type selector ─────────────────────────────── */
     .event-type-grid {
@@ -211,38 +204,27 @@
       align-items: center;
       gap: .35rem;
       padding: .75rem .5rem;
-      border: 1.5px solid var(--bg2);
-      border-radius: calc(var(--border-radius) * .65);
-      background: var(--bg);
+      border: 1.5px solid var(--line-2);
+      border-radius: var(--r);
+      background: var(--paper);
       cursor: pointer;
       transition: all .2s;
-      font-family: var(--body-font);
+      font-family: var(--sans);
     }
 
     .event-type-btn:hover {
-      border-color: var(--accent-light);
+      border-color: var(--accent-soft);
       background: #fff;
     }
 
     .event-type-btn.selected {
       border-color: var(--accent);
       background: #fff;
-      box-shadow: 0 0 0 3px var(--accent-light);
+      box-shadow: 0 0 0 3px rgba(196,90,58,.12);
     }
 
-    .event-type-btn .et-emoji {
-      font-size: 1.5rem;
-      line-height: 1;
-    }
-
-    .event-type-btn .et-label {
-      font-size: .72rem;
-      font-weight: 600;
-      color: var(--text);
-      text-align: center;
-      line-height: 1.2;
-    }
-
+    .event-type-btn .et-emoji { font-size: 1.5rem; line-height: 1; }
+    .event-type-btn .et-label { font-size: .72rem; font-weight: 600; color: var(--ink-soft); text-align: center; line-height: 1.2; }
     .event-type-btn.selected .et-label { color: var(--accent); }
 
     /* ── Plan cards ──────────────────────────────────────── */
@@ -258,25 +240,25 @@
 
     .plan-card {
       position: relative;
-      border: 2px solid var(--bg2);
-      border-radius: var(--border-radius);
+      border: 2px solid var(--line-2);
+      border-radius: var(--r-lg);
       padding: 1.5rem 1.25rem;
-      background: var(--bg);
+      background: var(--paper);
       cursor: pointer;
       transition: all .25s;
     }
 
     .plan-card:hover {
-      border-color: var(--accent-light);
+      border-color: var(--accent-soft);
       background: #fff;
       transform: translateY(-2px);
-      box-shadow: 0 6px 24px rgba(0,0,0,.08);
+      box-shadow: var(--shadow-card);
     }
 
     .plan-card.selected {
       border-color: var(--accent);
       background: #fff;
-      box-shadow: 0 0 0 3px var(--accent-light), 0 8px 32px rgba(0,0,0,.1);
+      box-shadow: 0 0 0 3px rgba(196,90,58,.12), var(--shadow-card);
       transform: translateY(-2px);
     }
 
@@ -287,9 +269,10 @@
       transform: translateX(-50%);
       background: var(--accent);
       color: #fff;
-      font-size: .65rem;
-      font-weight: 700;
-      letter-spacing: .08em;
+      font-family: var(--mono);
+      font-size: .62rem;
+      font-weight: 600;
+      letter-spacing: .1em;
       text-transform: uppercase;
       padding: .25rem .75rem;
       border-radius: 999px;
@@ -297,21 +280,22 @@
     }
 
     .plan-name {
-      font-size: .75rem;
-      font-weight: 700;
-      letter-spacing: .1em;
+      font-family: var(--mono);
+      font-size: .72rem;
+      font-weight: 600;
+      letter-spacing: .12em;
       text-transform: uppercase;
-      color: var(--text-soft);
+      color: var(--ink-soft);
       margin-bottom: .4rem;
     }
 
     .plan-card.selected .plan-name { color: var(--accent); }
 
     .plan-price {
-      font-family: var(--heading-font);
+      font-family: var(--display);
       font-size: 1.75rem;
       font-weight: 600;
-      color: var(--primary);
+      color: var(--ink);
       margin-bottom: .25rem;
       line-height: 1;
     }
@@ -319,13 +303,13 @@
     .plan-price span {
       font-size: .9rem;
       font-weight: 400;
-      font-family: var(--body-font);
-      color: var(--text-soft);
+      font-family: var(--sans);
+      color: var(--ink-soft);
     }
 
     .plan-tagline {
       font-size: .8rem;
-      color: var(--text-soft);
+      color: var(--ink-soft);
       margin-bottom: 1rem;
     }
 
@@ -339,7 +323,7 @@
 
     .plan-features li {
       font-size: .8rem;
-      color: var(--text);
+      color: var(--ink);
       display: flex;
       gap: .5rem;
       align-items: flex-start;
@@ -357,10 +341,10 @@
       width: 100%;
       padding: .65rem 1rem;
       border: 2px solid var(--accent);
-      border-radius: calc(var(--border-radius) * .65);
+      border-radius: var(--r);
       background: transparent;
       color: var(--accent);
-      font-family: var(--body-font);
+      font-family: var(--sans);
       font-size: .875rem;
       font-weight: 600;
       cursor: pointer;
@@ -375,8 +359,9 @@
 
     /* ── Payment summary ─────────────────────────────────── */
     .pay-summary {
-      background: var(--bg2);
-      border-radius: calc(var(--border-radius) * .65);
+      background: var(--paper-2);
+      border: 1px solid var(--line);
+      border-radius: var(--r);
       padding: 1.1rem 1.25rem;
       margin-bottom: 1.25rem;
       display: flex;
@@ -385,20 +370,10 @@
       gap: 1rem;
     }
 
-    .pay-summary-label {
-      font-size: .875rem;
-      color: var(--text-soft);
-      margin-bottom: .15rem;
-    }
-
-    .pay-summary-plan {
-      font-weight: 700;
-      color: var(--primary);
-      font-size: 1rem;
-    }
-
+    .pay-summary-label { font-size: .875rem; color: var(--ink-soft); margin-bottom: .15rem; }
+    .pay-summary-plan  { font-weight: 700; color: var(--ink); font-size: 1rem; }
     .pay-summary-price {
-      font-family: var(--heading-font);
+      font-family: var(--display);
       font-size: 1.6rem;
       font-weight: 600;
       color: var(--accent);
@@ -418,34 +393,63 @@
       align-items: center;
       gap: .3rem;
       background: #fff;
-      border: 1.5px solid var(--bg2);
-      border-radius: 8px;
+      border: 1.5px solid var(--line-2);
+      border-radius: var(--r-sm);
       padding: .35rem .7rem;
       font-size: .78rem;
       font-weight: 600;
-      color: var(--text);
+      color: var(--ink);
+      cursor: pointer;
+      transition: all .15s;
     }
 
-    .pay-methods-label {
+    .pay-method-chip.active {
+      background: #fff;
+      border-color: var(--accent);
+      color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(196,90,58,.15);
+    }
+
+    .pay-methods-label { font-size: .8rem; color: var(--ink-soft); margin-bottom: .5rem; }
+
+    /* ── GCash panel ─────────────────────────────────────── */
+    .gcash-panel {
+      background: var(--paper-2);
+      border: 1px solid var(--line);
+      border-radius: var(--r-lg);
+      padding: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+    .gcash-qr-img {
+      width: 160px; height: 160px; object-fit: cover;
+      border-radius: 10px; display: block; margin: 0 auto .75rem;
+    }
+    .gcash-amount {
+      text-align: center;
+      font-family: var(--display);
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: .35rem;
+    }
+    .gcash-steps {
       font-size: .8rem;
-      color: var(--text-soft);
-      margin-bottom: .5rem;
+      color: var(--ink-soft);
+      text-align: center;
+      line-height: 1.7;
+      margin-bottom: 1rem;
     }
 
     /* ── Submit / CTA ────────────────────────────────────── */
-    .submit-section {
-      display: flex;
-      flex-direction: column;
-      gap: .75rem;
-    }
+    .submit-section { display: flex; flex-direction: column; gap: .75rem; }
 
     .btn-pay {
       background: var(--accent);
       color: #fff;
       border: none;
-      border-radius: var(--border-radius);
+      border-radius: 999px;
       padding: 1.1rem 2rem;
-      font-family: var(--body-font);
+      font-family: var(--sans);
       font-size: 1.05rem;
       font-weight: 700;
       cursor: pointer;
@@ -457,20 +461,15 @@
       min-height: 56px;
       width: 100%;
       letter-spacing: .02em;
+      box-shadow: 0 1px 2px rgba(196,90,58,.30), inset 0 1px 0 rgba(255,255,255,.18);
     }
 
-    .btn-pay:hover {
-      background: var(--accent-deep);
-      transform: translateY(-2px);
-      box-shadow: 0 10px 28px rgba(0,0,0,.15);
-    }
-
+    .btn-pay:hover { background: var(--accent-deep); transform: translateY(-1px); }
     .btn-pay:active  { transform: translateY(0); }
     .btn-pay:disabled { opacity: .55; cursor: not-allowed; transform: none; }
 
     .btn-pay .btn-spinner {
-      width: 20px;
-      height: 20px;
+      width: 20px; height: 20px;
       border: 2.5px solid rgba(255,255,255,.4);
       border-top-color: #fff;
       border-radius: 50%;
@@ -487,26 +486,22 @@
       align-items: center;
       gap: .75rem;
       font-size: .78rem;
-      color: var(--text-soft);
+      color: var(--ink-soft);
     }
 
-    .trial-divider::before,
-    .trial-divider::after {
-      content: '';
-      flex: 1;
-      height: 1px;
-      background: var(--bg2);
+    .trial-divider::before, .trial-divider::after {
+      content: ''; flex: 1; height: 1px; background: var(--line);
     }
 
     .btn-trial {
       background: transparent;
-      border: 1.5px dashed var(--accent-light);
-      border-radius: var(--border-radius);
+      border: 1.5px dashed var(--accent-soft);
+      border-radius: 999px;
       padding: .85rem 1.5rem;
-      font-family: var(--body-font);
+      font-family: var(--sans);
       font-size: .9rem;
       font-weight: 600;
-      color: var(--text-soft);
+      color: var(--ink-soft);
       cursor: pointer;
       transition: all .2s;
       text-align: center;
@@ -516,143 +511,16 @@
     .btn-trial:hover {
       border-color: var(--accent);
       color: var(--accent);
-      background: rgba(0,0,0,.02);
     }
 
     .btn-trial strong { color: var(--accent); }
 
     /* ── Error state ─────────────────────────────────────── */
-    .field-error {
-      font-size: .78rem;
-      color: #b91c1c;
-      margin-top: .35rem;
-      display: none;
-    }
-
-    .field.has-error input { border-color: #b91c1c; }
+    .field-error { font-size: .78rem; color: var(--accent-deep); margin-top: .35rem; display: none; }
+    .field.has-error input { border-color: var(--accent-deep); }
     .field.has-error .field-error { display: block; }
 
-    /* ── Toast ───────────────────────────────────────────── */
-    .toast {
-      position: fixed;
-      bottom: 1.5rem;
-      left: 50%;
-      transform: translateX(-50%) translateY(80px);
-      background: var(--primary);
-      color: #fff;
-      padding: .8rem 1.5rem;
-      border-radius: 24px;
-      font-size: .9rem;
-      font-weight: 500;
-      box-shadow: 0 4px 20px rgba(0,0,0,.2);
-      transition: transform .3s ease;
-      white-space: nowrap;
-      z-index: 9999;
-      pointer-events: none;
-      max-width: 90vw;
-      text-align: center;
-    }
-
-    .toast.show  { transform: translateX(-50%) translateY(0); }
-    .toast.error { background: #b91c1c; }
-
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* ── Dark theme override ─────────────────────────────── */
-    body, body[data-theme] {
-      --bg:        #080808;
-      --bg2:       #1a1a1a;
-      --text:      #f0ebe4;
-      --text-soft: rgba(240,235,228,.55);
-    }
-    body { background: #080808; }
-
-    .form-section {
-      background: #111111 !important;
-      box-shadow: 0 2px 20px rgba(0,0,0,.4);
-      border: 1px solid rgba(255,255,255,.07);
-    }
-    .form-section-title { color: var(--text); }
-    .field label { color: var(--text); }
-    .field input[type="text"],
-    .field input[type="date"] {
-      background: #1a1a1a;
-      border-color: rgba(255,255,255,.12);
-      color: var(--text);
-    }
-    .field input:focus { background: #222; box-shadow: 0 0 0 3px rgba(232,115,90,.25); }
-    .field input::placeholder { color: rgba(240,235,228,.3); opacity: 1; }
-
-    .event-type-btn {
-      background: #1a1a1a;
-      border-color: rgba(255,255,255,.1);
-    }
-    .event-type-btn:hover { background: #222; border-color: var(--accent-light); }
-    .event-type-btn.selected { background: #222; }
-    .event-type-btn .et-label { color: var(--text-soft); }
-    .event-type-btn.selected .et-label { color: var(--accent); }
-
-    .plan-card {
-      background: #1a1a1a;
-      border-color: rgba(255,255,255,.1);
-    }
-    .plan-card:hover, .plan-card.selected { background: #222; }
-    .plan-price { color: var(--text); }
-    .plan-features li { color: var(--text-soft); }
-
-    .pay-summary {
-      background: #1a1a1a;
-      border: 1px solid rgba(255,255,255,.08);
-    }
-    .pay-summary-plan { color: var(--text); }
-    .pay-method-chip {
-      background: #1a1a1a;
-      border-color: rgba(255,255,255,.12);
-      color: var(--text-soft);
-    }
-    .pay-method-chip.active {
-      background: #222;
-      border-color: var(--accent);
-      color: var(--text);
-    }
-    .trial-divider::before,
-    .trial-divider::after { background: rgba(255,255,255,.1); }
-    .btn-trial { border-color: rgba(232,115,90,.3); color: var(--text-soft); }
-    .step-dot .step-num { background: #1a1a1a; border-color: rgba(255,255,255,.15); }
-    .step-label { color: rgba(240,235,228,.4); }
-
-    /* ── GCash panel ─────────────────────────────────────── */
-    .gcash-panel {
-      background: #1a1a1a;
-      border: 1px solid rgba(255,255,255,.08);
-      border-radius: var(--border-radius);
-      padding: 1.25rem;
-      margin-bottom: 1.25rem;
-    }
-    .gcash-qr-img {
-      width: 160px;
-      height: 160px;
-      object-fit: cover;
-      border-radius: 10px;
-      display: block;
-      margin: 0 auto .75rem;
-    }
-    .gcash-amount {
-      text-align: center;
-      font-family: var(--heading-font);
-      font-size: 2rem;
-      font-weight: 700;
-      color: var(--accent);
-      margin-bottom: .35rem;
-    }
-    .gcash-steps {
-      font-size: .8rem;
-      color: var(--text-soft);
-      text-align: center;
-      line-height: 1.7;
-      margin-bottom: 1rem;
-    }
-
+    /* ── Lang switch ─────────────────────────────────────── */
     .lang-toggle {
       display: flex;
       background: rgba(255,255,255,.15);
@@ -664,7 +532,7 @@
       padding: .22rem .6rem;
       border: none;
       border-radius: 16px;
-      font-family: var(--body-font, 'DM Sans', sans-serif);
+      font-family: var(--sans);
       font-size: .72rem;
       font-weight: 600;
       letter-spacing: .05em;
@@ -673,7 +541,9 @@
       color: rgba(255,255,255,.65);
       transition: background .15s, color .15s;
     }
-    .lang-btn.active { background: rgba(255,255,255,.9); color: var(--primary, #e8735a); }
+    .lang-btn.active { background: rgba(255,255,255,.9); color: var(--ink); }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body data-theme="wedding">
@@ -887,7 +757,7 @@
       </button>
     </div>
 
-    <p style="font-size:.72rem;color:var(--text-soft);text-align:center;margin-top:1rem;line-height:1.5;"
+    <p style="font-size:.72rem;color:var(--ink-faint);text-align:center;margin-top:1rem;line-height:1.5;"
        data-en='By clicking "Create my reel" you agree to our Terms of Service and Privacy Policy. All transactions are secure and encrypted.'
        data-fil='Sa pag-click ng "I-create ang aking reel" sumasang-ayon ka sa aming Terms of Service at Privacy Policy. Lahat ng transaksyon ay secure at encrypted.'>
       By clicking "Create my reel" you agree to our <a href="#" style="color:var(--accent);">Terms of Service</a> and <a href="#" style="color:var(--accent);">Privacy Policy</a>. All transactions are secure and encrypted.

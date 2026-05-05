@@ -3,96 +3,104 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#080808" />
+  <meta name="theme-color" content="#fbf5ec" />
   <title>Reelday — My Events</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;1,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/shared.css" />
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #080808; color: #f0ebe4; font-family: 'DM Sans', sans-serif; min-height: 100dvh; }
+    body { min-height: 100dvh; }
 
-    /* ── Nav ── */
-    .top-nav { background: #111; border-bottom: 1px solid rgba(255,255,255,.07); padding: .85rem 1.5rem; display: flex; align-items: center; gap: 1rem; }
-    .nav-logo { font-family: 'Playfair Display', serif; font-size: 1rem; letter-spacing: .12em; text-transform: uppercase; color: #e8735a; text-decoration: none; opacity: .8; }
-    .nav-user { margin-left: auto; font-size: .85rem; color: rgba(240,235,228,.55); }
-    .nav-btn { padding: .4rem .9rem; border-radius: 8px; font-family: inherit; font-size: .85rem; font-weight: 600; cursor: pointer; transition: all .15s; text-decoration: none; }
-    .nav-btn-ghost { background: transparent; border: 1px solid rgba(232,115,90,.4); color: #e8735a; }
-    .nav-btn-ghost:hover { background: #e8735a; color: #fff; }
-    .nav-btn-solid { background: #e8735a; border: 1px solid #e8735a; color: #fff; }
-    .nav-btn-solid:hover { opacity: .88; }
-
-    /* ── Header ── */
-    .page-header { background: linear-gradient(135deg, #1a0e0a 0%, #111 100%); border-bottom: 1px solid rgba(255,255,255,.06); padding: 2.5rem 1.5rem; }
+    /* ── Page header ── */
+    .page-header {
+      background: #fff;
+      border-bottom: 1px solid var(--line);
+      padding: 2.5rem 1.5rem;
+    }
     .page-header-inner { max-width: 900px; margin-inline: auto; }
-    .page-title { font-family: 'Playfair Display', serif; font-size: clamp(1.6rem, 4vw, 2.2rem); margin-bottom: .3rem; }
-    .page-sub { color: rgba(240,235,228,.45); font-size: .9rem; }
+    .page-title {
+      font-family: var(--display);
+      font-size: clamp(1.6rem, 4vw, 2.2rem);
+      color: var(--ink);
+      margin-bottom: .3rem;
+    }
+    .page-sub { color: var(--ink-faint); font-size: .9rem; }
 
     /* ── Main ── */
     .main { max-width: 900px; margin-inline: auto; padding: 2rem 1.5rem 4rem; }
-
-    .new-event-btn {
-      display: inline-flex; align-items: center; gap: .5rem;
-      background: #e8735a; color: #fff; padding: .75rem 1.5rem; border-radius: 12px;
-      text-decoration: none; font-weight: 700; font-size: .95rem; margin-bottom: 2rem;
-      transition: opacity .15s;
-    }
-    .new-event-btn:hover { opacity: .88; }
 
     /* ── Event cards ── */
     .events-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.25rem; }
 
     .event-card {
-      background: #111; border: 1px solid rgba(255,255,255,.07);
-      border-radius: 16px; padding: 1.5rem; transition: border-color .15s, transform .15s;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: var(--r-lg);
+      padding: 1.5rem;
+      box-shadow: var(--shadow-soft);
+      transition: transform .2s ease, box-shadow .2s ease;
       display: flex; flex-direction: column; gap: .75rem;
     }
-    .event-card:hover { border-color: rgba(232,115,90,.3); transform: translateY(-2px); }
+    .event-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lift);
+    }
 
     .ec-top { display: flex; align-items: flex-start; justify-content: space-between; gap: .5rem; }
-    .ec-names { font-family: 'Playfair Display', serif; font-size: 1.1rem; line-height: 1.3; flex: 1; }
-    .ec-badge {
-      font-size: .68rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
-      padding: .2rem .6rem; border-radius: 999px; white-space: nowrap;
-    }
-    .badge-libre     { background: rgba(255,255,255,.1);  color: rgba(240,235,228,.65); }
-    .badge-pending   { background: rgba(251,191,36,.15);  color: #fbbf24; }
-    .badge-selebrasyon { background: rgba(232,115,90,.2); color: #e8735a; }
-    .badge-pro       { background: rgba(212,175,55,.2);   color: #d4af37; }
+    .ec-names { font-family: var(--display); font-size: 1.1rem; line-height: 1.3; flex: 1; color: var(--ink); }
 
-    .ec-meta { font-size: .8rem; color: rgba(240,235,228,.4); display: flex; gap: 1rem; flex-wrap: wrap; }
+    .ec-badge {
+      font-family: var(--mono);
+      font-size: .65rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+      padding: .25rem .65rem; border-radius: 999px; white-space: nowrap;
+    }
+    .badge-libre       { background: var(--paper-2);             color: var(--ink-soft); }
+    .badge-pending     { background: rgba(216,160,90,.15);        color: #7a5a20; }
+    .badge-selebrasyon { background: rgba(196,90,58,.12);         color: var(--accent-deep); }
+    .badge-pro         { background: rgba(216,160,90,.18);        color: #6a4a10; }
+
+    .ec-meta { font-size: .8rem; color: var(--ink-faint); display: flex; gap: 1rem; flex-wrap: wrap; }
     .ec-type { text-transform: capitalize; }
 
     .ec-actions { display: flex; gap: .65rem; margin-top: .25rem; }
     .ec-link {
-      flex: 1; padding: .55rem; text-align: center; border-radius: 10px;
+      flex: 1; padding: .55rem; text-align: center; border-radius: var(--r);
       font-size: .83rem; font-weight: 600; text-decoration: none; transition: all .15s;
     }
-    .ec-link-primary { background: #e8735a; color: #fff; }
-    .ec-link-primary:hover { opacity: .88; }
-    .ec-link-ghost { background: transparent; border: 1px solid rgba(255,255,255,.12); color: rgba(240,235,228,.7); }
-    .ec-link-ghost:hover { border-color: rgba(232,115,90,.4); color: #e8735a; }
+    .ec-link-primary { background: var(--accent); color: #fff; }
+    .ec-link-primary:hover { background: var(--accent-deep); }
+    .ec-link-ghost {
+      background: transparent;
+      border: 1px solid var(--line-2);
+      color: var(--ink-soft);
+    }
+    .ec-link-ghost:hover { background: var(--paper-2); color: var(--ink); }
 
     /* ── Empty state ── */
-    .empty { text-align: center; padding: 5rem 2rem; color: rgba(240,235,228,.35); }
+    .empty { text-align: center; padding: 5rem 2rem; color: var(--ink-faint); }
     .empty-icon { font-size: 3.5rem; margin-bottom: 1rem; }
-    .empty h2 { font-family: 'Playfair Display', serif; font-size: 1.4rem; color: rgba(240,235,228,.6); margin-bottom: .5rem; }
+    .empty h2 { font-family: var(--display); font-size: 1.4rem; color: var(--ink-soft); margin-bottom: .5rem; }
     .empty p { font-size: .9rem; margin-bottom: 1.5rem; line-height: 1.6; }
 
     /* ── Loading ── */
     .loading { display: flex; align-items: center; justify-content: center; padding: 5rem; }
-    .spinner { width: 36px; height: 36px; border: 3px solid rgba(232,115,90,.2); border-top-color: #e8735a; border-radius: 50%; animation: spin .6s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
 
-    @media (max-width: 600px) { .main { padding-inline: 1rem; } .top-nav { padding-inline: 1rem; } }
+    @media (max-width: 600px) {
+      .main { padding-inline: 1rem; }
+      .site-header-inner { padding-inline: 1rem; }
+    }
   </style>
 </head>
 <body>
 
-<nav class="top-nav">
-  <a class="nav-logo" href="/">Reelday ✦</a>
-  <span class="nav-user" id="nav-user"></span>
-  <button class="nav-btn nav-btn-ghost" id="btn-logout" style="border:none;padding:.4rem .9rem">Logout</button>
-</nav>
+<header class="site-header">
+  <div class="site-header-inner">
+    <a class="brand" href="/">REELDAY<sup>★</sup></a>
+    <div class="site-actions">
+      <span style="font-size:.85rem;color:var(--ink-soft)" id="nav-user"></span>
+      <button class="btn btn-ghost" id="btn-logout" style="padding:10px 16px;font-size:.85rem">Logout</button>
+    </div>
+  </div>
+</header>
 
 <div class="page-header">
   <div class="page-header-inner">
@@ -102,7 +110,7 @@
 </div>
 
 <main class="main">
-  <a class="new-event-btn" href="/create">+ New Event</a>
+  <a class="btn btn-accent" href="/create" style="margin-bottom:2rem;display:inline-flex">+ New Event</a>
 
   <div class="loading" id="loading"><div class="spinner"></div></div>
   <div id="events-container" style="display:none"></div>
@@ -158,7 +166,7 @@
             <div class="empty-icon">🎉</div>
             <h2>No events yet</h2>
             <p>Create your first event and start collecting<br>photos and videos from your guests.</p>
-            <a class="new-event-btn" href="/create">+ Create Event</a>
+            <a class="btn btn-accent" href="/create">+ Create Event</a>
           </div>`;
         return;
       }
@@ -187,7 +195,7 @@
           </div>`;
       }).join('')}</div>`;
     } catch {
-      document.getElementById('loading').innerHTML = '<p style="color:rgba(240,235,228,.4)">Failed to load events.</p>';
+      document.getElementById('loading').innerHTML = '<p style="color:var(--ink-faint)">Failed to load events.</p>';
     }
   }
 

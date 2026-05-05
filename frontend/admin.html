@@ -3,13 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#080808" />
+  <meta name="theme-color" content="#fbf5ec" />
   <title>Reelday Admin</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Playfair+Display:wght@600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/shared.css" />
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #080808; color: #f0ebe4; font-family: 'DM Sans', sans-serif; min-height: 100dvh; }
+    body { min-height: 100dvh; }
 
     /* ── Login screen ── */
     .login-screen {
@@ -17,92 +16,102 @@
       min-height: 100dvh; padding: 2rem;
     }
     .login-card {
-      background: #111; border: 1px solid rgba(255,255,255,.08);
-      border-radius: 16px; padding: 2.5rem; width: 100%; max-width: 360px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: var(--r-xl);
+      box-shadow: var(--shadow-card);
+      padding: 2.5rem; width: 100%; max-width: 360px;
     }
-    .login-card h1 { font-family: 'Playfair Display', serif; color: #e8735a; font-size: 1.6rem; margin-bottom: .4rem; }
-    .login-card p  { color: rgba(240,235,228,.55); font-size: .9rem; margin-bottom: 1.75rem; }
+    .login-card h1 { font-family: var(--display); color: var(--accent); font-size: 1.6rem; margin-bottom: .4rem; }
+    .login-card p { color: var(--ink-soft); font-size: .9rem; margin-bottom: 1.75rem; }
     .login-input {
-      width: 100%; padding: .75rem 1rem; background: #1a1a1a; border: 1px solid rgba(255,255,255,.1);
-      border-radius: 10px; color: #f0ebe4; font-family: inherit; font-size: 1rem;
+      width: 100%; padding: .75rem 1rem; background: #fff;
+      border: 1.5px solid var(--line-2); border-radius: var(--r);
+      color: var(--ink); font-family: inherit; font-size: 1rem;
       outline: none; margin-bottom: 1rem;
+      transition: border-color .15s, box-shadow .15s;
     }
-    .login-input:focus { border-color: #e8735a; }
-    .login-btn {
-      width: 100%; padding: .85rem; background: #e8735a; color: #fff; border: none;
-      border-radius: 10px; font-family: inherit; font-size: 1rem; font-weight: 700;
-      cursor: pointer; transition: opacity .15s;
+    .login-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(196,90,58,.12);
     }
-    .login-btn:hover { opacity: .88; }
-    .login-error { color: #f87171; font-size: .85rem; margin-top: .75rem; }
+    .login-error { color: var(--accent-deep); font-size: .85rem; margin-top: .75rem; }
 
     /* ── Admin shell ── */
     .admin-shell { display: none; }
-
-    .admin-header {
-      background: #111; border-bottom: 1px solid rgba(255,255,255,.08);
-      padding: 1rem 1.5rem; display: flex; align-items: center; gap: 1rem;
-      position: sticky; top: 0; z-index: 100;
-    }
-    .admin-logo { font-family: 'Playfair Display', serif; color: #e8735a; font-size: 1.1rem; }
-    .admin-title { color: rgba(240,235,228,.55); font-size: .85rem; }
-    .admin-logout {
-      margin-left: auto; padding: .4rem .9rem; background: transparent;
-      border: 1px solid rgba(232,115,90,.4); color: #e8735a; border-radius: 8px;
-      font-family: inherit; font-size: .85rem; cursor: pointer; transition: all .15s;
-    }
-    .admin-logout:hover { background: #e8735a; color: #fff; }
 
     .admin-main { max-width: 1100px; margin-inline: auto; padding: 2rem 1.5rem 4rem; }
 
     /* ── Stats row ── */
     .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
     .stat-card {
-      background: #111; border: 1px solid rgba(255,255,255,.07); border-radius: 12px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: var(--r-lg);
+      box-shadow: var(--shadow-soft);
       padding: 1.25rem; text-align: center;
     }
-    .stat-num { font-family: 'Playfair Display', serif; font-size: 2rem; color: #e8735a; }
-    .stat-lbl { font-size: .75rem; font-weight: 600; color: rgba(240,235,228,.45); text-transform: uppercase; letter-spacing: .05em; margin-top: .2rem; }
+    .stat-num { font-family: var(--display); font-size: 2rem; color: var(--accent); }
+    .stat-lbl {
+      font-family: var(--mono);
+      font-size: .7rem; font-weight: 500; color: var(--ink-faint);
+      text-transform: uppercase; letter-spacing: .08em; margin-top: .3rem;
+    }
 
     /* ── Sections ── */
     .section { margin-bottom: 2.5rem; }
     .section-title {
-      font-family: 'Playfair Display', serif; font-size: 1.2rem; color: #f0ebe4;
+      font-family: var(--display); font-size: 1.2rem; color: var(--ink);
       margin-bottom: 1rem; display: flex; align-items: center; gap: .5rem;
     }
-    .badge { background: #e8735a; color: #fff; border-radius: 999px; font-size: .7rem; font-weight: 700; padding: .1rem .55rem; }
+    .count-badge {
+      background: var(--accent); color: #fff;
+      border-radius: 999px; font-family: var(--mono);
+      font-size: .68rem; font-weight: 600; padding: .15rem .55rem;
+    }
 
     /* ── Table ── */
-    .tbl-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid rgba(255,255,255,.07); }
+    .tbl-wrap {
+      overflow-x: auto;
+      border-radius: var(--r-lg);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow-soft);
+    }
     table { width: 100%; border-collapse: collapse; font-size: .875rem; }
-    thead { background: #1a1a1a; }
-    th { padding: .75rem 1rem; text-align: left; font-weight: 600; color: rgba(240,235,228,.55); font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; }
-    td { padding: .85rem 1rem; border-top: 1px solid rgba(255,255,255,.05); vertical-align: middle; }
-    tr:hover td { background: rgba(255,255,255,.02); }
+    thead { background: var(--paper-2); }
+    th {
+      padding: .75rem 1rem; text-align: left; font-weight: 600;
+      color: var(--ink-soft); font-family: var(--mono);
+      font-size: .7rem; text-transform: uppercase; letter-spacing: .06em;
+      white-space: nowrap;
+    }
+    td { padding: .85rem 1rem; border-top: 1px solid var(--line); vertical-align: middle; background: #fff; }
+    tr:hover td { background: var(--paper); }
 
     .pill {
       display: inline-block; padding: .2rem .65rem; border-radius: 999px;
-      font-size: .72rem; font-weight: 700; text-transform: uppercase;
+      font-family: var(--mono); font-size: .68rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .06em;
     }
-    .pill-pending   { background: rgba(251,191,36,.15);  color: #fbbf24; }
-    .pill-succeeded { background: rgba(52,211,153,.15);  color: #34d399; }
-    .pill-rejected  { background: rgba(248,113,113,.15); color: #f87171; }
-    .pill-paid      { background: rgba(52,211,153,.15);  color: #34d399; }
-    .pill-unpaid    { background: rgba(251,191,36,.15);  color: #fbbf24; }
+    .pill-pending   { background: rgba(216,160,90,.15);  color: #7a5a20; }
+    .pill-succeeded { background: rgba(45,106,74,.12);   color: #2d6a4a; }
+    .pill-rejected  { background: rgba(196,90,58,.12);   color: var(--accent-deep); }
+    .pill-paid      { background: rgba(45,106,74,.12);   color: #2d6a4a; }
+    .pill-unpaid    { background: rgba(216,160,90,.15);  color: #7a5a20; }
 
     .btn-verify, .btn-reject, .btn-deactivate {
-      padding: .35rem .8rem; border: none; border-radius: 6px;
+      padding: .35rem .8rem; border: none; border-radius: var(--r-sm);
       font-family: inherit; font-size: .8rem; font-weight: 600;
       cursor: pointer; transition: opacity .15s; white-space: nowrap;
     }
-    .btn-verify     { background: rgba(52,211,153,.2);  color: #34d399; }
-    .btn-reject     { background: rgba(248,113,113,.15); color: #f87171; }
-    .btn-deactivate { background: rgba(248,113,113,.15); color: #f87171; }
+    .btn-verify     { background: rgba(45,106,74,.12);  color: #2d6a4a; border: 1px solid rgba(45,106,74,.25); }
+    .btn-reject     { background: rgba(196,90,58,.10);  color: var(--accent-deep); border: 1px solid rgba(196,90,58,.25); }
+    .btn-deactivate { background: rgba(196,90,58,.10);  color: var(--accent-deep); border: 1px solid rgba(196,90,58,.25); }
     .btn-verify:hover, .btn-reject:hover, .btn-deactivate:hover { opacity: .75; }
 
     .action-btns { display: flex; gap: .5rem; }
 
-    .empty-state { padding: 3rem 1rem; text-align: center; color: rgba(240,235,228,.35); font-size: .9rem; }
+    .empty-state { padding: 3rem 1rem; text-align: center; color: var(--ink-faint); font-size: .9rem; background: #fff; }
 
     @media (max-width: 640px) {
       .stats-row { grid-template-columns: repeat(2, 1fr); }
@@ -118,17 +127,19 @@
     <h1>Reelday Admin</h1>
     <p>Enter your admin password to continue.</p>
     <input class="login-input" type="password" id="pw-input" placeholder="Password" autocomplete="current-password" />
-    <button class="login-btn" id="login-btn">Enter</button>
+    <button class="btn btn-accent" id="login-btn" style="width:100%;min-height:48px">Enter</button>
     <div class="login-error" id="login-error" style="display:none">Incorrect password.</div>
   </div>
 </div>
 
 <!-- ── Admin shell ────────────────────────────────────── -->
 <div class="admin-shell" id="admin-shell">
-  <header class="admin-header">
-    <span class="admin-logo">Reelday ✦</span>
-    <span class="admin-title">Admin Panel</span>
-    <button class="admin-logout" id="btn-logout">Logout</button>
+  <header class="site-header">
+    <div class="site-header-inner">
+      <a class="brand" href="/">REELDAY<sup>★</sup></a>
+      <span style="font-family:var(--mono);font-size:.78rem;color:var(--ink-faint);letter-spacing:.1em;text-transform:uppercase">Admin Panel</span>
+      <button class="btn btn-ghost" id="btn-logout" style="padding:10px 16px;font-size:.85rem;margin-left:auto">Logout</button>
+    </div>
   </header>
 
   <main class="admin-main">
@@ -145,7 +156,7 @@
     <div class="section">
       <div class="section-title">
         💳 Pending GCash Payments
-        <span class="badge" id="pending-badge">0</span>
+        <span class="count-badge" id="pending-badge">0</span>
       </div>
       <div class="tbl-wrap">
         <table>
@@ -267,11 +278,11 @@
       }
       tbody.innerHTML = payments.map(p => `
         <tr id="row-${esc(p.id)}">
-          <td><strong>${esc(p.couple_names)}</strong><br><a href="/dashboard?slug=${esc(p.slug)}" target="_blank" style="color:#e8735a;font-size:.8rem">${esc(p.slug)}</a></td>
+          <td><strong>${esc(p.couple_names)}</strong><br><a href="/dashboard?slug=${esc(p.slug)}" target="_blank" style="color:var(--accent);font-size:.8rem">${esc(p.slug)}</a></td>
           <td>${esc(p.plan)}</td>
           <td>${formatAmount(p.amount)}</td>
-          <td><code style="background:#1a1a1a;padding:.2rem .5rem;border-radius:4px;font-size:.85rem">${esc(p.gcash_reference || '—')}</code></td>
-          <td style="font-size:.8rem;color:rgba(240,235,228,.55)">${fmtDate(p.created_at)}</td>
+          <td><code style="background:var(--paper-2);padding:.2rem .5rem;border-radius:4px;font-size:.85rem;font-family:var(--mono)">${esc(p.gcash_reference || '—')}</code></td>
+          <td style="font-size:.8rem;color:var(--ink-faint)">${fmtDate(p.created_at)}</td>
           <td>
             <div class="action-btns">
               <button class="btn-verify" onclick="verify('${esc(p.id)}')">✅ Verify</button>
@@ -296,14 +307,14 @@
       tbody.innerHTML = events.map(e => `
         <tr>
           <td><strong>${esc(e.couple_names)}</strong></td>
-          <td><a href="/dashboard?slug=${esc(e.slug)}" target="_blank" style="color:#e8735a;font-size:.82rem">${esc(e.slug)}</a></td>
-          <td style="font-size:.82rem;color:rgba(240,235,228,.7)">${esc(e.user_email || '—')}</td>
+          <td><a href="/dashboard?slug=${esc(e.slug)}" target="_blank" style="color:var(--accent);font-size:.82rem">${esc(e.slug)}</a></td>
+          <td style="font-size:.82rem;color:var(--ink-soft)">${esc(e.user_email || '—')}</td>
           <td>${esc(e.plan)}</td>
           <td><span class="pill ${e.is_paid ? 'pill-paid' : 'pill-unpaid'}">${e.is_paid ? 'Paid' : 'Unpaid'}</span></td>
           <td>${e.upload_count}</td>
-          <td style="font-size:.8rem;color:rgba(240,235,228,.55)">${fmtDate(e.created_at)}</td>
+          <td style="font-size:.8rem;color:var(--ink-faint)">${fmtDate(e.created_at)}</td>
           <td>
-            ${e.is_active ? `<button class="btn-deactivate" onclick="deactivate('${esc(e.slug)}', this)">🔒 Deactivate</button>` : '<span style="color:rgba(240,235,228,.3);font-size:.8rem">Inactive</span>'}
+            ${e.is_active ? `<button class="btn-deactivate" onclick="deactivate('${esc(e.slug)}', this)">🔒 Deactivate</button>` : '<span style="color:var(--ink-faint);font-size:.8rem">Inactive</span>'}
           </td>
         </tr>`).join('');
     } catch {
@@ -338,7 +349,7 @@
       if (!r.ok) throw new Error();
       btn.replaceWith(Object.assign(document.createElement('span'), {
         textContent: 'Inactive',
-        style: 'color:rgba(240,235,228,.3);font-size:.8rem',
+        style: 'color:var(--ink-faint);font-size:.8rem',
       }));
     } catch { alert('Failed to deactivate event.'); }
   }

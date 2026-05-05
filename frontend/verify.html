@@ -3,43 +3,70 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#080808" />
+  <meta name="theme-color" content="#fbf5ec" />
   <title>Reelday — Verify Email</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/shared.css" />
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #080808; color: #f0ebe4; font-family: 'DM Sans', sans-serif; min-height: 100dvh; display: flex; align-items: center; justify-content: center; padding: 2rem; }
-    .card { background: #111; border: 1px solid rgba(255,255,255,.08); border-radius: 20px; padding: 2.5rem; width: 100%; max-width: 400px; text-align: center; }
-    .logo { display: block; font-family: 'Playfair Display', serif; font-size: 1rem; letter-spacing: .14em; text-transform: uppercase; color: #e8735a; text-decoration: none; margin-bottom: 2rem; opacity: .8; }
+    body {
+      min-height: 100dvh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .auth-card {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: var(--r-xl);
+      box-shadow: var(--shadow-card);
+      padding: 2.5rem;
+      width: 100%; max-width: 420px;
+      text-align: center;
+    }
+
+    .auth-brand { display: block; margin-bottom: 2rem; }
+
     .icon { font-size: 3rem; margin-bottom: 1rem; }
-    h1 { font-family: 'Playfair Display', serif; font-size: 1.6rem; margin-bottom: .5rem; }
-    p { color: rgba(240,235,228,.55); font-size: .9rem; line-height: 1.6; }
-    .btn { display: inline-block; margin-top: 1.5rem; padding: .8rem 2rem; background: #e8735a; color: #fff; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: .95rem; transition: opacity .15s; }
-    .btn:hover { opacity: .88; }
-    .error { color: #f87171; }
-    .spinner { width: 32px; height: 32px; border: 3px solid rgba(232,115,90,.3); border-top-color: #e8735a; border-radius: 50%; animation: spin .6s linear infinite; margin: 1rem auto; }
-    @keyframes spin { to { transform: rotate(360deg); } }
+
+    h1 { font-family: var(--display); font-size: 1.6rem; margin-bottom: .5rem; color: var(--ink); }
+
+    p { color: var(--ink-soft); font-size: .9rem; line-height: 1.6; }
+
+    .btn-goto {
+      display: inline-block;
+      margin-top: 1.5rem;
+    }
+
+    .error-text { color: var(--accent-deep); }
+
+    .loading-wrap { display: flex; flex-direction: column; align-items: center; gap: 1rem; }
   </style>
 </head>
 <body>
-<div class="card">
-  <a class="logo" href="/">Reelday ✦</a>
-  <div id="loading">
+<div class="auth-card">
+  <div class="auth-brand">
+    <a class="brand" href="/">REELDAY<sup>★</sup></a>
+  </div>
+
+  <div id="loading" class="loading-wrap">
     <div class="spinner"></div>
     <p>Verifying your email…</p>
   </div>
+
   <div id="success" style="display:none">
     <div class="icon">🎉</div>
     <h1>Email Verified!</h1>
     <p>Your account is now active. Welcome to Reelday!</p>
-    <a class="btn" href="/my-events">Go to My Events</a>
+    <a class="btn btn-accent btn-goto" href="/my-events">Go to My Events</a>
   </div>
+
   <div id="error-state" style="display:none">
     <div class="icon">😔</div>
-    <h1 class="error">Verification Failed</h1>
+    <h1 class="error-text">Verification Failed</h1>
     <p id="error-msg">The link is invalid or has expired.</p>
-    <a class="btn" href="/register">Sign up again</a>
+    <a class="btn btn-accent btn-goto" href="/register">Sign up again</a>
   </div>
 </div>
 
