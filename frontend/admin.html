@@ -175,6 +175,7 @@
             <tr>
               <th>Couple</th>
               <th>Slug</th>
+              <th>Email</th>
               <th>Plan</th>
               <th>Status</th>
               <th>Uploads</th>
@@ -183,7 +184,7 @@
             </tr>
           </thead>
           <tbody id="events-tbody">
-            <tr><td colspan="7" class="empty-state">Loading…</td></tr>
+            <tr><td colspan="8" class="empty-state">Loading…</td></tr>
           </tbody>
         </table>
       </div>
@@ -289,13 +290,14 @@
       const { events } = await r.json();
       const tbody = document.getElementById('events-tbody');
       if (!events.length) {
-        tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No events yet.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No events yet.</td></tr>';
         return;
       }
       tbody.innerHTML = events.map(e => `
         <tr>
           <td><strong>${esc(e.couple_names)}</strong></td>
           <td><a href="/dashboard?slug=${esc(e.slug)}" target="_blank" style="color:#e8735a;font-size:.82rem">${esc(e.slug)}</a></td>
+          <td style="font-size:.82rem;color:rgba(240,235,228,.7)">${esc(e.user_email || '—')}</td>
           <td>${esc(e.plan)}</td>
           <td><span class="pill ${e.is_paid ? 'pill-paid' : 'pill-unpaid'}">${e.is_paid ? 'Paid' : 'Unpaid'}</span></td>
           <td>${e.upload_count}</td>
@@ -305,7 +307,7 @@
           </td>
         </tr>`).join('');
     } catch {
-      document.getElementById('events-tbody').innerHTML = `<tr><td colspan="7" class="empty-state">Error loading events.</td></tr>`;
+      document.getElementById('events-tbody').innerHTML = `<tr><td colspan="8" class="empty-state">Error loading events.</td></tr>`;
     }
   }
 

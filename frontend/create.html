@@ -1119,6 +1119,12 @@
 
   // ── Free trial button ─────────────────────────────────────
   btnTrial.addEventListener('click', async () => {
+    let token = null;
+    try { token = localStorage.getItem('reelday_token'); } catch { /* */ }
+    if (!token) {
+      location.href = `/login?next=${encodeURIComponent('/create')}`;
+      return;
+    }
     if (!validate()) return;
 
     btnTrial.disabled = true;

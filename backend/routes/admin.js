@@ -20,11 +20,14 @@ export default async function adminRoutes(fastify) {
   // GET /api/admin/events
   fastify.get('/admin/events', async () => {
     const { rows } = await fastify.db.query(
-      `SELECT e.*,
-              COUNT(u.id)::int AS upload_count
+      `SELECT e.id, e.slug, e.couple_names, e.event_type, e.plan,
+              e.is_paid, e.is_active, e.created_at,
+              COUNT(up.id)::int AS upload_count,
+              usr.email AS user_email
        FROM events e
-       LEFT JOIN uploads u ON u.event_id = e.id
-       GROUP BY e.id
+       LEFT JOIN uploads  up  ON up.event_id = e.id
+       LEFT JOIN users    usr ON usr.id = e.user_id
+       GROUP BY e.id, usr.email
        ORDER BY e.created_at DESC`,
     );
     return { events: rows };
