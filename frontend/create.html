@@ -554,6 +554,14 @@
     }
     .auth-already { font-size: .82rem; color: var(--ink-soft); text-align: center; margin-top: .75rem; }
     .auth-already a { color: var(--accent); font-weight: 600; text-decoration: none; }
+    .auth-forgot { display: block; text-align: right; font-size: .78rem; color: var(--ink-faint); text-decoration: none; margin-top: .3rem; }
+    .auth-forgot:hover { color: var(--accent); }
+
+    @keyframes authSlideIn {
+      from { opacity: 0; transform: translateY(-18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    #section-auth { animation: authSlideIn .35s ease both; }
 
     /* ── Lang switch ─────────────────────────────────────── */
     .lang-toggle {
@@ -818,6 +826,7 @@
       <div class="field">
         <label for="a-password">Password</label>
         <input type="password" id="a-password" placeholder="••••••••" autocomplete="current-password" />
+        <a class="auth-forgot" href="/forgot-password">Forgot password?</a>
       </div>
       <div class="auth-inline-err" id="auth-signin-err"></div>
       <button class="btn-pay" id="btn-auth-signin" type="button">
@@ -855,8 +864,6 @@
 <div class="toast" id="toast"></div>
 
 <script type="module">
-  import { saveAuth } from '/js/auth.js';
-
   // ── Theme map ─────────────────────────────────────────────
   const THEMES = ['wedding','debut','birthday','seventh_birthday',
                   'baptism','reunion','corporate','memorial'];
@@ -1106,8 +1113,13 @@
   function showAuthSection(intent) {
     pendingIntent = intent;
     const section = document.getElementById('section-auth');
+    // Reset animation so it replays each time the panel opens
+    section.style.animation = 'none';
     section.style.display = 'block';
-    section.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // Force reflow then restore animation
+    void section.offsetHeight;
+    section.style.animation = '';
+    section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
   function setAuthBtnLoading(btn, loading) {
@@ -1164,7 +1176,8 @@
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Login failed');
-      saveAuth(data.token, data.user);
+      localStorage.setItem('reelday_token', data.token);
+      localStorage.setItem('reelday_user', JSON.stringify(data.user));
       await afterInlineAuth();
     } catch (err) {
       showAuthErr('auth-signin-err', err.message);
@@ -1192,7 +1205,8 @@
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Registration failed');
       if (data.token) {
-        saveAuth(data.token, data.user);
+        localStorage.setItem('reelday_token', data.token);
+        localStorage.setItem('reelday_user', JSON.stringify(data.user));
         await afterInlineAuth();
       } else {
         showAuthErr('auth-reg-err', 'Account created! Check your email, then sign in.');
