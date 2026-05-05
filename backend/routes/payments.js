@@ -62,7 +62,7 @@ export default async function paymentRoutes(fastify) {
               }],
               payment_method_types: ['gcash', 'paymaya', 'card'],
               success_url: `${appUrl}/dashboard?slug=${slug}`,
-              cancel_url:  `${appUrl}/create`,
+              cancel_url:  `${appUrl}/create.html`,
               description: `Reelday - ${planConfig.label}`,
               metadata:    { slug, plan },
             },
@@ -77,7 +77,8 @@ export default async function paymentRoutes(fastify) {
       } else {
         const errBody = await checkoutRes.json().catch(() => ({}));
         fastify.log.error({ errBody }, 'PayMongo checkout session failed');
-        return reply.status(502).send({ error: true, message: 'Payment gateway error. Please try again.' });
+        const detail = errBody?.errors?.[0]?.detail ?? errBody?.message ?? 'Payment gateway error. Please try again.';
+        return reply.status(502).send({ error: true, message: detail, raw: errBody });
       }
     } catch (networkErr) {
       fastify.log.error({ networkErr }, 'PayMongo unreachable');
