@@ -13,7 +13,7 @@ function makeSlug(coupleNames) {
 export default async function eventRoutes(fastify) {
   // POST /api/events — create a new event
   fastify.post('/events', async (request, reply) => {
-    const { couple_names, event_type, event_date, plan } = request.body ?? {};
+    const { couple_names, event_type, event_date, plan, user_id } = request.body ?? {};
 
     if (!couple_names) {
       return reply.status(400).send({ error: true, message: 'couple_names is required' });
@@ -22,10 +22,10 @@ export default async function eventRoutes(fastify) {
     const slug = makeSlug(couple_names);
 
     const { rows } = await fastify.db.query(
-      `INSERT INTO events (slug, couple_names, event_type, event_date, plan)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO events (slug, couple_names, event_type, event_date, plan, user_id)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [slug, couple_names, event_type ?? 'wedding', event_date ?? null, plan ?? 'libre'],
+      [slug, couple_names, event_type ?? 'wedding', event_date ?? null, plan ?? 'libre', user_id ?? null],
     );
 
     const event = rows[0];

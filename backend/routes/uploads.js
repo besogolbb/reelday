@@ -16,6 +16,12 @@ export default async function uploadRoutes(fastify) {
     }
 
     const event = eventRows[0];
+
+    // ── Feature gating ────────────────────────────────────
+    if (!event.is_paid && event.plan !== 'libre') {
+      return reply.status(403).send({ error: true, message: 'Payment pending verification' });
+    }
+
     const fields = {};
     let fileBuffer = null;
     let fileMime = null;
@@ -48,6 +54,10 @@ export default async function uploadRoutes(fastify) {
 
     const isVideo        = fileMime.startsWith('video/');
     const isVideoMessage = isVideo && fields.is_video_message === 'true';
+
+    if (isVideoMessage && event.plan === 'libre') {
+      return reply.status(403).send({ error: true, message: 'Upgrade to Selebrasyon to send video messages' });
+    }
     const filename       = `${randomUUID()}${fileExt}`;
     const fileUrl        = await fastify.uploadFile(fileBuffer, filename, fileMime);
 

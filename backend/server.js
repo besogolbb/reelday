@@ -9,10 +9,13 @@ import staticFiles from '@fastify/static';
 
 import dbPlugin from './plugins/database.js';
 import storagePlugin from './plugins/storage.js';
+import authPlugin from './plugins/auth.js';
 import healthRoutes from './routes/health.js';
 import eventRoutes from './routes/events.js';
 import uploadRoutes from './routes/uploads.js';
 import paymentRoutes from './routes/payments.js';
+import authRoutes from './routes/auth.js';
+import adminRoutes from './routes/admin.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -43,11 +46,14 @@ await fastify.register(staticFiles, {
 
 await fastify.register(dbPlugin);
 await fastify.register(storagePlugin);
+await fastify.register(authPlugin);
 
 await fastify.register(healthRoutes,  { prefix: '/api' });
 await fastify.register(eventRoutes,   { prefix: '/api' });
 await fastify.register(uploadRoutes,  { prefix: '/api' });
 await fastify.register(paymentRoutes, { prefix: '/api' });
+await fastify.register(authRoutes,    { prefix: '/api' });
+await fastify.register(adminRoutes,   { prefix: '/api' });
 
 // Serve index.html at root
 fastify.get('/', (_request, reply) => {
@@ -73,6 +79,13 @@ fastify.get('/wall/:slug', (_request, reply) => {
 fastify.get('/dashboard', (_request, reply) => {
   reply.sendFile('dashboard.html');
 });
+
+fastify.get('/admin',          (_r, reply) => reply.sendFile('admin.html'));
+fastify.get('/login',          (_r, reply) => reply.sendFile('login.html'));
+fastify.get('/register',       (_r, reply) => reply.sendFile('register.html'));
+fastify.get('/verify',         (_r, reply) => reply.sendFile('verify.html'));
+fastify.get('/reset-password', (_r, reply) => reply.sendFile('reset-password.html'));
+fastify.get('/my-events',      (_r, reply) => reply.sendFile('my-events.html'));
 
 fastify.setErrorHandler((error, _request, reply) => {
   fastify.log.error(error);

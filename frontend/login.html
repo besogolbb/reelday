@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#080808" />
+  <title>Reelday — Login</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #080808; color: #f0ebe4; font-family: 'DM Sans', sans-serif; min-height: 100dvh; display: flex; flex-direction: column; }
+
+    .page-wrap { flex: 1; display: flex; align-items: center; justify-content: center; padding: 2rem 1rem; }
+
+    .card {
+      background: #111; border: 1px solid rgba(255,255,255,.08);
+      border-radius: 20px; padding: clamp(1.75rem, 5vw, 2.5rem);
+      width: 100%; max-width: 400px;
+    }
+
+    .logo { display: block; text-align: center; font-family: 'Playfair Display', serif; font-size: 1rem; letter-spacing: .14em; text-transform: uppercase; color: #e8735a; text-decoration: none; margin-bottom: 2rem; opacity: .8; }
+
+    h1 { font-family: 'Playfair Display', serif; font-size: 1.7rem; text-align: center; margin-bottom: .4rem; }
+    .sub { text-align: center; color: rgba(240,235,228,.5); font-size: .9rem; margin-bottom: 2rem; }
+
+    .field { margin-bottom: 1.1rem; }
+    label  { display: block; font-size: .82rem; font-weight: 600; color: rgba(240,235,228,.6); margin-bottom: .4rem; }
+    input  {
+      width: 100%; padding: .75rem 1rem; background: #1a1a1a;
+      border: 1px solid rgba(255,255,255,.1); border-radius: 10px;
+      color: #f0ebe4; font-family: inherit; font-size: .95rem; outline: none;
+      transition: border-color .15s;
+    }
+    input:focus { border-color: #e8735a; }
+
+    .forgot { display: block; text-align: right; font-size: .8rem; color: rgba(240,235,228,.45); text-decoration: none; margin-top: .3rem; }
+    .forgot:hover { color: #e8735a; }
+
+    .btn-submit {
+      width: 100%; padding: .9rem; background: #e8735a; color: #fff; border: none;
+      border-radius: 12px; font-family: inherit; font-size: 1rem; font-weight: 700;
+      cursor: pointer; transition: opacity .15s; margin-top: .5rem;
+      display: flex; align-items: center; justify-content: center; gap: .5rem;
+      min-height: 50px;
+    }
+    .btn-submit:hover:not(:disabled) { opacity: .88; }
+    .btn-submit:disabled { opacity: .5; cursor: not-allowed; }
+
+    .error-msg { background: rgba(248,113,113,.1); border: 1px solid rgba(248,113,113,.25); color: #f87171; border-radius: 8px; padding: .65rem .9rem; font-size: .85rem; margin-top: .75rem; display: none; }
+
+    .divider { text-align: center; color: rgba(240,235,228,.3); margin: 1.25rem 0; font-size: .85rem; }
+
+    .signup-link { text-align: center; font-size: .88rem; color: rgba(240,235,228,.55); }
+    .signup-link a { color: #e8735a; font-weight: 600; text-decoration: none; }
+    .signup-link a:hover { text-decoration: underline; }
+
+    .spinner { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: spin .6s linear infinite; display: none; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+<div class="page-wrap">
+  <div class="card">
+    <a class="logo" href="/">Reelday ✦</a>
+    <h1>Welcome back</h1>
+    <p class="sub">Log in to manage your events</p>
+
+    <form id="login-form" novalidate>
+      <div class="field">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" placeholder="you@email.com" autocomplete="email" required />
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" placeholder="••••••••" autocomplete="current-password" required />
+        <a class="forgot" href="/forgot-password">Forgot password?</a>
+      </div>
+      <button class="btn-submit" id="btn-submit" type="submit">
+        <div class="spinner" id="spinner"></div>
+        <span id="btn-text">Log in</span>
+      </button>
+      <div class="error-msg" id="error-msg"></div>
+    </form>
+
+    <div class="divider">or</div>
+    <div class="signup-link">Don't have an account? <a href="/register">Sign up free</a></div>
+  </div>
+</div>
+
+<script type="module">
+  import { saveAuth, getToken } from '/js/auth.js';
+
+  // Redirect if already logged in
+  if (getToken()) location.href = '/my-events';
+
+  const form    = document.getElementById('login-form');
+  const btn     = document.getElementById('btn-submit');
+  const spinner = document.getElementById('spinner');
+  const btnText = document.getElementById('btn-text');
+  const errMsg  = document.getElementById('error-msg');
+
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    errMsg.style.display = 'none';
+    btn.disabled  = true;
+    spinner.style.display = 'block';
+    btnText.textContent   = 'Logging in…';
+
+    try {
+      const res = await fetch('/api/auth/login', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          email:    document.getElementById('email').value.trim(),
+          password: document.getElementById('password').value,
+        }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.message || 'Login failed');
+
+      saveAuth(data.token, data.user);
+
+      const next = new URLSearchParams(location.search).get('next');
+      location.href = next || '/my-events';
+    } catch (err) {
+      errMsg.textContent   = err.message;
+      errMsg.style.display = 'block';
+      btn.disabled         = false;
+      spinner.style.display = 'none';
+      btnText.textContent  = 'Log in';
+    }
+  });
+</script>
+</body>
+</html>

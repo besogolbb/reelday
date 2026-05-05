@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#080808" />
+  <title>Reelday — My Events</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;1,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #080808; color: #f0ebe4; font-family: 'DM Sans', sans-serif; min-height: 100dvh; }
+
+    /* ── Nav ── */
+    .top-nav { background: #111; border-bottom: 1px solid rgba(255,255,255,.07); padding: .85rem 1.5rem; display: flex; align-items: center; gap: 1rem; }
+    .nav-logo { font-family: 'Playfair Display', serif; font-size: 1rem; letter-spacing: .12em; text-transform: uppercase; color: #e8735a; text-decoration: none; opacity: .8; }
+    .nav-user { margin-left: auto; font-size: .85rem; color: rgba(240,235,228,.55); }
+    .nav-btn { padding: .4rem .9rem; border-radius: 8px; font-family: inherit; font-size: .85rem; font-weight: 600; cursor: pointer; transition: all .15s; text-decoration: none; }
+    .nav-btn-ghost { background: transparent; border: 1px solid rgba(232,115,90,.4); color: #e8735a; }
+    .nav-btn-ghost:hover { background: #e8735a; color: #fff; }
+    .nav-btn-solid { background: #e8735a; border: 1px solid #e8735a; color: #fff; }
+    .nav-btn-solid:hover { opacity: .88; }
+
+    /* ── Header ── */
+    .page-header { background: linear-gradient(135deg, #1a0e0a 0%, #111 100%); border-bottom: 1px solid rgba(255,255,255,.06); padding: 2.5rem 1.5rem; }
+    .page-header-inner { max-width: 900px; margin-inline: auto; }
+    .page-title { font-family: 'Playfair Display', serif; font-size: clamp(1.6rem, 4vw, 2.2rem); margin-bottom: .3rem; }
+    .page-sub { color: rgba(240,235,228,.45); font-size: .9rem; }
+
+    /* ── Main ── */
+    .main { max-width: 900px; margin-inline: auto; padding: 2rem 1.5rem 4rem; }
+
+    .new-event-btn {
+      display: inline-flex; align-items: center; gap: .5rem;
+      background: #e8735a; color: #fff; padding: .75rem 1.5rem; border-radius: 12px;
+      text-decoration: none; font-weight: 700; font-size: .95rem; margin-bottom: 2rem;
+      transition: opacity .15s;
+    }
+    .new-event-btn:hover { opacity: .88; }
+
+    /* ── Event cards ── */
+    .events-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.25rem; }
+
+    .event-card {
+      background: #111; border: 1px solid rgba(255,255,255,.07);
+      border-radius: 16px; padding: 1.5rem; transition: border-color .15s, transform .15s;
+      display: flex; flex-direction: column; gap: .75rem;
+    }
+    .event-card:hover { border-color: rgba(232,115,90,.3); transform: translateY(-2px); }
+
+    .ec-top { display: flex; align-items: flex-start; justify-content: space-between; gap: .5rem; }
+    .ec-names { font-family: 'Playfair Display', serif; font-size: 1.1rem; line-height: 1.3; flex: 1; }
+    .ec-badge {
+      font-size: .68rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+      padding: .2rem .6rem; border-radius: 999px; white-space: nowrap;
+    }
+    .badge-libre     { background: rgba(255,255,255,.1);  color: rgba(240,235,228,.65); }
+    .badge-pending   { background: rgba(251,191,36,.15);  color: #fbbf24; }
+    .badge-selebrasyon { background: rgba(232,115,90,.2); color: #e8735a; }
+    .badge-pro       { background: rgba(212,175,55,.2);   color: #d4af37; }
+
+    .ec-meta { font-size: .8rem; color: rgba(240,235,228,.4); display: flex; gap: 1rem; flex-wrap: wrap; }
+    .ec-type { text-transform: capitalize; }
+
+    .ec-actions { display: flex; gap: .65rem; margin-top: .25rem; }
+    .ec-link {
+      flex: 1; padding: .55rem; text-align: center; border-radius: 10px;
+      font-size: .83rem; font-weight: 600; text-decoration: none; transition: all .15s;
+    }
+    .ec-link-primary { background: #e8735a; color: #fff; }
+    .ec-link-primary:hover { opacity: .88; }
+    .ec-link-ghost { background: transparent; border: 1px solid rgba(255,255,255,.12); color: rgba(240,235,228,.7); }
+    .ec-link-ghost:hover { border-color: rgba(232,115,90,.4); color: #e8735a; }
+
+    /* ── Empty state ── */
+    .empty { text-align: center; padding: 5rem 2rem; color: rgba(240,235,228,.35); }
+    .empty-icon { font-size: 3.5rem; margin-bottom: 1rem; }
+    .empty h2 { font-family: 'Playfair Display', serif; font-size: 1.4rem; color: rgba(240,235,228,.6); margin-bottom: .5rem; }
+    .empty p { font-size: .9rem; margin-bottom: 1.5rem; line-height: 1.6; }
+
+    /* ── Loading ── */
+    .loading { display: flex; align-items: center; justify-content: center; padding: 5rem; }
+    .spinner { width: 36px; height: 36px; border: 3px solid rgba(232,115,90,.2); border-top-color: #e8735a; border-radius: 50%; animation: spin .6s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 600px) { .main { padding-inline: 1rem; } .top-nav { padding-inline: 1rem; } }
+  </style>
+</head>
+<body>
+
+<nav class="top-nav">
+  <a class="nav-logo" href="/">Reelday ✦</a>
+  <span class="nav-user" id="nav-user"></span>
+  <button class="nav-btn nav-btn-ghost" id="btn-logout" style="border:none;padding:.4rem .9rem">Logout</button>
+</nav>
+
+<div class="page-header">
+  <div class="page-header-inner">
+    <h1 class="page-title">My Events</h1>
+    <p class="page-sub" id="page-sub">Loading…</p>
+  </div>
+</div>
+
+<main class="main">
+  <a class="new-event-btn" href="/create">+ New Event</a>
+
+  <div class="loading" id="loading"><div class="spinner"></div></div>
+  <div id="events-container" style="display:none"></div>
+</main>
+
+<script type="module">
+  import { getToken, getUser, authHeaders, requireAuth, logout } from '/js/auth.js';
+
+  if (!requireAuth()) throw new Error('redirect');
+
+  const user = getUser();
+  document.getElementById('nav-user').textContent = user?.full_name ?? '';
+  document.getElementById('btn-logout').onclick = logout;
+
+  const PLAN_LABELS = {
+    libre:        ['badge-libre',       'LIBRE'],
+    selebrasyon:  ['badge-selebrasyon', 'SELEBRASYON ✓'],
+    pro:          ['badge-pro',         'PRO ✓'],
+  };
+
+  const TYPE_MAP = {
+    wedding: '💍 Kasalan', debut: '👑 Debut', birthday: '🎂 Birthday',
+    seventh_birthday: '🌟 7th Birthday', baptism: '🕊️ Baptism',
+    reunion: '🎉 Reunion', corporate: '🏢 Corporate', memorial: '🕯️ Memorial',
+  };
+
+  const FIL_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  function fmtDate(d) {
+    if (!d) return '';
+    const dt = new Date(d);
+    return `${FIL_MONTHS[dt.getUTCMonth()]} ${dt.getUTCDate()}, ${dt.getUTCFullYear()}`;
+  }
+
+  function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  async function load() {
+    try {
+      const res  = await fetch('/api/auth/me', { headers: authHeaders() });
+      if (res.status === 401) { logout(); return; }
+      const { user: u, events } = await res.json();
+
+      document.getElementById('page-sub').textContent =
+        `${events.length} event${events.length !== 1 ? 's' : ''} · ${u.email}`;
+
+      document.getElementById('loading').style.display = 'none';
+      const container = document.getElementById('events-container');
+      container.style.display = 'block';
+
+      if (!events.length) {
+        container.innerHTML = `
+          <div class="empty">
+            <div class="empty-icon">🎉</div>
+            <h2>No events yet</h2>
+            <p>Create your first event and start collecting<br>photos and videos from your guests.</p>
+            <a class="new-event-btn" href="/create">+ Create Event</a>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = `<div class="events-grid">${events.map(ev => {
+        const isPending = !ev.is_paid && ev.plan !== 'libre';
+        const [badgeClass, badgeText] = isPending
+          ? ['badge-pending', 'PENDING']
+          : (PLAN_LABELS[ev.plan] || PLAN_LABELS.libre);
+        const typeLabel = TYPE_MAP[ev.event_type] || ev.event_type;
+        const dateStr   = fmtDate(ev.event_date);
+        return `
+          <div class="event-card">
+            <div class="ec-top">
+              <div class="ec-names">${esc(ev.couple_names)}</div>
+              <span class="ec-badge ${badgeClass}">${badgeText}</span>
+            </div>
+            <div class="ec-meta">
+              <span class="ec-type">${typeLabel}</span>
+              ${dateStr ? `<span>${dateStr}</span>` : ''}
+            </div>
+            <div class="ec-actions">
+              <a class="ec-link ec-link-primary" href="/dashboard?slug=${esc(ev.slug)}">Dashboard</a>
+              <a class="ec-link ec-link-ghost" href="/wall/${esc(ev.slug)}" target="_blank">Live Wall</a>
+            </div>
+          </div>`;
+      }).join('')}</div>`;
+    } catch {
+      document.getElementById('loading').innerHTML = '<p style="color:rgba(240,235,228,.4)">Failed to load events.</p>';
+    }
+  }
+
+  load();
+</script>
+</body>
+</html>

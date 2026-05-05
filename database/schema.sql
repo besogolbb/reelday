@@ -2,6 +2,20 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
+-- Users table
+CREATE TABLE IF NOT EXISTS users (
+  id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email                VARCHAR(255) UNIQUE NOT NULL,
+  password_hash        TEXT NOT NULL,
+  full_name            VARCHAR(200),
+  phone                VARCHAR(30),
+  is_verified          BOOLEAN     DEFAULT false,
+  verification_token   TEXT,
+  reset_token          TEXT,
+  reset_token_expires  TIMESTAMPTZ,
+  created_at           TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Events table
 CREATE TABLE IF NOT EXISTS events (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -53,6 +67,9 @@ CREATE TABLE IF NOT EXISTS payments (
   plan                 VARCHAR(20),
   created_at           TIMESTAMPTZ  DEFAULT NOW()
 );
+
+-- Add user_id to events (migration for existing databases)
+ALTER TABLE events ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES users(id);
 
 -- Indexes for common queries
 CREATE INDEX IF NOT EXISTS idx_uploads_event_id    ON uploads(event_id);

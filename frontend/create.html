@@ -1045,6 +1045,9 @@
 
   // ── Create event helper ───────────────────────────────────
   async function createEvent(plan) {
+    let userId = null;
+    try { userId = JSON.parse(localStorage.getItem('reelday_user'))?.id ?? null; } catch { /* */ }
+
     const res = await fetch('/api/events', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1053,6 +1056,7 @@
         event_type:   selectedType,
         event_date:   dateInput.value || null,
         plan,
+        user_id:      userId,
       }),
     });
 

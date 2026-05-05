@@ -98,8 +98,20 @@
     }
 
     .plan-libre       { background: rgba(255,255,255,.15); color: rgba(255,255,255,.85); }
-    .plan-selebrasyon { background: var(--gold); color: var(--primary); }
-    .plan-pro         { background: var(--accent); color: #fff; }
+    .plan-pending     { background: rgba(251,191,36,.25);  color: #fbbf24; }
+    .plan-selebrasyon { background: rgba(232,115,90,.3);   color: #fff; }
+    .plan-pro         { background: rgba(212,175,55,.3);   color: #d4af37; }
+
+    /* ── Payment banner ─────────────────────────────────── */
+    .pay-banner {
+      display: none; padding: .75rem 1.25rem; text-align: center;
+      font-family: 'DM Sans', sans-serif; font-size: .875rem;
+      align-items: center; justify-content: center; gap: .75rem;
+      flex-wrap: wrap; position: sticky; top: 0; z-index: 999;
+    }
+    .pay-banner.banner-trial   { background: #e8735a; color: #fff; }
+    .pay-banner.banner-pending { background: #1a1200; border-bottom: 1px solid rgba(251,191,36,.3); color: #fbbf24; }
+    .pay-banner a { color: inherit; font-weight: 700; text-decoration: underline; }
 
     .header-divider {
       position: absolute;
@@ -691,10 +703,9 @@
 </head>
 <body>
 
-<!-- ── Mode banner (test / trial) ────────────────────────── -->
-<div id="mode-banner" style="display:none;background:var(--primary,#e8735a);color:#fff;text-align:center;padding:.6rem 1rem;font-size:.85rem;font-family:'DM Sans',sans-serif;position:sticky;top:0;z-index:999;gap:.5rem;align-items:center;justify-content:center">
-  <span id="mode-banner-text"></span>
-  <a href="/create" style="color:#fff;font-weight:700;margin-left:.75rem;text-decoration:underline">Mag-upgrade →</a>
+<!-- ── Payment / mode banner ─────────────────────────────── -->
+<div class="pay-banner" id="pay-banner">
+  <span id="pay-banner-text"></span>
 </div>
 
 <!-- ── Header ────────────────────────────────────────────── -->
@@ -702,7 +713,8 @@
   <div class="header-inner">
     <div class="header-top">
       <a href="/" class="logo">Reelday ✦</a>
-      <div style="display:flex;gap:.5rem;align-items:center">
+      <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+        <div id="dash-nav-links" style="display:flex;gap:.5rem;align-items:center"></div>
         <div class="lang-toggle" id="lang-toggle">
           <button class="lang-btn active" data-lang="en">EN</button>
           <button class="lang-btn" data-lang="fil">FIL</button>
@@ -858,6 +870,18 @@
 <div class="toast" id="toast"></div>
 
 <script type="module">
+  // ── Nav ───────────────────────────────────────────────
+  {
+    let user = null;
+    try { user = JSON.parse(localStorage.getItem('reelday_user')); } catch { /* */ }
+    const navLinks = document.getElementById('dash-nav-links');
+    if (user) {
+      navLinks.innerHTML = `<a href="/my-events" style="color:rgba(255,255,255,.75);font-size:.82rem;text-decoration:none;padding:.35rem .7rem;border:1px solid rgba(255,255,255,.2);border-radius:7px">My Events</a>`;
+    } else {
+      navLinks.innerHTML = `<a href="/login" style="color:rgba(255,255,255,.75);font-size:.82rem;text-decoration:none;padding:.35rem .7rem;border:1px solid rgba(255,255,255,.2);border-radius:7px">Login</a>`;
+    }
+  }
+
   // ── Theme map ────────────────────────────────────────
   const THEME_MAP = {
     wedding:          { theme: 'wedding',          emoji: '💍', label: 'Kasalan' },
@@ -954,9 +978,23 @@
       eventDate.textContent = formatDate(event.event_date);
     }
 
-    const plan = event.plan || 'libre';
-    planBadge.textContent = plan.charAt(0).toUpperCase() + plan.slice(1);
-    planBadge.className   = `plan-badge plan-${plan}`;
+    const plan    = event.plan || 'libre';
+    const isPaid  = event.is_paid;
+    const isPending = !isPaid && plan !== 'libre';
+
+    if (isPending) {
+      planBadge.textContent = 'PENDING';
+      planBadge.className   = 'plan-badge plan-pending';
+    } else if (plan === 'selebrasyon' && isPaid) {
+      planBadge.textContent = 'SELEBRASYON ✓';
+      planBadge.className   = 'plan-badge plan-selebrasyon';
+    } else if (plan === 'pro' && isPaid) {
+      planBadge.textContent = 'PRO ✓';
+      planBadge.className   = 'plan-badge plan-pro';
+    } else {
+      planBadge.textContent = 'LIBRE';
+      planBadge.className   = 'plan-badge plan-libre';
+    }
 
     $('btn-live-wall').onclick = () =>
       window.open(`/wall/${slug}`, '_blank');
@@ -1218,13 +1256,18 @@
       dashHeader.style.display   = 'block';
       dashMain.style.display     = 'block';
 
-      // Show mode banner
-      const banner = $('mode-banner');
-      if (isTestMode) {
-        $('mode-banner-text').textContent = '⚠️ Test mode — bayad hindi pa nakumpirma. I-upgrade para maging live.';
+      // ── Payment banner ────────────────────────────────
+      const banner     = $('pay-banner');
+      const bannerText = $('pay-banner-text');
+      const plan       = event.plan || 'libre';
+
+      if (isTrial || (plan === 'libre' && !event.is_paid)) {
+        bannerText.innerHTML = '🆓 Trial mode — <a href="/create">Upgrade to unlock all features →</a>';
+        banner.className = 'pay-banner banner-trial';
         banner.style.display = 'flex';
-      } else if (isTrial) {
-        $('mode-banner-text').textContent = '🎉 Libre trial — subukan mo ang Reelday! I-upgrade para sa buong features.';
+      } else if (!event.is_paid && plan !== 'libre') {
+        bannerText.textContent = '⏳ Payment verification in progress. We\'ll activate your event within 1 hour via Viber.';
+        banner.className = 'pay-banner banner-pending';
         banner.style.display = 'flex';
       }
     } catch (err) {

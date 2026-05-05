@@ -4,6 +4,8 @@ const PLANS = {
   pro:         { price: 349900, label: 'Pro',          },  // ₱3,499
 };
 
+import { buildAppUrl } from '../utils/appUrl.js';
+
 function paymongoAuth() {
   return `Basic ${Buffer.from(`${process.env.PAYMONGO_SECRET_KEY}:`).toString('base64')}`;
 }
@@ -35,9 +37,7 @@ export default async function paymentRoutes(fastify) {
     }
 
     const eventId  = eventRows[0].id;
-    const proto  = (request.headers['x-forwarded-proto'] || 'https').split(',')[0].trim();
-    const host   = (request.headers['x-forwarded-host'] || request.headers.host || 'reelday.ph').split(',')[0].trim();
-    const appUrl = (process.env.APP_URL || `${proto}://${host}`).replace(/\/+$/, '');
+    const appUrl = buildAppUrl(request);
 
     // ── PayMongo checkout session ─────────────────────────
     let checkoutUrl = null;
