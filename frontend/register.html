@@ -29,6 +29,10 @@
     .success-state p  { color: rgba(240,235,228,.55); font-size: .9rem; line-height: 1.6; }
     .login-link { text-align: center; font-size: .88rem; color: rgba(240,235,228,.55); margin-top: 1.25rem; }
     .login-link a { color: #e8735a; font-weight: 600; text-decoration: none; }
+    .divider { text-align: center; color: rgba(240,235,228,.3); margin: 1.25rem 0; font-size: .85rem; position: relative; }
+    .divider::before, .divider::after { content:''; position:absolute; top:50%; width:42%; height:1px; background:rgba(255,255,255,.08); }
+    .divider::before { left:0; } .divider::after { right:0; }
+    #google-btn { display: flex; justify-content: center; margin-bottom: .5rem; }
     .spinner { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: spin .6s linear infinite; display: none; }
     @keyframes spin { to { transform: rotate(360deg); } }
   </style>
@@ -70,12 +74,14 @@
       <p>We sent a verification link to <strong id="success-email"></strong>. Click it to activate your account.</p>
     </div>
 
+    <div class="divider">or</div>
+    <div id="google-btn"></div>
     <div class="login-link">Already have an account? <a href="/login">Log in</a></div>
   </div>
 </div>
 
 <script type="module">
-  import { getToken } from '/js/auth.js';
+  import { getToken, saveAuth } from '/js/auth.js';
   if (getToken()) location.href = '/my-events';
 
   const form    = document.getElementById('reg-form');
@@ -117,6 +123,37 @@
       btnText.textContent   = 'Create account';
     }
   });
+
+  // ── Google Sign-In ────────────────────────────────────
+  async function handleGoogleCredential(response) {
+    try {
+      const res  = await fetch('/api/auth/google', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ credential: response.credential }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Google sign-in failed');
+      saveAuth(data.token, data.user);
+      location.href = '/my-events';
+    } catch (err) {
+      errMsg.textContent   = err.message;
+      errMsg.style.display = 'block';
+    }
+  }
+
+  const { google_client_id } = await fetch('/api/auth/config').then(r => r.json()).catch(() => ({}));
+  if (google_client_id) {
+    const s = document.createElement('script');
+    s.src = 'https://accounts.google.com/gsi/client';
+    s.onload = () => {
+      google.accounts.id.initialize({ client_id: google_client_id, callback: handleGoogleCredential });
+      google.accounts.id.renderButton(document.getElementById('google-btn'), {
+        theme: 'outline', size: 'large', width: 368, text: 'signup_with', shape: 'rectangular',
+      });
+    };
+    document.head.appendChild(s);
+  }
 </script>
 </body>
 </html>

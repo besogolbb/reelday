@@ -228,4 +228,53 @@ export default async function authRoutes(fastify) {
     const { events, ...user } = rows[0];
     return { user, events: events ?? [] };
   });
+
+  // GET /api/auth/config — public client config for frontend
+  fastify.get('/auth/config', async () => ({
+    google_client_id: process.env.GOOGLE_CLIENT_ID ?? null,
+  }));
+
+  // POST /api/auth/google — verify Google ID token, sign in or register
+  fastify.post('/auth/google', async (request, reply) => {
+    const { credential } = request.body ?? {};
+    if (!credential) {
+      return reply.status(400).send({ error: true, message: 'credential is required' });
+    }
+
+    const googleRes = await fetch(
+      `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`,
+    );
+    if (!googleRes.ok) {
+      return reply.status(401).send({ error: true, message: 'Invalid Google token' });
+    }
+
+    const payload = await googleRes.json();
+
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    if (clientId && payload.aud !== clientId) {
+      return reply.status(401).send({ error: true, message: 'Token audience mismatch' });
+    }
+
+    const { sub: google_id, email, name } = payload;
+    if (!email) {
+      return reply.status(400).send({ error: true, message: 'Google account has no email' });
+    }
+
+    // Find existing user by google_id or email, then upsert
+    const { rows } = await fastify.db.query(
+      `INSERT INTO users (email, full_name, google_id, is_verified)
+       VALUES ($1, $2, $3, true)
+       ON CONFLICT (email) DO UPDATE
+         SET google_id   = COALESCE(users.google_id, EXCLUDED.google_id),
+             is_verified = true,
+             full_name   = COALESCE(users.full_name, EXCLUDED.full_name)
+       RETURNING id, email, full_name`,
+      [email.toLowerCase(), name ?? email, google_id],
+    );
+
+    const user  = rows[0];
+    const token = signToken({ id: user.id, email: user.email, full_name: user.full_name });
+
+    return { token, user };
+  });
 }

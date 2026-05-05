@@ -49,7 +49,12 @@
 
     .error-msg { background: rgba(248,113,113,.1); border: 1px solid rgba(248,113,113,.25); color: #f87171; border-radius: 8px; padding: .65rem .9rem; font-size: .85rem; margin-top: .75rem; display: none; }
 
-    .divider { text-align: center; color: rgba(240,235,228,.3); margin: 1.25rem 0; font-size: .85rem; }
+    .divider { text-align: center; color: rgba(240,235,228,.3); margin: 1.25rem 0; font-size: .85rem; position: relative; }
+    .divider::before, .divider::after { content:''; position:absolute; top:50%; width:42%; height:1px; background:rgba(255,255,255,.08); }
+    .divider::before { left:0; } .divider::after { right:0; }
+
+    #google-btn { display: flex; justify-content: center; margin-bottom: .5rem; }
+    #google-btn iframe { border-radius: 10px !important; }
 
     .signup-link { text-align: center; font-size: .88rem; color: rgba(240,235,228,.55); }
     .signup-link a { color: #e8735a; font-weight: 600; text-decoration: none; }
@@ -84,6 +89,7 @@
     </form>
 
     <div class="divider">or</div>
+    <div id="google-btn"></div>
     <div class="signup-link">Don't have an account? <a href="/register">Sign up free</a></div>
   </div>
 </div>
@@ -132,6 +138,38 @@
       btnText.textContent  = 'Log in';
     }
   });
+
+  // ── Google Sign-In ────────────────────────────────────
+  async function handleGoogleCredential(response) {
+    try {
+      const res  = await fetch('/api/auth/google', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ credential: response.credential }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Google sign-in failed');
+      saveAuth(data.token, data.user);
+      const next = new URLSearchParams(location.search).get('next');
+      location.href = next || '/my-events';
+    } catch (err) {
+      errMsg.textContent   = err.message;
+      errMsg.style.display = 'block';
+    }
+  }
+
+  const { google_client_id } = await fetch('/api/auth/config').then(r => r.json()).catch(() => ({}));
+  if (google_client_id) {
+    const s = document.createElement('script');
+    s.src = 'https://accounts.google.com/gsi/client';
+    s.onload = () => {
+      google.accounts.id.initialize({ client_id: google_client_id, callback: handleGoogleCredential });
+      google.accounts.id.renderButton(document.getElementById('google-btn'), {
+        theme: 'outline', size: 'large', width: 352, text: 'continue_with', shape: 'rectangular',
+      });
+    };
+    document.head.appendChild(s);
+  }
 </script>
 </body>
 </html>

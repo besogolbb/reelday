@@ -20,6 +20,10 @@ const MIGRATIONS = `
   );
 
   ALTER TABLE events ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES users(id);
+
+  ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR(100);
+  ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id) WHERE google_id IS NOT NULL;
 `;
 
 async function dbPlugin(fastify) {
