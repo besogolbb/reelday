@@ -520,6 +520,41 @@
     .field.has-error input { border-color: var(--accent-deep); }
     .field.has-error .field-error { display: block; }
 
+    /* ── Inline auth section ─────────────────────────────── */
+    .auth-tab-row {
+      display: flex;
+      border: 1.5px solid var(--line-2);
+      border-radius: var(--r);
+      overflow: hidden;
+      margin-bottom: 1.5rem;
+    }
+    .auth-tab-btn {
+      flex: 1; padding: .65rem 1rem; border: none;
+      background: var(--paper); color: var(--ink-soft);
+      font-family: var(--sans); font-size: .875rem; font-weight: 600;
+      cursor: pointer; transition: all .15s;
+    }
+    .auth-tab-btn.active { background: var(--accent); color: #fff; }
+    .auth-inline-err {
+      background: rgba(196,90,58,.08);
+      border: 1px solid rgba(196,90,58,.25);
+      color: var(--accent-deep);
+      border-radius: var(--r);
+      padding: .6rem .9rem;
+      font-size: .82rem;
+      margin-bottom: .75rem;
+      display: none;
+    }
+    .auth-divider {
+      display: flex; align-items: center; gap: .75rem;
+      font-size: .78rem; color: var(--ink-soft); margin: 1rem 0;
+    }
+    .auth-divider::before, .auth-divider::after {
+      content: ''; flex: 1; height: 1px; background: var(--line);
+    }
+    .auth-already { font-size: .82rem; color: var(--ink-soft); text-align: center; margin-top: .75rem; }
+    .auth-already a { color: var(--accent); font-weight: 600; text-decoration: none; }
+
     /* ── Lang switch ─────────────────────────────────────── */
     .lang-toggle {
       display: flex;
@@ -764,11 +799,64 @@
     </p>
   </div>
 
+  <!-- ── AUTH GATE: Inline sign-in / register ──────────── -->
+  <div class="form-section" id="section-auth" style="display:none">
+    <div class="form-section-title">One more step</div>
+    <div class="form-section-sub">Sign in or create a free account to continue.</div>
+
+    <div class="auth-tab-row" id="auth-tab-row">
+      <button class="auth-tab-btn active" data-auth-tab="signin">Sign in</button>
+      <button class="auth-tab-btn" data-auth-tab="register">Create account</button>
+    </div>
+
+    <!-- Sign in pane -->
+    <div id="auth-signin-pane">
+      <div class="field">
+        <label for="a-email">Email</label>
+        <input type="email" id="a-email" placeholder="you@email.com" autocomplete="email" />
+      </div>
+      <div class="field">
+        <label for="a-password">Password</label>
+        <input type="password" id="a-password" placeholder="••••••••" autocomplete="current-password" />
+      </div>
+      <div class="auth-inline-err" id="auth-signin-err"></div>
+      <button class="btn-pay" id="btn-auth-signin" type="button">
+        <div class="btn-spinner"></div>
+        <span class="btn-text">Sign in &amp; continue →</span>
+      </button>
+    </div>
+
+    <!-- Register pane -->
+    <div id="auth-register-pane" style="display:none">
+      <div class="field">
+        <label for="a-name">Full Name</label>
+        <input type="text" id="a-name" placeholder="Juan dela Cruz" autocomplete="name" />
+      </div>
+      <div class="field">
+        <label for="a-reg-email">Email</label>
+        <input type="email" id="a-reg-email" placeholder="you@email.com" autocomplete="email" />
+      </div>
+      <div class="field">
+        <label for="a-reg-pw">Password</label>
+        <input type="password" id="a-reg-pw" placeholder="At least 8 characters" autocomplete="new-password" />
+      </div>
+      <div class="auth-inline-err" id="auth-reg-err"></div>
+      <button class="btn-pay" id="btn-auth-reg" type="button">
+        <div class="btn-spinner"></div>
+        <span class="btn-text">Create account &amp; continue →</span>
+      </button>
+    </div>
+
+    <div class="auth-already">Already have an account? <a href="#" id="auth-switch-signin">Sign in instead</a></div>
+  </div>
+
 </main>
 
 <div class="toast" id="toast"></div>
 
 <script type="module">
+  import { saveAuth } from '/js/auth.js';
+
   // ── Theme map ─────────────────────────────────────────────
   const THEMES = ['wedding','debut','birthday','seventh_birthday',
                   'baptism','reunion','corporate','memorial'];
@@ -942,7 +1030,7 @@
   // ── Pay button ────────────────────────────────────────────
   btnPay.addEventListener('click', async () => {
     if (!localStorage.getItem('reelday_token')) {
-      location.href = `/login?next=${encodeURIComponent('/create')}`;
+      showAuthSection('pay');
       return;
     }
     const isGcash = selectedMethod === 'gcash';
@@ -993,10 +1081,8 @@
 
   // ── Free trial button ─────────────────────────────────────
   btnTrial.addEventListener('click', async () => {
-    let token = null;
-    try { token = localStorage.getItem('reelday_token'); } catch { /* */ }
-    if (!token) {
-      location.href = `/login?next=${encodeURIComponent('/create')}`;
+    if (!localStorage.getItem('reelday_token')) {
+      showAuthSection('trial');
       return;
     }
     if (!validate()) return;
@@ -1011,6 +1097,112 @@
       showToast(err.message || 'May naganap na error. Subukan ulit.', 'error');
       btnTrial.disabled = false;
       btnTrial.innerHTML = '<span data-en="Not ready to pay? " data-fil="Hindi pa ready magbayad? ">Not ready to pay? </span><strong data-en="Try for free first →" data-fil="I-try muna nang libre →">Try for free first →</strong>';
+    }
+  });
+
+  // ── Inline auth section ───────────────────────────────────
+  let pendingIntent = null;
+
+  function showAuthSection(intent) {
+    pendingIntent = intent;
+    const section = document.getElementById('section-auth');
+    section.style.display = 'block';
+    section.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  function setAuthBtnLoading(btn, loading) {
+    btn.disabled = loading;
+    btn.classList.toggle('loading', loading);
+  }
+
+  function showAuthErr(elId, msg) {
+    const el = document.getElementById(elId);
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  function hideAuthErr(elId) {
+    document.getElementById(elId).style.display = 'none';
+  }
+
+  // Tab switching
+  document.getElementById('auth-tab-row').addEventListener('click', e => {
+    const tab = e.target.closest('.auth-tab-btn');
+    if (!tab) return;
+    document.querySelectorAll('.auth-tab-btn').forEach(b => b.classList.remove('active'));
+    tab.classList.add('active');
+    const pane = tab.dataset.authTab;
+    document.getElementById('auth-signin-pane').style.display   = pane === 'signin'   ? '' : 'none';
+    document.getElementById('auth-register-pane').style.display = pane === 'register' ? '' : 'none';
+  });
+
+  document.getElementById('auth-switch-signin').addEventListener('click', e => {
+    e.preventDefault();
+    document.querySelector('[data-auth-tab="signin"]').click();
+  });
+
+  async function afterInlineAuth() {
+    document.getElementById('section-auth').style.display = 'none';
+    if (pendingIntent === 'pay')   btnPay.click();
+    if (pendingIntent === 'trial') btnTrial.click();
+  }
+
+  // Sign in submit
+  document.getElementById('btn-auth-signin').addEventListener('click', async () => {
+    const btn = document.getElementById('btn-auth-signin');
+    hideAuthErr('auth-signin-err');
+    const email    = document.getElementById('a-email').value.trim();
+    const password = document.getElementById('a-password').value;
+    if (!email || !password) { showAuthErr('auth-signin-err', 'Please enter your email and password.'); return; }
+
+    setAuthBtnLoading(btn, true);
+    try {
+      const res  = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Login failed');
+      saveAuth(data.token, data.user);
+      await afterInlineAuth();
+    } catch (err) {
+      showAuthErr('auth-signin-err', err.message);
+      setAuthBtnLoading(btn, false);
+    }
+  });
+
+  // Register submit
+  document.getElementById('btn-auth-reg').addEventListener('click', async () => {
+    const btn = document.getElementById('btn-auth-reg');
+    hideAuthErr('auth-reg-err');
+    const full_name = document.getElementById('a-name').value.trim();
+    const email     = document.getElementById('a-reg-email').value.trim();
+    const password  = document.getElementById('a-reg-pw').value;
+    if (!full_name || !email || !password) { showAuthErr('auth-reg-err', 'Please fill in all fields.'); return; }
+    if (password.length < 8) { showAuthErr('auth-reg-err', 'Password must be at least 8 characters.'); return; }
+
+    setAuthBtnLoading(btn, true);
+    try {
+      const res  = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, full_name }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Registration failed');
+      if (data.token) {
+        saveAuth(data.token, data.user);
+        await afterInlineAuth();
+      } else {
+        showAuthErr('auth-reg-err', 'Account created! Check your email, then sign in.');
+        document.querySelector('[data-auth-tab="signin"]').click();
+        document.getElementById('a-email').value = email;
+        setAuthBtnLoading(btn, false);
+      }
+    } catch (err) {
+      showAuthErr('auth-reg-err', err.message);
+      setAuthBtnLoading(btn, false);
     }
   });
 

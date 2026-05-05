@@ -136,6 +136,7 @@
 <script type="module">
   import { getToken, saveAuth } from '/js/auth.js';
   if (getToken()) location.href = '/my-events';
+  const nextUrl = new URLSearchParams(location.search).get('next') || '/my-events';
 
   const form    = document.getElementById('reg-form');
   const btn     = document.getElementById('btn-submit');
@@ -165,9 +166,14 @@
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Registration failed');
 
-      form.style.display = 'none';
-      document.getElementById('success-email').textContent = email;
-      document.getElementById('success-state').style.display = 'block';
+      if (data.token) {
+        saveAuth(data.token, data.user);
+        location.href = nextUrl;
+      } else {
+        form.style.display = 'none';
+        document.getElementById('success-email').textContent = email;
+        document.getElementById('success-state').style.display = 'block';
+      }
     } catch (err) {
       errMsg.textContent    = err.message;
       errMsg.style.display  = 'block';

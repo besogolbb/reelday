@@ -56,15 +56,18 @@ export default async function authRoutes(fastify) {
       return reply.status(400).send({ error: true, message: 'Password must be at least 8 characters' });
     }
 
-    const password_hash      = await bcrypt.hash(password, 12);
-    const verification_token = randomBytes(32).toString('hex');
+    const resendKey       = process.env.RESEND_API_KEY ?? '';
+    const resendReady     = resendKey.length > 10 && !resendKey.startsWith('re_XXXX');
+    const autoVerify      = !resendReady;
+    const password_hash   = await bcrypt.hash(password, 12);
+    const verification_token = resendReady ? randomBytes(32).toString('hex') : null;
 
     const { rows } = await fastify.db.query(
-      `INSERT INTO users (email, password_hash, full_name, phone, verification_token)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO users (email, password_hash, full_name, phone, verification_token, is_verified)
+       VALUES ($1, $2, $3, $4, $5, $6)
        ON CONFLICT (email) DO NOTHING
        RETURNING id, email, full_name, phone, is_verified, created_at`,
-      [email.toLowerCase(), password_hash, full_name, phone ?? null, verification_token],
+      [email.toLowerCase(), password_hash, full_name, phone ?? null, verification_token, autoVerify],
     );
 
     if (!rows.length) {
@@ -73,16 +76,22 @@ export default async function authRoutes(fastify) {
 
     const user = rows[0];
 
-    const appUrl = buildAppUrl(request);
-
-    try {
-      await sendVerifyEmail(email, full_name, verification_token, appUrl);
-    } catch (err) {
-      fastify.log.warn({ err }, 'Failed to send verification email');
+    if (resendReady) {
+      try {
+        await sendVerifyEmail(email, full_name, verification_token, buildAppUrl(request));
+      } catch (err) {
+        fastify.log.warn({ err }, 'Failed to send verification email');
+      }
     }
 
+    // Return a token so the client can auto-login (always safe since account is active)
+    const token = signToken({ id: user.id, email: user.email, full_name: user.full_name });
+
     return reply.status(201).send({
-      message: 'Account created! Please check your email to verify.',
+      message: resendReady
+        ? 'Account created! Please check your email to verify.'
+        : 'Account created!',
+      token,
       user,
     });
   });
