@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#3d1f2d" />
+  <meta name="theme-color" content="#080808" />
   <title>Reelday — Dashboard</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500;600&family=DM+Serif+Display&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Pacifico&display=swap" rel="stylesheet" />
@@ -642,6 +643,50 @@
       transition: background .15s, color .15s;
     }
     .lang-btn.active { background: rgba(255,255,255,.9); color: var(--primary, #e8735a); }
+
+    /* ── Dark theme override ─────────────────────────────── */
+    body, body[data-theme] {
+      --bg:        #080808;
+      --bg2:       #1a1a1a;
+      --text:      #f0ebe4;
+      --text-soft: rgba(240,235,228,.55);
+    }
+    body { background: #080808; }
+
+    .stat-card {
+      background: #111111;
+      border: 1px solid rgba(255,255,255,.07);
+    }
+    .stat-number { color: var(--text); }
+    .stat-label  { color: var(--text-soft); }
+
+    .qr-card, .gallery-panel {
+      background: #111111;
+      border: 1px solid rgba(255,255,255,.07);
+    }
+    .qr-card-title { color: var(--text); }
+    .qr-url { color: var(--text-soft); }
+
+    .gallery-title { color: var(--text); }
+    .gallery-tabs  { background: #1a1a1a; }
+    .g-tab         { color: var(--text-soft); }
+    .g-tab.active  { background: #2a2a2a; color: var(--text); }
+
+    .gallery-empty p { color: var(--text-soft); }
+    .download-bar { background: #1a1a1a; border-top-color: rgba(255,255,255,.06); }
+    .download-count { color: var(--text-soft); }
+
+    .vm-item { border-bottom-color: rgba(255,255,255,.06); }
+    .vm-name { color: var(--text); }
+    .vm-meta { color: var(--text-soft); }
+    .vm-avatar { background: var(--primary, #3d1f2d); color: #fff; }
+
+    .lb-meta { background: #111111; border-top-color: rgba(255,255,255,.06); }
+    .lb-uploader { color: var(--text); }
+    .lb-message  { color: var(--text-soft); }
+    .lb-counter  { color: var(--text-faint, rgba(240,235,228,.3)); }
+
+    .page-error-icon { font-size: 3rem; }
   </style>
 </head>
 <body>
@@ -1210,15 +1255,17 @@
   function applyDashLang() {
     document.documentElement.lang = dashLang;
     document.querySelectorAll('[data-en]').forEach(el => {
-      el.textContent = el.dataset[dashLang] || el.dataset.en;
+      if (el.children.length === 0) {
+        el.textContent = el.dataset[dashLang] || el.dataset.en;
+      }
     });
-    document.querySelectorAll('.lang-btn').forEach(btn => {
+    document.querySelectorAll('[data-lang]').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.lang === dashLang);
     });
   }
 
   $('lang-toggle')?.addEventListener('click', e => {
-    const btn = e.target.closest('.lang-btn');
+    const btn = e.target.closest('[data-lang]');
     if (!btn) return;
     dashLang = btn.dataset.lang;
     localStorage.setItem('reelday_lang', dashLang);

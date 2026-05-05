@@ -7,6 +7,7 @@
   <meta name="description" content="Every shot from your celebration. One QR code. Instantly. The cinematic photo-sharing platform for Filipino weddings, debuts, and celebrations." />
   <title>Reelday — Every Shot. One QR. Instantly.</title>
 
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -2189,15 +2190,15 @@
 
     document.querySelectorAll('[data-en]').forEach(el => {
       const val = el.dataset[lang] || el.dataset.en;
-      // Skip elements with child elements (use innerHTML only for text containers)
+      if (!val) return;
+      // Only update leaf text nodes — skip elements that have child elements
+      // (their children each have data-en/data-fil and are handled individually)
       if (el.children.length === 0) {
         el.textContent = val;
-      } else if (el.tagName === 'H1') {
-        // H1 has <span> children — leave alone
       }
     });
 
-    document.querySelectorAll('#lang-toggle button').forEach(btn => {
+    document.querySelectorAll('[data-lang]').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.lang === lang);
     });
   }

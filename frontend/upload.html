@@ -1,10 +1,11 @@
 <!DOCTYPE html>
-<html lang="fil">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <meta name="theme-color" content="#3d1f2d" />
-  <title>Reelday</title>
+  <meta name="theme-color" content="#080808" />
+  <title>Reelday — Share your moments</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500;600&family=DM+Serif+Display&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Pacifico&display=swap" rel="stylesheet" />
@@ -416,6 +417,49 @@
     .error-emoji { font-size: 3rem; margin-bottom: 1rem; }
 
     #loading-state { padding: 4rem 0; }
+
+    /* ── Dark theme override ─────────────────────────────── */
+    body, body[data-theme] {
+      --bg:        #080808;
+      --bg2:       #1a1a1a;
+      --text:      #f0ebe4;
+      --text-soft: rgba(240,235,228,.55);
+    }
+    body { background: #080808; }
+
+    .upload-card {
+      background: #111111 !important;
+      border: 1px solid rgba(255,255,255,.07);
+      box-shadow: 0 4px 32px rgba(0,0,0,.5);
+    }
+    .dropzone {
+      background: #1a1a1a;
+      border-color: rgba(232,115,90,.3);
+    }
+    .dropzone:hover, .dropzone.dragging {
+      background: #222;
+      border-color: var(--accent);
+    }
+    .field-label { color: var(--text); }
+    .field-input, .field-textarea {
+      background: #1a1a1a !important;
+      border-color: rgba(255,255,255,.12) !important;
+      color: var(--text) !important;
+    }
+    .field-input:focus, .field-textarea:focus {
+      background: #222 !important;
+      box-shadow: 0 0 0 3px rgba(232,115,90,.2) !important;
+    }
+    .field-input::placeholder,
+    .field-textarea::placeholder { color: rgba(240,235,228,.3); opacity: 1; }
+    .vm-toggle-wrap { border-color: rgba(255,255,255,.08); background: #1a1a1a; }
+    .recorder-section { background: #1a1a1a; border-color: rgba(255,255,255,.08); }
+    .recorder-preview { background: #000; }
+    .success-card {
+      background: #111111 !important;
+      border: 1px solid rgba(255,255,255,.07);
+    }
+    #error-screen { color: var(--text-soft); }
   </style>
 </head>
 <body>

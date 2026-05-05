@@ -1,10 +1,11 @@
 <!DOCTYPE html>
-<html lang="fil">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#3d1f2d" />
-  <title>Reelday — Gumawa ng iyong reel</title>
+  <meta name="theme-color" content="#080808" />
+  <title>Reelday — Create your reel</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500;600&family=DM+Serif+Display&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Pacifico&display=swap" rel="stylesheet" />
@@ -557,6 +558,101 @@
 
     @keyframes spin { to { transform: rotate(360deg); } }
 
+    /* ── Dark theme override ─────────────────────────────── */
+    body, body[data-theme] {
+      --bg:        #080808;
+      --bg2:       #1a1a1a;
+      --text:      #f0ebe4;
+      --text-soft: rgba(240,235,228,.55);
+    }
+    body { background: #080808; }
+
+    .form-section {
+      background: #111111 !important;
+      box-shadow: 0 2px 20px rgba(0,0,0,.4);
+      border: 1px solid rgba(255,255,255,.07);
+    }
+    .form-section-title { color: var(--text); }
+    .field label { color: var(--text); }
+    .field input[type="text"],
+    .field input[type="date"] {
+      background: #1a1a1a;
+      border-color: rgba(255,255,255,.12);
+      color: var(--text);
+    }
+    .field input:focus { background: #222; box-shadow: 0 0 0 3px rgba(232,115,90,.25); }
+    .field input::placeholder { color: rgba(240,235,228,.3); opacity: 1; }
+
+    .event-type-btn {
+      background: #1a1a1a;
+      border-color: rgba(255,255,255,.1);
+    }
+    .event-type-btn:hover { background: #222; border-color: var(--accent-light); }
+    .event-type-btn.selected { background: #222; }
+    .event-type-btn .et-label { color: var(--text-soft); }
+    .event-type-btn.selected .et-label { color: var(--accent); }
+
+    .plan-card {
+      background: #1a1a1a;
+      border-color: rgba(255,255,255,.1);
+    }
+    .plan-card:hover, .plan-card.selected { background: #222; }
+    .plan-price { color: var(--text); }
+    .plan-features li { color: var(--text-soft); }
+
+    .pay-summary {
+      background: #1a1a1a;
+      border: 1px solid rgba(255,255,255,.08);
+    }
+    .pay-summary-plan { color: var(--text); }
+    .pay-method-chip {
+      background: #1a1a1a;
+      border-color: rgba(255,255,255,.12);
+      color: var(--text-soft);
+    }
+    .pay-method-chip.active {
+      background: #222;
+      border-color: var(--accent);
+      color: var(--text);
+    }
+    .trial-divider::before,
+    .trial-divider::after { background: rgba(255,255,255,.1); }
+    .btn-trial { border-color: rgba(232,115,90,.3); color: var(--text-soft); }
+    .step-dot .step-num { background: #1a1a1a; border-color: rgba(255,255,255,.15); }
+    .step-label { color: rgba(240,235,228,.4); }
+
+    /* ── GCash panel ─────────────────────────────────────── */
+    .gcash-panel {
+      background: #1a1a1a;
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: var(--border-radius);
+      padding: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+    .gcash-qr-img {
+      width: 160px;
+      height: 160px;
+      object-fit: cover;
+      border-radius: 10px;
+      display: block;
+      margin: 0 auto .75rem;
+    }
+    .gcash-amount {
+      text-align: center;
+      font-family: var(--heading-font);
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: .35rem;
+    }
+    .gcash-steps {
+      font-size: .8rem;
+      color: var(--text-soft);
+      text-align: center;
+      line-height: 1.7;
+      margin-bottom: 1rem;
+    }
+
     .lang-toggle {
       display: flex;
       background: rgba(255,255,255,.15);
@@ -604,11 +700,11 @@
   </div>
   <div class="step-dot" data-step="2">
     <div class="step-num">2</div>
-    <div class="step-label">Plano</div>
+    <div class="step-label" data-en="Plan" data-fil="Plano">Plan</div>
   </div>
   <div class="step-dot" data-step="3">
     <div class="step-num">3</div>
-    <div class="step-label">Bayad</div>
+    <div class="step-label" data-en="Payment" data-fil="Bayad">Payment</div>
   </div>
 </div>
 
@@ -687,48 +783,48 @@
       <!-- Libre -->
       <div class="plan-card" data-plan="libre" data-price="99900">
         <div class="plan-name">Libre</div>
-        <div class="plan-price">₱999 <span>isang beses</span></div>
-        <div class="plan-tagline">Para sa simpleng selebrasyon</div>
+        <div class="plan-price">₱999 <span data-en="one-time" data-fil="isang beses">one-time</span></div>
+        <div class="plan-tagline" data-en="For simple celebrations" data-fil="Para sa simpleng selebrasyon">For simple celebrations</div>
         <ul class="plan-features">
-          <li>Unlimited uploads</li>
-          <li>Basic live wall</li>
-          <li>6-month access</li>
-          <li>Free QR templates</li>
+          <li data-en="Unlimited uploads" data-fil="Unlimited uploads">Unlimited uploads</li>
+          <li data-en="Basic live wall" data-fil="Basic live wall">Basic live wall</li>
+          <li data-en="6-month access" data-fil="6 buwang access">6-month access</li>
+          <li data-en="Free QR templates" data-fil="Libreng QR templates">Free QR templates</li>
         </ul>
-        <button class="plan-select-btn" type="button">Piliin ang Libre</button>
+        <button class="plan-select-btn" type="button" data-en="Choose Libre" data-fil="Piliin ang Libre">Choose Libre</button>
       </div>
 
       <!-- Selebrasyon -->
       <div class="plan-card selected" data-plan="selebrasyon" data-price="199900">
-        <div class="plan-popular-badge">⭐ Pinaka-popular</div>
+        <div class="plan-popular-badge" data-en="⭐ Most popular" data-fil="⭐ Pinaka-popular">⭐ Most popular</div>
         <div class="plan-name">Selebrasyon</div>
-        <div class="plan-price">₱1,999 <span>isang beses</span></div>
-        <div class="plan-tagline">Para sa espesyal na okasyon</div>
+        <div class="plan-price">₱1,999 <span data-en="one-time" data-fil="isang beses">one-time</span></div>
+        <div class="plan-tagline" data-en="For special occasions" data-fil="Para sa espesyal na okasyon">For special occasions</div>
         <ul class="plan-features">
-          <li>Lahat sa Libre plan</li>
+          <li data-en="Everything in Libre" data-fil="Lahat sa Libre plan">Everything in Libre</li>
           <li>Video messages (60s)</li>
           <li>Cinematic live wall + music</li>
           <li>Live emoji reactions</li>
-          <li>12-month access</li>
-          <li>Priority Viber support</li>
+          <li data-en="12-month access" data-fil="12 buwang access">12-month access</li>
+          <li data-en="Priority Viber support" data-fil="Priority Viber support">Priority Viber support</li>
         </ul>
-        <button class="plan-select-btn" type="button">Piliin ang Selebrasyon</button>
+        <button class="plan-select-btn" type="button" data-en="Choose Selebrasyon" data-fil="Piliin ang Selebrasyon">Choose Selebrasyon</button>
       </div>
 
       <!-- Pro -->
       <div class="plan-card" data-plan="pro" data-price="349900">
         <div class="plan-name">Pro</div>
-        <div class="plan-price">₱3,499 <span>isang beses</span></div>
-        <div class="plan-tagline">Para sa premium na karanasan</div>
+        <div class="plan-price">₱3,499 <span data-en="one-time" data-fil="isang beses">one-time</span></div>
+        <div class="plan-tagline" data-en="For a premium experience" data-fil="Para sa premium na karanasan">For a premium experience</div>
         <ul class="plan-features">
-          <li>Lahat sa Selebrasyon plan</li>
-          <li>AI highlight reel</li>
-          <li>5 sub-galleries</li>
-          <li>Lifetime archive</li>
-          <li>50 printed QR cards</li>
-          <li>Custom branding</li>
+          <li data-en="Everything in Selebrasyon" data-fil="Lahat sa Selebrasyon plan">Everything in Selebrasyon</li>
+          <li data-en="AI highlight reel" data-fil="AI highlight reel">AI highlight reel</li>
+          <li data-en="5 sub-galleries" data-fil="5 sub-galleries">5 sub-galleries</li>
+          <li data-en="Lifetime archive" data-fil="Lifetime archive">Lifetime archive</li>
+          <li data-en="50 printed QR cards" data-fil="50 na naka-print na QR cards">50 printed QR cards</li>
+          <li data-en="Custom branding" data-fil="Custom branding">Custom branding</li>
         </ul>
-        <button class="plan-select-btn" type="button">Piliin ang Pro</button>
+        <button class="plan-select-btn" type="button" data-en="Choose Pro" data-fil="Piliin ang Pro">Choose Pro</button>
       </div>
 
     </div>
@@ -748,12 +844,32 @@
       <div class="pay-summary-price" id="summary-plan-price">₱1,999</div>
     </div>
 
-    <!-- Payment methods -->
+    <!-- Payment methods (selectable) -->
     <div class="pay-methods-label" data-en="Pay via" data-fil="Bayaran via">Pay via</div>
-    <div class="pay-methods">
-      <div class="pay-method-chip">💙 GCash</div>
-      <div class="pay-method-chip">💜 Maya</div>
-      <div class="pay-method-chip">💳 Card</div>
+    <div class="pay-methods" id="pay-methods">
+      <button class="pay-method-chip active" data-method="gcash" type="button">💙 GCash</button>
+      <button class="pay-method-chip" data-method="maya" type="button">💜 Maya</button>
+      <button class="pay-method-chip" data-method="card" type="button">💳 Card</button>
+    </div>
+
+    <!-- GCash panel (visible when gcash is selected) -->
+    <div class="gcash-panel" id="gcash-panel">
+      <img src="/images/gcash-qr.jpeg" alt="GCash QR Code" class="gcash-qr-img" />
+      <div class="gcash-amount" id="gcash-amount">₱1,999</div>
+      <p class="gcash-steps"
+         data-en="1. Open GCash · 2. Scan QR · 3. Enter exact amount · 4. Paste reference number below"
+         data-fil="1. Buksan ang GCash · 2. I-scan ang QR · 3. Ilagay ang exact na halaga · 4. I-paste ang reference number">
+        1. Open GCash · 2. Scan QR · 3. Enter exact amount · 4. Paste reference number below
+      </p>
+      <div class="field" id="field-reference">
+        <label for="gcash-ref" data-en="GCash Reference Number" data-fil="GCash Reference Number">GCash Reference Number</label>
+        <input type="text" id="gcash-ref"
+               placeholder="e.g. 1234567890"
+               maxlength="30"
+               autocomplete="off"
+               inputmode="numeric" />
+        <div class="field-error" data-en="Please enter your GCash reference number." data-fil="Pakisulat ang inyong GCash reference number.">Please enter your GCash reference number.</div>
+      </div>
     </div>
 
     <!-- CTA -->
@@ -771,11 +887,10 @@
       </button>
     </div>
 
-    <p style="font-size:.72rem;color:var(--text-soft);text-align:center;margin-top:1rem;line-height:1.5;">
-      Sa pag-click ng "I-create ang aking reel" sumasang-ayon ka sa aming
-      <a href="#" style="color:var(--accent);">Terms of Service</a> at
-      <a href="#" style="color:var(--accent);">Privacy Policy</a>.
-      Lahat ng transaksyon ay secure at encrypted.
+    <p style="font-size:.72rem;color:var(--text-soft);text-align:center;margin-top:1rem;line-height:1.5;"
+       data-en='By clicking "Create my reel" you agree to our Terms of Service and Privacy Policy. All transactions are secure and encrypted.'
+       data-fil='Sa pag-click ng "I-create ang aking reel" sumasang-ayon ka sa aming Terms of Service at Privacy Policy. Lahat ng transaksyon ay secure at encrypted.'>
+      By clicking "Create my reel" you agree to our <a href="#" style="color:var(--accent);">Terms of Service</a> and <a href="#" style="color:var(--accent);">Privacy Policy</a>. All transactions are secure and encrypted.
     </p>
   </div>
 
@@ -797,15 +912,20 @@
   }
 
   // ── State ─────────────────────────────────────────────────
-  let selectedType = 'wedding';
-  let selectedPlan = 'selebrasyon';
-  let selectedPrice = 199900;
+  let selectedType   = 'wedding';
+  let selectedPlan   = 'selebrasyon';
+  let selectedPrice  = 199900;
+  let selectedMethod = 'gcash';
 
   // ── DOM ───────────────────────────────────────────────────
   const namesInput    = document.getElementById('couple-names');
   const dateInput     = document.getElementById('event-date');
   const fieldNames    = document.getElementById('field-names');
   const fieldDate     = document.getElementById('field-date');
+  const fieldRef      = document.getElementById('field-reference');
+  const gcashRefInput = document.getElementById('gcash-ref');
+  const gcashPanel    = document.getElementById('gcash-panel');
+  const gcashAmount   = document.getElementById('gcash-amount');
   const summaryName   = document.getElementById('summary-plan-name');
   const summaryPrice  = document.getElementById('summary-plan-price');
   const btnPay        = document.getElementById('btn-pay');
@@ -862,10 +982,21 @@
     const labels = { libre: 'Libre', selebrasyon: 'Selebrasyon', pro: 'Pro' };
     summaryName.textContent  = labels[selectedPlan] ?? selectedPlan;
     summaryPrice.textContent = formatPrice(selectedPrice);
+    gcashAmount.textContent  = formatPrice(selectedPrice);
   }
 
+  // ── Payment method selection ──────────────────────────────
+  document.getElementById('pay-methods').addEventListener('click', e => {
+    const chip = e.target.closest('.pay-method-chip[data-method]');
+    if (!chip) return;
+    document.querySelectorAll('.pay-method-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    selectedMethod = chip.dataset.method;
+    gcashPanel.style.display = selectedMethod === 'gcash' ? 'block' : 'none';
+  });
+
   // ── Validation ────────────────────────────────────────────
-  function validate() {
+  function validate(requireRef = false) {
     let ok = true;
 
     if (!namesInput.value.trim()) {
@@ -882,8 +1013,18 @@
       fieldDate.classList.remove('has-error');
     }
 
+    if (requireRef) {
+      if (!gcashRefInput.value.trim()) {
+        fieldRef.classList.add('has-error');
+        ok = false;
+      } else {
+        fieldRef.classList.remove('has-error');
+      }
+    }
+
     if (!ok) {
-      namesInput.closest('.form-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const first = document.querySelector('.has-error');
+      first?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
     return ok;
@@ -926,7 +1067,8 @@
 
   // ── Pay button ────────────────────────────────────────────
   btnPay.addEventListener('click', async () => {
-    if (!validate()) return;
+    const isGcash = selectedMethod === 'gcash';
+    if (!validate(isGcash)) return;
 
     btnPay.disabled = true;
     btnPay.classList.add('loading');
@@ -936,26 +1078,38 @@
       const { event } = await createEvent(selectedPlan);
       const slug = event.slug;
 
-      // 2. Create checkout session
-      const payRes = await fetch('/api/payments/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug, plan: selectedPlan }),
-      });
+      if (isGcash) {
+        // GCash manual: record payment with reference, mark paid
+        const manualRes = await fetch('/api/payments/manual', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            slug,
+            plan:      selectedPlan,
+            reference: gcashRefInput.value.trim(),
+          }),
+        });
+        const manualData = await manualRes.json();
+        if (!manualRes.ok) throw new Error(manualData.message || 'GCash submission failed.');
+        location.href = `/dashboard?slug=${slug}`;
+      } else {
+        // Maya / Card: PayMongo checkout session
+        const payRes = await fetch('/api/payments/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slug, plan: selectedPlan }),
+        });
+        const payData = await payRes.json();
 
-      const payData = await payRes.json();
-
-      if (payData.test_mode || !payData.checkout_url) {
-        // Test mode — skip payment, go straight to dashboard
-        location.href = `/dashboard?slug=${slug}&test_mode=true`;
-        return;
+        if (payData.test_mode || !payData.checkout_url) {
+          location.href = `/dashboard?slug=${slug}&test_mode=true`;
+          return;
+        }
+        location.href = payData.checkout_url;
       }
 
-      // 3. Redirect to PayMongo checkout
-      location.href = payData.checkout_url;
-
     } catch (err) {
-      showToast(err.message || 'May naganap na error. Subukan ulit.', 'error');
+      showToast(err.message || 'Something went wrong. Please try again.', 'error');
       btnPay.disabled = false;
       btnPay.classList.remove('loading');
     }
@@ -974,7 +1128,7 @@
     } catch (err) {
       showToast(err.message || 'May naganap na error. Subukan ulit.', 'error');
       btnTrial.disabled = false;
-      btnTrial.innerHTML = 'Hindi pa ready magbayad? <strong>I-try muna nang libre →</strong>';
+      btnTrial.innerHTML = '<span data-en="Not ready to pay? " data-fil="Hindi pa ready magbayad? ">Not ready to pay? </span><strong data-en="Try for free first →" data-fil="I-try muna nang libre →">Try for free first →</strong>';
     }
   });
 
@@ -1006,15 +1160,17 @@
   function applyCreateLang() {
     document.documentElement.lang = createLang;
     document.querySelectorAll('[data-en]').forEach(el => {
-      el.textContent = el.dataset[createLang] || el.dataset.en;
+      if (el.children.length === 0) {
+        el.textContent = el.dataset[createLang] || el.dataset.en;
+      }
     });
-    document.querySelectorAll('.lang-btn').forEach(btn => {
+    document.querySelectorAll('[data-lang]').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.lang === createLang);
     });
   }
 
   document.getElementById('lang-toggle')?.addEventListener('click', e => {
-    const btn = e.target.closest('.lang-btn');
+    const btn = e.target.closest('[data-lang]');
     if (!btn) return;
     createLang = btn.dataset.lang;
     localStorage.setItem('reelday_lang', createLang);

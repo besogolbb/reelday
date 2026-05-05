@@ -98,6 +98,43 @@ export default async function paymentRoutes(fastify) {
     });
   });
 
+  // POST /api/payments/manual — GCash manual reference submission
+  fastify.post('/payments/manual', async (request, reply) => {
+    const { slug, plan, reference } = request.body ?? {};
+
+    if (!slug || !plan || !reference?.trim()) {
+      return reply.status(400).send({ error: true, message: 'slug, plan, and reference are required' });
+    }
+
+    const planConfig = PLANS[plan];
+    if (!planConfig) {
+      return reply.status(400).send({ error: true, message: `Unknown plan: ${plan}` });
+    }
+
+    const { rows: eventRows } = await fastify.db.query(
+      'SELECT id FROM events WHERE slug = $1',
+      [slug],
+    );
+    if (!eventRows.length) {
+      return reply.status(404).send({ error: true, message: 'Event not found' });
+    }
+
+    const eventId = eventRows[0].id;
+
+    await fastify.db.query(
+      `INSERT INTO payments (event_id, paymongo_payment_id, amount, plan, status)
+       VALUES ($1, $2, $3, $4, 'manual_pending')`,
+      [eventId, `gcash-${reference.trim()}`, planConfig.price, plan],
+    );
+
+    await fastify.db.query(
+      'UPDATE events SET is_paid = true, plan = $2 WHERE slug = $1',
+      [slug, plan],
+    );
+
+    return reply.status(201).send({ success: true, slug });
+  });
+
   // POST /api/payments/webhook — PayMongo webhook
   fastify.post('/payments/webhook', async (request, reply) => {
     const payload = request.body;
