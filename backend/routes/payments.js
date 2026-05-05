@@ -60,7 +60,7 @@ export default async function paymentRoutes(fastify) {
                 currency: 'PHP',
                 quantity: 1,
               }],
-              payment_method_types: ['gcash', 'paymaya', 'card'],
+              payment_method_types: ['gcash', 'paymaya', 'card', 'qrph'],
               success_url: `${appUrl}/dashboard?slug=${slug}`,
               cancel_url:  `${appUrl}/create.html`,
               description: `Reelday - ${planConfig.label}`,
