@@ -100,11 +100,11 @@ export default async function authRoutes(fastify) {
       [email.toLowerCase()],
     );
 
-    if (!rows.length || !(await bcrypt.compare(password, rows[0].password_hash))) {
+    const user = rows[0];
+    if (!user || !user.password_hash || !(await bcrypt.compare(password, user.password_hash))) {
       return reply.status(401).send({ error: true, message: 'Invalid email or password' });
     }
 
-    const user  = rows[0];
     const token = signToken({ id: user.id, email: user.email, full_name: user.full_name });
 
     return {

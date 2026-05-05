@@ -941,6 +941,10 @@
 
   // ── Pay button ────────────────────────────────────────────
   btnPay.addEventListener('click', async () => {
+    if (!localStorage.getItem('reelday_token')) {
+      location.href = `/login?next=${encodeURIComponent('/create')}`;
+      return;
+    }
     const isGcash = selectedMethod === 'gcash';
     if (!validate(isGcash)) return;
 
