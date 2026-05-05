@@ -303,7 +303,7 @@
     </nav>
     <div class="site-actions">
       <a class="btn btn-ghost" href="/login" style="padding:10px 18px;font-size:.875rem">Log in</a>
-      <a class="btn btn-accent" href="/create" style="padding:10px 18px;font-size:.875rem">Start free →</a>
+      <a class="btn btn-accent" href="/create" style="padding:10px 18px;font-size:.875rem" data-cta="start">Start free →</a>
     </div>
   </div>
 </header>
@@ -316,7 +316,7 @@
       <h1>Every shot.<br/><em>Every guest.</em><br/><span class="underline">One QR.</span></h1>
       <p>Guests scan one code and upload photos straight to your live cinematic wall — no app, no sign-up, no missed moments.</p>
       <div class="hero-cta">
-        <a class="btn btn-accent" href="/create">Start free →</a>
+        <a class="btn btn-accent" href="/create" data-cta="start">Start free →</a>
         <a class="btn btn-ghost" href="#how">See how it works</a>
       </div>
       <div class="hero-trust">
@@ -529,7 +529,7 @@
 <section class="final-cta">
   <div class="eyebrow" style="margin-bottom:24px">— Start today, free</div>
   <h2>Your day. Every <em>angle.</em></h2>
-  <a class="btn btn-accent" href="/create" style="font-size:1rem;padding:16px 32px">Start free — no card needed →</a>
+  <a class="btn btn-accent" href="/create" style="font-size:1rem;padding:16px 32px" data-cta="start">Start free — no card needed →</a>
 </section>
 
 <footer class="site-footer">
@@ -595,6 +595,16 @@
     });
   }, { threshold: .1 });
   document.querySelectorAll('.how-card, .feat, .price-card').forEach(el => io.observe(el));
+</script>
+
+<script>
+  // Route "Start free" CTAs based on auth state
+  // Logged-in users → /create (they already have an account)
+  // New visitors    → /register (create account first, then /create)
+  const loggedIn = !!localStorage.getItem('reelday_token');
+  document.querySelectorAll('[data-cta="start"]').forEach(a => {
+    if (!loggedIn) a.href = '/register';
+  });
 </script>
 
 </body>

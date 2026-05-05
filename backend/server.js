@@ -80,12 +80,13 @@ fastify.get('/dashboard', (_request, reply) => {
   reply.sendFile('dashboard.html');
 });
 
-fastify.get('/admin',          (_r, reply) => reply.sendFile('admin.html'));
-fastify.get('/login',          (_r, reply) => reply.sendFile('login.html'));
-fastify.get('/register',       (_r, reply) => reply.sendFile('register.html'));
-fastify.get('/verify',         (_r, reply) => reply.sendFile('verify.html'));
-fastify.get('/reset-password', (_r, reply) => reply.sendFile('reset-password.html'));
-fastify.get('/my-events',      (_r, reply) => reply.sendFile('my-events.html'));
+fastify.get('/admin',            (_r, reply) => reply.sendFile('admin.html'));
+fastify.get('/login',            (_r, reply) => reply.sendFile('login.html'));
+fastify.get('/register',         (_r, reply) => reply.sendFile('register.html'));
+fastify.get('/verify',           (_r, reply) => reply.sendFile('verify.html'));
+fastify.get('/forgot-password',  (_r, reply) => reply.sendFile('forgot-password.html'));
+fastify.get('/reset-password',   (_r, reply) => reply.sendFile('reset-password.html'));
+fastify.get('/my-events',        (_r, reply) => reply.sendFile('my-events.html'));
 
 fastify.setErrorHandler((error, _request, reply) => {
   fastify.log.error(error);

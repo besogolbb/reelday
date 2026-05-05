@@ -136,7 +136,7 @@
 <script type="module">
   import { getToken, saveAuth } from '/js/auth.js';
   if (getToken()) location.href = '/my-events';
-  const nextUrl = new URLSearchParams(location.search).get('next') || '/my-events';
+  const nextUrl = new URLSearchParams(location.search).get('next') || '/create';
 
   const form    = document.getElementById('reg-form');
   const btn     = document.getElementById('btn-submit');
