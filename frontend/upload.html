@@ -13,14 +13,14 @@
       background: var(--paper);
     }
 
-    /* ── Shell ─────────────────────────────────────────────── */
+    /* ── Shell ─────────────────────────────────────── */
     .upload-shell {
       max-width: 480px;
       margin: 0 auto;
       padding: 24px 20px 80px;
     }
 
-    /* ── Top row ──────────────────────────────────────────── */
+    /* ── Top row ──────────────────────────────────────── */
     .upload-top {
       display: flex;
       justify-content: space-between;
@@ -67,12 +67,18 @@
       color: #fff;
     }
 
-    /* ── Hero ─────────────────────────────────────────────── */
+    /* ── Hero ─────────────────────────────────────────── */
     .upload-hero {
       text-align: center;
       padding: 32px 0 40px;
       border-bottom: 1px solid var(--line);
       margin-bottom: 32px;
+    }
+
+    .upload-hero .brand {
+      display: inline-flex;
+      margin-bottom: 24px;
+      font-size: 16px;
     }
 
     .upload-hero h1 {
@@ -110,7 +116,7 @@
       line-height: 1.5;
     }
 
-    /* ── Drop zone ────────────────────────────────────────── */
+    /* ── Drop zone ──────────────────────────────────────── */
     .drop {
       background: #fff;
       border: 2px dashed var(--line-2);
@@ -168,7 +174,38 @@
       height: 100%;
     }
 
-    /* ── Preview ──────────────────────────────────────────── */
+    /* ── Upload queue (from reference) ─────────────────────── */
+    .queue { margin-top: 24px; display: grid; gap: 8px; }
+
+    .queue-item {
+      display: grid;
+      grid-template-columns: 56px 1fr auto;
+      gap: 12px;
+      align-items: center;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: var(--r);
+      padding: 8px 12px 8px 8px;
+    }
+
+    .queue-item .thumb { aspect-ratio: 1; border-radius: 8px; }
+
+    .queue-item .meta-name { font-weight: 500; font-size: 14px; }
+
+    .queue-item .progress {
+      height: 4px;
+      background: var(--paper-3);
+      border-radius: 2px;
+      margin-top: 4px;
+      overflow: hidden;
+    }
+
+    .queue-item .progress > span { display: block; height: 100%; background: var(--accent); }
+
+    .queue-item .status { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-soft); }
+    .queue-item.done .status { color: #2d7a4a; }
+
+    /* ── Preview ──────────────────────────────────────── */
     #preview-area {
       display: none;
       margin-top: 1rem;
@@ -267,7 +304,7 @@
     .video-toggle-label { font-size: .9rem; font-weight: 600; color: var(--ink); }
     .video-toggle-sub   { font-size: .75rem; color: var(--ink-soft); margin-top: .1rem; }
 
-    /* ── Recorder ─────────────────────────────────────────── */
+    /* ── Recorder ──────────────────────────────────────── */
     #recorder-section {
       display: none;
       margin-top: 1.25rem;
@@ -314,6 +351,7 @@
     .btn-record:active { transform: scale(.93); }
     .btn-record .dot { width: 28px; height: 28px; border-radius: 50%; background: #fff; }
     .btn-record.recording .dot { border-radius: 6px; width: 22px; height: 22px; }
+
     .btn-record.recording {
       border-color: #ff4040;
       animation: pulse 1.2s infinite;
@@ -325,12 +363,16 @@
     }
 
     #recorded-preview-section { display: none; margin-top: 1rem; }
+
     #recorded-video { width: 100%; border-radius: var(--r); margin-bottom: .75rem; }
 
-    /* ── Progress ─────────────────────────────────────────── */
+    /* ── Progress ──────────────────────────────────────── */
     .progress-wrap { display: none; margin-top: 1.5rem; }
+
     .progress-label { font-size: .85rem; color: var(--ink-soft); margin-bottom: .4rem; }
+
     .progress-bar-bg { height: 8px; background: var(--paper-2); border-radius: 4px; overflow: hidden; }
+
     .progress-bar-fill {
       height: 100%;
       background: linear-gradient(90deg, var(--accent-soft), var(--accent));
@@ -339,7 +381,7 @@
       width: 0%;
     }
 
-    /* ── Send button ──────────────────────────────────────── */
+    /* ── Send button ─────────────────────────────────────── */
     .send-btn {
       width: 100%;
       padding: 16px;
@@ -361,7 +403,7 @@
     .send-btn:active  { transform: scale(.98); }
     .send-btn:disabled { opacity: .55; cursor: not-allowed; transform: none; }
 
-    /* ── Success ──────────────────────────────────────────── */
+    /* ── Success ──────────────────────────────────────── */
     #success-screen {
       display: none;
       background: #fff;
@@ -405,7 +447,7 @@
     }
     .btn-another:hover { background: var(--accent); color: #fff; }
 
-    /* ── Error / Loading ──────────────────────────────────── */
+    /* ── Error / Loading ─────────────────────────────────── */
     #error-screen {
       display: none;
       text-align: center;
@@ -416,7 +458,7 @@
     .error-emoji { font-size: 3rem; margin-bottom: 1rem; }
     #loading-state { padding: 4rem 0; text-align: center; }
 
-    /* ── Recently shared ──────────────────────────────────── */
+    /* ── Recently shared ─────────────────────────────────── */
     .recent {
       margin-top: 56px;
     }
@@ -449,29 +491,30 @@
       gap: 6px;
     }
 
-    .recent-grid .thumb {
+    .recent-grid > div {
       aspect-ratio: 1;
       border-radius: 8px;
       background: var(--line);
       overflow: hidden;
     }
 
-    .recent-grid .thumb img,
-    .recent-grid .thumb video {
+    .recent-grid > div img,
+    .recent-grid > div video {
       width: 100%;
       height: 100%;
       object-fit: cover;
       display: block;
     }
 
-    /* ── Footer note ──────────────────────────────────────── */
+    /* ── Footer note ─────────────────────────────────────── */
     .footer-note {
       margin-top: 40px;
       text-align: center;
       font-family: var(--mono, monospace);
-      font-size: 11px;
-      letter-spacing: .10em;
-      color: var(--ink-soft);
+      font-size: 10px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
       opacity: .6;
     }
   </style>
@@ -480,7 +523,7 @@
 
 <div class="upload-shell">
 
-  <!-- ── Top row ──────────────────────────────────────────── -->
+  <!-- ── Top row ──────────────────────────────────────── -->
   <div class="upload-top">
     <a class="brand" href="/">REELDAY<sup>★</sup></a>
     <div class="lang-switch" id="lang-toggle" aria-label="Choose language">
@@ -489,8 +532,9 @@
     </div>
   </div>
 
-  <!-- ── Hero ─────────────────────────────────────────────── -->
+  <!-- ── Hero ─────────────────────────────────────────── -->
   <div class="upload-hero">
+    <a class="brand" href="/">REELDAY<sup>★</sup></a>
     <h1 id="hero-names">…</h1>
     <div class="meta" id="hero-date"></div>
     <div class="welcome" id="hero-welcome"></div>
@@ -499,14 +543,14 @@
   <!-- ── Loading ───────────────────────────────────────────── -->
   <div id="loading-state"><div class="spinner"></div></div>
 
-  <!-- ── Error ─────────────────────────────────────────────── -->
+  <!-- ── Error ───────────────────────────────────────────── -->
   <div id="error-screen">
     <div class="error-emoji">😔</div>
     <p id="error-msg" style="color:var(--ink-soft);font-size:.95rem;margin-top:.5rem"></p>
   </div>
 
-  <!-- ── Upload form ───────────────────────────────────────── -->
-  <div id="upload-card" style="display:none">
+  <!-- ── Upload form ─────────────────────────────────────── -->
+  <div id="upload-card" style="display:none;">
 
     <!-- Drop zone -->
     <div class="drop" id="dropzone">
@@ -579,7 +623,7 @@
     <label class="video-toggle">
       <input type="checkbox" id="video-msg-toggle" />
       <div>
-        <div class="video-toggle-label" id="video-toggle-label" data-i18n="videoToggleLabel">Record a video message for them 💌</div>
+        <div class="video-toggle-label" id="video-toggle-label" data-i18n="videoToggleLabel">Record a video message for them 📌</div>
         <div class="video-toggle-sub" data-i18n="videoToggleSub">Record a special message (max 60 seconds)</div>
       </div>
     </label>
@@ -592,9 +636,14 @@
       Pick a photo first ✦
     </button>
 
+    <!-- Upload queue (from reference) -->
+    <div class="queue" id="upload-queue" style="display:none;">
+      <!-- Queue items will be dynamically added here -->
+    </div>
+
   </div><!-- /upload-card -->
 
-  <!-- ── Success ───────────────────────────────────────────── -->
+  <!-- ── Success ──────────────────────────────────────── -->
   <div id="success-screen">
     <div class="success-emoji" id="success-emoji">✦</div>
     <h2 class="success-title" id="success-title"></h2>
@@ -604,8 +653,8 @@
     </button>
   </div>
 
-  <!-- ── Recently shared ───────────────────────────────────── -->
-  <div class="recent" id="recent-section" style="display:none">
+  <!-- ── Recently shared ─────────────────────────────────── -->
+  <div class="recent" id="recent-section" style="display:none;">
     <div class="head">
       <h3>Recently shared</h3>
       <span class="count" id="recent-count"></span>
@@ -613,12 +662,12 @@
     <div class="recent-grid" id="recent-grid"></div>
   </div>
 
-  <!-- ── Footer ────────────────────────────────────────────── -->
+  <!-- ── Footer ──────────────────────────────────────── -->
   <div class="footer-note">★ Powered by Reelday · reelday.ph</div>
 
 </div><!-- /upload-shell -->
 
-<!-- ── Toast ─────────────────────────────────────────────── -->
+<!-- ── Toast ──────────────────────────────────────── -->
 <div class="toast" id="toast"></div>
 
 <script type="module">
@@ -640,7 +689,7 @@
       submitNoFile:      'Pick a photo first ✦',
       submitNeedsRecord: 'Record your video message first ✦',
       uploadAnother:     '📸 Upload another one',
-      errorNotFound:     "This event couldn't be found. Make sure you have the right link.",
+      errorNotFound:     "This event can't be found. Make sure you have the right link.",
       toastOnlyMedia:    'Only photos and videos are accepted.',
       toastNeedName:     'Please enter your name first.',
       toastCameraFail:   "Can't access your camera. Please allow camera permission.",
@@ -650,21 +699,21 @@
     },
     fil: {
       changeFile:        'Palitan ✕',
-      fileWarning:       '⚠️ Malaking file ito. Tiyaking malakas ang iyong koneksyon bago mag-upload.',
+      fileWarning:       '⚠️ Malaking file ito. Tiyakin malakas ang iyong koneksyon bago mag-upload.',
       nameLabel:         'Ano ang pangalan mo?',
       namePlaceholder:   'Ilagay ang iyong pangalan',
       messageLabel:      'Mensahe para sa kanila',
       messagePlaceholder:'Mag-iwan ng mensahe para sa kanila… (optional)',
-      videoToggleSub:    'I-record ang isang espesyal na mensahe (max 60 segundo)',
+      videoToggleSub:    'I-record ang espesyal na mensahe (max 60 segundo)',
       rerecordBtn:       '🔄 I-record ulit',
-      recorderHintIdle:  'Pindutin ang pindutan para magsimula ng recording',
+      recorderHintIdle:  'Pindutin ang button para magsimula ng recording',
       recorderHintActive:'Nagre-record… pindutin ulit para ihinto',
       recorderHintDone:  'Na-record na! Manood muna bago mag-submit.',
       uploadingLabel:    'Sine-send na… ',
       submitNoFile:      'Pumili muna ng larawan ✦',
       submitNeedsRecord: 'I-record muna ang video message ✦',
       uploadAnother:     '📸 Mag-upload pa ng isa',
-      errorNotFound:     'Hindi mahanap ang event na ito. Siguraduhing tama ang link.',
+      errorNotFound:     'Hindi mahanap ang event na ito. Siguraduhin tama ang link.',
       toastOnlyMedia:    'Tanggap lang ang mga larawan at video.',
       toastNeedName:     'Ilagay muna ang iyong pangalan.',
       toastCameraFail:   'Hindi ma-access ang camera. I-allow ang permission.',
@@ -682,7 +731,7 @@
         button:      (n) => `Share with ${n} ✦`,
         success:     (n) => `Your moment has been shared with ${n}. They'll love it! 💕`,
         placeholder: 'Leave them a message… (optional)',
-        videoLabel:  'Record a video message for them 💌',
+        videoLabel:  'Record a video message for them 📌',
         emoji:       '💍',
       },
       debut: {
@@ -712,7 +761,7 @@
       baptism: {
         title:       '🕊️ Share this blessing',
         button:      (n) => `Share at ${n}'s Baptism 🕊️`,
-        success:     (n) => `Thank you! We are all blessed on this day. 🕊️`,
+        success:     (n) => `Thank you. We are all blessed on this day. 🕊️`,
         placeholder: 'Leave a message or blessing… (optional)',
         videoLabel:  'Record a video blessing 🕊️',
         emoji:       '🕊️',
@@ -784,7 +833,7 @@
         emoji:       '🕊️',
       },
       reunion: {
-        title:       '📸 I-share ang iyong alaala',
+        title:       '📸 I-share ang iyong momento',
         button:      () => 'I-share sa ating reunion 🎉',
         success:     () => 'Salamat! Masayang makita kayong lahat! 🎉',
         placeholder: 'Mag-iwan ng mensahe para sa lahat… (optional)',
@@ -817,7 +866,7 @@
     reunion: 'reunion', corporate: 'corporate', memorial: 'memorial',
   };
 
-  // ── App state ──────────────────────────────────────────
+  // ── App state ──────────────────────────────────────
   const slug          = location.pathname.split('/').filter(Boolean).pop();
   let lang            = localStorage.getItem('reelday_lang') || 'en';
   let eventData       = null;
@@ -862,6 +911,7 @@
   const successEmoji     = $('success-emoji');
   const btnUploadAnother = $('btn-upload-another');
   const toast            = $('toast');
+  const uploadQueue      = $('upload-queue');
 
   // ── Helpers ───────────────────────────────────────────
   function t(key) { return STRINGS[lang]?.[key] ?? STRINGS.en[key] ?? key; }
@@ -887,7 +937,7 @@
     document.body.setAttribute('data-theme', theme);
   }
 
-  // ── Translations ──────────────────────────────────────
+  // ── Translations ────────────────────────────────────────
   function applyTranslations() {
     document.documentElement.lang = lang;
 
@@ -972,7 +1022,7 @@
     applyEventCopy();
   });
 
-  // ── File handling ─────────────────────────────────────
+  // ── File handling ───────────────────────────────────────
   function handleFile(file) {
     if (!file) return;
     if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
@@ -1012,7 +1062,7 @@
     updateSubmitState();
   });
 
-  dropzone.addEventListener('dragover',  e => { e.preventDefault(); dropzone.classList.add('drag-over'); });
+  dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag-over'); });
   dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
   dropzone.addEventListener('drop', e => {
     e.preventDefault();
@@ -1099,7 +1149,7 @@
     updateSubmitState();
   });
 
-  // ── Submit state ──────────────────────────────────────
+  // ── Submit state ────────────────────────────────────────
   function updateSubmitState() {
     const hasFile     = !!selectedFile;
     const needsRecord = videoToggle.checked && !recordedBlob;
