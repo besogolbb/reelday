@@ -1,466 +1,658 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#fbf5ec" />
-  <meta name="description" content="Every shot from your celebration. One QR code. Instantly. The cinematic photo-sharing platform for Filipino weddings, debuts, and celebrations." />
-  <title>Reelday — Every Shot. One QR. Instantly.</title>
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-  <link rel="stylesheet" href="/css/shared.css" />
-  <style>
-    /* ── Hero ════════════════════════════════════════════════ */
-    .hero { padding: 60px 28px 100px; position: relative; overflow: hidden; }
-    .hero::before {
-      content: ''; position: absolute; inset: 0;
-      background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(216,160,90,.18), transparent 70%);
-      pointer-events: none;
-    }
-    .hero-inner {
-      max-width: 1240px; margin: 0 auto;
-      display: grid; grid-template-columns: 1fr 1fr;
-      gap: 48px; align-items: center; position: relative;
-    }
-    .hero-text { position: relative; z-index: 3; }
-    .hero h1 {
-      font-family: var(--display); font-weight: 400;
-      font-size: clamp(56px, 7.5vw, 110px);
-      line-height: .96; letter-spacing: -0.03em;
-      margin: 28px 0 24px; color: var(--ink);
-    }
-    .hero h1 em { font-style: italic; color: var(--accent); font-weight: 400; }
-    .hero h1 .underline { position: relative; display: inline-block; }
-    .hero h1 .underline::after {
-      content: ''; position: absolute; left: 0; right: 0; bottom: -6px;
-      height: 8px; background: var(--gold); opacity: .6;
-      border-radius: 8px; transform: skewX(-2deg);
-    }
-    .hero p { font-size: 19px; color: var(--ink-soft); line-height: 1.55; max-width: 38ch; margin-bottom: 28px; }
-    .hero-cta { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 32px; }
-    .hero-trust { display: flex; align-items: center; gap: 16px; font-size: 13px; color: var(--ink-soft); }
-    .hero-trust .avatars { display: flex; }
-    .hero-trust .avatars > div {
-      width: 32px; height: 32px; border-radius: 50%;
-      border: 2px solid var(--paper); margin-left: -8px;
-    }
-    .hero-trust .avatars > div:first-child { margin-left: 0; }
-    .hero-trust .stars { color: var(--gold); font-size: 14px; letter-spacing: 2px; }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#fdfaf5" />
+<meta name="description" content="Every shot from your celebration. One QR code. Instantly. The cinematic photo-sharing platform for Filipino weddings, debuts, and celebrations." />
+<title>Reelday — Every shot. Every guest. One QR.</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="stylesheet" href="/css/shared.css" />
+<style>
+  body { background: #fdfaf5; }
 
-    /* Polaroid pile */
-    .polaroid-stage { position: relative; aspect-ratio: 1; perspective: 1400px; }
-    .polaroid {
-      position: absolute; background: #fff;
-      padding: 12px 12px 44px; border-radius: 4px;
-      box-shadow: var(--shadow-card);
-      transition: transform .4s cubic-bezier(.22,1,.36,1);
-      transform-origin: center;
-    }
-    .polaroid .pic { width: 220px; height: 220px; border-radius: 2px; }
-    .polaroid .caption {
-      position: absolute; bottom: 12px; left: 12px; right: 12px;
-      font-family: var(--display); font-style: italic;
-      font-size: 14px; color: var(--ink); text-align: center;
-    }
-    .polaroid:hover { transform: translate(var(--tx,0), var(--ty,0)) rotate(0deg) scale(1.05); z-index: 20 !important; }
-    .pol-1 { top: 4%;  left: 8%;   transform: translate(0,0) rotate(-8deg); z-index: 3; }
-    .pol-2 { top: 0%;  right: 6%;  transform: translate(0,0) rotate(6deg);  z-index: 5; }
-    .pol-3 { bottom: 14%; left: 0%; transform: translate(0,0) rotate(-3deg); z-index: 4; }
-    .pol-4 { bottom: 4%; right: 12%; transform: translate(0,0) rotate(8deg); z-index: 6; }
-    .pol-5 { top: 38%; left: 32%; transform: translate(0,0) rotate(-2deg); z-index: 7; }
+  /* ════════════════════════════════════════════════════════
+     HEADER
+  ════════════════════════════════════════════════════════ */
+  .site-header { background: rgba(253,250,245,.9); }
 
-    .sticker {
-      position: absolute; background: var(--gold); color: var(--ink);
-      padding: 10px 16px; border-radius: 999px;
-      font-family: var(--mono); font-size: 11px; letter-spacing: .14em;
-      text-transform: uppercase; box-shadow: var(--shadow-soft);
-      z-index: 10; transform: rotate(-6deg);
-    }
-    .sticker.s1 { top: 10%; right: 38%; background: var(--accent); color: #fff; }
-    .sticker.s2 { bottom: 30%; right: 4%; }
+  /* ════════════════════════════════════════════════════════
+     HERO
+  ════════════════════════════════════════════════════════ */
+  .hero {
+    padding: 80px 28px 60px;
+    position: relative; overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 80% 60% at 55% 0%, rgba(216,160,90,.16), transparent 70%);
+    pointer-events: none;
+  }
+  .hero-inner {
+    max-width: 1240px; margin: 0 auto;
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 48px; align-items: center;
+    position: relative;
+  }
+  .hero-text { position: relative; z-index: 3; }
+  .hero h1 {
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: clamp(52px, 7.5vw, 108px);
+    line-height: .96;
+    letter-spacing: -0.03em;
+    margin: 24px 0 22px;
+    color: var(--ink);
+  }
+  .hero h1 em { font-style: italic; color: var(--accent); font-weight: 400; }
+  .hero h1 .underline {
+    position: relative; display: inline-block;
+  }
+  .hero h1 .underline::after {
+    content: '';
+    position: absolute; left: 0; right: 0; bottom: -4px;
+    height: 7px; background: var(--gold); opacity: .55;
+    border-radius: 8px; transform: skewX(-2deg);
+  }
+  .hero p {
+    font-size: 18px; color: var(--ink-soft);
+    line-height: 1.6; max-width: 40ch; margin-bottom: 28px;
+  }
+  .hero-cta { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 32px; }
+  .hero-trust {
+    display: flex; align-items: center; gap: 14px;
+    font-size: 13px; color: var(--ink-soft);
+  }
+  .avatars { display: flex; }
+  .avatars > div {
+    width: 32px; height: 32px; border-radius: 50%;
+    border: 2px solid #fdfaf5; margin-left: -9px;
+  }
+  .avatars > div:first-child { margin-left: 0; }
+  .stars { color: var(--gold); font-size: 14px; letter-spacing: 2px; line-height: 1; margin-bottom: 2px; }
 
-    /* Stats strip */
-    .hero-strip {
-      background: var(--ink); color: var(--paper);
-      border-radius: var(--r-xl);
-      padding: 36px 48px;
-      max-width: 1100px; margin: 80px auto 0;
-      display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px;
-    }
-    .strip-stat .num {
-      font-family: var(--display); font-size: 56px; font-weight: 400;
-      line-height: 1; letter-spacing: -.02em; margin-bottom: 8px;
-    }
-    .strip-stat .num em { color: var(--accent-soft); font-style: italic; }
-    .strip-stat .lbl {
-      font-family: var(--mono); font-size: 11px; letter-spacing: .14em;
-      text-transform: uppercase; color: rgba(251,245,236,.6);
-    }
+  /* ── Polaroid stage ────────────────────────────────────── */
+  .polaroid-stage {
+    position: relative;
+    aspect-ratio: 1 / 1.02;
+    perspective: 1400px;
+  }
+  .polaroid {
+    position: absolute;
+    background: #fff;
+    padding: 10px 10px 40px;
+    border-radius: 3px;
+    box-shadow: 0 4px 12px rgba(42,26,20,.12), 0 16px 40px rgba(42,26,20,.1);
+    transform-origin: center;
+    transition: transform .4s cubic-bezier(.22,1,.36,1), box-shadow .4s ease, z-index 0s .4s;
+  }
+  .polaroid:hover {
+    box-shadow: 0 8px 24px rgba(42,26,20,.18), 0 28px 60px rgba(42,26,20,.18);
+    z-index: 20 !important;
+    transition: transform .4s cubic-bezier(.22,1,.36,1), box-shadow .4s ease, z-index 0s;
+  }
+  .polaroid .pic {
+    display: block; border-radius: 1px; overflow: hidden;
+  }
 
-    /* ── How it works ══════════════════════════════════════ */
-    .how { padding: 120px 28px; }
-    .how-head { max-width: 1100px; margin: 0 auto 64px; text-align: center; }
-    .how-head h2 {
-      font-family: var(--display); font-size: clamp(48px, 6vw, 88px);
-      font-weight: 400; line-height: 1.02; letter-spacing: -.025em; color: var(--ink);
-    }
-    .how-head h2 em { font-style: italic; color: var(--accent); }
-    .how-grid { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; }
-    .how-card {
-      background: #fff; border-radius: var(--r-xl);
-      padding: 40px 32px 32px; border: 1px solid var(--line);
-    }
-    .how-card .big-num {
-      font-family: var(--display); font-size: 120px; font-weight: 400;
-      font-style: italic; line-height: 1; color: var(--accent-soft);
-      letter-spacing: -.04em; margin-bottom: 16px; opacity: .5;
-    }
-    .how-card h3 {
-      font-family: var(--display); font-size: 26px; line-height: 1.15;
-      letter-spacing: -.01em; margin-bottom: 12px; color: var(--ink);
-    }
-    .how-card p { color: var(--ink-soft); font-size: 15px; line-height: 1.6; }
-    .how-card .demo {
-      aspect-ratio: 4/3; border-radius: var(--r); overflow: hidden;
-      background: var(--paper-2); margin-top: 24px;
-      display: flex; align-items: center; justify-content: center;
-      font-family: var(--mono); font-size: 11px; letter-spacing: .14em;
-      text-transform: uppercase; color: var(--ink-faint);
-    }
+  /* Real CSS "photo" fills — warm gradient photos */
+  .photo-coral  { background: linear-gradient(145deg, #e8c5b0 0%, #c45a3a 100%); }
+  .photo-ochre  { background: linear-gradient(145deg, #ead8b0 0%, #c98040 100%); }
+  .photo-sage   { background: linear-gradient(145deg, #b8d4c0 0%, #2d6a4a 100%); }
+  .photo-clay   { background: linear-gradient(145deg, #d4a892 0%, #8a3a28 100%); }
+  .photo-cream  { background: linear-gradient(145deg, #fdfaf5 0%, #e6d0b0 100%); }
 
-    /* ── Quote ═════════════════════════════════════════════ */
-    .quote { padding: 120px 28px; background: var(--paper-2); position: relative; overflow: hidden; }
-    .quote::before {
-      content: '"'; position: absolute; font-family: var(--display);
-      font-style: italic; font-size: 600px; line-height: 1;
-      color: var(--accent); opacity: .06; top: -80px; left: 60px;
-    }
-    .quote-inner { max-width: 900px; margin: 0 auto; text-align: center; position: relative; }
-    .quote blockquote {
-      font-family: var(--display); font-style: italic;
-      font-size: clamp(28px, 3.5vw, 42px); line-height: 1.3;
-      letter-spacing: -.01em; color: var(--ink); font-weight: 400; margin-bottom: 32px;
-    }
-    .quote-attr { display: flex; align-items: center; justify-content: center; gap: 16px; }
-    .quote-avatar {
-      width: 56px; height: 56px; border-radius: 50%;
-      background: linear-gradient(135deg, #f0d8c8, #d8a892);
-    }
-    .quote-name { font-weight: 600; font-size: 15px; color: var(--ink); }
-    .quote-meta { font-family: var(--mono); font-size: 11px; color: var(--ink-faint); letter-spacing: .12em; text-transform: uppercase; }
+  .photo-label {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 10px; letter-spacing: .16em;
+    text-transform: uppercase; color: rgba(255,255,255,.55);
+  }
+  .photo-cream .photo-label { color: rgba(42,26,20,.35); }
 
-    /* ── Features ══════════════════════════════════════════ */
-    .features { padding: 120px 28px; }
-    .features-head { max-width: 1100px; margin: 0 auto 56px; }
-    .features-head h2 {
-      font-family: var(--display); font-weight: 400;
-      font-size: clamp(40px, 5vw, 72px); line-height: 1.04; letter-spacing: -.025em;
-      max-width: 18ch; color: var(--ink);
-    }
-    .features-head h2 em { color: var(--accent); font-style: italic; }
-    .features-grid {
-      max-width: 1100px; margin: 0 auto;
-      display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px;
-    }
-    .feat {
-      background: #fff; border: 1px solid var(--line); border-radius: var(--r-xl);
-      padding: 28px; display: flex; flex-direction: column; gap: 16px;
-    }
-    .feat-1 { grid-column: span 4; aspect-ratio: 16/9; background: var(--ink); color: var(--paper); border-color: var(--ink); }
-    .feat-2 { grid-column: span 2; }
-    .feat-3 { grid-column: span 2; }
-    .feat-4 { grid-column: span 4; aspect-ratio: 16/9; background: var(--accent); color: #fff; border-color: var(--accent); }
-    .feat h3 { font-family: var(--display); font-size: 22px; line-height: 1.2; letter-spacing: -.01em; }
-    .feat h3 em { font-style: italic; }
-    .feat p { font-size: 14px; line-height: 1.55; opacity: .75; }
-    .feat .feat-pill {
-      display: inline-flex; padding: 4px 10px; background: var(--paper-2);
-      border-radius: 999px; font-family: var(--mono); font-size: 10px;
-      letter-spacing: .12em; text-transform: uppercase; color: var(--ink-soft); width: fit-content;
-    }
-    .feat-1 .feat-pill, .feat-4 .feat-pill { background: rgba(255,255,255,.15); color: rgba(255,255,255,.8); }
-    .feat-demo {
-      flex: 1; min-height: 80px; border-radius: var(--r);
-      background: rgba(255,255,255,.1);
-      display: flex; align-items: center; justify-content: center;
-      font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
-    }
+  .polaroid .caption {
+    position: absolute;
+    bottom: 8px; left: 10px; right: 10px;
+    font-family: var(--display); font-style: italic;
+    font-size: 13px; color: var(--ink);
+    text-align: center; line-height: 1.2;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
 
-    /* ── Pricing ═══════════════════════════════════════════ */
-    .pricing { padding: 120px 28px; background: var(--paper-2); }
-    .pricing-head { max-width: 800px; margin: 0 auto 56px; text-align: center; }
-    .pricing-head h2 {
-      font-family: var(--display); font-weight: 400;
-      font-size: clamp(40px, 5vw, 72px); letter-spacing: -.025em; line-height: 1.05; color: var(--ink);
-    }
-    .pricing-head h2 em { font-style: italic; color: var(--accent); }
-    .pricing-head p { color: var(--ink-soft); font-size: 17px; margin-top: 16px; }
-    .pricing-grid {
-      max-width: 1000px; margin: 0 auto;
-      display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
-    }
-    .price-card {
-      background: #fff; border: 1px solid var(--line); border-radius: var(--r-xl);
-      padding: 32px; display: flex; flex-direction: column;
-    }
-    .price-card.featured {
-      background: var(--ink); color: var(--paper);
-      border-color: var(--ink); transform: translateY(-12px);
-    }
-    .price-card .tier {
-      font-family: var(--mono); font-size: 11px; letter-spacing: .16em;
-      text-transform: uppercase; color: var(--ink-soft); margin-bottom: 12px;
-    }
-    .price-card.featured .tier { color: var(--accent-soft); }
-    .price-card .price {
-      font-family: var(--display); font-size: 56px; font-weight: 400;
-      line-height: 1; letter-spacing: -.03em; margin-bottom: 8px; color: var(--ink);
-    }
-    .price-card.featured .price { color: var(--paper); }
-    .price-card .price sub { font-family: var(--sans); font-size: 13px; color: var(--ink-faint); font-weight: 400; }
-    .price-card.featured .price sub { color: rgba(251,245,236,.5); }
-    .price-card .desc {
-      font-size: 13px; color: var(--ink-soft); margin-bottom: 24px;
-      padding-bottom: 20px; border-bottom: 1px solid var(--line);
-    }
-    .price-card.featured .desc { color: rgba(251,245,236,.6); border-color: rgba(255,255,255,.12); }
-    .price-card ul { list-style: none; display: grid; gap: 8px; font-size: 14px; flex: 1; color: var(--ink-soft); }
-    .price-card.featured ul { color: rgba(251,245,236,.75); }
-    .price-card li { display: flex; gap: 8px; }
-    .price-card li::before { content: '✓'; color: var(--accent); font-weight: 700; }
-    .price-card.featured li::before { color: var(--accent-soft); }
-    .price-card .btn { margin-top: 24px; width: 100%; justify-content: center; }
+  .pol-1 { width: 230px; top: 2%;  left: 6%;   transform: rotate(-7deg);  z-index: 3; }
+  .pol-2 { width: 210px; top: 0%;  right: 2%;  transform: rotate(5deg);   z-index: 5; }
+  .pol-3 { width: 220px; bottom: 16%; left: 0%;  transform: rotate(-3.5deg); z-index: 4; }
+  .pol-4 { width: 200px; bottom: 3%; right: 10%; transform: rotate(7.5deg);  z-index: 6; }
+  .pol-5 { width: 215px; top: 36%; left: 30%;   transform: rotate(-1.5deg);  z-index: 7; }
 
-    /* ── FAQ ═══════════════════════════════════════════════ */
-    .faq { padding: 120px 28px; }
-    .faq-inner { max-width: 800px; margin: 0 auto; }
-    .faq-inner > h2 {
-      font-family: var(--display); font-weight: 400;
-      font-size: clamp(40px, 5vw, 64px); text-align: center; margin-bottom: 56px;
-      letter-spacing: -.025em; color: var(--ink);
-    }
-    .faq-inner > h2 em { color: var(--accent); font-style: italic; }
-    .faq-item { border-top: 1px solid var(--line-2); padding: 28px 0; }
-    .faq-item:last-child { border-bottom: 1px solid var(--line-2); }
-    .faq-item summary {
-      cursor: pointer; font-family: var(--display); font-size: 22px;
-      font-weight: 500; letter-spacing: -.01em; list-style: none;
-      display: flex; justify-content: space-between; align-items: center;
-      color: var(--ink);
-    }
-    .faq-item summary::-webkit-details-marker { display: none; }
-    .faq-item summary::after {
-      content: '+'; font-family: var(--display); font-size: 28px;
-      font-weight: 300; transition: transform .3s ease; color: var(--accent);
-    }
-    .faq-item[open] summary::after { transform: rotate(45deg); }
-    .faq-item p { margin-top: 16px; color: var(--ink-soft); line-height: 1.65; }
+  .pol-1:hover { transform: rotate(0deg) scale(1.05) translateY(-4px); }
+  .pol-2:hover { transform: rotate(0deg) scale(1.05) translateY(-4px); }
+  .pol-3:hover { transform: rotate(0deg) scale(1.05) translateY(-4px); }
+  .pol-4:hover { transform: rotate(0deg) scale(1.05) translateY(-4px); }
+  .pol-5:hover { transform: rotate(0deg) scale(1.05) translateY(-4px); }
 
-    /* ── Final CTA ═════════════════════════════════════════ */
-    .final-cta {
-      padding: 120px 28px;
-      background: radial-gradient(ellipse 60% 80% at 50% 0%, rgba(216,160,90,.25), transparent 70%),
-                  var(--paper);
-      text-align: center;
-    }
-    .final-cta h2 {
-      font-family: var(--display); font-weight: 400;
-      font-size: clamp(48px, 7vw, 100px); line-height: .98;
-      letter-spacing: -.03em; max-width: 14ch; margin: 0 auto 32px; color: var(--ink);
-    }
-    .final-cta h2 em { font-style: italic; color: var(--accent); }
+  .sticker {
+    position: absolute;
+    padding: 9px 16px;
+    border-radius: 999px;
+    font-family: var(--mono);
+    font-size: 11px; letter-spacing: .14em;
+    text-transform: uppercase;
+    box-shadow: 0 2px 8px rgba(42,26,20,.18);
+    z-index: 10; font-weight: 500;
+  }
+  .sticker-live {
+    top: 8%; right: 34%;
+    background: var(--accent); color: #fff;
+    transform: rotate(-4deg);
+  }
+  .sticker-live::before { content: '★ '; }
+  .sticker-count {
+    bottom: 28%; right: 2%;
+    background: var(--gold); color: var(--ink);
+    transform: rotate(3deg);
+  }
 
-    /* ── Live Wall Demo ════════════════════════════════════ */
-    .wall-demo {
-      padding: 0; background: var(--ink); position: relative; overflow: hidden;
-    }
-    .wall-demo-inner {
-      max-width: 1240px; margin: 0 auto;
-      display: grid; grid-template-columns: 1fr 460px;
-      min-height: 560px;
-    }
-    .wall-demo-stage {
-      position: relative; overflow: hidden; background: #0a0a0a;
-    }
-    .wall-slide {
-      position: absolute; inset: 0; opacity: 0;
-      transition: opacity 1.2s ease;
-    }
-    .wall-slide.active { opacity: 1; }
-    .ws-1 { background: linear-gradient(135deg, #1a0a05 0%, #3d1a0a 40%, #1a0a05 100%); }
-    .ws-2 { background: linear-gradient(135deg, #0a1220 0%, #1a2a3d 40%, #0a1220 100%); }
-    .ws-3 { background: linear-gradient(135deg, #0a1a0a 0%, #1a3a1a 40%, #0a1a0a 100%); }
-    .ws-4 { background: linear-gradient(135deg, #1a0a20 0%, #2d1a3d 40%, #1a0a20 100%); }
-    .ws-5 { background: linear-gradient(135deg, #200a0a 0%, #3d0a1a 40%, #200a0a 100%); }
-    .ws-6 { background: linear-gradient(135deg, #0a1820 0%, #1a303d 40%, #0a1820 100%); }
-    .wall-slide-content {
-      position: absolute; inset: 0; display: flex; flex-direction: column;
-      align-items: center; justify-content: center; padding: 48px;
-    }
-    .wall-fake-photo {
-      width: 100%; max-width: 340px; aspect-ratio: 4/3; border-radius: 8px;
-      background: rgba(255,255,255,.07); margin-bottom: 20px;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .wall-fake-caption {
-      font-family: var(--display); font-style: italic;
-      font-size: clamp(18px, 2.5vw, 26px); color: rgba(251,245,236,.9);
-      text-align: center; max-width: 28ch; line-height: 1.3;
-    }
-    .wall-fake-meta {
-      margin-top: 12px; font-family: var(--mono); font-size: 11px;
-      letter-spacing: .14em; text-transform: uppercase;
-      color: rgba(251,245,236,.4);
-    }
-    .wall-progress-bar {
-      position: absolute; bottom: 0; left: 0; right: 0; height: 3px;
-      background: rgba(255,255,255,.1);
-    }
-    .wall-progress-fill {
-      height: 100%; background: var(--accent);
-      transition: width .1s linear;
-    }
-    .wall-thumbs {
-      position: absolute; bottom: 20px; left: 0; right: 0;
-      display: flex; justify-content: center; gap: 6px; padding: 0 24px;
-    }
-    .wall-thumb {
-      width: 40px; height: 6px; border-radius: 3px;
-      background: rgba(255,255,255,.2); cursor: pointer;
-      transition: background .3s;
-    }
-    .wall-thumb.active { background: var(--accent); }
-    .wall-demo-copy {
-      display: flex; flex-direction: column; justify-content: center;
-      padding: 64px 48px; color: var(--paper);
-    }
-    .wall-demo-copy .eyebrow { color: var(--accent-soft); margin-bottom: 20px; }
-    .wall-demo-copy h2 {
-      font-family: var(--display); font-weight: 400;
-      font-size: clamp(36px, 3.5vw, 52px); line-height: 1.06;
-      letter-spacing: -.025em; margin-bottom: 20px; color: var(--paper);
-    }
-    .wall-demo-copy h2 em { font-style: italic; color: var(--accent-soft); }
-    .wall-demo-copy p {
-      font-size: 16px; line-height: 1.65; color: rgba(251,245,236,.65); margin-bottom: 32px;
-    }
-    .wall-demo-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 32px; }
-    .wall-tag {
-      background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.1);
-      color: rgba(251,245,236,.6); border-radius: 999px;
-      font-family: var(--mono); font-size: 10px; letter-spacing: .12em;
-      text-transform: uppercase; padding: 5px 12px;
-    }
+  /* ── Hero stats strip ──────────────────────────────────── */
+  .hero-strip {
+    max-width: 1100px; margin: 64px auto 0;
+    background: var(--ink); color: var(--paper);
+    border-radius: var(--r-xl);
+    padding: 36px 48px;
+    display: grid; grid-template-columns: repeat(4,1fr);
+    gap: 32px; position: relative; z-index: 5;
+  }
+  .hstat .num {
+    font-family: var(--display); font-size: 52px; font-weight: 400;
+    line-height: 1; letter-spacing: -.02em; margin-bottom: 8px;
+  }
+  .hstat .num em { color: var(--accent-soft); font-style: italic; }
+  .hstat .lbl {
+    font-family: var(--mono); font-size: 11px;
+    letter-spacing: .14em; text-transform: uppercase;
+    color: rgba(251,245,236,.55);
+  }
 
-    /* ── Event Types ════════════════════════════════════════ */
-    .event-types { padding: 100px 28px; }
-    .event-types-head { max-width: 1100px; margin: 0 auto 48px; }
-    .event-types-head h2 {
-      font-family: var(--display); font-weight: 400;
-      font-size: clamp(36px, 4.5vw, 64px); line-height: 1.04;
-      letter-spacing: -.025em; color: var(--ink); margin-bottom: 12px;
-    }
-    .event-types-head h2 em { font-style: italic; color: var(--accent); }
-    .event-types-head p { color: var(--ink-soft); font-size: 16px; max-width: 44ch; }
-    .event-grid {
-      max-width: 1100px; margin: 0 auto;
-      display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;
-    }
-    .event-tile {
-      position: relative; border-radius: var(--r-xl);
-      padding: 28px 24px 24px; overflow: hidden;
-      border: 1px solid var(--line); background: #fff;
-      text-decoration: none; color: var(--ink);
-      display: flex; flex-direction: column; gap: 8px;
-      transition: transform .25s cubic-bezier(.22,1,.36,1), box-shadow .25s;
-      min-height: 140px;
-    }
-    .event-tile:hover { transform: translateY(-4px); box-shadow: var(--shadow-card); }
-    .event-tile-icon { font-size: 28px; line-height: 1; }
-    .event-tile-name {
-      font-family: var(--display); font-size: 20px; font-weight: 400;
-      letter-spacing: -.01em; line-height: 1.1;
-    }
-    .event-tile-sub {
-      font-family: var(--mono); font-size: 10px; letter-spacing: .12em;
-      text-transform: uppercase; color: var(--ink-faint);
-    }
-    .event-tile-arrow {
-      position: absolute; right: 20px; bottom: 20px;
-      font-size: 18px; color: var(--accent); opacity: 0;
-      transition: opacity .2s, transform .2s;
-    }
-    .event-tile:hover .event-tile-arrow { opacity: 1; transform: translate(3px, -3px); }
-    .event-tile.et-wedding { background: linear-gradient(135deg, #fdf6f0, #f5e8de); }
-    .event-tile.et-debut   { background: linear-gradient(135deg, #f8f0fd, #ead8f5); }
-    .event-tile.et-bday    { background: linear-gradient(135deg, #f0f8f0, #d8f0d8); }
-    .event-tile.et-baptism { background: linear-gradient(135deg, #f0f6fd, #d8e8f5); }
-    .event-tile.et-reunion { background: linear-gradient(135deg, #fdf8f0, #f5ecd8); }
-    .event-tile.et-corp    { background: linear-gradient(135deg, #f0f2f5, #dde2e8); }
-    .event-tile.et-mem     { background: linear-gradient(135deg, #f5f5f5, #e8e8e8); }
-    .event-tile.et-kids    { background: linear-gradient(135deg, #fff8f0, #ffecd8); }
+  /* ════════════════════════════════════════════════════════
+     HOW IT WORKS — with real CSS mockups
+  ════════════════════════════════════════════════════════ */
+  .how { padding: 120px 28px 100px; background: #fdfaf5; }
+  .how-head { max-width: 1100px; margin: 0 auto 72px; text-align: center; }
+  .how-head h2 {
+    font-family: var(--display); font-weight: 400;
+    font-size: clamp(44px, 6vw, 86px);
+    line-height: 1.02; letter-spacing: -.03em;
+    color: var(--ink);
+  }
+  .how-head h2 em { font-style: italic; color: var(--accent); }
+  .how-grid {
+    max-width: 1100px; margin: 0 auto;
+    display: grid; grid-template-columns: repeat(3,1fr); gap: 28px;
+  }
+  .how-card {
+    background: #fff; border-radius: var(--r-lg);
+    padding: 36px 28px 28px;
+    border: 1px solid var(--line);
+    box-shadow: 0 2px 8px rgba(42,26,20,.04);
+    display: flex; flex-direction: column;
+  }
+  .how-card .big-num {
+    font-family: var(--display); font-size: 112px; font-weight: 400;
+    font-style: italic; line-height: 1;
+    color: var(--accent-soft); letter-spacing: -.04em;
+    opacity: .4; margin-bottom: 12px;
+  }
+  .how-card h3 {
+    font-family: var(--display); font-weight: 500;
+    font-size: 24px; line-height: 1.2;
+    letter-spacing: -.01em; margin-bottom: 10px; color: var(--ink);
+  }
+  .how-card p { color: var(--ink-soft); font-size: 14px; line-height: 1.65; margin-bottom: 24px; flex: 1; }
+  .how-card .mockup { border-radius: var(--r); overflow: hidden; position: relative; }
 
-    /* ── Responsive ════════════════════════════════════════ */
-    @media (max-width: 900px) {
-      .hero-inner { grid-template-columns: 1fr; }
-      .polaroid-stage { display: none; }
-      .hero-strip { grid-template-columns: repeat(2, 1fr); padding: 28px 24px; }
-      .how-grid { grid-template-columns: 1fr; }
-      .features-grid { grid-template-columns: 1fr; }
-      .feat-1, .feat-2, .feat-3, .feat-4 { grid-column: span 1; aspect-ratio: auto; }
-      .pricing-grid { grid-template-columns: 1fr; }
-      .price-card.featured { transform: none; }
-      .wall-demo-inner { grid-template-columns: 1fr; }
-      .wall-demo-stage { min-height: 320px; }
-      .wall-demo-copy { padding: 48px 28px; }
-      .event-grid { grid-template-columns: repeat(2, 1fr); }
-    }
-    @media (max-width: 600px) {
-      .hero { padding: 40px 20px 72px; }
-      .hero h1 { font-size: clamp(44px, 12vw, 72px); }
-      .hero-strip { grid-template-columns: repeat(2, 1fr); margin-top: 48px; }
-      .strip-stat .num { font-size: 36px; }
-      .how { padding: 80px 20px; }
-      .features, .pricing, .faq, .final-cta { padding: 80px 20px; }
-      .event-types { padding: 64px 20px; }
-      .event-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-    }
-  </style>
+  /* ── Mockup 1: QR Poster ─────────────────────────────── */
+  .qr-poster-mockup {
+    background: linear-gradient(160deg, var(--paper) 0%, var(--paper-2) 100%);
+    border: 1px solid var(--line);
+    border-radius: var(--r); padding: 20px 16px 16px;
+    position: relative;
+  }
+  .qr-poster-mockup .pin-badge {
+    display: inline-block; background: #fff; border: 1px solid var(--line);
+    border-radius: 999px; padding: 5px 12px;
+    font-family: var(--mono); font-size: 9px; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--ink-soft);
+    margin-bottom: 16px;
+  }
+  .qr-poster-mockup .poster-title {
+    font-family: var(--display); font-size: 15px; font-style: italic;
+    color: var(--ink); text-align: center; margin-bottom: 12px; font-weight: 500;
+  }
+  .qr-poster-mockup .qr-block {
+    width: 80px; height: 80px; margin: 0 auto 12px;
+    border-radius: 6px;
+    background: repeating-conic-gradient(var(--ink) 0% 25%, #fff 0% 50%) 0 0 / 10px 10px;
+    border: 6px solid #fff;
+    box-shadow: 0 0 0 1px var(--line);
+  }
+  .qr-poster-mockup .poster-meta {
+    font-family: var(--mono); font-size: 9px; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--ink-soft);
+    text-align: center; line-height: 1.6;
+  }
+
+  /* ── Mockup 2: Phone upload screen ───────────────────── */
+  .phone-mockup {
+    background: var(--paper); border: 1px solid var(--line);
+    border-radius: var(--r); overflow: hidden; position: relative;
+  }
+  .phone-mockup .pm-header {
+    background: var(--paper-2); border-bottom: 1px solid var(--line);
+    padding: 10px 14px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .phone-mockup .pm-brand { font-family: var(--display); font-size: 13px; font-weight: 600; color: var(--ink); }
+  .phone-mockup .pm-lang { font-family: var(--mono); font-size: 9px; color: var(--ink-soft); letter-spacing: .1em; }
+  .phone-mockup .pm-body { padding: 12px 14px 14px; }
+  .phone-mockup .pm-event-name {
+    font-family: var(--display); font-size: 18px; font-style: italic;
+    color: var(--ink); text-align: center; margin-bottom: 10px; line-height: 1.1;
+  }
+  .phone-mockup .pm-event-name em { color: var(--accent); }
+  .phone-mockup .pm-drop {
+    background: #fff; border: 1.5px dashed var(--line-2);
+    border-radius: 10px; padding: 16px 12px; text-align: center; margin-bottom: 10px;
+  }
+  .phone-mockup .pm-drop-icon {
+    width: 36px; height: 36px; background: var(--accent); border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 8px; color: #fff; font-size: 20px; font-family: var(--display); font-style: italic;
+  }
+  .phone-mockup .pm-drop h4 { font-family: var(--display); font-size: 14px; font-weight: 500; margin-bottom: 2px; color: var(--ink); }
+  .phone-mockup .pm-drop p  { font-size: 11px; color: var(--ink-soft); }
+  .phone-mockup .pm-queue { display: grid; gap: 5px; }
+  .phone-mockup .pm-item {
+    background: #fff; border: 1px solid var(--line);
+    border-radius: 8px; padding: 6px 10px;
+    display: grid; grid-template-columns: 28px 1fr auto; gap: 8px; align-items: center;
+  }
+  .phone-mockup .pm-thumb { width: 28px; height: 28px; border-radius: 4px; }
+  .phone-mockup .pm-file  { font-size: 11px; font-weight: 500; color: var(--ink); }
+  .phone-mockup .pm-prog  { height: 3px; background: var(--paper-2); border-radius: 2px; margin-top: 2px; overflow: hidden; }
+  .phone-mockup .pm-prog span { display: block; height: 100%; background: var(--accent); border-radius: 2px; }
+  .phone-mockup .pm-done  { font-family: var(--mono); font-size: 9px; color: #2d7a4a; letter-spacing: .1em; }
+  .phone-mockup .pm-pct   { font-family: var(--mono); font-size: 9px; color: var(--ink-soft); letter-spacing: .1em; }
+
+  /* ── Mockup 3: Live wall mini-preview ─────────────────── */
+  .wall-mini-mockup {
+    background: #1a0f0a; border-radius: var(--r); overflow: hidden;
+    position: relative; aspect-ratio: 16/10;
+  }
+  .wall-mini-mockup .wm-bg {
+    position: absolute; inset: -5%;
+    animation: wm-kb 10s ease-out infinite alternate;
+  }
+  @keyframes wm-kb { from{transform:scale(1)} to{transform:scale(1.1) translate(-1.5%,-1%)} }
+  .wall-mini-mockup .wm-vignette {
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(0,0,0,.3) 0%, transparent 30%, transparent 55%, rgba(0,0,0,.75) 100%);
+  }
+  .wall-mini-mockup .wm-ticker {
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 32px;
+    background: linear-gradient(180deg, rgba(0,0,0,.6), transparent);
+    display: flex; align-items: center; padding: 0 12px; gap: 6px;
+    font-family: var(--mono); font-size: 9px; letter-spacing: .16em;
+    text-transform: uppercase; color: rgba(255,255,255,.7);
+  }
+  .wm-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent-soft); box-shadow: 0 0 0 2px rgba(240,163,122,.3);
+    animation: pulse 1.5s ease infinite; flex-shrink: 0;
+  }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 5px rgba(240,163,122,0); } }
+  .wall-mini-mockup .wm-caption {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    padding: 0 14px 12px;
+  }
+  .wall-mini-mockup .wm-who {
+    font-family: var(--mono); font-size: 8px; letter-spacing: .16em;
+    text-transform: uppercase; color: rgba(255,255,255,.5); margin-bottom: 4px;
+  }
+  .wall-mini-mockup .wm-quote {
+    font-family: var(--display); font-style: italic;
+    font-size: 14px; line-height: 1.2;
+    color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,.5);
+  }
+  .wall-mini-mockup .wm-pin {
+    position: absolute; top: 8px; right: 8px;
+    background: rgba(255,255,255,.95); border-radius: 999px;
+    padding: 4px 10px; font-family: var(--mono); font-size: 9px;
+    letter-spacing: .12em; text-transform: uppercase; color: var(--ink);
+  }
+
+  /* ════════════════════════════════════════════════════════
+     LIVE WALL DEMO — full animated section
+  ════════════════════════════════════════════════════════ */
+  .wall-section { padding: 100px 28px; background: var(--paper-2); }
+  .wall-section .container { max-width: 1100px; margin: 0 auto; }
+  .wall-section .head { margin-bottom: 44px; }
+  .wall-section h2 {
+    font-family: var(--display); font-weight: 400;
+    font-size: clamp(36px, 4.5vw, 60px);
+    letter-spacing: -.025em; line-height: 1.06;
+    margin-top: 14px; color: var(--ink);
+  }
+  .wall-section h2 em { font-style: italic; color: var(--accent); }
+
+  .wall-frame {
+    border-radius: var(--r-lg); overflow: hidden;
+    background: #1a0f0a; aspect-ratio: 16/9;
+    border: 1px solid var(--line-2);
+    box-shadow: 0 16px 56px rgba(42,26,20,.22);
+    position: relative;
+  }
+  .wl-layer { position: absolute; inset: 0; transition: opacity 1.6s ease; }
+  .wl-layer.wl-out { opacity: 0; }
+  .wl-pic { position: absolute; inset: -8%; background-size: cover; background-position: center; animation: wl-kb 14s ease-out forwards; }
+  @keyframes wl-kb { from{transform:scale(1) translate(0,0)} to{transform:scale(1.14) translate(-2%,-1.5%)} }
+  .wl-vignette {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,.55) 100%),
+      linear-gradient(180deg, rgba(0,0,0,.5) 0%, transparent 25%, transparent 45%, rgba(0,0,0,.9) 100%);
+  }
+  .wl-ticker {
+    position: absolute; top: 0; left: 0; right: 0; z-index: 5;
+    height: 56px; background: linear-gradient(180deg, rgba(0,0,0,.65), transparent);
+    display: flex; align-items: center; justify-content: space-between; padding: 0 28px;
+  }
+  .wl-live { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: rgba(255,255,255,.85); }
+  .wl-live-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent-soft, #f0a37a); box-shadow: 0 0 0 3px rgba(240,163,122,.3); animation: pulse 1.4s ease infinite; }
+  .wl-stats { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: rgba(255,255,255,.55); display: flex; gap: 20px; }
+  .wl-stats em { color: var(--accent-soft, #f0a37a); font-style: normal; }
+  .wl-frame-inner { position: absolute; bottom: 0; left: 0; right: 0; z-index: 5; padding: 0 32px 28px; display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; }
+  .wl-caption { max-width: 55%; }
+  .wl-uploader { font-family: var(--mono); font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: rgba(255,255,255,.75); margin-bottom: 10px; transition: opacity .5s; }
+  .wl-quote { font-family: var(--display); font-style: italic; font-size: clamp(20px,2.8vw,40px); line-height: 1.1; letter-spacing: -.01em; color: #fff; text-shadow: 0 2px 12px rgba(0,0,0,.8), 0 8px 32px rgba(0,0,0,.6); transition: opacity .5s; font-weight: 400; }
+  .wl-caption.wl-fade .wl-uploader, .wl-caption.wl-fade .wl-quote { opacity: 0; }
+  .wl-corner { text-align: right; font-family: var(--mono); font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: rgba(255,255,255,.38); flex-shrink: 0; }
+  .wl-corner .wl-event { font-family: var(--display); font-style: italic; font-size: 20px; text-transform: none; letter-spacing: -.01em; color: rgba(255,255,255,.8); margin-bottom: 2px; }
+  .wl-progress { position: absolute; bottom: 0; left: 0; right: 0; height: 2px; z-index: 6; }
+  .wl-progress-fill { height: 100%; background: var(--accent-soft, #f0a37a); width: 0; }
+  .wall-thumbs { display: flex; gap: 8px; margin-top: 10px; }
+  .wall-thumb { flex: 1; aspect-ratio: 16/9; border-radius: 8px; border: 1px solid var(--line); cursor: pointer; opacity: .45; transition: opacity .3s, transform .2s, border-color .2s; }
+  .wall-thumb:hover { opacity: .75; transform: translateY(-2px); }
+  .wall-thumb.wt-active { opacity: 1; border-color: var(--accent); }
+
+  /* ════════════════════════════════════════════════════════
+     TESTIMONIAL
+  ════════════════════════════════════════════════════════ */
+  .quote-section { padding: 100px 28px; background: #fdfaf5; position: relative; overflow: hidden; }
+  .quote-section::before {
+    content: '"'; position: absolute;
+    font-family: var(--display); font-style: italic;
+    font-size: 500px; line-height: 1;
+    color: var(--accent); opacity: .05;
+    top: -60px; left: 40px; pointer-events: none;
+  }
+  .quote-inner { max-width: 880px; margin: 0 auto; text-align: center; position: relative; }
+  .quote-inner blockquote {
+    font-family: var(--display); font-style: italic;
+    font-size: clamp(24px, 3vw, 38px);
+    line-height: 1.35; letter-spacing: -.01em;
+    color: var(--ink); font-weight: 400; margin-bottom: 32px;
+  }
+  .quote-attr { display: flex; align-items: center; justify-content: center; gap: 16px; }
+  .quote-avatar { width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg, #e8c5b0, #c45a3a); }
+  .quote-name { font-weight: 600; font-size: 15px; color: var(--ink); text-align: left; }
+  .quote-meta { font-family: var(--mono); font-size: 10px; color: var(--ink-soft); letter-spacing: .12em; text-transform: uppercase; text-align: left; }
+
+  /* ════════════════════════════════════════════════════════
+     FEATURES
+  ════════════════════════════════════════════════════════ */
+  .features { padding: 100px 28px; background: var(--paper-2); }
+  .features .container { max-width: 1100px; margin: 0 auto; }
+  .features h2 {
+    font-family: var(--display); font-weight: 400;
+    font-size: clamp(36px, 4.5vw, 60px);
+    letter-spacing: -.025em; line-height: 1.06;
+    margin: 14px 0 48px; max-width: 18ch; color: var(--ink);
+  }
+  .features h2 em { font-style: italic; color: var(--accent); }
+  .features-grid {
+    display: grid; grid-template-columns: repeat(6,1fr);
+    gap: 12px;
+  }
+  .feat {
+    background: #fff; border: 1px solid var(--line);
+    border-radius: var(--r-lg); padding: 28px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .feat-wide { grid-column: span 4; }
+  .feat-narrow { grid-column: span 2; }
+  .feat-dark { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .feat-accent { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .feat-pill {
+    display: inline-flex; padding: 4px 10px;
+    background: var(--paper-2); border-radius: 999px;
+    font-family: var(--mono); font-size: 10px;
+    letter-spacing: .12em; text-transform: uppercase;
+    color: var(--ink-soft); width: fit-content;
+  }
+  .feat-dark .feat-pill, .feat-accent .feat-pill { background: rgba(255,255,255,.15); color: rgba(255,255,255,.8); }
+  .feat h3 { font-family: var(--display); font-weight: 500; font-size: 22px; line-height: 1.2; letter-spacing: -.01em; }
+  .feat h3 em { font-style: italic; }
+  .feat p { font-size: 14px; line-height: 1.6; opacity: .75; }
+  .feat .feat-visual { flex: 1; min-height: 70px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+  .feat-dark .feat-visual { background: rgba(255,255,255,.06); }
+  .feat-accent .feat-visual { background: rgba(255,255,255,.15); }
+
+  .feat-wall-preview {
+    border-radius: 10px; overflow: hidden; position: relative;
+    aspect-ratio: 21/9; background: #1a0f0a;
+  }
+  .feat-wall-preview .fw-bg {
+    position: absolute; inset: -5%;
+    background: linear-gradient(135deg, #3d1c0a, #c45a3a 60%, #d8a05a);
+    animation: wm-kb 8s ease-out infinite alternate;
+  }
+  .feat-wall-preview .fw-vignette {
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(0,0,0,.3) 0%, transparent 40%, rgba(0,0,0,.7) 100%);
+  }
+  .feat-wall-preview .fw-text {
+    position: absolute; bottom: 12px; left: 16px;
+    font-family: var(--display); font-style: italic;
+    font-size: 18px; color: #fff;
+    text-shadow: 0 2px 8px rgba(0,0,0,.5);
+  }
+  .feat-wall-preview .fw-badge {
+    position: absolute; top: 10px; left: 10px;
+    background: rgba(255,255,255,.95); border-radius: 999px;
+    padding: 5px 10px; font-family: var(--mono); font-size: 9px;
+    letter-spacing: .14em; text-transform: uppercase; color: var(--ink);
+    display: flex; align-items: center; gap: 5px;
+  }
+  .fw-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: pulse 1.5s ease infinite; }
+
+  /* ════════════════════════════════════════════════════════
+     EVENT TYPES
+  ════════════════════════════════════════════════════════ */
+  .events { padding: 100px 28px; background: #fdfaf5; }
+  .events .container { max-width: 1100px; margin: 0 auto; }
+  .events h2 {
+    font-family: var(--display); font-weight: 400;
+    font-size: clamp(36px, 4.5vw, 60px);
+    letter-spacing: -.025em; margin: 14px 0 44px; color: var(--ink);
+  }
+  .events h2 em { font-style: italic; color: var(--accent); }
+  .events-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; }
+  .event-tile {
+    border: 1px solid var(--line); border-radius: var(--r);
+    padding: 20px 18px 18px; aspect-ratio: 3/4;
+    display: flex; flex-direction: column; justify-content: space-between;
+    position: relative; overflow: hidden; cursor: pointer;
+    transition: border-color .25s, transform .25s, box-shadow .25s;
+    background: #fff; text-decoration: none; color: var(--ink);
+  }
+  .event-tile:hover { border-color: var(--accent); transform: translateY(-3px); box-shadow: 0 12px 32px rgba(42,26,20,.1); }
+  .event-tile-bg { position: absolute; inset: 0; opacity: .15; }
+  .event-tile-top { position: relative; z-index: 2; font-family: var(--mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); }
+  .event-tile-name { position: relative; z-index: 2; font-family: var(--display); font-size: 22px; font-style: italic; font-weight: 400; line-height: 1.1; }
+  .event-tile-sub  { position: relative; z-index: 2; font-family: var(--mono); font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); margin-top: 3px; }
+
+  /* ════════════════════════════════════════════════════════
+     PRICING
+  ════════════════════════════════════════════════════════ */
+  .pricing { padding: 100px 28px; background: var(--paper-2); }
+  .pricing .container { max-width: 1000px; margin: 0 auto; text-align: center; }
+  .pricing h2 {
+    font-family: var(--display); font-weight: 400;
+    font-size: clamp(36px, 4.5vw, 60px);
+    letter-spacing: -.025em; margin: 14px 0 10px; color: var(--ink);
+  }
+  .pricing h2 em { font-style: italic; color: var(--accent); }
+  .pricing .sub { font-size: 16px; color: var(--ink-soft); margin-bottom: 52px; }
+  .pricing-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; text-align: left; }
+  .price-card {
+    background: #fff; border: 1px solid var(--line);
+    border-radius: var(--r-lg); padding: 32px;
+    display: flex; flex-direction: column;
+    box-shadow: 0 2px 8px rgba(42,26,20,.04);
+    transition: transform .2s, box-shadow .2s;
+  }
+  .price-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(42,26,20,.08); }
+  .price-card.featured {
+    background: var(--ink); color: var(--paper);
+    border-color: var(--ink); transform: translateY(-10px);
+    box-shadow: 0 12px 40px rgba(42,26,20,.22);
+  }
+  .price-card.featured:hover { transform: translateY(-13px); }
+  .price-card .tier { font-family: var(--mono); font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 14px; }
+  .price-card.featured .tier { color: var(--accent-soft); }
+  .price-card .price { font-family: var(--display); font-size: 52px; font-weight: 400; line-height: 1; letter-spacing: -.03em; margin-bottom: 4px; }
+  .price-card .price sub { font-family: var(--sans); font-size: 12px; color: var(--ink-faint); font-weight: 400; }
+  .price-card.featured .price sub { color: rgba(251,245,236,.45); }
+  .price-card .desc { font-size: 13px; color: var(--ink-soft); margin-bottom: 20px; padding-bottom: 18px; border-bottom: 1px solid var(--line); line-height: 1.6; }
+  .price-card.featured .desc { color: rgba(251,245,236,.6); border-color: rgba(255,255,255,.1); }
+  .price-card ul { list-style: none; display: grid; gap: 9px; font-size: 13px; flex: 1; color: var(--ink-soft); }
+  .price-card.featured ul { color: rgba(251,245,236,.7); }
+  .price-card li { display: flex; gap: 8px; }
+  .price-card li::before { content: '✓'; color: var(--accent); font-weight: 700; flex-shrink: 0; }
+  .price-card.featured li::before { color: var(--accent-soft); }
+  .price-card .btn { margin-top: 24px; width: 100%; }
+
+  /* ════════════════════════════════════════════════════════
+     FAQ
+  ════════════════════════════════════════════════════════ */
+  .faq { padding: 100px 28px; background: #fdfaf5; }
+  .faq .container { max-width: 760px; margin: 0 auto; text-align: center; }
+  .faq h2 {
+    font-family: var(--display); font-weight: 400;
+    font-size: clamp(36px, 4.5vw, 60px);
+    letter-spacing: -.025em; margin: 14px 0 48px; color: var(--ink);
+  }
+  .faq h2 em { font-style: italic; color: var(--accent); }
+  details.faq-item { border-top: 1px solid var(--line-2); padding: 24px 0; text-align: left; }
+  details.faq-item:last-of-type { border-bottom: 1px solid var(--line-2); }
+  details.faq-item summary {
+    cursor: pointer; list-style: none;
+    font-family: var(--display); font-size: 20px; font-weight: 500;
+    letter-spacing: -.01em; color: var(--ink);
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  }
+  details.faq-item summary::-webkit-details-marker { display: none; }
+  details.faq-item summary::after {
+    content: '+'; font-family: var(--display); font-size: 26px;
+    font-weight: 300; transition: transform .3s ease; flex-shrink: 0; color: var(--accent);
+  }
+  details.faq-item[open] summary::after { transform: rotate(45deg); }
+  details.faq-item p { margin-top: 14px; color: var(--ink-soft); font-size: 15px; line-height: 1.7; }
+
+  /* ════════════════════════════════════════════════════════
+     FINAL CTA
+  ════════════════════════════════════════════════════════ */
+  .final-cta {
+    padding: 120px 28px; text-align: center;
+    background: radial-gradient(ellipse 60% 80% at 50% 0%, rgba(216,160,90,.2), transparent 70%),
+      var(--paper);
+  }
+  .final-cta h2 {
+    font-family: var(--display); font-weight: 400;
+    font-size: clamp(44px, 7vw, 96px);
+    line-height: .98; letter-spacing: -.03em;
+    max-width: 14ch; margin: 0 auto 28px; color: var(--ink);
+  }
+  .final-cta h2 em { font-style: italic; color: var(--accent); }
+
+  /* ════════════════════════════════════════════════════════
+     RESPONSIVE
+  ════════════════════════════════════════════════════════ */
+  @media (max-width: 960px) {
+    .hero-inner { grid-template-columns: 1fr; }
+    .polaroid-stage { max-width: 480px; margin: 0 auto; }
+    .hero-strip { grid-template-columns: repeat(2,1fr); padding: 24px 28px; }
+    .how-grid { grid-template-columns: 1fr; }
+    .features-grid { grid-template-columns: 1fr; }
+    .feat-wide, .feat-narrow { grid-column: 1; }
+    .events-grid { grid-template-columns: repeat(2,1fr); }
+    .pricing-grid { grid-template-columns: 1fr; }
+    .price-card.featured { transform: none; }
+    .site-nav { display: none; }
+  }
+  @media (max-width: 600px) {
+    .hero { padding: 72px 20px 40px; }
+    .how, .wall-section, .quote-section, .features, .events, .pricing, .faq, .final-cta { padding-left: 20px; padding-right: 20px; }
+    .events-grid { grid-template-columns: repeat(2,1fr); }
+  }
+</style>
 </head>
 <body>
 
+<!-- ════ HEADER ════════════════════════════════════════════ -->
 <header class="site-header">
   <div class="site-header-inner">
     <a class="brand" href="/">REELDAY<sup>★</sup></a>
     <nav class="site-nav">
       <a href="#how">How it works</a>
-      <a href="#features">Features</a>
+      <a href="#demo">Live demo</a>
       <a href="#pricing">Pricing</a>
       <a href="#faq">FAQ</a>
     </nav>
     <div class="site-actions">
-      <a class="btn btn-ghost" href="/login" style="padding:10px 18px;font-size:.875rem">Log in</a>
-      <a class="btn btn-accent" href="/create?free=1" style="padding:10px 18px;font-size:.875rem">Start free →</a>
+      <div class="lang-switch" id="langSwitch">
+        <button class="active" onclick="setLang('EN',this)">EN</button>
+        <button onclick="setLang('FIL',this)">FIL</button>
+      </div>
+      <a class="btn btn-accent" href="/create">Start free →</a>
     </div>
   </div>
 </header>
 
-<!-- ── Hero ────────────────────────────────────────────────── -->
+<!-- ════ HERO ══════════════════════════════════════════════ -->
 <section class="hero">
   <div class="hero-inner">
+
+    <!-- Left: copy -->
     <div class="hero-text">
       <div class="chip"><span class="chip-dot"></span>Built for Filipino celebrations</div>
-      <h1>Every shot.<br/><em>Every guest.</em><br/><span class="underline">One QR.</span></h1>
+      <h1>
+        Every shot.<br/>
+        <em>Every guest.</em><br/>
+        <span class="underline">One QR.</span>
+      </h1>
       <p>Guests scan one code and upload photos straight to your live cinematic wall — no app, no sign-up, no missed moments.</p>
       <div class="hero-cta">
-        <a class="btn btn-accent" href="/create?free=1">Start free →</a>
-        <a class="btn btn-ghost" href="#how">See how it works</a>
+        <a class="btn btn-accent" href="/create">Start free →</a>
+        <a class="btn btn-ghost" href="#demo">See live demo</a>
       </div>
       <div class="hero-trust">
         <div class="avatars">
-          <div class="placeholder--coral" style="width:32px;height:32px;border-radius:50%;border:2px solid var(--paper)"></div>
-          <div class="placeholder--ochre" style="width:32px;height:32px;border-radius:50%;border:2px solid var(--paper);margin-left:-8px"></div>
-          <div class="placeholder--sage"  style="width:32px;height:32px;border-radius:50%;border:2px solid var(--paper);margin-left:-8px"></div>
-          <div class="placeholder--clay"  style="width:32px;height:32px;border-radius:50%;border:2px solid var(--paper);margin-left:-8px"></div>
+          <div style="background:linear-gradient(135deg,#e8c5b0,#c45a3a)"></div>
+          <div style="background:linear-gradient(135deg,#ead8b0,#c98040)"></div>
+          <div style="background:linear-gradient(135deg,#b8d4c0,#2d6a4a)"></div>
+          <div style="background:linear-gradient(135deg,#d4a892,#8a3a28)"></div>
         </div>
         <div>
           <div class="stars">★★★★★</div>
@@ -469,336 +661,328 @@
       </div>
     </div>
 
+    <!-- Right: Polaroid pile -->
     <div class="polaroid-stage">
-      <div class="sticker s1">★ Live now</div>
-      <div class="sticker s2">847 today</div>
+
+      <div class="sticker sticker-live">Live now</div>
+      <div class="sticker sticker-count">847 today</div>
+
       <div class="polaroid pol-1">
-        <div class="pic placeholder placeholder--coral" style="width:220px;height:220px"></div>
+        <div class="pic photo-coral" style="width:220px;height:220px;position:relative;">
+          <span class="photo-label">First Dance</span>
+        </div>
         <div class="caption">Tito's mga kuya, finally on the floor</div>
       </div>
+
       <div class="polaroid pol-2">
-        <div class="pic placeholder placeholder--ochre" style="width:220px;height:220px"></div>
+        <div class="pic photo-ochre" style="width:200px;height:200px;position:relative;">
+          <span class="photo-label">Garden</span>
+        </div>
         <div class="caption">Ate Andrea's bouquet toss ✦</div>
       </div>
+
       <div class="polaroid pol-3">
-        <div class="pic placeholder placeholder--sage" style="width:220px;height:220px"></div>
+        <div class="pic photo-sage" style="width:210px;height:210px;position:relative;">
+          <span class="photo-label">Lola</span>
+        </div>
         <div class="caption">Lolo's speech, 1962 → today</div>
       </div>
+
       <div class="polaroid pol-4">
-        <div class="pic placeholder placeholder--clay" style="width:220px;height:220px"></div>
+        <div class="pic photo-clay" style="width:195px;height:195px;position:relative;">
+          <span class="photo-label">Reception</span>
+        </div>
         <div class="caption">Tinapay table looks unreal</div>
       </div>
+
       <div class="polaroid pol-5">
-        <div class="pic placeholder placeholder--paper" style="width:220px;height:220px;color:var(--ink)"></div>
+        <div class="pic photo-cream" style="width:210px;height:210px;position:relative;">
+          <span class="photo-label">Ceremony</span>
+        </div>
         <div class="caption">First kiss, Sta. Cruz</div>
       </div>
+
     </div>
   </div>
 
+  <!-- Stats strip -->
   <div class="hero-strip">
-    <div class="strip-stat"><div class="num"><em>2,140</em></div><div class="lbl">Events hosted</div></div>
-    <div class="strip-stat"><div class="num"><em>180k</em></div><div class="lbl">Photos uploaded</div></div>
-    <div class="strip-stat"><div class="num"><em>52s</em></div><div class="lbl">Setup time avg</div></div>
-    <div class="strip-stat"><div class="num"><em>4.9★</em></div><div class="lbl">Couple rating</div></div>
+    <div class="hstat"><div class="num"><em>2,140</em></div><div class="lbl">Events hosted</div></div>
+    <div class="hstat"><div class="num"><em>180k</em></div><div class="lbl">Photos uploaded</div></div>
+    <div class="hstat"><div class="num"><em>52s</em></div><div class="lbl">Setup time avg</div></div>
+    <div class="hstat"><div class="num"><em>4.9★</em></div><div class="lbl">Event rating</div></div>
   </div>
 </section>
 
-<!-- ── How it works ─────────────────────────────────────────── -->
+<!-- ════ HOW IT WORKS ══════════════════════════════════════ -->
 <section class="how" id="how">
   <div class="how-head">
-    <div class="eyebrow" style="margin-bottom:16px;text-align:center">— How it works</div>
+    <div class="eyebrow" style="justify-content:center;margin-bottom:16px;">— How it works</div>
     <h2>Three steps.<br/>Done before <em>cocktail hour.</em></h2>
   </div>
   <div class="how-grid">
+
     <div class="how-card">
       <div class="big-num">1</div>
-      <h3>Create your event</h3>
-      <p>Set names, date, type. Choose a plan. Get your QR code in under 5 minutes.</p>
-      <div class="demo">Event setup screen</div>
+      <h3>Print your QR</h3>
+      <p>Set names, date, theme. Download a print-ready poster. Place it at the welcome table.</p>
+      <div class="mockup qr-poster-mockup">
+        <div class="pin-badge">QR Poster</div>
+        <div class="poster-title">Your Event Name<br/>&amp; Date</div>
+        <div class="qr-block"></div>
+        <div class="poster-meta">reelday.ph/e/your-event<br/>scan to share your moments</div>
+      </div>
     </div>
+
     <div class="how-card">
       <div class="big-num">2</div>
-      <h3>Guests scan & share</h3>
+      <h3>Guests scan &amp; share</h3>
       <p>One tap opens the upload page. Pick photos, add a caption, send. No app, no login.</p>
-      <div class="demo">Guest upload screen</div>
+      <div class="mockup phone-mockup">
+        <div class="pm-header">
+          <div class="pm-brand">REELDAY<sup style="font-family:var(--mono);font-size:7px;color:var(--accent);">★</sup></div>
+          <div class="pm-lang">EN · FIL</div>
+        </div>
+        <div class="pm-body">
+          <div class="pm-event-name">Your Event <em>&amp;</em> Name</div>
+          <div class="pm-drop">
+            <div class="pm-drop-icon">+</div>
+            <h4>Tap to share</h4>
+            <p>Photos &amp; videos · up to 100MB</p>
+          </div>
+          <div class="pm-queue">
+            <div class="pm-item">
+              <div class="pm-thumb photo-coral" style="border-radius:4px;"></div>
+              <div>
+                <div class="pm-file">first-dance.jpg</div>
+                <div class="pm-prog"><span style="width:100%"></span></div>
+              </div>
+              <div class="pm-done">✓ Sent</div>
+            </div>
+            <div class="pm-item">
+              <div class="pm-thumb photo-ochre" style="border-radius:4px;"></div>
+              <div>
+                <div class="pm-file">garden-shot.jpg</div>
+                <div class="pm-prog"><span id="demoBar" style="width:62%"></span></div>
+              </div>
+              <div class="pm-pct" id="demoPct">62%</div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
+
     <div class="how-card">
       <div class="big-num">3</div>
       <h3>Wall goes live</h3>
       <p>Photos appear on screen within seconds. Ken Burns pans, music, captions, the works.</p>
-      <div class="demo">Live wall preview</div>
+      <div class="mockup wall-mini-mockup" id="miniWall">
+        <div class="wm-bg" id="miniWallBg" style="background:linear-gradient(135deg,#7a3b2e,#c45a3a 60%,#d8a05a)"></div>
+        <div class="wm-vignette"></div>
+        <div class="wm-ticker">
+          <span class="wm-dot"></span>
+          Live
+        </div>
+        <div class="wm-pin">Wall · Live</div>
+        <div class="wm-caption">
+          <div class="wm-who" id="miniWho">— Tita Marivic</div>
+          <div class="wm-quote" id="miniQuote">"First dance, 38 years later."</div>
+        </div>
+      </div>
     </div>
+
   </div>
 </section>
 
-<!-- ── Testimonial ──────────────────────────────────────────── -->
-<section class="quote">
+<!-- ════ LIVE WALL DEMO ════════════════════════════════════ -->
+<section class="wall-section" id="demo">
+  <div class="container">
+    <div class="head">
+      <div class="eyebrow">Live demo</div>
+      <h2>Watch the wall <em>come alive.</em></h2>
+    </div>
+    <div class="wall-frame">
+      <div class="wl-layer" id="wlLayerA"><div class="wl-pic" id="wlPicA"></div><div class="wl-vignette"></div></div>
+      <div class="wl-layer wl-out" id="wlLayerB"><div class="wl-pic" id="wlPicB"></div><div class="wl-vignette"></div></div>
+      <div class="wl-ticker">
+        <div class="wl-live"><span class="wl-live-dot"></span>Live · Reelday Demo</div>
+        <div class="wl-stats"><span><em id="wlMoments">847</em> moments</span><span><em id="wlGuests">47</em> sharing</span></div>
+      </div>
+      <div class="wl-frame-inner">
+        <div class="wl-caption" id="wlCaption">
+          <div class="wl-uploader" id="wlUploader">— Tita Marivic · 8:42 pm</div>
+          <div class="wl-quote" id="wlQuote">"First dance after 38 years — still got it."</div>
+        </div>
+        <div class="wl-corner">
+          <div class="wl-event">Your Event</div>
+          <div>★ Reelday</div>
+        </div>
+      </div>
+      <div class="wl-progress"><div class="wl-progress-fill" id="wlFill"></div></div>
+    </div>
+    <div class="wall-thumbs" id="wallThumbs"></div>
+  </div>
+</section>
+
+<!-- ════ TESTIMONIAL ═══════════════════════════════════════ -->
+<section class="quote-section">
   <div class="quote-inner">
-    <div class="eyebrow" style="margin-bottom:16px">— What couples say</div>
+    <div class="eyebrow" style="justify-content:center;margin-bottom:18px;">— What people say</div>
     <blockquote>"By the end of the night we had 412 photos we'd never have seen otherwise. Tita Marivic's <em>blurry first dance</em> shot is still my favorite frame in the whole reel."</blockquote>
     <div class="quote-attr">
       <div class="quote-avatar"></div>
-      <div style="text-align:left">
-        <div class="quote-name">Andrea & JM Cabrera</div>
-        <div class="quote-meta">Manila · June 2025</div>
+      <div>
+        <div class="quote-name">Andrea &amp; JM Cabrera</div>
+        <div class="quote-meta">Manila · June 2026</div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ── Live Wall Demo ──────────────────────────────────────── -->
-<section class="wall-demo">
-  <div class="wall-demo-inner">
-    <div class="wall-demo-stage" id="wallStage">
-      <div class="wall-slide ws-1 active">
-        <div class="wall-slide-content">
-          <div class="wall-fake-photo">
-            <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect x="8" y="8" width="48" height="48" rx="4" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="2"/>
-              <circle cx="24" cy="24" r="6" fill="rgba(255,255,255,.15)"/>
-              <path d="M8 42 L20 30 L30 40 L40 28 L56 42" stroke="rgba(255,255,255,.15)" stroke-width="2" fill="none"/>
-            </svg>
-          </div>
-          <div class="wall-fake-caption">"Tito's mga kuya, finally on the floor."</div>
-          <div class="wall-fake-meta">Uploaded by Marivic · just now</div>
-        </div>
-      </div>
-      <div class="wall-slide ws-2">
-        <div class="wall-slide-content">
-          <div class="wall-fake-photo">
-            <svg width="64" height="64" viewBox="0 0 64 64" fill="none"><rect x="8" y="8" width="48" height="48" rx="4" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="2"/><circle cx="24" cy="24" r="6" fill="rgba(255,255,255,.15)"/><path d="M8 42 L22 32 L36 44 L46 30 L56 40" stroke="rgba(255,255,255,.15)" stroke-width="2" fill="none"/></svg>
-          </div>
-          <div class="wall-fake-caption">"First kiss, Sta. Cruz — 7:03 PM."</div>
-          <div class="wall-fake-meta">Uploaded by guest · 1 min ago</div>
-        </div>
-      </div>
-      <div class="wall-slide ws-3">
-        <div class="wall-slide-content">
-          <div class="wall-fake-photo">
-            <svg width="64" height="64" viewBox="0 0 64 64" fill="none"><rect x="8" y="8" width="48" height="48" rx="4" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="2"/><circle cx="24" cy="24" r="6" fill="rgba(255,255,255,.15)"/><path d="M8 44 L18 34 L28 42 L44 26 L56 38" stroke="rgba(255,255,255,.15)" stroke-width="2" fill="none"/></svg>
-          </div>
-          <div class="wall-fake-caption">"Lolo's speech — 1962 to today."</div>
-          <div class="wall-fake-meta">Uploaded by Bea · 2 min ago</div>
-        </div>
-      </div>
-      <div class="wall-slide ws-4">
-        <div class="wall-slide-content">
-          <div class="wall-fake-photo">
-            <svg width="64" height="64" viewBox="0 0 64 64" fill="none"><rect x="8" y="8" width="48" height="48" rx="4" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="2"/><circle cx="24" cy="24" r="6" fill="rgba(255,255,255,.15)"/><path d="M8 40 L24 28 L34 38 L42 30 L56 42" stroke="rgba(255,255,255,.15)" stroke-width="2" fill="none"/></svg>
-          </div>
-          <div class="wall-fake-caption">"Ate Andrea's bouquet toss ✦"</div>
-          <div class="wall-fake-meta">Uploaded by JM · 3 min ago</div>
-        </div>
-      </div>
-      <div class="wall-slide ws-5">
-        <div class="wall-slide-content">
-          <div class="wall-fake-photo">
-            <svg width="64" height="64" viewBox="0 0 64 64" fill="none"><rect x="8" y="8" width="48" height="48" rx="4" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="2"/><circle cx="24" cy="24" r="6" fill="rgba(255,255,255,.15)"/><path d="M8 42 L20 32 L32 40 L48 24 L56 34" stroke="rgba(255,255,255,.15)" stroke-width="2" fill="none"/></svg>
-          </div>
-          <div class="wall-fake-caption">"Tinapay table looks unreal."</div>
-          <div class="wall-fake-meta">Uploaded by Marivic · 4 min ago</div>
-        </div>
-      </div>
-      <div class="wall-slide ws-6">
-        <div class="wall-slide-content">
-          <div class="wall-fake-photo">
-            <svg width="64" height="64" viewBox="0 0 64 64" fill="none"><rect x="8" y="8" width="48" height="48" rx="4" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="2"/><circle cx="24" cy="24" r="6" fill="rgba(255,255,255,.15)"/><path d="M8 44 L22 30 L36 42 L46 28 L56 40" stroke="rgba(255,255,255,.15)" stroke-width="2" fill="none"/></svg>
-          </div>
-          <div class="wall-fake-caption">"Everyone on the dance floor na!"</div>
-          <div class="wall-fake-meta">Uploaded by guest · 5 min ago</div>
-        </div>
-      </div>
-
-      <div class="wall-thumbs" id="wallThumbs">
-        <div class="wall-thumb active" onclick="wallGoTo(0)"></div>
-        <div class="wall-thumb" onclick="wallGoTo(1)"></div>
-        <div class="wall-thumb" onclick="wallGoTo(2)"></div>
-        <div class="wall-thumb" onclick="wallGoTo(3)"></div>
-        <div class="wall-thumb" onclick="wallGoTo(4)"></div>
-        <div class="wall-thumb" onclick="wallGoTo(5)"></div>
-      </div>
-      <div class="wall-progress-bar"><div class="wall-progress-fill" id="wallProgress"></div></div>
-    </div>
-
-    <div class="wall-demo-copy">
-      <div class="eyebrow">— Live wall</div>
-      <h2>Photos appear<br/>on screen within <em>seconds.</em></h2>
-      <p>Your celebration plays out like a film. Ken Burns pans, smooth crossfades, captions, ambient music — fully automatic from the moment the first guest uploads.</p>
-      <div class="wall-demo-tags">
-        <span class="wall-tag">Ken Burns pans</span>
-        <span class="wall-tag">A/B crossfade</span>
-        <span class="wall-tag">Emoji reactions</span>
-        <span class="wall-tag">Bilingual captions</span>
-        <span class="wall-tag">Auto-moderation</span>
-      </div>
-      <a class="btn btn-accent" href="/create?free=1">See it at your event →</a>
-    </div>
-  </div>
-</section>
-
-<!-- ── Features ─────────────────────────────────────────────── -->
+<!-- ════ FEATURES ══════════════════════════════════════════ -->
 <section class="features" id="features">
-  <div class="features-head">
-    <div class="eyebrow" style="margin-bottom:16px">— What's inside</div>
-    <h2>A wedding video<br/>directed by your <em>guests.</em></h2>
+  <div class="container">
+    <div class="eyebrow">What's inside</div>
+    <h2>A video directed<br/>by your <em>guests.</em></h2>
+    <div class="features-grid">
+      <div class="feat feat-dark feat-wide">
+        <span class="feat-pill">Headline feature</span>
+        <h3>Cinematic <em>live wall</em></h3>
+        <p>Ken Burns pans, crossfades, captions, ambient music — automatic and beautiful.</p>
+        <div class="feat-wall-preview">
+          <div class="fw-bg"></div>
+          <div class="fw-vignette"></div>
+          <div class="fw-badge"><span class="fw-dot"></span>Live</div>
+          <div class="fw-text">"The moment everyone was waiting for."</div>
+        </div>
+      </div>
+      <div class="feat feat-narrow">
+        <span class="feat-pill">EN · FIL</span>
+        <h3><em>Bilingual</em> upload</h3>
+        <p>Guests pick their language. Titas get Filipino, kids get English — captions follow.</p>
+      </div>
+      <div class="feat feat-narrow">
+        <span class="feat-pill">1-tap</span>
+        <h3>Phone <em>moderation</em></h3>
+        <p>Approve, feature, or hide photos from your phone. Auto-approve keeps you present.</p>
+      </div>
+      <div class="feat feat-accent feat-wide">
+        <span class="feat-pill">Forever</span>
+        <h3>Full-quality <em>archive.</em></h3>
+        <p>Every photo and video downloadable as a full-res .zip. Yours to keep forever.</p>
+        <div class="feat-visual">
+          <div style="font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.7);">your-event-photos.zip · 4.2 GB</div>
+        </div>
+      </div>
+    </div>
   </div>
-  <div class="features-grid">
-    <div class="feat feat-1">
-      <span class="feat-pill">Headline feature</span>
-      <h3>Cinematic <em>live wall</em></h3>
-      <p>Ken Burns pans, crossfades, captions, ambient music — automatic, beautiful.</p>
-      <div class="feat-demo">Live wall preview</div>
-    </div>
-    <div class="feat feat-2">
-      <span class="feat-pill">EN · FIL</span>
-      <h3><em>Bilingual</em> upload</h3>
-      <p>Guests pick their language. Tita & Tito get TL, kids get EN.</p>
-    </div>
-    <div class="feat feat-3">
-      <span class="feat-pill">1-tap</span>
-      <h3>Phone <em>moderation</em></h3>
-      <p>Approve, hide, or feature uploads from your phone.</p>
-    </div>
-    <div class="feat feat-4">
-      <span class="feat-pill">Forever</span>
-      <h3>Full-quality <em>archive.</em></h3>
-      <p>Download every photo and video as a .zip. Yours forever.</p>
-      <div class="feat-demo">Download archive</div>
+</section>
+
+<!-- ════ EVENT TYPES ═══════════════════════════════════════ -->
+<section class="events">
+  <div class="container">
+    <div class="eyebrow">Event types</div>
+    <h2>One platform.<br/><em>Seven celebrations.</em></h2>
+    <div class="events-grid">
+      <a class="event-tile" href="/create?type=wedding">
+        <div class="event-tile-bg" style="background:linear-gradient(135deg,#c45a3a,#7a3b2e)"></div>
+        <span class="event-tile-top">01 · Kasal</span>
+        <div><div class="event-tile-name">Wedding</div><div class="event-tile-sub">Kasal</div></div>
+      </a>
+      <a class="event-tile" href="/create?type=debut">
+        <div class="event-tile-bg" style="background:linear-gradient(135deg,#b6457a,#6b1f49)"></div>
+        <span class="event-tile-top">02 · Ika-18</span>
+        <div><div class="event-tile-name">Debut</div><div class="event-tile-sub">Ika-18</div></div>
+      </a>
+      <a class="event-tile" href="/create?type=birthday">
+        <div class="event-tile-bg" style="background:linear-gradient(135deg,#d97706,#7c2d12)"></div>
+        <span class="event-tile-top">03 · Kaarawan</span>
+        <div><div class="event-tile-name">Birthday</div><div class="event-tile-sub">Kaarawan</div></div>
+      </a>
+      <a class="event-tile" href="/create?type=baptism">
+        <div class="event-tile-bg" style="background:linear-gradient(135deg,#3b6ea8,#1e3a5f)"></div>
+        <span class="event-tile-top">04 · Binyag</span>
+        <div><div class="event-tile-name">Baptism</div><div class="event-tile-sub">Binyag</div></div>
+      </a>
+      <a class="event-tile" href="/create?type=reunion">
+        <div class="event-tile-bg" style="background:linear-gradient(135deg,#2d6a4a,#134e3a)"></div>
+        <span class="event-tile-top">05 · Pagkikita</span>
+        <div><div class="event-tile-name">Reunion</div><div class="event-tile-sub">Pagkikita</div></div>
+      </a>
+      <a class="event-tile" href="/create?type=corporate">
+        <div class="event-tile-bg" style="background:linear-gradient(135deg,#2a3548,#16202e)"></div>
+        <span class="event-tile-top">06 · Kompanya</span>
+        <div><div class="event-tile-name">Corporate</div><div class="event-tile-sub">Kompanya</div></div>
+      </a>
+      <a class="event-tile" href="/create?type=memorial">
+        <div class="event-tile-bg" style="background:linear-gradient(135deg,#4a6b4a,#1c2b1a)"></div>
+        <span class="event-tile-top">07 · Alaala</span>
+        <div><div class="event-tile-name">Memorial</div><div class="event-tile-sub">Alaala</div></div>
+      </a>
     </div>
   </div>
 </section>
 
-<!-- ── Event Types ───────────────────────────────────────────── -->
-<section class="event-types">
-  <div class="event-types-head">
-    <div class="eyebrow" style="margin-bottom:16px">— Works for every celebration</div>
-    <h2>Built for every<br/>Filipino <em>occasion.</em></h2>
-    <p>From intimate baptisms to grand weddings — Reelday fits every celebration.</p>
-  </div>
-  <div class="event-grid">
-    <a class="event-tile et-wedding" href="/create?type=wedding">
-      <div class="event-tile-icon">💍</div>
-      <div class="event-tile-name">Kasal</div>
-      <div class="event-tile-sub">Wedding</div>
-      <div class="event-tile-arrow">↗</div>
-    </a>
-    <a class="event-tile et-debut" href="/create?type=debut">
-      <div class="event-tile-icon">🌸</div>
-      <div class="event-tile-name">Debut</div>
-      <div class="event-tile-sub">18th Birthday</div>
-      <div class="event-tile-arrow">↗</div>
-    </a>
-    <a class="event-tile et-bday" href="/create?type=birthday">
-      <div class="event-tile-icon">🎂</div>
-      <div class="event-tile-name">Kaarawan</div>
-      <div class="event-tile-sub">Birthday</div>
-      <div class="event-tile-arrow">↗</div>
-    </a>
-    <a class="event-tile et-kids" href="/create?type=birthday7">
-      <div class="event-tile-icon">🎈</div>
-      <div class="event-tile-name">7th Birthday</div>
-      <div class="event-tile-sub">Kids' Party</div>
-      <div class="event-tile-arrow">↗</div>
-    </a>
-    <a class="event-tile et-baptism" href="/create?type=baptism">
-      <div class="event-tile-icon">✝️</div>
-      <div class="event-tile-name">Binyag</div>
-      <div class="event-tile-sub">Baptism</div>
-      <div class="event-tile-arrow">↗</div>
-    </a>
-    <a class="event-tile et-reunion" href="/create?type=reunion">
-      <div class="event-tile-icon">👨‍👩‍👧‍👦</div>
-      <div class="event-tile-name">Reunion</div>
-      <div class="event-tile-sub">Family & Barkada</div>
-      <div class="event-tile-arrow">↗</div>
-    </a>
-    <a class="event-tile et-corp" href="/create?type=corporate">
-      <div class="event-tile-icon">🏢</div>
-      <div class="event-tile-name">Corporate</div>
-      <div class="event-tile-sub">Events & Awarding</div>
-      <div class="event-tile-arrow">↗</div>
-    </a>
-    <a class="event-tile et-mem" href="/create?type=memorial">
-      <div class="event-tile-icon">🕯️</div>
-      <div class="event-tile-name">Remembrance</div>
-      <div class="event-tile-sub">Memorial & Tribute</div>
-      <div class="event-tile-arrow">↗</div>
-    </a>
-  </div>
-</section>
-
-<!-- ── Pricing ───────────────────────────────────────────────── -->
+<!-- ════ PRICING ═══════════════════════════════════════════ -->
 <section class="pricing" id="pricing">
-  <div class="pricing-head">
-    <div class="eyebrow" style="margin-bottom:16px">— Simple pricing</div>
+  <div class="container">
+    <div class="eyebrow" style="justify-content:center;">— Simple pricing</div>
     <h2>One payment.<br/><em>Sulit forever.</em></h2>
-    <p>No subscription. No surprise charges. Pick the tier that matches your celebration.</p>
-  </div>
-  <div class="pricing-grid">
-    <div class="price-card">
-      <div class="tier" style="display:flex;align-items:center;gap:.4rem">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#a0762a"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>
-        Dalisay <span style="font-size:.68rem;font-weight:500;color:var(--ink-faint);letter-spacing:.06em">Basic</span>
+    <p class="sub">No subscription. No surprise charges. Pick the tier that matches your guest list.</p>
+    <div class="pricing-grid">
+      <div class="price-card">
+        <div class="tier">Intimate</div>
+        <div class="price">₱990<sub> / event</sub></div>
+        <p class="desc">Up to 50 guests. Despedidas, baby showers, salu-salo.</p>
+        <ul>
+          <li>200 uploads</li>
+          <li>Live wall, 24h</li>
+          <li>Standard themes</li>
+          <li>Watermarked .zip</li>
+        </ul>
+        <a class="btn btn-ghost" href="/create?plan=intimate">Get started</a>
       </div>
-      <div class="price">₱999<sub> / event</sub></div>
-      <p class="desc">For simple celebrations — despedidas, baptisms, reunions.</p>
-      <ul>
-        <li>Unlimited uploads</li>
-        <li>Basic live wall</li>
-        <li>Free QR templates</li>
-        <li>6-month archive</li>
-      </ul>
-      <a class="btn btn-ghost" href="/create">Choose Dalisay</a>
-    </div>
-    <div class="price-card featured">
-      <div class="tier" style="display:flex;align-items:center;gap:.4rem">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#b07800"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-        ★ Sinag <span style="font-size:.68rem;font-weight:500;opacity:.75;letter-spacing:.06em">Standard</span>
+      <div class="price-card featured">
+        <div class="tier">★ Celebration</div>
+        <div class="price">₱2,490<sub> / event</sub></div>
+        <p class="desc">Up to 250 guests. Weddings, debuts, big birthdays.</p>
+        <ul>
+          <li>Unlimited uploads</li>
+          <li>Live wall, 7 days</li>
+          <li>All 7 themes</li>
+          <li>HD .zip + custom poster</li>
+          <li>Custom QR poster</li>
+        </ul>
+        <a class="btn btn-accent" href="/create?plan=celebration">Choose Celebration →</a>
       </div>
-      <div class="price">₱1,999<sub> / event</sub></div>
-      <p class="desc">For weddings, debuts, and big birthdays.</p>
-      <ul>
-        <li>Everything in Dalisay</li>
-        <li>Cinematic wall + music</li>
-        <li>Video messages (60s)</li>
-        <li>Live emoji reactions</li>
-        <li>12-month archive</li>
-        <li>Priority Viber support</li>
-      </ul>
-      <a class="btn btn-accent" href="/create">Choose Sinag →</a>
-    </div>
-    <div class="price-card">
-      <div class="tier" style="display:flex;align-items:center;gap:.4rem">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#5c3d8a"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-        Hiraya <span style="font-size:.68rem;font-weight:500;color:var(--ink-faint);letter-spacing:.06em">Premium</span>
+      <div class="price-card">
+        <div class="tier">Forever</div>
+        <div class="price">₱4,990<sub> / event</sub></div>
+        <p class="desc">500+ guests. White-glove setup, lifetime archive.</p>
+        <ul>
+          <li>Everything in Celebration</li>
+          <li>Lifetime archive</li>
+          <li>Coordinator dashboard</li>
+          <li>Priority support</li>
+        </ul>
+        <a class="btn btn-ghost" href="/create?plan=forever">Get started</a>
       </div>
-      <div class="price">₱3,499<sub> / event</sub></div>
-      <p class="desc">Premium experience with lifetime archive.</p>
-      <ul>
-        <li>Everything in Sinag</li>
-        <li>AI highlight reel</li>
-        <li>5 sub-galleries</li>
-        <li>Lifetime archive</li>
-        <li>50 printed QR cards</li>
-        <li>Custom branding</li>
-      </ul>
-      <a class="btn btn-ghost" href="/create">Choose Hiraya</a>
     </div>
   </div>
 </section>
 
-<!-- ── FAQ ──────────────────────────────────────────────────── -->
+<!-- ════ FAQ ═══════════════════════════════════════════════ -->
 <section class="faq" id="faq">
-  <div class="faq-inner">
-    <div class="eyebrow" style="margin-bottom:16px;text-align:center">— Common questions</div>
-    <h2>Mga <em>tanong</em>?</h2>
+  <div class="container">
+    <div class="eyebrow" style="justify-content:center;">— Common questions</div>
+    <h2>Mga <em>tanong?</em></h2>
     <details class="faq-item" open>
       <summary>Do guests need to download an app?</summary>
       <p>No. They scan the QR, the upload page opens in any browser, and they share. That's the whole point.</p>
     </details>
     <details class="faq-item">
       <summary>What if the venue Wi-Fi is bad?</summary>
-      <p>Guests can upload over mobile data. There's no Wi-Fi dependency — the upload page works on any connection.</p>
+      <p>Uploads queue locally and finish when signal returns. Guests don't see a spinner — the page says "kept safe, will share soon."</p>
     </details>
     <details class="faq-item">
       <summary>Can we screen photos before they go live?</summary>
@@ -806,31 +990,27 @@
     </details>
     <details class="faq-item">
       <summary>Do we keep the photos forever?</summary>
-      <p>Yes. Download a full-resolution .zip any time from your dashboard. Pro events stay archived for life.</p>
-    </details>
-    <details class="faq-item">
-      <summary>Paano mag-bayad? (How do we pay?)</summary>
-      <p>We accept GCash, Maya, and credit/debit cards via PayMongo. GCash payments are verified within 1 hour.</p>
+      <p>Yes. Download a full-resolution .zip any time. Forever-tier events stay archived on Reelday for life.</p>
     </details>
     <details class="faq-item">
       <summary>Pwede ba namin gamitin sa Filipino?</summary>
-      <p>Oo naman. The guest upload page is fully bilingual — guests pick EN or FIL when they open it.</p>
+      <p>Oo naman. Guest upload page is fully bilingual — guests pick EN or FIL. Wall captions follow.</p>
     </details>
   </div>
 </section>
 
-<!-- ── Final CTA ─────────────────────────────────────────────── -->
+<!-- ════ FINAL CTA ═════════════════════════════════════════ -->
 <section class="final-cta">
-  <div class="eyebrow" style="margin-bottom:24px">— Start today, free</div>
   <h2>Your day. Every <em>angle.</em></h2>
-  <a class="btn btn-accent" href="/create?free=1" style="font-size:1rem;padding:16px 32px">Start free with Tala — no card needed →</a>
+  <a class="btn btn-accent" style="font-size:16px;padding:15px 36px;" href="/create">Start free — no card needed →</a>
 </section>
 
+<!-- ════ FOOTER ════════════════════════════════════════════ -->
 <footer class="site-footer">
   <div class="site-footer-inner">
     <div>
-      <div class="brand" style="margin-bottom:14px">REELDAY<sup>★</sup></div>
-      <p style="color:var(--ink-soft);font-size:14px;max-width:32ch;line-height:1.6">The cinematic photo wall for Filipino celebrations. Made in Manila.</p>
+      <div class="brand" style="margin-bottom:14px;">REELDAY<sup>★</sup></div>
+      <p style="color:var(--ink-soft);font-size:14px;max-width:32ch;">The live photo wall for Filipino celebrations. Made in Manila.</p>
     </div>
     <div>
       <h4>Product</h4>
@@ -838,15 +1018,16 @@
         <li><a href="#how">How it works</a></li>
         <li><a href="#pricing">Pricing</a></li>
         <li><a href="#features">Features</a></li>
-        <li><a href="/create">Create event</a></li>
+        <li><a href="#demo">Live demo</a></li>
       </ul>
     </div>
     <div>
-      <h4>Account</h4>
+      <h4>Company</h4>
       <ul>
-        <li><a href="/login">Log in</a></li>
-        <li><a href="/register">Sign up</a></li>
-        <li><a href="/my-events">My Events</a></li>
+        <li><a href="#">About</a></li>
+        <li><a href="#">Press</a></li>
+        <li><a href="#">Partners</a></li>
+        <li><a href="#">Contact</a></li>
       </ul>
     </div>
     <div>
@@ -859,87 +1040,129 @@
     </div>
   </div>
   <div class="footer-meta">
-    <span>© 2026 Reelday · Made in Manila</span>
+    <span>© 2026 Reelday Inc · Made in Manila</span>
     <span>★ EVERY SHOT · ONE QR · INSTANTLY</span>
   </div>
 </footer>
 
+<!-- ════ SCRIPTS ═══════════════════════════════════════════ -->
 <script>
-  // Live wall demo slideshow
-  (function() {
-    const slides = document.querySelectorAll('.wall-slide');
-    const thumbs = document.querySelectorAll('.wall-thumb');
-    const progress = document.getElementById('wallProgress');
-    const DURATION = 6500;
-    let current = 0, startTime = null, raf = null, paused = false;
+/* ── Language toggle ──────────────────────────────────── */
+function setLang(lang, btn) {
+  document.querySelectorAll('#langSwitch button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
 
-    function showSlide(idx) {
-      slides[current].classList.remove('active');
-      thumbs[current].classList.remove('active');
-      current = (idx + slides.length) % slides.length;
-      slides[current].classList.add('active');
-      thumbs[current].classList.add('active');
-    }
+/* ── Demo upload bar animation ────────────────────────── */
+(function() {
+  const bar = document.getElementById('demoBar');
+  const pct = document.getElementById('demoPct');
+  if (!bar) return;
+  let p = 62;
+  const t = setInterval(() => {
+    p = Math.min(p + Math.random() * 10 + 3, 100);
+    bar.style.width = p + '%';
+    if (pct) pct.textContent = p < 100 ? Math.round(p) + '%' : '✓ Sent';
+    if (p >= 100) clearInterval(t);
+  }, 300);
+})();
 
-    function tick(ts) {
-      if (!startTime) startTime = ts;
-      const elapsed = ts - startTime;
-      const pct = Math.min(elapsed / DURATION * 100, 100);
-      if (progress) progress.style.width = pct + '%';
-      if (elapsed >= DURATION) {
-        showSlide(current + 1);
-        startTime = ts;
-      }
-      raf = requestAnimationFrame(tick);
-    }
+/* ── Mini wall rotation (step 3 card) ─────────────────── */
+(function() {
+  const bgs = [
+    'linear-gradient(135deg,#7a3b2e,#c45a3a 60%,#d8a05a)',
+    'linear-gradient(135deg,#1e3a5f,#3b6ea8 60%,#a4c2e3)',
+    'linear-gradient(135deg,#134e3a,#2d6a4a 60%,#8fc4a4)',
+    'linear-gradient(135deg,#4c1d95,#7d3aa8 60%,#c8a2e3)',
+  ];
+  const quotes = [
+    { who: '— Tita Marivic', q: '"First dance, 38 years later."' },
+    { who: '— Kuya Mike',    q: '"Whole family, one frame."' },
+    { who: '— Ate Karen',    q: '"Garden hour. No filter."' },
+    { who: '— Kuya Vince',   q: '"Best night of the year."' },
+  ];
+  let i = 0;
+  setInterval(() => {
+    i = (i + 1) % bgs.length;
+    const bg  = document.getElementById('miniWallBg');
+    const who = document.getElementById('miniWho');
+    const q   = document.getElementById('miniQuote');
+    if (bg)  bg.style.background = bgs[i];
+    if (who) who.textContent = quotes[i].who;
+    if (q)   q.textContent   = quotes[i].q;
+  }, 3500);
+})();
 
-    // Only run when section is in view
-    const wallSection = document.querySelector('.wall-demo');
-    if (wallSection) {
-      const wallObs = new IntersectionObserver(([entry]) => {
-        if (entry.isIntersecting && !raf) {
-          startTime = null;
-          raf = requestAnimationFrame(tick);
-        } else if (!entry.isIntersecting && raf) {
-          cancelAnimationFrame(raf);
-          raf = null;
-        }
-      }, { threshold: 0.25 });
-      wallObs.observe(wallSection);
-    }
+/* ── Full live wall demo ──────────────────────────────── */
+(function() {
+  const DURATION = 6500;
+  const slides = [
+    { bg: 'linear-gradient(135deg,#7a3b2e 0%,#c45a3a 60%,#d8a05a 100%)', uploader: '— Tita Marivic · 8:42 pm', quote: '"First dance after 38 years — still got it."' },
+    { bg: 'linear-gradient(135deg,#1e3a5f 0%,#3b6ea8 60%,#a4c2e3 100%)', uploader: '— Kuya Mike · 9:01 pm',    quote: '"The whole family finally in one frame."' },
+    { bg: 'linear-gradient(135deg,#134e3a 0%,#2d6a4a 60%,#8fc4a4 100%)', uploader: '— Ate Karen · 9:18 pm',    quote: '"Garden hour. No filter needed."' },
+    { bg: 'linear-gradient(135deg,#4c1d95 0%,#7d3aa8 60%,#c8a2e3 100%)', uploader: '— Kuya Vince · 9:35 pm',   quote: '"Best night of the year, hands down."' },
+    { bg: 'linear-gradient(135deg,#7c2d12 0%,#d97706 60%,#fbbf6f 100%)', uploader: '— JM · 9:52 pm',           quote: '"The moment everyone was waiting for."' },
+    { bg: 'linear-gradient(135deg,#2a1a14 0%,#5a443a 60%,#8a7468 100%)', uploader: '— Andrea · 10:08 pm',      quote: '"Dancing with Tatay. I will never forget this."' },
+  ];
 
-    window.wallGoTo = function(idx) {
-      showSlide(idx);
-      startTime = null;
-    };
-  })();
+  let idx = 0, active = 'A', timer;
+  const lA = document.getElementById('wlLayerA'), lB = document.getElementById('wlLayerB');
+  const pA = document.getElementById('wlPicA'),   pB = document.getElementById('wlPicB');
+  const cap = document.getElementById('wlCaption');
+  const upl = document.getElementById('wlUploader');
+  const qt  = document.getElementById('wlQuote');
+  const fill = document.getElementById('wlFill');
+  const thumbs = document.getElementById('wallThumbs');
 
-  // Reveal on scroll
-  const observer = new IntersectionObserver(entries => {
-    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); } });
-  }, { threshold: .1 });
-  document.querySelectorAll('.how-card, .feat, .price-card').forEach(el => {
-    el.style.opacity = '0';
-    el.style.transform = 'translateY(24px)';
-    el.style.transition = 'opacity .6s ease, transform .6s ease';
-    observer.observe(el);
+  if (!lA || !thumbs) return;
+
+  slides.forEach((s, i) => {
+    const d = document.createElement('div');
+    d.className = 'wall-thumb' + (i === 0 ? ' wt-active' : '');
+    d.style.background = s.bg;
+    d.addEventListener('click', () => jumpTo(i));
+    thumbs.appendChild(d);
   });
-  document.querySelectorAll('.how-card.visible, .feat.visible, .price-card.visible').forEach(el => {
-    el.style.opacity = '1'; el.style.transform = 'translateY(0)';
-  });
 
-  const io = new IntersectionObserver(entries => {
-    entries.forEach(e => {
-      if (e.isIntersecting) {
-        e.target.style.opacity = '1';
-        e.target.style.transform = 'translateY(0)';
-        io.unobserve(e.target);
-      }
-    });
-  }, { threshold: .1 });
-  document.querySelectorAll('.how-card, .feat, .price-card').forEach(el => io.observe(el));
+  function setProgress() {
+    fill.style.transition = 'none'; fill.style.width = '0%';
+    void fill.offsetWidth;
+    fill.style.transition = `width ${DURATION}ms linear`; fill.style.width = '100%';
+  }
+
+  function showSlide(i) {
+    const s   = slides[i];
+    const inL = active === 'A' ? lB : lA;
+    const outL= active === 'A' ? lA : lB;
+    const inP = active === 'A' ? pB : pA;
+    inP.style.background = s.bg;
+    inP.style.animation = 'none'; void inP.offsetWidth; inP.style.animation = '';
+    inL.classList.remove('wl-out'); outL.classList.add('wl-out');
+    active = active === 'A' ? 'B' : 'A';
+    cap.classList.add('wl-fade');
+    setTimeout(() => { upl.textContent = s.uploader; qt.textContent = s.quote; cap.classList.remove('wl-fade'); }, 500);
+    document.querySelectorAll('.wall-thumb').forEach((t,ti) => t.classList.toggle('wt-active', ti === i));
+    setProgress();
+  }
+
+  function jumpTo(i) { clearTimeout(timer); idx = i; showSlide(idx); timer = setTimeout(advance, DURATION); }
+  function advance() {
+    idx = (idx + 1) % slides.length; showSlide(idx);
+    const el = document.getElementById('wlMoments');
+    if (el) el.textContent = parseInt(el.textContent, 10) + Math.floor(Math.random() * 2 + 1);
+    timer = setTimeout(advance, DURATION);
+  }
+
+  showSlide(0);
+  timer = setTimeout(advance, DURATION);
+
+  const obs = new IntersectionObserver(([e]) => {
+    if (!e.isIntersecting) clearTimeout(timer);
+    else timer = setTimeout(advance, DURATION);
+  });
+  const demoEl = document.getElementById('demo');
+  if (demoEl) obs.observe(demoEl);
+})();
 </script>
-
-
 </body>
 </html>
