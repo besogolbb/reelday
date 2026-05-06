@@ -1625,12 +1625,14 @@
         welcome_message: 'Salamat sa pagdating! Scan, share, and become part of the story.'
       };
       applyTheme('wedding');
-      heroNames.textContent  = 'Andrea & JM';
+      if (heroNames) heroNames.textContent  = 'Andrea & JM';
       document.title         = 'Reelday — Andrea & JM';
       const heroWelcome = $('hero-welcome');
       if (heroWelcome) heroWelcome.textContent = `"${eventData.welcome_message}"`;
-      loadingState.style.display = 'none';
-      uploadCard.style.display   = 'block';
+      if (loadingState) loadingState.style.display = 'none';
+      if (uploadCard) uploadCard.style.display   = 'block';
+      const shareTabs = $('share-tabs');
+      if (shareTabs) shareTabs.style.display = 'grid';
       applyTranslations();
       applyEventCopy();
       return;
@@ -1894,8 +1896,15 @@
   });
 
   // ── Init ──────────────────────────────────────────────
-  applyTranslations();
-  loadEvent();
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      applyTranslations();
+      loadEvent();
+    });
+  } else {
+    applyTranslations();
+    loadEvent();
+  }
 
   // ── Reference design: Tab switching ───────────────────
   window.switchTab = function(id, el) {
