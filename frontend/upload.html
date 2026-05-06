@@ -1616,6 +1616,26 @@
 
   // ── Load event ────────────────────────────────────────
   async function loadEvent() {
+    // Demo mode: if slug is not a valid event slug, show demo data
+    if (slug === 'upload.html' || !slug || slug.includes('.')) {
+      eventData = {
+        couple_names: 'Andrea & JM',
+        event_type: 'wedding',
+        event_date: '2026-06-14',
+        welcome_message: 'Salamat sa pagdating! Scan, share, and become part of the story.'
+      };
+      applyTheme('wedding');
+      heroNames.textContent  = 'Andrea & JM';
+      document.title         = 'Reelday — Andrea & JM';
+      const heroWelcome = $('hero-welcome');
+      if (heroWelcome) heroWelcome.textContent = `"${eventData.welcome_message}"`;
+      loadingState.style.display = 'none';
+      uploadCard.style.display   = 'block';
+      applyTranslations();
+      applyEventCopy();
+      return;
+    }
+
     try {
       const res = await fetch(`/api/events/${slug}`);
       if (!res.ok) throw new Error();
