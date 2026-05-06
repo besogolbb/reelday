@@ -1619,8 +1619,10 @@
 
   // ── Load event ────────────────────────────────────────
   async function loadEvent() {
+    console.log('loadEvent called, slug:', slug);
     // Demo mode: if slug is not a valid event slug, show demo data
     if (slug === 'upload.html' || !slug || slug.includes('.')) {
+      console.log('Demo mode activated');
       eventData = {
         couple_names: 'Andrea & JM',
         event_type: 'wedding',
@@ -1632,10 +1634,19 @@
       document.title         = 'Reelday — Andrea & JM';
       const heroWelcome = $('hero-welcome');
       if (heroWelcome) heroWelcome.textContent = `"${eventData.welcome_message}"`;
-      if (loadingState) loadingState.style.display = 'none';
-      if (uploadCard) uploadCard.style.display   = 'block';
+      if (loadingState) {
+        console.log('Hiding loading state');
+        loadingState.style.display = 'none';
+      }
+      if (uploadCard) {
+        console.log('Showing upload card');
+        uploadCard.style.display   = 'block';
+      }
       const shareTabs = $('share-tabs');
-      if (shareTabs) shareTabs.style.display = 'grid';
+      if (shareTabs) {
+        console.log('Showing share tabs');
+        shareTabs.style.display = 'grid';
+      }
       applyTranslations();
       applyEventCopy();
       return;
@@ -1728,18 +1739,20 @@
   });
 
   // ── Recorder ──────────────────────────────────────────
-  videoToggle.addEventListener('change', async () => {
-    if (videoToggle.checked) {
-      recorderSection.style.display = 'block';
-      await startCamera();
-    } else {
-      recorderSection.style.display = 'none';
-      stopRecorder();
-      recordedBlob = null;
-      recordedSection.style.display = 'none';
-    }
-    updateSubmitState();
-  });
+  if (videoToggle) {
+    videoToggle.addEventListener('change', async () => {
+      if (videoToggle.checked) {
+        if (recorderSection) recorderSection.style.display = 'block';
+        await startCamera();
+      } else {
+        if (recorderSection) recorderSection.style.display = 'none';
+        stopRecorder();
+        recordedBlob = null;
+        if (recordedSection) recordedSection.style.display = 'none';
+      }
+      updateSubmitState();
+    });
+  }
 
   async function startCamera() {
     try {
@@ -1809,16 +1822,16 @@
   // ── Submit state ────────────────────────────────────────
   function updateSubmitState() {
     const hasFile     = !!selectedFile;
-    const needsRecord = videoToggle.checked && !recordedBlob;
-    btnSubmit.disabled = !hasFile || needsRecord;
+    const needsRecord = videoToggle && videoToggle.checked && !recordedBlob;
+    if (btnSubmit) btnSubmit.disabled = !hasFile || needsRecord;
 
     if (!hasFile) {
-      btnSubmit.textContent = t('submitNoFile');
+      if (btnSubmit) btnSubmit.textContent = t('submitNoFile');
     } else if (needsRecord) {
-      btnSubmit.textContent = t('submitNeedsRecord');
+      if (btnSubmit) btnSubmit.textContent = t('submitNeedsRecord');
     } else if (eventData) {
       const fn = eventCopy().button;
-      btnSubmit.textContent = typeof fn === 'function' ? fn(eventData.couple_names) : fn;
+      if (btnSubmit) btnSubmit.textContent = typeof fn === 'function' ? fn(eventData.couple_names) : fn;
     }
   }
 
