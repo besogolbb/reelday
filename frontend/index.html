@@ -806,8 +806,17 @@
     .feat-wall-preview { aspect-ratio: 4/3; }
   }
   @media (max-width: 480px) {
-    /* header: hide login button to prevent overflow */
-    .site-actions .btn-ghost { display: none; }
+    /* header: keep login visible but compact so it fits alongside Start free */
+    .site-actions { gap: 6px; }
+    .site-actions .btn-ghost {
+      display: inline-flex;
+      padding: 8px 12px !important;
+      font-size: .78rem !important;
+    }
+    .site-actions .btn-accent {
+      padding: 8px 14px;
+      font-size: .82rem;
+    }
 
     /* hero: scale down polaroid stack to fit narrow screens */
     .polaroid-stage { transform: scale(.8); transform-origin: center top; margin-bottom: -12%; }
