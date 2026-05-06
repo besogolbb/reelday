@@ -32,14 +32,14 @@
     .event-header .nav a:hover { color: var(--paper); }
     .event-header-top-right { display: flex; align-items: center; gap: 10px; }
 
-    .event-header .live-badge {
+    .event-header .badge {
       display: inline-flex; gap: 8px; align-items: center;
       background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12);
       border-radius: 999px; padding: 6px 14px;
       font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
       color: rgba(251,245,236,.85); margin-bottom: 20px; width: fit-content;
     }
-    .event-header .live-badge .dot {
+    .event-header .badge .dot {
       width: 8px; height: 8px; border-radius: 50%;
       background: #2d7a4a; box-shadow: 0 0 0 4px rgba(45,122,74,.3);
       animation: pulse 1.5s ease infinite; flex-shrink: 0;
@@ -54,7 +54,7 @@
     }
     .event-header h1 em { font-style: italic; color: var(--accent-soft); }
 
-    .event-header-meta {
+    .event-header .meta {
       font-family: var(--mono); font-size: 12px; letter-spacing: .14em;
       color: rgba(251,245,236,.6); text-transform: uppercase;
       display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
@@ -81,7 +81,7 @@
     .stat .delta { font-family: var(--mono); font-size: 11px; color: #2d7a4a; margin-top: 6px; }
 
     /* ── Body grid ────────────────────────────────────────── */
-    .dash-body {
+    .body {
       max-width: 1200px; margin: 56px auto 0;
       padding: 0 28px 96px;
       display: grid; grid-template-columns: 1fr 320px; gap: 32px;
@@ -93,6 +93,16 @@
     .panel-head { padding: 20px 24px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; }
     .panel-head h2 { font-family: var(--display); font-size: 22px; font-weight: 500; letter-spacing: -.01em; color: var(--ink); }
     .pill { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); padding: 6px 12px; border-radius: 999px; background: var(--paper-2); }
+
+    /* ── Tabs (from reference design) ─────────────────────── */
+    .tab-row { display: flex; gap: 6px; padding: 16px 24px; border-bottom: 1px solid var(--line); }
+    .tab {
+      padding: 8px 14px; border-radius: 999px;
+      font-size: 13px; color: var(--ink-soft);
+      cursor: pointer; transition: background .15s, color .15s;
+    }
+    .tab.active { background: var(--ink); color: var(--paper); }
+    .tab:hover:not(.active) { background: var(--paper-2); }
 
     /* ── Photo grid (matching reference design) ───────────── */
     .photo-grid {
@@ -174,16 +184,18 @@
 
     /* ── Responsive ───────────────────────────────────────── */
     @media (max-width: 1024px) {
-      .dash-body { grid-template-columns: 1fr; }
+      .body { grid-template-columns: 1fr; }
       .stats { grid-template-columns: repeat(2, 1fr); }
     }
     @media (max-width: 640px) {
       .photo-grid { grid-template-columns: repeat(2, 1fr); }
       .stats { padding: 0 16px; margin-top: -32px; }
-      .dash-body { padding: 0 16px 64px; margin-top: 40px; }
+      .body { padding: 0 16px 64px; margin-top: 40px; }
       .event-header { padding: 24px 16px 72px; }
       .event-header h1 { font-size: 36px; }
       .event-header-top { margin-bottom: 32px; }
+      .tab-row { padding: 12px 16px; }
+      .tab { font-size: 12px; padding: 6px 10px; }
     }
   </style>
 </head>
@@ -205,9 +217,9 @@
       </div>
     </div>
 
-    <div class="live-badge"><span class="dot"></span>Live · <span id="live-count">0</span> guests sharing right now</div>
+    <div class="badge"><span class="dot"></span>Live · <span id="live-count">0</span> guests sharing right now</div>
     <h1 id="event-names">Andrea <em>&</em> JM</h1>
-    <div class="event-header-meta">
+    <div class="meta">
       <span id="event-date">14 June 2026 · Manila Hotel · Wedding</span>
     </div>
   </div>
@@ -249,7 +261,7 @@
 </div>
 
 <!-- ── Main body ──────────────────────────────────────────── -->
-<div class="dash-body" id="dash-main" style="display:none">
+<div class="body" id="dash-main" style="display:none">
 
   <!-- ── Photo stream panel (left) ─────────────────────── -->
   <div>
@@ -257,6 +269,12 @@
       <div class="panel-head">
         <h2>Photo stream</h2>
         <span class="pill" id="approve-status">Auto-approve · ON</span>
+      </div>
+      <div class="tab-row" id="tab-row">
+        <span class="tab active" data-tab="all">All · <span id="tab-all-count">0</span></span>
+        <span class="tab" data-tab="pending">Pending · <span id="tab-pending-count">0</span></span>
+        <span class="tab" data-tab="featured">Featured · <span id="tab-featured-count">0</span></span>
+        <span class="tab" data-tab="hidden">Hidden · <span id="tab-hidden-count">0</span></span>
       </div>
       <div class="photo-grid" id="photo-grid"></div>
     </div>
@@ -322,6 +340,7 @@
   const params  = new URLSearchParams(location.search);
   const slug    = params.get('slug');
   let allUploads = [];
+  let currentTab = 'all';
 
   // ── DOM refs ──────────────────────────────────────────
   const $ = id => document.getElementById(id);
@@ -336,6 +355,7 @@
   const qrWrap         = $('qr-wrap');
   const qrUrl          = $('qr-url');
   const toast          = $('toast');
+  const tabRow         = $('tab-row');
 
   // ── Helpers ───────────────────────────────────────────
   function formatDate(dateStr) {
@@ -354,6 +374,30 @@
     const meta = THEME_MAP[eventType] || THEME_MAP.wedding;
     document.body.setAttribute('data-theme', meta.theme);
     return meta;
+  }
+
+  // ── Filter uploads by tab ────────────────────────────
+  function filterUploads(uploads, tab) {
+    switch(tab) {
+      case 'pending':  return uploads.filter(u => u.status === 'pending');
+      case 'featured': return uploads.filter(u => u.featured === true);
+      case 'hidden':   return uploads.filter(u => u.status === 'hidden' || u.hidden === true);
+      case 'all':
+      default:         return uploads;
+    }
+  }
+
+  // ── Update tab counts ────────────────────────────────
+  function updateTabCounts(uploads) {
+    const allCount = uploads.length;
+    const pendingCount = uploads.filter(u => u.status === 'pending').length;
+    const featuredCount = uploads.filter(u => u.featured === true).length;
+    const hiddenCount = uploads.filter(u => u.status === 'hidden' || u.hidden === true).length;
+
+    $('tab-all-count').textContent = allCount;
+    $('tab-pending-count').textContent = pendingCount;
+    $('tab-featured-count').textContent = featuredCount;
+    $('tab-hidden-count').textContent = hiddenCount;
   }
 
   // ── Render header ─────────────────────────────────────
@@ -432,28 +476,83 @@
     // Update live count
     const liveCount = $('live-count');
     if (liveCount) liveCount.textContent = uniqueGuests || 0;
+
+    // Update tab counts
+    updateTabCounts(uploads);
+  }
+
+  // ── Get action button based on upload status ──────────
+  function getActionButton(u) {
+    if (u.status === 'pending') {
+      return `<span class="actions-btn" data-action="approve" data-id="${u.id}">Approve</span>`;
+    } else if (u.featured) {
+      return `<span class="actions-btn" data-action="unfeature" data-id="${u.id}">Unfeature</span>`;
+    } else if (u.status === 'hidden' || u.hidden) {
+      return `<span class="actions-btn" data-action="unhide" data-id="${u.id}">Unhide</span>`;
+    } else {
+      return `<span class="actions-btn" data-action="feature" data-id="${u.id}">Feature</span>`;
+    }
   }
 
   // ── Render gallery grid ───────────────────────────────
   function renderGallery(uploads) {
     allUploads = uploads;
 
+    const filteredUploads = filterUploads(uploads, currentTab);
+
     const placeholderClasses = ['placeholder--clay', 'placeholder--ochre', 'placeholder--coral', 'placeholder--sage', 'placeholder--ink', 'placeholder--paper'];
 
-    if (!uploads.length) {
+    if (!filteredUploads.length) {
       photoGrid.innerHTML = `
         <div style="grid-column:1/-1;text-align:center;padding:48px 16px;color:var(--ink-soft);">
           <div style="font-size:3rem;margin-bottom:12px;">📭</div>
-          <p>No uploads yet. Share the QR code with your guests!</p>
+          <p>No uploads${currentTab !== 'all' ? ' in this category' : ''}. ${currentTab === 'all' ? 'Share the QR code with your guests!' : 'Try a different filter.'}</p>
         </div>`;
       return;
     }
 
-    photoGrid.innerHTML = uploads.map((u, i) => {
+    photoGrid.innerHTML = filteredUploads.map((u, i) => {
       const cls = placeholderClasses[i % placeholderClasses.length];
       const label = u.uploader_name || 'Guest';
-      return `<div class="placeholder ${cls}">${label}<div class="actions-overlay"><span class="uploader">${label}</span><span class="actions-btn">Feature</span></div></div>`;
+      const actionBtn = getActionButton(u);
+      return `<div class="placeholder ${cls}">${label}<div class="actions-overlay"><span class="uploader">${label}</span>${actionBtn}</div></div>`;
     }).join('');
+  }
+
+  // ── Handle action button clicks (Feature/Hide/Approve) ─
+  async function handleAction(action, uploadId) {
+    try {
+      const res = await fetch(`/api/uploads/${slug}/${uploadId}/${action}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (!res.ok) throw new Error('Action failed');
+
+      showToast(`Photo ${action}d successfully!`);
+
+      // Refresh uploads after action
+      const uploadsRes = await fetch(`/api/uploads/${slug}`);
+      const { uploads } = await uploadsRes.json();
+      renderStats(uploads);
+      renderGallery(uploads);
+    } catch (err) {
+      showToast('Failed to perform action. Please try again.');
+    }
+  }
+
+  // ── Tab click handler ────────────────────────────────
+  function handleTabClick(e) {
+    const tab = e.target.closest('.tab');
+    if (!tab) return;
+
+    // Update active tab
+    tabRow.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+
+    // Update current tab and re-render gallery
+    currentTab = tab.dataset.tab;
+    renderGallery(allUploads);
   }
 
   // ── Data loading ──────────────────────────────────────
@@ -508,6 +607,25 @@
         renderGallery(uploads);
       }
     } catch { /* silent */ }
+  }
+
+  // ── Event listeners ──────────────────────────────────
+  if (tabRow) {
+    tabRow.addEventListener('click', handleTabClick);
+  }
+
+  if (photoGrid) {
+    photoGrid.addEventListener('click', (e) => {
+      const actionBtn = e.target.closest('.actions-btn');
+      if (!actionBtn) return;
+
+      const action = actionBtn.dataset.action;
+      const id = actionBtn.dataset.id;
+
+      if (action && id) {
+        handleAction(action, id);
+      }
+    });
   }
 
   // ── Init ──────────────────────────────────────────────
