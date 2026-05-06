@@ -238,6 +238,71 @@
       .plans-grid { grid-template-columns: repeat(3, 1fr); }
     }
 
+    /* Plan icon */
+    .plan-icon {
+      width: 48px; height: 48px;
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: .9rem;
+    }
+    .plan-icon svg { width: 26px; height: 26px; }
+    .plan-icon-tala    { background: rgba(216,160,90,.15); color: #a0762a; }
+    .plan-icon-dalisay { background: rgba(196,90,58,.12);  color: var(--accent); }
+    .plan-icon-sinag   { background: rgba(255,180,0,.15);  color: #b07800; }
+    .plan-icon-hiraya  { background: rgba(80,60,120,.12);  color: #5c3d8a; }
+
+    .plan-tier {
+      font-family: var(--mono);
+      font-size: .62rem; font-weight: 700;
+      letter-spacing: .14em; text-transform: uppercase;
+      color: var(--ink-faint); margin-bottom: .2rem;
+    }
+    .plan-card.selected .plan-tier { color: var(--accent); }
+
+    /* ── Free-flow CTA (Start free mode) ─────────────────── */
+    .free-cta-box {
+      margin-top: 1.5rem;
+      background: rgba(216,160,90,.08);
+      border: 1.5px dashed rgba(216,160,90,.5);
+      border-radius: var(--r-lg);
+      padding: 1.25rem 1.5rem;
+      text-align: center;
+    }
+    .free-cta-plan {
+      display: inline-flex; align-items: center; gap: .5rem;
+      background: rgba(216,160,90,.15);
+      border-radius: 999px;
+      padding: .3rem .85rem;
+      font-family: var(--mono);
+      font-size: .72rem; font-weight: 700;
+      color: #a0762a;
+      letter-spacing: .08em; text-transform: uppercase;
+      margin-bottom: .75rem;
+    }
+    .free-cta-box h3 {
+      font-family: var(--display);
+      font-size: 1.1rem; font-weight: 500;
+      color: var(--ink); margin-bottom: .3rem;
+    }
+    .free-cta-box p {
+      font-size: .82rem; color: var(--ink-soft);
+      margin-bottom: 1.1rem; line-height: 1.5;
+    }
+    .free-cta-features {
+      display: flex; flex-wrap: wrap; justify-content: center;
+      gap: .4rem; margin-bottom: 1.1rem;
+    }
+    .free-cta-features span {
+      background: #fff; border: 1px solid var(--line);
+      border-radius: 999px; padding: .2rem .65rem;
+      font-size: .75rem; color: var(--ink-soft);
+    }
+    .free-upgrade-link {
+      font-size: .78rem; color: var(--ink-faint);
+      text-align: center; margin-top: .75rem;
+    }
+    .free-upgrade-link a { color: var(--accent); text-decoration: none; font-weight: 600; }
+
     .plan-card {
       position: relative;
       border: 2px solid var(--line-2);
@@ -684,6 +749,29 @@
       <input type="date" id="event-date" />
       <div class="field-error" data-en="Please pick the event date." data-fil="Pakipili ang petsa ng event.">Please pick the event date.</div>
     </div>
+
+    <!-- Free-flow CTA: shown only when ?free=1 -->
+    <div class="free-cta-box" id="free-cta-box" style="display:none">
+      <div class="free-cta-plan">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        Tala — Free
+      </div>
+      <h3 data-en="Start capturing moments today" data-fil="Simulan na ang pag-capture ng alaala">Start capturing moments today</h3>
+      <p data-en="Get your QR code for free. Guests can upload up to 15 photos to your live wall." data-fil="Makakuha ng QR code nang libre. Ang mga bisita ay makakapag-upload ng hanggang 15 larawan.">Get your QR code for free. Guests can upload up to 15 photos to your live wall.</p>
+      <div class="free-cta-features">
+        <span>15 photos</span>
+        <span>Live wall</span>
+        <span>QR sharing</span>
+        <span>No credit card</span>
+      </div>
+      <button class="btn-pay" id="btn-free-start" type="button">
+        <div class="btn-spinner"></div>
+        <span class="btn-text" data-en="Create my free Reelday →" data-fil="Gumawa ng libreng Reelday →">Create my free Reelday →</span>
+      </button>
+      <div class="free-upgrade-link" data-en='Want more photos? <a href="/create">See paid plans →</a>' data-fil='Gusto ng mas maraming larawan? <a href="/create">Tingnan ang mga plano →</a>'>
+        Want more photos? <a href="/create">See paid plans →</a>
+      </div>
+    </div>
   </div>
 
   <!-- ── STEP 2: Plan Selection ──────────────────────────── -->
@@ -693,9 +781,13 @@
 
     <div class="plans-grid">
 
-      <!-- Libre -->
-      <div class="plan-card" data-plan="libre" data-price="99900">
-        <div class="plan-name">Libre</div>
+      <!-- Dalisay / Basic -->
+      <div class="plan-card" data-plan="dalisay" data-price="99900">
+        <div class="plan-icon plan-icon-dalisay">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>
+        </div>
+        <div class="plan-tier">Basic</div>
+        <div class="plan-name">Dalisay</div>
         <div class="plan-price">₱999 <span data-en="one-time" data-fil="isang beses">one-time</span></div>
         <div class="plan-tagline" data-en="For simple celebrations" data-fil="Para sa simpleng selebrasyon">For simple celebrations</div>
         <ul class="plan-features">
@@ -704,40 +796,48 @@
           <li data-en="6-month access" data-fil="6 buwang access">6-month access</li>
           <li data-en="Free QR templates" data-fil="Libreng QR templates">Free QR templates</li>
         </ul>
-        <button class="plan-select-btn" type="button" data-en="Choose Libre" data-fil="Piliin ang Libre">Choose Libre</button>
+        <button class="plan-select-btn" type="button" data-en="Choose Dalisay" data-fil="Piliin ang Dalisay">Choose Dalisay</button>
       </div>
 
-      <!-- Selebrasyon -->
-      <div class="plan-card selected" data-plan="selebrasyon" data-price="199900">
+      <!-- Sinag / Standard -->
+      <div class="plan-card selected" data-plan="sinag" data-price="199900">
         <div class="plan-popular-badge" data-en="⭐ Most popular" data-fil="⭐ Pinaka-popular">⭐ Most popular</div>
-        <div class="plan-name">Selebrasyon</div>
+        <div class="plan-icon plan-icon-sinag">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        </div>
+        <div class="plan-tier">Standard</div>
+        <div class="plan-name">Sinag</div>
         <div class="plan-price">₱1,999 <span data-en="one-time" data-fil="isang beses">one-time</span></div>
         <div class="plan-tagline" data-en="For special occasions" data-fil="Para sa espesyal na okasyon">For special occasions</div>
         <ul class="plan-features">
-          <li data-en="Everything in Libre" data-fil="Lahat sa Libre plan">Everything in Libre</li>
+          <li data-en="Everything in Dalisay" data-fil="Lahat sa Dalisay plan">Everything in Dalisay</li>
           <li>Video messages (60s)</li>
           <li>Cinematic live wall + music</li>
           <li>Live emoji reactions</li>
           <li data-en="12-month access" data-fil="12 buwang access">12-month access</li>
           <li data-en="Priority Viber support" data-fil="Priority Viber support">Priority Viber support</li>
         </ul>
-        <button class="plan-select-btn" type="button" data-en="Choose Selebrasyon" data-fil="Piliin ang Selebrasyon">Choose Selebrasyon</button>
+        <button class="plan-select-btn" type="button" data-en="Choose Sinag" data-fil="Piliin ang Sinag">Choose Sinag</button>
       </div>
 
-      <!-- Pro -->
-      <div class="plan-card" data-plan="pro" data-price="349900">
-        <div class="plan-name">Pro</div>
+      <!-- Hiraya / Premium -->
+      <div class="plan-card" data-plan="hiraya" data-price="349900">
+        <div class="plan-icon plan-icon-hiraya">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </div>
+        <div class="plan-tier">Premium</div>
+        <div class="plan-name">Hiraya</div>
         <div class="plan-price">₱3,499 <span data-en="one-time" data-fil="isang beses">one-time</span></div>
         <div class="plan-tagline" data-en="For a premium experience" data-fil="Para sa premium na karanasan">For a premium experience</div>
         <ul class="plan-features">
-          <li data-en="Everything in Selebrasyon" data-fil="Lahat sa Selebrasyon plan">Everything in Selebrasyon</li>
+          <li data-en="Everything in Sinag" data-fil="Lahat sa Sinag plan">Everything in Sinag</li>
           <li data-en="AI highlight reel" data-fil="AI highlight reel">AI highlight reel</li>
           <li data-en="5 sub-galleries" data-fil="5 sub-galleries">5 sub-galleries</li>
           <li data-en="Lifetime archive" data-fil="Lifetime archive">Lifetime archive</li>
           <li data-en="50 printed QR cards" data-fil="50 na naka-print na QR cards">50 printed QR cards</li>
           <li data-en="Custom branding" data-fil="Custom branding">Custom branding</li>
         </ul>
-        <button class="plan-select-btn" type="button" data-en="Choose Pro" data-fil="Piliin ang Pro">Choose Pro</button>
+        <button class="plan-select-btn" type="button" data-en="Choose Hiraya" data-fil="Piliin ang Hiraya">Choose Hiraya</button>
       </div>
 
     </div>
@@ -752,7 +852,7 @@
     <div class="pay-summary" id="pay-summary">
       <div>
         <div class="pay-summary-label" data-en="Selected plan" data-fil="Napiling plano">Selected plan</div>
-        <div class="pay-summary-plan" id="summary-plan-name">Selebrasyon</div>
+        <div class="pay-summary-plan" id="summary-plan-name">Sinag</div>
       </div>
       <div class="pay-summary-price" id="summary-plan-price">₱1,999</div>
     </div>
@@ -795,8 +895,9 @@
       <div class="trial-divider" data-en="or" data-fil="o">or</div>
 
       <button class="btn-trial" id="btn-trial" type="button">
-        <span data-en="Not ready to pay? " data-fil="Hindi pa ready magbayad? ">Not ready to pay? </span>
-        <strong data-en="Try for free first →" data-fil="I-try muna nang libre →">Try for free first →</strong>
+        <span data-en="Not ready to pay? Try " data-fil="Hindi pa ready? Subukan ang ">Not ready to pay? Try </span>
+        <strong>Tala</strong>
+        <span data-en=" — free, 15 photos →" data-fil=" — libre, 15 larawan →"> — free, 15 photos →</span>
       </button>
     </div>
 
@@ -876,9 +977,29 @@
         .getPropertyValue('--primary').trim() || '#3d1f2d');
   }
 
+  // ── Free-flow mode (Start free button → ?free=1) ──────────
+  const isFreeFlow = new URLSearchParams(location.search).has('free');
+
+  if (isFreeFlow) {
+    document.getElementById('section-plans').style.display   = 'none';
+    document.getElementById('section-payment').style.display = 'none';
+    document.getElementById('free-cta-box').style.display    = 'block';
+    // Simplify steps bar to 2 steps
+    const stepDots = document.querySelectorAll('.step-dot');
+    stepDots.forEach(d => {
+      if (d.dataset.step === '2') d.querySelector('.step-label').textContent = 'Free';
+      if (d.dataset.step === '3') d.style.display = 'none';
+      // Hide connector line from step 2
+      if (d.dataset.step === '2') d.style.setProperty('--line-hide','1');
+    });
+    document.querySelector('[data-step="2"] .step-label').textContent = 'Get started';
+    // Hide step 3 dot's connector
+    document.querySelector('.step-dot[data-step="2"]').style.setProperty('pointer-events','none');
+  }
+
   // ── State ─────────────────────────────────────────────────
   let selectedType   = 'wedding';
-  let selectedPlan   = 'selebrasyon';
+  let selectedPlan   = 'sinag';
   let selectedPrice  = 199900;
   let selectedMethod = 'gcash';
 
@@ -944,7 +1065,7 @@
   });
 
   function updateSummary() {
-    const labels = { libre: 'Libre', selebrasyon: 'Selebrasyon', pro: 'Pro' };
+    const labels = { tala: 'Tala', dalisay: 'Dalisay', sinag: 'Sinag', hiraya: 'Hiraya' };
     summaryName.textContent  = labels[selectedPlan] ?? selectedPlan;
     summaryPrice.textContent = formatPrice(selectedPrice);
     gcashAmount.textContent  = formatPrice(selectedPrice);
@@ -1098,7 +1219,7 @@
     btnTrial.textContent = 'Gumagawa…';
 
     try {
-      const { event } = await createEvent('libre');
+      const { event } = await createEvent('tala');
       location.href = `/dashboard?slug=${event.slug}&trial=true`;
     } catch (err) {
       showToast(err.message || 'May naganap na error. Subukan ulit.', 'error');
@@ -1157,7 +1278,30 @@
     document.getElementById('section-auth').style.display = 'none';
     if (pendingIntent === 'pay')   btnPay.click();
     if (pendingIntent === 'trial') btnTrial.click();
+    if (pendingIntent === 'free')  document.getElementById('btn-free-start').click();
   }
+
+  // ── Free-flow start button ────────────────────────────────
+  document.getElementById('btn-free-start')?.addEventListener('click', async () => {
+    if (!localStorage.getItem('reelday_token')) {
+      showAuthSection('free');
+      return;
+    }
+    if (!validate()) return;
+
+    const btn = document.getElementById('btn-free-start');
+    btn.disabled = true;
+    btn.classList.add('loading');
+
+    try {
+      const { event } = await createEvent('tala');
+      location.href = `/dashboard?slug=${event.slug}`;
+    } catch (err) {
+      showToast(err.message || 'Something went wrong. Please try again.', 'error');
+      btn.disabled = false;
+      btn.classList.remove('loading');
+    }
+  });
 
   // Sign in submit
   document.getElementById('btn-auth-signin').addEventListener('click', async () => {

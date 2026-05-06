@@ -316,7 +316,7 @@
       <h1>Every shot.<br/><em>Every guest.</em><br/><span class="underline">One QR.</span></h1>
       <p>Guests scan one code and upload photos straight to your live cinematic wall — no app, no sign-up, no missed moments.</p>
       <div class="hero-cta">
-        <a class="btn btn-accent" href="/create">Start free →</a>
+        <a class="btn btn-accent" href="/create?free=1">Start free →</a>
         <a class="btn btn-ghost" href="#how">See how it works</a>
       </div>
       <div class="hero-trust">
@@ -451,44 +451,53 @@
   </div>
   <div class="pricing-grid">
     <div class="price-card">
-      <div class="tier">Libre</div>
+      <div class="tier" style="display:flex;align-items:center;gap:.4rem">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#a0762a"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>
+        Dalisay <span style="font-size:.68rem;font-weight:500;color:var(--ink-faint);letter-spacing:.06em">Basic</span>
+      </div>
       <div class="price">₱999<sub> / event</sub></div>
       <p class="desc">For simple celebrations — despedidas, baptisms, reunions.</p>
       <ul>
         <li>Unlimited uploads</li>
-        <li>Basic live wall, 24h</li>
+        <li>Basic live wall</li>
         <li>Free QR templates</li>
         <li>6-month archive</li>
       </ul>
-      <a class="btn btn-ghost" href="/create">Get started</a>
+      <a class="btn btn-ghost" href="/create">Choose Dalisay</a>
     </div>
     <div class="price-card featured">
-      <div class="tier">★ Selebrasyon</div>
+      <div class="tier" style="display:flex;align-items:center;gap:.4rem">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#b07800"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        ★ Sinag <span style="font-size:.68rem;font-weight:500;opacity:.75;letter-spacing:.06em">Standard</span>
+      </div>
       <div class="price">₱1,999<sub> / event</sub></div>
       <p class="desc">For weddings, debuts, and big birthdays.</p>
       <ul>
-        <li>Everything in Libre</li>
+        <li>Everything in Dalisay</li>
         <li>Cinematic wall + music</li>
         <li>Video messages (60s)</li>
         <li>Live emoji reactions</li>
         <li>12-month archive</li>
         <li>Priority Viber support</li>
       </ul>
-      <a class="btn btn-accent" href="/create">Choose Selebrasyon →</a>
+      <a class="btn btn-accent" href="/create">Choose Sinag →</a>
     </div>
     <div class="price-card">
-      <div class="tier">Pro</div>
+      <div class="tier" style="display:flex;align-items:center;gap:.4rem">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#5c3d8a"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        Hiraya <span style="font-size:.68rem;font-weight:500;color:var(--ink-faint);letter-spacing:.06em">Premium</span>
+      </div>
       <div class="price">₱3,499<sub> / event</sub></div>
       <p class="desc">Premium experience with lifetime archive.</p>
       <ul>
-        <li>Everything in Selebrasyon</li>
+        <li>Everything in Sinag</li>
         <li>AI highlight reel</li>
         <li>5 sub-galleries</li>
         <li>Lifetime archive</li>
         <li>50 printed QR cards</li>
         <li>Custom branding</li>
       </ul>
-      <a class="btn btn-ghost" href="/create">Choose Pro</a>
+      <a class="btn btn-ghost" href="/create">Choose Hiraya</a>
     </div>
   </div>
 </section>
@@ -529,7 +538,7 @@
 <section class="final-cta">
   <div class="eyebrow" style="margin-bottom:24px">— Start today, free</div>
   <h2>Your day. Every <em>angle.</em></h2>
-  <a class="btn btn-accent" href="/create" style="font-size:1rem;padding:16px 32px">Start free — no card needed →</a>
+  <a class="btn btn-accent" href="/create?free=1" style="font-size:1rem;padding:16px 32px">Start free with Tala — no card needed →</a>
 </section>
 
 <footer class="site-footer">
