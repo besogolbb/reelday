@@ -1605,9 +1605,11 @@
 
     updateSubmitState();
 
-    if (!isRecording && !recordedBlob) recorderHint.textContent = t('recorderHintIdle');
-    else if (isRecording)              recorderHint.textContent = t('recorderHintActive');
-    else                               recorderHint.textContent = t('recorderHintDone');
+    if (recorderHint) {
+      if (!isRecording && !recordedBlob) recorderHint.textContent = t('recorderHintIdle');
+      else if (isRecording)              recorderHint.textContent = t('recorderHintActive');
+      else                               recorderHint.textContent = t('recorderHintDone');
+    }
 
     if (eventData.event_date) {
       heroDate.textContent = new Date(eventData.event_date)
