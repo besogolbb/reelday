@@ -800,8 +800,25 @@ body { background: var(--paper); min-height: 100dvh; }
   }
 
 
+  /* ── Thumbnail — compress to ≤160px JPEG before localStorage ── */
+  function makeThumbnail(dataUrl, maxDim = 160) {
+    return new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => {
+        const ratio  = Math.min(maxDim / img.width, maxDim / img.height, 1);
+        const canvas = document.createElement('canvas');
+        canvas.width  = Math.round(img.width  * ratio);
+        canvas.height = Math.round(img.height * ratio);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', 0.72));
+      };
+      img.onerror = () => resolve(null);
+      img.src = dataUrl;
+    });
+  }
+
   /* ── Send ──────────────────────────────────────────── */
-  function handleSend(mode) {
+  async function handleSend(mode) {
     if (mode === 'record' && !recordedBlob) return;
 
     const nameInput = mode === 'gallery'
@@ -817,27 +834,40 @@ body { background: var(--paper); min-height: 100dvh; }
       return;
     }
 
-    const msg = (document.getElementById('msgText') || {}).value || '';
-    const thumbUrl = Object.values(itemDataUrls)[0] || null;
+    const msg      = (document.getElementById('msgText') || {}).value || '';
+    const fullUrl  = Object.values(itemDataUrls)[0] || null;
+
+    /* Compress to a tiny thumbnail (~5-15 KB) so localStorage quota isn't hit */
+    const thumbSmall = fullUrl ? await makeThumbnail(fullUrl) : null;
 
     /* Save to localStorage so dashboard can read it */
     const localKey = `reelday_uploads_${currentEvent.slug}`;
     try {
       const existing = JSON.parse(localStorage.getItem(localKey) || '[]');
       existing.unshift({
-        id: Date.now(),
+        id:            Date.now(),
         uploader_name: name,
-        message: msg,
-        thumb: thumbUrl,
-        timestamp: new Date().toISOString(),
-        status: 'pending',
-        featured: false,
+        message:       msg,
+        thumb:         thumbSmall,
+        timestamp:     new Date().toISOString(),
+        status:        'pending',
+        featured:      false,
       });
       localStorage.setItem(localKey, JSON.stringify(existing.slice(0, 200)));
-    } catch { /* storage full */ }
+    } catch (e) {
+      /* Quota exceeded — clear old entries and retry once */
+      try {
+        localStorage.removeItem(localKey);
+        localStorage.setItem(localKey, JSON.stringify([{
+          id: Date.now(), uploader_name: name, message: msg,
+          thumb: thumbSmall, timestamp: new Date().toISOString(),
+          status: 'pending', featured: false,
+        }]));
+      } catch { /* give up silently */ }
+    }
 
     /* TODO: POST to /api/events/:slug/upload */
-    showThankYou(name, msg, thumbUrl);
+    showThankYou(name, msg, fullUrl);
   }
 
   function showThankYou(name, msg, thumbUrl) {

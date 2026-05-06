@@ -600,30 +600,29 @@
       try {
         const p = new URLSearchParams(location.search);
 
-        /* Try the slug directly, then a name-derived key, then scan all reelday_uploads_* keys */
-        const nameDerived = (p.get('name') || slug || '')
-          .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-        const candidates = [...new Set([slug, nameDerived].filter(Boolean))];
-
-        let localUploads = [];
-        for (const key of candidates) {
-          try {
-            const stored = JSON.parse(localStorage.getItem(`reelday_uploads_${key}`) || '[]');
-            if (stored.length) { localUploads = stored; break; }
-          } catch { /* continue */ }
-        }
-        /* Last resort: scan all keys */
-        if (!localUploads.length) {
-          for (let i = 0; i < localStorage.length; i++) {
-            const k = localStorage.key(i);
-            if (k && k.startsWith('reelday_uploads_')) {
-              try {
-                const stored = JSON.parse(localStorage.getItem(k) || '[]');
-                localUploads = [...localUploads, ...stored];
-              } catch { /* skip */ }
-            }
+        /* Collect every reelday_uploads_* entry from localStorage */
+        const allLocalUploads = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k.startsWith('reelday_uploads_')) {
+            try {
+              const stored = JSON.parse(localStorage.getItem(k) || '[]');
+              allLocalUploads.push(...stored);
+            } catch { /* skip */ }
           }
         }
+        /* Sort newest first */
+        allLocalUploads.sort((a, b) => b.id - a.id);
+
+        /* If slug is set, prefer uploads for that slug; otherwise show all */
+        const localUploads = slug
+          ? (() => {
+              try {
+                const keyed = JSON.parse(localStorage.getItem(`reelday_uploads_${slug}`) || '[]');
+                return keyed.length ? keyed : allLocalUploads;
+              } catch { return allLocalUploads; }
+            })()
+          : allLocalUploads;
 
         const demoEvent = {
           couple_names: p.get('name') || slug || 'Your Event',
