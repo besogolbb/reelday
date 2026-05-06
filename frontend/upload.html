@@ -349,17 +349,18 @@ body { background: var(--paper); min-height: 100dvh; }
   <div class="share-panel" id="panel-record">
     <div class="record-panel">
       <div class="record-viewfinder">
+        <video id="viewfinderVideo" autoplay muted playsinline style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;"></video>
         <div class="vf-corners"></div>
         <div class="vf-dot-wrap">
           <div class="rec-dot" id="recDot"></div>
           <div class="vf-time" id="recTimeDisplay" style="display:none">00:00</div>
         </div>
-        <div class="vf-label" id="vfLabel">Camera ready</div>
+        <div class="vf-label" id="vfLabel">Tap record to start camera</div>
       </div>
       <div class="record-controls">
         <div class="rec-timer" id="recTimer">00:00</div>
         <div class="rec-btn-row">
-          <button class="rec-btn-secondary" onclick="alert('TODO: flip camera via MediaStream API')">
+          <button class="rec-btn-secondary" onclick="flipCamera()" title="Flip camera">
             <svg viewBox="0 0 24 24"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
           </button>
           <button class="rec-btn-main" id="recBtn" onclick="toggleRecord()">
@@ -459,9 +460,7 @@ body { background: var(--paper); min-height: 100dvh; }
 
 <script>
   /* ════════════════════════════════════════════════════
-     EVENT DATA
-     Reads from URL params. Swap the fetch() call in
-     for real API data when the backend is ready.
+     EVENT DATA — reads URL params, falls back to API
   ════════════════════════════════════════════════════ */
   const DEMO_PHOTOS = [
     'images/First%20kiss.png',
@@ -475,50 +474,67 @@ body { background: var(--paper); min-height: 100dvh; }
     'images/Dancing%20with%20Tatay.%20I%20will%20never%20forget%20this.png',
   ];
 
+  let currentEvent = null;
+
   async function loadEvent() {
     const p = new URLSearchParams(location.search);
-    const slug = p.get('slug') || p.get('event') || 'andrea-jm';
+    const slug = p.get('slug') || p.get('event');
 
     let event = null;
 
-    /* TODO: uncomment when API is live
-    try {
-      const res = await fetch(`/api/events/${slug}`);
-      if (res.ok) event = await res.json();
-    } catch (e) {}
-    */
-
-    if (!event) {
-      event = {
-        slug,
-        name:    p.get('name')    || 'Andrea & JM',
-        date:    p.get('date')    || '14 June 2026',
-        venue:   p.get('venue')   || 'Manila Hotel',
-        theme:   p.get('theme')   || 'wedding',
-        welcome: p.get('welcome') || 'Salamat sa pagdating! Scan, share, and become part of the story.',
-        cover:   p.get('cover')   || 'images/newlyweds.png',
-        count:   parseInt(p.get('count') || '847', 10),
-      };
+    if (slug) {
+      /* TODO: uncomment when API is live
+      try {
+        const res = await fetch(`/api/events/${slug}`);
+        if (res.ok) event = await res.json();
+      } catch (e) {}
+      */
     }
 
+    if (!event) {
+      const name    = p.get('name');
+      const date    = p.get('date');
+      const venue   = p.get('venue');
+      const theme   = p.get('theme')   || 'wedding';
+      const welcome = p.get('welcome');
+      const cover   = p.get('cover');
+      const count   = parseInt(p.get('count') || '0', 10);
+      event = { slug, name, date, venue, theme, welcome, cover, count };
+    }
+
+    currentEvent = event;
     applyEvent(event);
   }
 
   function applyEvent(ev) {
     document.body.setAttribute('data-theme', ev.theme || 'wedding');
-    const nameHtml = ev.name.replace(/\s*&\s*/, ' <em>&amp;</em> ');
-    document.getElementById('heroName').innerHTML = nameHtml;
+
+    if (ev.name) {
+      const nameHtml = ev.name.replace(/\s*&\s*/, ' <em>&amp;</em> ');
+      document.getElementById('heroName').innerHTML = nameHtml;
+      document.title = `Reelday — ${ev.name}`;
+    } else {
+      document.getElementById('heroName').innerHTML = '<em>Your event</em>';
+      document.title = 'Reelday';
+    }
+
+    const metaParts = [ev.date, ev.venue].filter(Boolean);
     document.getElementById('heroMeta').textContent =
-      [ev.date, ev.venue].filter(Boolean).join(' · ').toUpperCase();
-    document.getElementById('heroWelcome').textContent = `"${ev.welcome}"`;
-    document.title = `Reelday — ${ev.name}`;
+      metaParts.length ? metaParts.join(' · ').toUpperCase() : '';
+
+    document.getElementById('heroWelcome').textContent =
+      ev.welcome ? `"${ev.welcome}"` : '';
+
     if (ev.cover) {
       document.getElementById('wallPreviewBg').style.backgroundImage = `url(${ev.cover})`;
     }
+
     const photos = ev.photos || DEMO_PHOTOS;
     document.getElementById('recentGrid').innerHTML =
       photos.slice(0,9).map(src => `<div style="background-image:url(${src})"></div>`).join('');
-    document.getElementById('recentCount').textContent = `${ev.count} today`;
+    document.getElementById('recentCount').textContent =
+      ev.count ? `${ev.count} today` : '0 today';
+
     document.getElementById('uploadHero').classList.remove('hero-loading');
   }
 
@@ -528,6 +544,12 @@ body { background: var(--paper); min-height: 100dvh; }
     document.querySelectorAll('.share-panel').forEach(p => p.classList.remove('active'));
     el.classList.add('active');
     document.getElementById('panel-' + id).classList.add('active');
+
+    if (id === 'record') {
+      initCamera();
+    } else {
+      releaseCamera();
+    }
   }
 
   function setLang(lang, btn) {
@@ -540,22 +562,29 @@ body { background: var(--paper); min-height: 100dvh; }
     const files = Array.from(e.target.files);
     const queue = document.getElementById('galleryQueue');
     files.forEach(f => {
+      const reader = new FileReader();
       const id = 'qi' + Date.now() + Math.random().toString(36).slice(2,6);
       const item = document.createElement('div');
       item.className = 'queue-item'; item.id = id;
+      const thumbId = 'th' + id;
       item.innerHTML = `
-        <div class="q-thumb placeholder placeholder--coral"></div>
+        <div class="q-thumb placeholder placeholder--coral" id="${thumbId}"></div>
         <div><div class="q-name">${f.name}</div><div class="q-prog"><span id="b${id}" style="width:0%"></span></div></div>
         <div class="q-status" id="s${id}">Queued</div>`;
       queue.appendChild(item);
-      let p = 0;
+      reader.onload = ev => {
+        const th = document.getElementById(thumbId);
+        if (th) { th.style.backgroundImage = `url(${ev.target.result})`; th.style.backgroundSize = 'cover'; th.style.backgroundPosition = 'center'; }
+      };
+      reader.readAsDataURL(f);
+      let prog = 0;
       const t = setInterval(() => {
-        p = Math.min(p + Math.random()*18+5, 100);
+        prog = Math.min(prog + Math.random()*18+5, 100);
         const b = document.getElementById('b'+id);
         const s = document.getElementById('s'+id);
-        if (b) b.style.width = p+'%';
-        if (s) s.textContent = p < 100 ? Math.round(p)+'%' : '✓ Shared';
-        if (p >= 100) { clearInterval(t); item.classList.add('done'); }
+        if (b) b.style.width = prog+'%';
+        if (s) s.textContent = prog < 100 ? Math.round(prog)+'%' : '✓ Shared';
+        if (prog >= 100) { clearInterval(t); item.classList.add('done'); }
       }, 200);
     });
     const total = document.querySelectorAll('#galleryQueue .queue-item').length;
@@ -563,58 +592,125 @@ body { background: var(--paper); min-height: 100dvh; }
       `Send ${total} moment${total>1?'s':''} →`;
   }
 
-  /* ── Record ────────────────────────────────────────── */
-  let recording = false, recInterval, recSecs = 0;
+  /* ── Record Video — real camera + MediaRecorder ────── */
+  let mediaStream = null;
+  let facingMode = 'user';
+  let mediaRecorder = null;
+  let recordedChunks = [];
+  let recordedBlob = null;
+  let recording = false;
+  let recInterval = null;
+  let recSecs = 0;
+
+  async function initCamera() {
+    if (mediaStream) return;
+    const lbl = document.getElementById('vfLabel');
+    lbl.textContent = 'Starting camera…';
+    try {
+      mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: true
+      });
+      const vid = document.getElementById('viewfinderVideo');
+      vid.srcObject = mediaStream;
+      vid.style.display = 'block';
+      lbl.style.display = 'none';
+      document.getElementById('recDot').style.display = 'block';
+    } catch (err) {
+      lbl.textContent = err.name === 'NotAllowedError'
+        ? 'Camera access denied — check browser permissions'
+        : 'Camera unavailable';
+    }
+  }
+
+  function releaseCamera() {
+    if (recording) stopRecord();
+    if (mediaStream) {
+      mediaStream.getTracks().forEach(t => t.stop());
+      mediaStream = null;
+    }
+    const vid = document.getElementById('viewfinderVideo');
+    vid.srcObject = null;
+    vid.style.display = 'none';
+    const lbl = document.getElementById('vfLabel');
+    lbl.style.display = '';
+    lbl.textContent = 'Tap record to start camera';
+  }
+
+  async function flipCamera() {
+    if (recording) return;
+    facingMode = facingMode === 'user' ? 'environment' : 'user';
+    releaseCamera();
+    await initCamera();
+  }
 
   function toggleRecord() {
-    const btn = document.getElementById('recBtn');
-    const dot = document.getElementById('recDot');
-    const status = document.getElementById('recStatus');
-    const timer = document.getElementById('recTimer');
-    const lbl = document.getElementById('vfLabel');
-    const icon = document.getElementById('recIcon');
-    const sendBtn = document.getElementById('recordSendBtn');
+    if (!mediaStream) { initCamera(); return; }
+    if (!recording) startRecord(); else stopRecord();
+  }
 
-    if (!recording) {
-      recording = true; recSecs = 0;
-      btn.classList.add('recording'); dot.classList.add('recording');
-      icon.innerHTML = '<rect x="8" y="8" width="8" height="8" rx="1" fill="white"/>';
-      status.textContent = 'Recording…'; status.classList.add('active');
-      lbl.textContent = '● REC'; timer.classList.add('visible');
-      recInterval = setInterval(() => {
-        recSecs++;
-        timer.textContent = fmt(recSecs);
-        if (recSecs >= 60) stopRecord();
-      }, 1000);
-    } else { stopRecord(); }
+  function startRecord() {
+    recordedChunks = []; recordedBlob = null; recSecs = 0; recording = true;
+
+    const mimeType = ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4']
+      .find(m => MediaRecorder.isTypeSupported(m)) || '';
+    mediaRecorder = new MediaRecorder(mediaStream, mimeType ? { mimeType } : {});
+    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
+    mediaRecorder.onstop = () => {
+      recordedBlob = new Blob(recordedChunks, { type: mediaRecorder.mimeType });
+      showClipPreview(recordedBlob);
+    };
+    mediaRecorder.start(250);
+
+    document.getElementById('recBtn').classList.add('recording');
+    document.getElementById('recDot').classList.add('recording');
+    document.getElementById('recIcon').innerHTML = '<rect x="8" y="8" width="8" height="8" rx="1" fill="white"/>';
+    document.getElementById('recStatus').textContent = 'Recording…';
+    document.getElementById('recStatus').classList.add('active');
+    document.getElementById('recTimer').classList.add('visible');
+
+    recInterval = setInterval(() => {
+      recSecs++;
+      document.getElementById('recTimer').textContent = fmt(recSecs);
+      document.getElementById('recTimeDisplay').textContent = fmt(recSecs);
+      if (recSecs >= 60) stopRecord();
+    }, 1000);
   }
 
   function stopRecord() {
-    recording = false; clearInterval(recInterval);
-    const btn = document.getElementById('recBtn');
-    const dot = document.getElementById('recDot');
-    const status = document.getElementById('recStatus');
-    const lbl = document.getElementById('vfLabel');
-    const icon = document.getElementById('recIcon');
-    const preview = document.getElementById('clipPreview');
-    const dur = document.getElementById('clipDur');
-    const sendBtn = document.getElementById('recordSendBtn');
-    btn.classList.remove('recording'); dot.classList.remove('recording');
-    icon.innerHTML = '<circle cx="12" cy="12" r="6"/>';
-    status.textContent = 'Recording saved'; status.classList.remove('active');
-    lbl.textContent = 'Camera ready';
-    dur.textContent = fmt(recSecs);
-    preview.classList.add('visible');
-    sendBtn.style.display = 'block';
+    recording = false;
+    clearInterval(recInterval);
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+
+    document.getElementById('recBtn').classList.remove('recording');
+    document.getElementById('recDot').classList.remove('recording');
+    document.getElementById('recIcon').innerHTML = '<circle cx="12" cy="12" r="6"/>';
+    document.getElementById('recStatus').textContent = 'Clip saved — ready to send';
+    document.getElementById('recStatus').classList.remove('active');
+  }
+
+  function showClipPreview(blob) {
+    const url = URL.createObjectURL(blob);
+    const thumb = document.querySelector('.clip-thumb');
+    thumb.style.backgroundImage = '';
+    thumb.innerHTML = `<video src="${url}" style="width:100%;height:100%;object-fit:cover;border-radius:6px;" muted loop autoplay playsinline></video>`;
+    document.getElementById('clipDur').textContent = fmt(recSecs);
+    document.querySelector('.clip-name').textContent = `clip-${Date.now()}.webm`;
+    document.getElementById('clipPreview').classList.add('visible');
+    document.getElementById('recordSendBtn').style.display = 'block';
+    document.getElementById('recordSendBtn').dataset.blobUrl = url;
   }
 
   function discardClip() {
+    const url = document.getElementById('recordSendBtn').dataset.blobUrl;
+    if (url) URL.revokeObjectURL(url);
     document.getElementById('clipPreview').classList.remove('visible');
     document.getElementById('recordSendBtn').style.display = 'none';
     document.getElementById('recTimer').classList.remove('visible');
     document.getElementById('recTimer').textContent = '00:00';
     document.getElementById('recStatus').textContent = 'Tap to start recording';
-    recSecs = 0;
+    document.querySelector('.clip-thumb').innerHTML = '';
+    recordedBlob = null; recordedChunks = []; recSecs = 0;
   }
 
   function fmt(s) {
@@ -628,6 +724,7 @@ body { background: var(--paper); min-height: 100dvh; }
     const counter = document.getElementById('charCount');
     preview.textContent = txt || 'Your message appears here…';
     preview.style.opacity = txt ? '1' : '0.4';
+    preview.style.fontStyle = txt ? 'normal' : 'italic';
     counter.textContent = txt.length + ' / 160';
     counter.classList.toggle('warn', txt.length > 140);
   }
@@ -636,11 +733,24 @@ body { background: var(--paper); min-height: 100dvh; }
 
   /* ── Send ──────────────────────────────────────────── */
   function handleSend(mode) {
+    if (mode === 'message') {
+      const txt = document.getElementById('msgText').value.trim();
+      if (!txt) {
+        document.getElementById('msgText').focus();
+        document.querySelector('.mp-textarea-wrap').style.borderColor = 'var(--accent)';
+        setTimeout(() => document.querySelector('.mp-textarea-wrap').style.borderColor = '', 1200);
+        return;
+      }
+    }
+    if (mode === 'record' && !recordedBlob) return;
+
     /* TODO: POST to /api/events/:slug/upload or /api/events/:slug/message */
-    const id = { gallery:'gallerySuccess', record:'recordSuccess', message:'messageSuccess' }[mode];
-    document.getElementById(id).classList.add('visible');
+    const bannerId = { gallery:'gallerySuccess', record:'recordSuccess', message:'messageSuccess' }[mode];
+    document.getElementById(bannerId).classList.add('visible');
+
     const el = document.getElementById('recentCount');
-    el.textContent = (parseInt(el.textContent, 10) + 1) + ' today';
+    const cur = parseInt(el.textContent, 10) || 0;
+    el.textContent = (cur + 1) + ' today';
   }
 
   loadEvent();
