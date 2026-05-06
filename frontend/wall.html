@@ -34,27 +34,28 @@
     .layer.out { opacity: 0; }
 
     .layer .pic {
-      position: absolute; inset: -8%;
+      position: absolute; inset: -3%;
       background-size: cover; background-position: center;
       will-change: transform;
+      image-rendering: -webkit-optimize-contrast;
     }
 
-    /* Ken Burns variants — JS picks one per slide */
+    /* Ken Burns variants — gentle zoom & pan, no aggressive scaling */
     @keyframes kb1 {
       from { transform: scale(1)    translate(0, 0); }
-      to   { transform: scale(1.14) translate(-2%, -1.5%); }
+      to   { transform: scale(1.05) translate(-1%, -0.8%); }
     }
     @keyframes kb2 {
-      from { transform: scale(1)    translate(-2%, 0); }
-      to   { transform: scale(1.12) translate(1.5%, 2%); }
+      from { transform: scale(1)    translate(-0.8%, 0); }
+      to   { transform: scale(1.04) translate(0.8%, 1%); }
     }
     @keyframes kb3 {
-      from { transform: scale(1.05) translate(2%, 2%); }
-      to   { transform: scale(1.16) translate(-1.5%, -2%); }
+      from { transform: scale(1.03) translate(1%, 1%); }
+      to   { transform: scale(1.06) translate(-1%, -1%); }
     }
     @keyframes kb4 {
-      from { transform: scale(1)    translate(1.5%, -1.5%); }
-      to   { transform: scale(1.13) translate(-2%, 2%); }
+      from { transform: scale(1)    translate(0.8%, -0.8%); }
+      to   { transform: scale(1.05) translate(-1%, 1%); }
     }
 
     .layer .vignette {
