@@ -401,10 +401,36 @@
   ══════════════════════════════════════════════════════════ */
   const slug = (() => {
     const parts = location.pathname.split('/').filter(Boolean);
-    // Expect /wall/:slug
     if (parts[0] === 'wall' && parts[1]) return parts[1];
     return new URLSearchParams(location.search).get('slug') || parts.pop() || null;
   })();
+
+  /* Read uploads saved by upload.html into localStorage (same-origin) */
+  function readLocalUploads() {
+    if (!slug) return [];
+    try {
+      const raw = JSON.parse(localStorage.getItem(`reelday_uploads_${slug}`) || '[]');
+      return raw.map(u => ({
+        id:             u.id,
+        uploader_name:  u.uploader_name,
+        message:        u.message,
+        // Wall uses file_url; fall back to thumb data URL
+        file_url:       u.file_url || u.thumb || null,
+        file_type:      u.file_type || 'photo',
+        is_video_message: u.is_video_message || false,
+        is_approved:    u.status !== 'hidden',
+        created_at:     u.created_at || u.timestamp || null,
+      })).filter(u => u.file_url); // skip entries that haven't finished compressing
+    } catch { return []; }
+  }
+
+  function mergeUploads(apiUploads) {
+    const local  = readLocalUploads();
+    const apiIds = new Set(apiUploads.map(u => String(u.id)));
+    const extras = local.filter(u => !apiIds.has(String(u.id)));
+    // newest first — already the order localStorage uses (unshift on save)
+    return [...extras, ...apiUploads];
+  }
 
   let items      = [];
   let allUploads = [];
@@ -693,35 +719,37 @@
      POLL FOR NEW UPLOADS
   ══════════════════════════════════════════════════════════ */
   async function refreshUploads() {
+    let apiUploads = [];
     try {
       const res = await fetch(`/api/uploads/${slug}`);
-      if (!res.ok) return;
-      const { uploads } = await res.json();
+      if (res.ok) apiUploads = (await res.json()).uploads || [];
+    } catch { /* fall through to local-only */ }
 
-      allUploads = uploads;
-      const slideable = uploads.filter(u => !u.is_video_message);
-      const newOnes   = slideable.filter(u => !knownIds.has(u.id));
+    const merged = mergeUploads(apiUploads);
+    allUploads = merged;
 
-      if (newOnes.length > 0) {
-        newOnes.forEach(u => knownIds.add(u.id));
+    const slideable = merged.filter(u => !u.is_video_message);
+    const newOnes   = slideable.filter(u => !knownIds.has(u.id));
 
-        if (isRunning) {
-          items = slideable;
-          const name = newOnes[0].uploader_name || 'Panauhin';
-          showToast(`✨ ${name} just shared a moment!`);
-          spawnEmoji(3 + Math.floor(Math.random() * 2));
-        }
-      }
-
-      if (!isRunning && slideable.length > 0) {
+    if (newOnes.length > 0) {
+      newOnes.forEach(u => knownIds.add(u.id));
+      if (isRunning) {
         items = slideable;
-        slideable.forEach(u => knownIds.add(u.id));
-        startSlideshow();
-        scheduleRandomEmoji();
+        const name = newOnes[0].uploader_name || 'Panauhin';
+        showToast(`✨ ${name} just shared a moment!`);
+        spawnEmoji(3 + Math.floor(Math.random() * 2));
       }
+    }
 
-      updateTicker(uploads);
-    } catch { /* wall must never crash */ }
+    if (!isRunning && slideable.length > 0) {
+      items = slideable;
+      slideable.forEach(u => knownIds.add(u.id));
+      emptyState.classList.remove('visible');
+      startSlideshow();
+      scheduleRandomEmoji();
+    }
+
+    updateTicker(merged);
   }
 
   /* ══════════════════════════════════════════════════════════
@@ -772,6 +800,11 @@
 
   document.addEventListener('mousemove', resetQrTimer);
 
+  // Cross-tab sync: pick up new uploads from upload.html immediately
+  window.addEventListener('storage', e => {
+    if (e.key === `reelday_uploads_${slug}`) refreshUploads();
+  });
+
   document.body.addEventListener('click', e => {
     if (e.target.closest('.qr-badge') || e.target.closest('.upcoming') || e.target.closest('.pause-btn')) return;
     if (isRunning) goTo(currentIdx + 1);
@@ -787,48 +820,55 @@
       return;
     }
 
+    // Try the API for event metadata + uploads
+    let apiEvent = null;
+    let apiUploads = [];
     try {
       const [eventRes, uploadsRes] = await Promise.all([
         fetch(`/api/events/${slug}`),
         fetch(`/api/uploads/${slug}`),
       ]);
+      if (eventRes.ok)   apiEvent   = (await eventRes.json()).event;
+      if (uploadsRes.ok) apiUploads = (await uploadsRes.json()).uploads || [];
+    } catch { /* offline / demo mode — fall back to localStorage */ }
 
-      if (!eventRes.ok) throw new Error('Event not found');
+    // Read URL query params as a fallback for event metadata (matches dashboard demo mode)
+    const qs = new URLSearchParams(location.search);
+    eventData = apiEvent || {
+      slug,
+      couple_names: qs.get('name')  || slug,
+      event_type:   qs.get('theme') || 'wedding',
+      event_date:   qs.get('date')  || '',
+      venue:        qs.get('venue') || '',
+    };
 
-      const { event }   = await eventRes.json();
-      const { uploads } = await uploadsRes.json();
+    // Apply event theme
+    const themeKey = Object.keys(THEME_META).includes(eventData.event_type) ? eventData.event_type : 'wedding';
+    themeMeta = THEME_META[themeKey];
+    document.body.setAttribute('data-theme', themeKey);
 
-      eventData  = event;
-      allUploads = uploads;
+    document.title = `Live Wall — ${eventData.couple_names}`;
 
-      // Apply event theme
-      const themeKey = Object.keys(THEME_META).includes(event.event_type) ? event.event_type : 'wedding';
-      themeMeta = THEME_META[themeKey];
-      document.body.setAttribute('data-theme', themeKey);
+    // Merge API + localStorage uploads
+    const merged = mergeUploads(apiUploads);
+    allUploads = merged;
 
-      document.title = `Live Wall — ${event.couple_names}`;
+    updateCorner();
+    updateTicker(merged);
+    await initQrBadge(slug);
 
-      updateCorner();
-      updateTicker(uploads);
-      await initQrBadge(slug);
+    const slideable = merged.filter(u => !u.is_video_message);
+    slideable.forEach(u => knownIds.add(u.id));
+    items = slideable;
 
-      const slideable = uploads.filter(u => !u.is_video_message);
-      slideable.forEach(u => knownIds.add(u.id));
-      items = slideable;
-
-      if (items.length > 0) {
-        startSlideshow();
-        scheduleRandomEmoji();
-      } else {
-        await showEmptyState(event);
-      }
-
-      setInterval(refreshUploads, POLL_INTERVAL);
-
-    } catch {
-      emptyName.textContent = 'Event not found';
-      emptyState.classList.add('visible');
+    if (items.length > 0) {
+      startSlideshow();
+      scheduleRandomEmoji();
+    } else {
+      await showEmptyState(eventData);
     }
+
+    setInterval(refreshUploads, POLL_INTERVAL);
   }
 
   init();
