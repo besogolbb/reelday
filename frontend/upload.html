@@ -209,13 +209,14 @@ body { background: var(--paper); min-height: 100dvh; }
 
 /* ── Message section (inside gallery panel) ──────────── */
 .gallery-msg { margin-top: 14px; display: flex; flex-direction: column; gap: 0; }
-.mp-textarea-wrap { background: var(--paper); border: 1.5px solid var(--line); border-radius: var(--r); padding: 12px 14px; transition: border-color .2s, box-shadow .2s; }
+.mp-textarea-wrap { background: #fff; border: 1.5px solid var(--line); border-radius: var(--r); padding: 12px 14px; transition: border-color .2s, box-shadow .2s; }
 .mp-textarea-wrap:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(196,90,58,.1); }
 .mp-textarea-wrap label { font-family: var(--mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); display: block; margin-bottom: 6px; }
 .mp-textarea { width: 100%; border: none; outline: none; background: transparent; font-family: var(--display); font-size: 16px; font-style: italic; color: var(--ink); resize: none; line-height: 1.5; min-height: 72px; }
 .mp-textarea::placeholder { color: var(--ink-faint); }
 .mp-wall-preview { border-radius: var(--r); overflow: hidden; position: relative; aspect-ratio: 16/6; background: #1a0f0a; }
-.mp-wall-bg { position: absolute; inset: -5%; background-size: cover; background-position: center; }
+.mp-wall-bg { position: absolute; inset: -8%; background-size: cover; background-position: center; animation: wall-kb 12s ease-in-out infinite alternate; }
+@keyframes wall-kb { from { transform: scale(1) translate(0,0); } to { transform: scale(1.14) translate(-2%,-1.5%); } }
 .mp-wall-vignette { position: absolute; inset: 0; background: linear-gradient(180deg,rgba(0,0,0,.3) 0%,transparent 30%,rgba(0,0,0,.7) 100%); }
 .mp-wall-label { position: absolute; top: 8px; left: 10px; font-family: var(--mono); font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: rgba(255,255,255,.45); }
 .mp-wall-msg { position: absolute; bottom: 10px; left: 14px; right: 14px; font-family: var(--display); font-style: italic; font-size: 15px; line-height: 1.3; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,.6); }
@@ -233,7 +234,7 @@ body { background: var(--paper); min-height: 100dvh; }
 
 /* ── Queue ───────────────────────────────────────────── */
 .queue { margin-top: 14px; display: grid; gap: 8px; }
-.queue-item { display: grid; grid-template-columns: 48px 1fr auto; gap: 10px; align-items: center; background: #fff; border: 1px solid var(--line); border-radius: var(--r); padding: 8px 12px 8px 8px; }
+.queue-item { display: grid; grid-template-columns: 48px 1fr auto auto; gap: 10px; align-items: center; background: #fff; border: 1px solid var(--line); border-radius: var(--r); padding: 8px 10px 8px 8px; }
 .queue-item.done { border-color: rgba(45,122,74,.3); }
 .q-thumb { aspect-ratio: 1; border-radius: 6px; }
 .q-name  { font-weight: 500; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -241,6 +242,8 @@ body { background: var(--paper); min-height: 100dvh; }
 .q-prog span { display: block; height: 100%; background: var(--accent); border-radius: 2px; }
 .q-status { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-soft); white-space: nowrap; }
 .queue-item.done .q-status { color: #2d7a4a; }
+.q-remove { width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--line-2); background: var(--paper-2); color: var(--ink-faint); font-size: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; transition: background .15s, color .15s, border-color .15s; }
+.q-remove:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
 
 /* ── Send button ─────────────────────────────────────── */
 .send-btn { width: 100%; padding: 15px; margin-top: 16px; font-size: 15px; }
@@ -503,12 +506,11 @@ body { background: var(--paper); min-height: 100dvh; }
   }
 
   /* ── Gallery ───────────────────────────────────────── */
-  let firstUploadDataUrl = null;
+  const itemDataUrls = {};
 
   function handleFiles(e) {
     const files = Array.from(e.target.files);
     const queue = document.getElementById('galleryQueue');
-    const isFirst = !firstUploadDataUrl;
 
     files.forEach((f, i) => {
       const reader = new FileReader();
@@ -519,7 +521,8 @@ body { background: var(--paper); min-height: 100dvh; }
       item.innerHTML = `
         <div class="q-thumb placeholder placeholder--coral" id="${thumbId}"></div>
         <div><div class="q-name">${f.name}</div><div class="q-prog"><span id="b${id}" style="width:0%"></span></div></div>
-        <div class="q-status" id="s${id}">Queued</div>`;
+        <div class="q-status" id="s${id}">Queued</div>
+        <button class="q-remove" onclick="removeItem('${id}')" title="Remove">✕</button>`;
       queue.appendChild(item);
       reader.onload = ev => {
         const th = document.getElementById(thumbId);
@@ -528,10 +531,8 @@ body { background: var(--paper); min-height: 100dvh; }
           th.style.backgroundSize = 'cover';
           th.style.backgroundPosition = 'center';
         }
-        if (isFirst && i === 0) {
-          firstUploadDataUrl = ev.target.result;
-          document.getElementById('wallPreviewBg').style.backgroundImage = `url(${ev.target.result})`;
-        }
+        itemDataUrls[id] = ev.target.result;
+        updateWallPreview();
       };
       reader.readAsDataURL(f);
       let prog = 0;
@@ -544,9 +545,34 @@ body { background: var(--paper); min-height: 100dvh; }
         if (prog >= 100) { clearInterval(t); item.classList.add('done'); }
       }, 200);
     });
+    updateSendBtn();
+  }
+
+  function removeItem(id) {
+    const item = document.getElementById(id);
+    if (item) item.remove();
+    delete itemDataUrls[id];
+    updateWallPreview();
+    updateSendBtn();
+  }
+
+  function updateWallPreview() {
+    const ids = Object.keys(itemDataUrls);
+    const bg = document.getElementById('wallPreviewBg');
+    if (ids.length > 0) {
+      bg.style.backgroundImage = `url(${itemDataUrls[ids[0]]})`;
+    } else {
+      bg.style.backgroundImage = currentEvent && currentEvent.cover
+        ? `url(${currentEvent.cover})` : '';
+    }
+  }
+
+  function updateSendBtn() {
     const total = document.querySelectorAll('#galleryQueue .queue-item').length;
-    document.querySelector('#panel-gallery .send-btn').textContent =
-      `Send ${total} moment${total>1?'s':''} →`;
+    const btn = document.querySelector('#panel-gallery .send-btn');
+    btn.textContent = total > 0
+      ? `Send ${total} moment${total>1?'s':''} →`
+      : 'Share moments →';
   }
 
   /* ── Record Video — real camera + MediaRecorder ────── */
