@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Reelday — Every shot. Every guest. One QR.</title>
+<link rel="stylesheet" href="shared.css" />
+<style>
+  body { background: #fdfaf5; }
+
+  .site-header { background: rgba(253,250,245,.9); }
+
+  /* ── HERO ─────────────────────────────────────────── */
+  .hero {
+    padding: 80px 28px 60px;
+    position: relative; overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 80% 60% at 55% 0%, rgba(216,160,90,.16), transparent 70%);
+    pointer-events: none;
+  }
+  .hero-inner {
+    max-width: 1240px; margin: 0 auto;
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 48px; align-items: center;
+    position: relative;
+  }
+  .hero-text { position: relative; z-index: 3; }
+  .hero h1 {
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: clamp(52px, 7.5vw, 108px);
+    line-height: .96;
+    letter-spacing: -0.03em;
+    margin: 24px 0 22px;
+    color: var(--ink);
+  }
+  .hero h1 em { font-style: italic; color: var(--accent); font-weight: 400; }
+  .hero h1 .underline {
+    position: relative; display: inline-block;
+  }
+  .hero h1 .underline::after {
+    content: '';
+    position: absolute; left: 0; right: 0; bottom: -4px;
+    height: 7px; background: var(--gold); opacity: .55;
+    border-radius: 8px; transform: skewX(-2deg);
+  }
+  .hero p {
+    font-size: 18px; color: var(--ink-soft);
+    line-height: 1.6; max-width: 40ch; margin-bottom: 28px;
+  }
+  .hero-cta { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 32px; }
+  .hero-trust {
+    display: flex; align-items: center; gap: 14px;
+    font-size: 13px; color: var(--ink-soft);
+  }
+  .avatars { display: flex; }
+  .avatars > div {
+    width: 32px; height: 32px; border-radius: 50%;
+    border: 2px solid #fdfaf5; margin-left: -9px;
+  }
+  .avatars > div:first-child { margin-left: 0; }
+  .stars { color: var(--gold); font-size: 14px; letter-spacing: 2px; line-height: 1; margin-bottom: 2px; }
+
+  /* ── Polaroid stage ─────────────────────────────────── */
+  .polaroid-stage {
+    position: relative;
+    aspect-ratio: 1 / 1.02;
+    perspective: 1400px;
+  }
+  .polaroid {
+    position: absolute;
+    background: #fff;
+    padding: 10px 10px 40px;
+    border-radius: 3px;
+    box-shadow: 0 4px 12px rgba(42,26,20,.12), 0 16px 40px rgba(42,26,20,.1);
+    transform-origin: center;
+    transition: transform .4s cubic-bezier(.22,1,.36,1), box-shadow .4s ease, z-index 0s .4s;
+  }
+  .polaroid:hover {
+    box-shadow: 0 8px 24px rgba(42,26,20,.18), 0 28px 60px rgba(42,26,20,.18);
+    z-index: 20 !important;
+    transition: transform .4s cubic-bezier(.22,1,.36,1), box-shadow .4s ease, z-index 0s;
+  }
+  .polaroid .pic {
+    display: block; border-radius: 1px; overflow: hidden;
+  }
+
+  .photo-coral  { background: linear-gradient(145deg, #e8c5b0 0%, #c45a3a 100%); }
+  .photo-ochre  { background: linear-gradient(145deg, #ead8b0 0%, #c98040 100%); }
+  .photo-sage   { background: linear-gradient(145deg, #b8d4c0 0%, #2d6a4a 100%); }
+  .photo-clay   { background: linear-gradient(145deg, #d4a892 0%, #8a3a28 100%); }
+  .photo-cream  { background: linear-gradient(145deg, #fdfaf5 0%, #e6d0b0 100%); }
+
+  .photo-label {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 10px; letter-spacing: .16em;
+    text-transform: uppercase; color: rgba(255,255,255,.55);
+  }
+  .photo-cream .photo-label { color: rgba(42,26,20,.35); }
+
+  .polaroid .caption {
+    position: absolute;
+    bottom: 8px; left: 10px; right: 10px;
+    font-family: var(--display); font-style: italic;
+    font-size: 13px; color: var(--ink);
+    text-align: center; line-height: 1.2;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  .pol-1 { width: 230px; top: 2%;  left: 6%;   transform: rotate(-7deg);  z-index: 3; }
+  .pol-2 { width: 210px; top: 0%;  right: 2%;  transform: rotate(5deg);   z-index: 5; }
+  .pol-3 { width: 220px; bottom: 16%; left: 0%;  transform: rotate(-3.5deg); z-index: 4; }
+  .pol-4 { width: 200px; bottom: 3%; right: 10%; transform: rotate(7.5deg);  z-index: 6; }
+  .pol-5 { width: 215px; top: 36%; left: 30%;   transform: rotate(-1.5deg);  z-index: 7; }
+
+  .pol-1:hover { transform: rotate(0deg) scale(1.05) translateY(-4px); }
+  .pol-2:hover { transform: rotate(0deg) scale(1.05) translateY(-4px); }
+  .pol-3:hover { transform: rotate(0deg) scale(1.05) translateY(-4px); }
+  .pol-4:hover { transform: rotate(0deg) scale(1.05) translateY(-4px); }
+  .pol-5:hover { transform: rotate(0deg) scale(1.05) translateY(-4px); }
+
+  .sticker {
+    position: absolute;
+    padding: 9px 16px;
+    border-radius: 999px;
+    font-family: var(--mono);
+    font-size: 11px; letter-spacing: .14em;
+    text-transform: uppercase;
+    box-shadow: 0 2px 8px rgba(42,26,20,.18);
+    z-index: 10; font-weight: 500;
+  }
+  .sticker-live {
+    top: 8%; right: 34%;
+    background: var(--accent); color: #fff;
+    transform: rotate(-4deg);
+  }
+  .sticker-live::before { content: '★ '; }
+  .sticker-count {
+    bottom: 28%; right: 2%;
+    background: var(--gold); color: var(--ink);
+    transform: rotate(3deg);
+  }
+
+  /* ── Hero stats strip ──────────────────────────────── */
+  .hero-strip {
+    max-width: 1100px; margin: 64px auto 0;
+    background: var(--ink); color: var(--paper);
+    border-radius: var(--r-xl);
+    padding: 36px 48px;
+    display: grid; grid-template-columns: repeat(4,1fr);
+    gap: 32px; position: relative; z-index: 5;
+  }
+  .hstat .num {
+    font-family: var(--display); font-size: 52px; font-weight: 400;
+    line-height: 1; letter-spacing: -.02em; margin-bottom: 8px;
+  }
+  .hstat .num em { color: var(--accent-soft); font-style: italic; }
+  .hstat .lbl {
+    font-family: var(--mono); font-size: 11px;
+    letter-spacing: .14em; text-transform: uppercase;
+    color: rgba(251,245,236,.55);
+  }
+
+  /* ── HOW IT WORKS ────────────────────────────────── */
+  .how { padding: 120px 28px 100px; background: #fdfaf5; }
+  .how-head { max-width: 1100px; margin: 0 auto 72px; text-align: center; }
+  .how-head h2 {
+    font-family: var(--display); font-weight: 400;
+    font-size: clamp(44px, 6vw, 86px);
+    line-height: 1.02; letter-spacing: -.03em;
+    color: var(--ink);
+  }
+  .how-head h2 em { font-style: italic; color: var(--accent); }
+  .how-grid {
+    max-width: 1100px; margin: 0 auto;
+    display: grid; grid-template-columns: repeat(3,1fr); gap: 28px;
+  }
+  .how-card {
+    background: #fff; border-radius: var(--r-lg);
+    padding: 36px 28px 28px;
+    border: 1px solid var(--line);
+    box-shadow: 0 2px 8px rgba(42,26,20,.04);
+    display: flex; flex-direction: column;
+  }
+  .how-card .big-num {
+    font-family: var(--display); font-size: 112px; font-weight: 400;
+    font-style: italic; line-height: 1;
+    color: var(--accent-soft); letter-spacing: -.04em;
+    opacity: .4; margin-bottom: 12px;
+  }
+  .how-card h3 {
+    font-family: var(--display); font-weight: 500;
+    font-size: 24px; line-height: 1.2;
+    letter-spacing: -.01em; margin-bottom: 10px; color: var(--ink);
+  }
+  .how-card p { color: var(--ink-soft); font-size: 14px; line-height: 1.65; margin-bottom: 24px; flex: 1; }
+  .how-card .mockup { border-radius: var(--r); overflow: hidden; position: relative; }
+
+  /* QR Poster mockup */
+  .qr-poster-mockup {
+    background: linear-gradient(160deg, var(--paper) 0%, var(--paper-2) 100%);
+    border: 1px solid var(--line);
+    border-radius: var(--r); padding: 20px 16px 16px;
+    position: relative;
+  }
+  .qr-poster-mockup .pin-badge {
+    display: inline-block; background: #fff; border: 1px solid var(--line);
+    border-radius: 999px; padding: 5px 12px;
+    font-family: var(--mono); font-size: 9px; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--ink-soft);
+    margin-bottom: 16px;
+  }
+  .qr-poster-mockup .poster-title {
+    font-family: var(--display); font-size: 15px; font-style: italic;
+    color: var(--ink); text-align: center; margin-bottom: 12px; font-weight: 500;
+  }
+  .qr-poster-mockup .qr-block {
+    width: 80px; height: 80px; margin: 0 auto 12px;
+    border-radius: 6px;
+    background: repeating-conic-gradient(var(--ink) 0% 25%, #fff 0% 50%) 0 0 / 10px 10px;
+    border: 6px solid #fff;
+    box-shadow: 0 0 0 1px var(--line);
+  }
+  .qr-poster-mockup .poster-meta {
+    font-family: var(--mono); font-size: 9px; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--ink-soft);
+    text-align: center; line-height: 1.6;
+  }
+
+  /* Phone upload mockup */
+  .phone-mockup {
+    background: var(--paper); border: 1px solid var(--line);
+    border-radius: var(--r); overflow: hidden; position: relative;
+  }
+  .phone-mockup .pm-header {
+    background: var(--paper-2); border-bottom: 1px solid var(--line);
+    padding: 10px 14px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .phone-mockup .pm-brand { font-family: var(--display); font-size: 13px; font-weight: 600; color: var(--ink); }
+  .phone-mockup .pm-lang { font-family: var(--mono); font-size: 9px; color: var(--ink-soft); letter-spacing: .1em; }
+  .phone-mockup .pm-body { padding: 12px 14px 14px; }
+  .phone-mockup .pm-event-name {
+    font-family: var(--display); font-size: 18px; font-style: italic;
+    color: var(--ink); text-align: center; margin-bottom: 10px; line-height: 1.1;
+  }
+  .phone-mockup .pm-event-name em { color: var(--accent); }
+  .phone-mockup .pm-drop {
+    background: #fff; border: 1.5px dashed var(--line-2);
+    border-radius: 10px; padding: 16px 12px; text-align: center; margin-bottom: 10px;
+  }
+  .phone-mockup .pm-drop-icon {
+    width: 36px; height: 36px; background: var(--accent); border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 8px; color: #fff; font-size: 20px; font-family: var(--display); font-style: italic;
+  }
+  .phone-mockup .pm-drop h4 { font-family: var(--display); font-size: 14px; font-weight: 500; margin-bottom: 2px; color: var(--ink); }
+  .phone-mockup .pm-drop p  { font-size: 11px; color: var(--ink-soft); }
+  .phone-mockup .pm-queue { display: grid; gap: 5px; }
+  .phone-mockup .pm-item {
+    background: #fff; border: 1px solid var(--line);
+    border-radius: 8px; padding: 6px 10px;
+    display: grid; grid-template-columns: 28px 1fr auto; gap: 8px; align-items: center;
+  }
+  .phone-mockup .pm-thumb { width: 28px; height: 28px; border-radius: 4px; }
+  .phone-mockup .pm-file  { font-size: 11px; font-weight: 500; color: var(--ink); }
+  .phone-mockup .pm-prog  { height: 3px; background: var(--paper-2); border-radius: 2px; margin-top: 2px; overflow: hidden; }
+  .phone-mockup .pm-prog span { display: block; height: 100%; background: var(--accent); border-radius: 2px; }
+  .phone-mockup .pm-done  { font-family: var(--mono); font-size: 9px; color: #2d7a4a; letter-spacing: .1em; }
+  .phone-mockup .pm-pct   { font-family: var(--mono); font-size: 9px; color: var(--ink-soft); letter-spacing: .1em; }
+
+  /* Wall mini mockup */
+  .wall-mini-mockup {
+    background: #1a0f0a; border-radius: var(--r); overflow: hidden;
+    position: relative; aspect-ratio: 16/10;
+  }
+  .wall-mini-mockup .wm-bg {
+    position: absolute; inset: -5%;
+    animation: wm-kb 10s ease-out infinite alternate;
+  }
+  @keyframes wm-kb { from{transform:scale(1)} to{transform:scale(1.1) translate(-1.5%,-1%)} }
+  .wall-mini-mockup .wm-vignette {
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(0,0,0,.3) 0%, transparent 30%, transparent 55%, rgba(0,0,0,.75) 100%);
+  }
+  .wall-mini-mockup .wm-ticker {
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 32px;
+    background: linear-gradient(180deg, rgba(0,0,0,.6), transparent);
+    display: flex; align-items: center; padding: 0 12px; gap: 6px;
+    font-family: var(--mono); font-size: 9px; letter-spacing: .16em;
+    text-transform: uppercase; color: rgba(255,255,255,.7);
+  }
+  .wm-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent-soft); box-shadow: 0 0 0 2px rgba(240,163,122,.3);
+    animation: wm-pulse 1.5s ease infinite; flex-shrink: 0;
+  }
+  @keyframes wm-pulse { 50% { box-shadow: 0 0 0 5px rgba(240,163,122,0); } }
+  .wall-mini-mockup .wm-caption {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    padding: 0 14px 12px;
+  }
+  .wall-mini-mockup .wm-who {
+    font-family: var(--mono); font-size: 8px; letter-spacing: .16em;
+    text-transform: uppercase; color: rgba(255,255,255,.5); margin-bottom: 4px;
+  }
+  .wall-mini-mockup .wm-quote {
+    font-family: var(--display); font-style: italic;
+    font-size: 14px; line-height: 1.2;
+    color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,.5);
+  }
+  .wall-mini-mockup .wm-pin {
+    position: absolute; top: 8px; right: 8px;
+    background: rgba(255,255,255,.95); border-radius: 999px;
+    padding: 4px 10px; font-family: var(--mono); font-size: 9px;
+    letter-spacing: .12em; text-transform: uppercase; color: var(--ink);
+  }
+
+  /* ── LIVE WALL DEMO ────────────────────────────────── */
+  .wall-section { padding: 100px 28px; background: var(--paper-2); }
+  .wall-section .container { max-width: 1100px; margin: 0 auto; }
+  .wall-section .head { margin-bottom: 44px; }
+  .wall-section h2 {
+    font-family: var(--display); font-weight: 400;
+    font-size: clamp(36px, 4.5vw, 60px);
+    letter-spacing: -.025em; line-height: 1.06;
+    margin-top: 14px; color: var(--ink);
+  }
+  .wall-section h2 em { font-style: italic; color: var(--accent); }
+
+  .wall-frame {
+    border-radius: var(--r-lg); overflow: hidden;
+    background: #1a0f0a; aspect-ratio: 16/9;
+    border: 1px solid var(--line-2);
+    box-shadow: 0 16px 56px rgba(42,26,20,.22);
+    position: relative;
+  }
+  .wl-layer { position: absolute; inset: 0; transition: opacity 1.6s ease; }
+  .wl-layer.wl-out { opacity: 0; }
+  .wl-pic { position: absolute; inset: -8%; background-size: cover; background-position: center; animation: wl-kb 14s ease-out forwards; }
+  @keyframes wl-kb { from{transform:scale(1) translate(0,0)} to{transform:scale(1.14) translate(-2%,-1.5%)} }
+  .wl-vignette {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,.55) 100%),
+      linear-gradient(180deg, rgba(0,0,0,.5) 0%, transparent 25%, transparent 45%, rgba(0,0,0,.9) 100%);
+  }
+  .wl-ticker {
+    position: absolute; top: 0; left: 0; right: 0; z-index: 5;
+    height: 56px; background: linear-gradient(180deg, rgba(0,0,0,.65), transparent);
+    display: flex; align-items: center; justify-content: space-between; padding: 0 28px;
+  }
+  .wl-live { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: rgba(255,255,255,.85); }
+  .wl-live-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent-soft); box-shadow: 0 0 0 3px rgba(240,163,122,.3); animation: wm-pulse 1.4s ease infinite; }
+  .wl-stats { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: rgba(255,255,255,.55); display: flex; gap: 20px; }
+  .wl-stats em { color: var(--accent-soft); font-style: normal; }
+  .wl-frame-inner { position: absolute; bottom: 0; left: 0; right: 0; z-index: 5; padding: 0 32px 28px; display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; }
+  .wl-caption { max-width: 55%; }
+  .wl-uploader { font-family: var(--mono); font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: rgba(255,255,255,.75); margin-bottom: 10px; transition: opacity .5s; }
+  .wl-quote { font-family: var(--display); font-style: italic; font-size: clamp(20px,2.8vw,40px); line-height: 1.1; letter-spacing: -.01em; color: #fff; text-shadow: 0 2px 12px rgba(0,0,0,.8), 0 8px 32px rgba(0,0,0,.6); transition: opacity .5s; font-weight: 400; }
+  .wl-caption.wl-fade .wl-uploader, .wl-caption.wl-fade .wl-quote { opacity: 0; }
+  .wl-corner { text-align: right; font-family: var(--mono); font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: rgba(255,255,255,.38); flex-shrink: 0; }
+  .wl-corner .wl-event { font-family: var(--display); font-style: italic; font-size: 20px; text-transform: none; letter-spacing: -.01em; color: rgba(255,255,255,.8); margin-bottom: 2px; }
+  .wl-progress { position: absolute; bottom: 0; left: 0; right: 0; height: 2px; z-index: 6; }
+  .wl-progress-fill { height: 100%; background: var(--accent-soft); width: 0; }
+  .wall-thumbs { display: flex; gap: 8px; margin-top: 10px; }
+  .wall-thumb { flex: 1; aspect-ratio: 16/9; border-radius: 8px; border: 1px solid var(--line); cursor: pointer; opacity: .45; transition: opacity .3s, transform .2s, border-color .2s; }
+  .wall-thumb:hover { opacity: .75; transform: translateY(-2px); }
+  .wall-thumb.wt-active { opacity: 1; border-color: var(--accent); }
+
+  /* ── TESTIMONIAL ────────────────────────────────────── */
+  .quote-section { padding: 100px 28px; background: #fdfaf5; position: relative; overflow: hidden; }
+  .quote-section::before {
+    content: '"'; position: absolute;
+    font-family: var(--display); font-style: italic;
+    font-size: 500px; line-height: 1;
+    color: var(--accent); opacity: .05;
+    top: -60px; left: 40px; pointer-events: none;
+  }
+  .quote-inner { max-width: 880px; margin: 0 auto; text-align: center; position: relative; }
+  .quote-inner blockquote {
+    font-family: var(--display); font-style: italic;
+    font-size: clamp(24px, 3vw, 38px);
+    line-height: 1.35; letter-spacing: -.01em;
+    color: var(--ink); font-weight: 400; margin-bottom: 32px;
+  }
+  .quote-attr { display: flex; align-items: center; justify-content: center; gap: 16px; }
+  .quote-avatar { width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg, #e8c5b0, #c45a3a); }
+  .quote-name { font-weight: 600; font-size: 15px; color: var(--ink); text-align: left; }
+  .quote-meta { font-family: var(--mono); font-size: 10px; color: var(--ink-soft); letter-spacing: .12em; text-transform: uppercase; text-align: left; }
+
+  /* ── FEATURES ───────────────────────────────────────── */
+  .features { padding: 100px 28px; background: var(--paper-2); }
+  .features .container { max-width: 1100px; margin: 0 auto; }
+  .features h2 {
+    font-family: var(--display); font-weight: 400;
+    font-size: clamp(36px, 4.5vw, 60px);
+    letter-spacing: -.025em; line-height: 1.06;
+    margin: 14px 0 48px; max-width: 18ch; color: var(--ink);
+  }
+  .features h2 em { font-style: italic; color: var(--accent); }
+  .features-grid {
+    display: grid; grid-template-columns: repeat(6,1fr);
+    gap: 12px;
+  }
+  .feat {
+    background: #fff; border: 1px solid var(--line);
+    border-radius: var(--r-lg); padding: 28px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .feat-wide { grid-column: span 4; }
+  .feat-narrow { grid-column: span 2; }
+  .feat-dark { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .feat-accent { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .feat-pill {
+    display: inline-flex; padding: 4px 10px;
+    background: var(--paper-2); border-radius: 999px;
+    font-family: var(--mono); font-size: 10px;
+    letter-spacing: .12em; text-transform: uppercase;
+    color: var(--ink-soft); width: fit-content;
+  }
+  .feat-dark .feat-pill, .feat-accent .feat-pill { background: rgba(255,255,255,.15); color: rgba(255,255,255,.8); }
+  .feat h3 { font-family: var(--display); font-weight: 500; font-size: 22px; line-height: 1.2; letter-spacing: -.01em; }
+  .feat h3 em { font-style: italic; }
+  .feat p { font-size: 14px; line-height: 1.6; opacity: .75; }
+  .feat .feat-visual { flex: 1; min-height: 70px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+  .feat-dark .feat-visual { background: rgba(255,255,255,.06); }
+  .feat-accent .feat-visual { background: rgba(255,255,255,.15); }
+
+  .feat-wall-preview {
+    border-radius: 10px; overflow: hidden; position: relative;
+    aspect-ratio: 21/9; background: #1a0f0a;
+  }
+  .feat-wall-preview .fw-bg {
+    position: absolute; inset: -5%;
+    background: linear-gradient(135deg, #3d1c0a, #c45a3a 60%, #d8a05a);
+    animation: wm-kb 8s ease-out infinite alternate;
+  }
+  .feat-wall-preview .fw-vignette {
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(0,0,0,.3) 0%, transparent 40%, rgba(0,0,0,.7) 100%);
+  }
+  .feat-wall-preview .fw-text {
+    position: absolute; bottom: 12px; left: 16px;
+    font-family: var(--display); font-style: italic;
+    font-size: 18px; color: #fff;
+    text-shadow: 0 2px 8px rgba(0,0,0,.5);
+  }
+  .feat-wall-preview .fw-badge {
+    position: absolute; top: 10px; left: 10px;
+    background: rgba(255,255,255,.95); border-radius: 999px;
+    padding: 5px 10px; font-family: var(--mono); font-size: 9px;
+    letter-spacing: .14em; text-transform: uppercase; color: var(--ink);
+    display: flex; align-items: center; gap: 5px;
+  }
+  .fw-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: wm-pulse 1.5s ease infinite; }
+
+  /* ── EVENT TYPES ────────────────────────────────────── */
+  .events { padding: 100px 28px; background: #fdfaf5; }
+  .events .container { max-width: 1100px; margin: 0 auto; }
+  .events h2 {
+    font-family: var(--display); font-weight: 400;
+    font-size: clamp(36px, 4.5vw, 60px);
+    letter-spacing: -.025em; margin: 14px 0 44px; color: var(--ink);
+  }
+  .events h2 em { font-style: italic; color: var(--accent); }
+  .events-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; }
+  .event-tile {
+    border: 1px solid var(--line); border-radius: var(--r);
+    padding: 20px 18px 18px; aspect-ratio: 3/4;
+    display: flex; flex-direction: column; justify-content: space-between;
+    position: relative; overflow: hidden; cursor: pointer;
+    transition: border-color .25s, transform .25s, box-shadow .25s;
+    background: #fff; text-decoration: none; color: var(--ink);
+  }
+  .event-tile:hover { border-color: var(--accent); transform: translateY(-3px); box-shadow: 0 12px 32px rgba(42,26,20,.1); }
+  .event-tile-bg { position: absolute; inset: 0; opacity: .15; }
+  .event-tile-top { position: relative; z-index: 2; font-family: var(--mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); }
+  .event-tile-name { position: relative; z-index: 2; font-family: var(--display); font-size: 22px; font-style: italic; font-weight: 400; line-height: 1.1; }
+  .event-tile-sub  { position: relative; z-index: 2; font-family: var(--mono); font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); margin-top: 3px; }
+
+  /* ── PRICING ────────────────────────────────────────── */
+  .pricing { padding: 100px 28px; background: var(--paper-2); }
+  .pricing .container { max-width: 1000px; margin: 0 auto; text-align: center; }
+  .pricing h2 {
+    font-family: var(--display); font-weight: 400;
+    font-size: clamp(36px, 4.5vw, 60px);
+    letter-spacing: -.025em; margin: 14px 0 10px; color: var(--ink);
+  }
+  .pricing h2 em { font-style: italic; color: var(--accent); }
+  .pricing .sub { font-size: 16px; color: var(--ink-soft); margin-bottom: 52px; }
+  .pricing-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; text-align: left; }
+  .price-card {
+    background: #fff; border: 1px solid var(--line);
+    border-radius: var(--r-lg); padding: 32px;
+    display: flex; flex-direction: column;
+    box-shadow: 0 2px 8px rgba(42,26,20,.04);
+    transition: transform .2s, box-shadow .2s;
+  }
+  .price-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(42,26,20,.08); }
+  .price-card.featured {
+    background: var(--ink); color: var(--paper);
+    border-color: var(--ink); transform: translateY(-10px);
+    box-shadow: 0 12px 40px rgba(42,26,20,.22);
+  }
+  .price-card.featured:hover { transform: translateY(-13px); }
+  .price-card .tier { font-family: var(--mono); font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 14px; }
+  .price-card.featured .tier { color: var(--accent-soft); }
+  .price-card .price { font-family: var(--display); font-size: 52px; font-weight: 400; line-height: 1; letter-spacing: -.03em; margin-bottom: 4px; }
+  .price-card .price sub { font-family: var(--sans); font-size: 12px; color: var(--ink-faint); font-weight: 400; }
+  .price-card.featured .price sub { color: rgba(251,245,236,.45); }
+  .price-card .desc { font-size: 13px; color: var(--ink-soft); margin-bottom: 20px; padding-bottom: 18px; border-bottom: 1px solid var(--line); line-height: 1.6; }
+  .price-card.featured .desc { color: rgba(251,245,236,.6); border-color: rgba(255,255,255,.1); }
+  .price-card ul { list-style: none; display: grid; gap: 9px; font-size: 13px; flex: 1; color: var(--ink-soft); }
+  .price-card.featured ul { color: rgba(251,245,236,.7); }
+  .price-card li { display: flex; gap: 8px; }
+  .price-card li::before { content: '✓'; color: var(--accent); font-weight: 700; flex-shrink: 0; }
+  .price-card.featured li::before { color: var(--accent-soft); }
+  .price-card .btn { margin-top: 24px; width: 100%; }
+
+  /* ── FAQ ────────────────────────────────────────────── */
+  .faq { padding: 100px 28px; background: #fdfaf5; }
+  .faq .container { max-width: 760px; margin: 0 auto; text-align: center; }
+  .faq h2 {
+    font-family: var(--display); font-weight: 400;
+    font-size: clamp(36px, 4.5vw, 60px);
+    letter-spacing: -.025em; margin: 14px 0 48px; color: var(--ink);
+  }
+  .faq h2 em { font-style: italic; color: var(--accent); }
+  details.faq-item { border-top: 1px solid var(--line-2); padding: 24px 0; text-align: left; }
+  details.faq-item:last-of-type { border-bottom: 1px solid var(--line-2); }
+  details.faq-item summary {
+    cursor: pointer; list-style: none;
+    font-family: var(--display); font-size: 20px; font-weight: 500;
+    letter-spacing: -.01em; color: var(--ink);
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  }
+  details.faq-item summary::-webkit-details-marker { display: none; }
+  details.faq-item summary::after {
+    content: '+'; font-family: var(--display); font-size: 26px;
+    font-weight: 300; transition: transform .3s ease; flex-shrink: 0; color: var(--accent);
+  }
+  details.faq-item[open] summary::after { transform: rotate(45deg); }
+  details.faq-item p { margin-top: 14px; color: var(--ink-soft); font-size: 15px; line-height: 1.7; }
+
+  /* ── FINAL CTA ──────────────────────────────────────── */
+  .final-cta {
+    padding: 120px 28px; text-align: center;
+    background: radial-gradient(ellipse 60% 80% at 50% 0%, rgba(216,160,90,.2), transparent 70%),
+      var(--paper);
+  }
+  .final-cta h2 {
+    font-family: var(--display); font-weight: 400;
+    font-size: clamp(44px, 7vw, 96px);
+    line-height: .98; letter-spacing: -.03em;
+    max-width: 14ch; margin: 0 auto 28px; color: var(--ink);
+  }
+  .final-cta h2 em { font-style: italic; color: var(--accent); }
+
+  /* ── RESPONSIVE ─────────────────────────────────────── */
+  @media (max-width: 960px) {
+    .hero-inner { grid-template-columns: 1fr; }
+    .polaroid-stage { max-width: 480px; margin: 0 auto; }
+    .hero-strip { grid-template-columns: repeat(2,1fr); padding: 24px 28px; }
+    .how-grid { grid-template-columns: 1fr; }
+    .features-grid { grid-template-columns: 1fr; }
+    .feat-wide, .feat-narrow { grid-column: 1; }
+    .events-grid { grid-template-columns: repeat(2,1fr); }
+    .pricing-grid { grid-template-columns: 1fr; }
+    .price-card.featured { transform: none; }
+    .site-nav { display: none; }
+  }
+  @media (max-width: 600px) {
+    .hero { padding: 72px 20px 40px; }
+    .how, .wall-section, .quote-section, .features, .events, .pricing, .faq, .final-cta { padding-left: 20px; padding-right: 20px; }
+    .events-grid { grid-template-columns: repeat(2,1fr); }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="site-header">
+  <div class="site-header-inner">
+    <a class="brand" href="landing.html">REELDAY<sup>★</sup></a>
+    <nav class="site-nav">
+      <a href="#how">How it works</a>
+      <a href="#demo">Live demo</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <div class="site-actions">
+      <div class="lang-switch" id="langSwitch">
+        <button class="active" onclick="setLang('EN',this)">EN</button>
+        <button onclick="setLang('FIL',this)">FIL</button>
+      </div>
+      <a class="btn btn-accent" href="create.html">Start free →</a>
+    </div>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-inner">
+
+    <!-- Left: copy -->
+    <div class="hero-text">
+      <div class="chip"><span class="chip-dot"></span>Built for Filipino celebrations</div>
+      <h1>
+        Every shot.<br/>
+        <em>Every guest.</em><br/>
+        <span class="underline">One QR.</span>
+      </h1>
+      <p>Guests scan one code and upload photos straight to your live cinematic wall — no app, no sign-up, no missed moments.</p>
+      <div class="hero-cta">
+        <a class="btn btn-accent" href="create.html">Start free →</a>
+        <a class="btn btn-ghost" href="#demo">See live demo</a>
+      </div>
+      <div class="hero-trust">
+        <div class="avatars">
+          <div style="background:linear-gradient(135deg,#e8c5b0,#c45a3a)"></div>
+          <div style="background:linear-gradient(135deg,#ead8b0,#c98040)"></div>
+          <div style="background:linear-gradient(135deg,#b8d4c0,#2d6a4a)"></div>
+          <div style="background:linear-gradient(135deg,#d4a892,#8a3a28)"></div>
+        </div>
+        <div>
+          <div class="stars">★★★★★</div>
+          <div>Trusted by 2,140+ celebrations across PH</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Polaroid pile -->
+    <div class="polaroid-stage">
+
+      <div class="sticker sticker-live">Live now</div>
+      <div class="sticker sticker-count">847 today</div>
+
+      <div class="polaroid pol-1">
+        <div class="pic photo-coral" style="width:220px;height:220px;position:relative;">
+          <span class="photo-label">First Dance</span>
+        </div>
+        <div class="caption">Tito's mga kuya, finally on the floor</div>
+      </div>
+
+      <div class="polaroid pol-2">
+        <div class="pic photo-ochre" style="width:200px;height:200px;position:relative;">
+          <span class="photo-label">Garden</span>
+        </div>
+        <div class="caption">Ate Andrea's bouquet toss ✦</div>
+      </div>
+
+      <div class="polaroid pol-3">
+        <div class="pic photo-sage" style="width:210px;height:210px;position:relative;">
+          <span class="photo-label">Lola</span>
+        </div>
+        <div class="caption">Lolo's speech, 1962 → today</div>
+      </div>
+
+      <div class="polaroid pol-4">
+        <div class="pic photo-clay" style="width:195px;height:195px;position:relative;">
+          <span class="photo-label">Reception</span>
+        </div>
+        <div class="caption">Tinapay table looks unreal</div>
+      </div>
+
+      <div class="polaroid pol-5">
+        <div class="pic photo-cream" style="width:210px;height:210px;position:relative;">
+          <span class="photo-label">Ceremony</span>
+        </div>
+        <div class="caption">First kiss, Sta. Cruz</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Stats strip -->
+  <div class="hero-strip">
+    <div class="hstat"><div class="num"><em>2,140</em></div><div class="lbl">Events hosted</div></div>
+    <div class="hstat"><div class="num"><em>180k</em></div><div class="lbl">Photos uploaded</div></div>
+    <div class="hstat"><div class="num"><em>52s</em></div><div class="lbl">Setup time avg</div></div>
+    <div class="hstat"><div class="num"><em>4.9★</em></div><div class="lbl">Event rating</div></div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how" id="how">
+  <div class="how-head">
+    <div class="eyebrow" style="justify-content:center;margin-bottom:16px;">— How it works</div>
+    <h2>Three steps.<br/>Done before <em>cocktail hour.</em></h2>
+  </div>
+  <div class="how-grid">
+
+    <div class="how-card">
+      <div class="big-num">1</div>
+      <h3>Print your QR</h3>
+      <p>Set names, date, theme. Download a print-ready poster. Place it at the welcome table.</p>
+      <div class="mockup qr-poster-mockup">
+        <div class="pin-badge">QR Poster</div>
+        <div class="poster-title">Your Event Name<br/>&amp; Date</div>
+        <div class="qr-block"></div>
+        <div class="poster-meta">reelday.ph/e/your-event<br/>scan to share your moments</div>
+      </div>
+    </div>
+
+    <div class="how-card">
+      <div class="big-num">2</div>
+      <h3>Guests scan &amp; share</h3>
+      <p>One tap opens the upload page. Pick photos, add a caption, send. No app, no login.</p>
+      <div class="mockup phone-mockup">
+        <div class="pm-header">
+          <div class="pm-brand">REELDAY<sup style="font-family:var(--mono);font-size:7px;color:var(--accent);">★</sup></div>
+          <div class="pm-lang">EN · FIL</div>
+        </div>
+        <div class="pm-body">
+          <div class="pm-event-name">Your Event <em>&amp;</em> Name</div>
+          <div class="pm-drop">
+            <div class="pm-drop-icon">+</div>
+            <h4>Tap to share</h4>
+            <p>Photos &amp; videos · up to 100MB</p>
+          </div>
+          <div class="pm-queue">
+            <div class="pm-item">
+              <div class="pm-thumb photo-coral" style="border-radius:4px;"></div>
+              <div>
+                <div class="pm-file">first-dance.jpg</div>
+                <div class="pm-prog"><span style="width:100%"></span></div>
+              </div>
+              <div class="pm-done">✓ Sent</div>
+            </div>
+            <div class="pm-item">
+              <div class="pm-thumb photo-ochre" style="border-radius:4px;"></div>
+              <div>
+                <div class="pm-file">garden-shot.jpg</div>
+                <div class="pm-prog"><span id="demoBar" style="width:62%"></span></div>
+              </div>
+              <div class="pm-pct" id="demoPct">62%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="how-card">
+      <div class="big-num">3</div>
+      <h3>Wall goes live</h3>
+      <p>Photos appear on screen within seconds. Ken Burns pans, music, captions, the works.</p>
+      <div class="mockup wall-mini-mockup" id="miniWall">
+        <div class="wm-bg" id="miniWallBg" style="background:linear-gradient(135deg,#7a3b2e,#c45a3a 60%,#d8a05a)"></div>
+        <div class="wm-vignette"></div>
+        <div class="wm-ticker">
+          <span class="wm-dot"></span>
+          Live
+        </div>
+        <div class="wm-pin">Wall · Live</div>
+        <div class="wm-caption">
+          <div class="wm-who" id="miniWho">— Tita Marivic</div>
+          <div class="wm-quote" id="miniQuote">"First dance, 38 years later."</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- LIVE WALL DEMO -->
+<section class="wall-section" id="demo">
+  <div class="container">
+    <div class="head">
+      <div class="eyebrow">Live demo</div>
+      <h2>Watch the wall <em>come alive.</em></h2>
+    </div>
+    <div class="wall-frame">
+      <div class="wl-layer" id="wlLayerA"><div class="wl-pic" id="wlPicA"></div><div class="wl-vignette"></div></div>
+      <div class="wl-layer wl-out" id="wlLayerB"><div class="wl-pic" id="wlPicB"></div><div class="wl-vignette"></div></div>
+      <div class="wl-ticker">
+        <div class="wl-live"><span class="wl-live-dot"></span>Live · Reelday Demo</div>
+        <div class="wl-stats"><span><em id="wlMoments">847</em> moments</span><span><em id="wlGuests">47</em> sharing</span></div>
+      </div>
+      <div class="wl-frame-inner">
+        <div class="wl-caption" id="wlCaption">
+          <div class="wl-uploader" id="wlUploader">— Tita Marivic · 8:42 pm</div>
+          <div class="wl-quote" id="wlQuote">"First dance after 38 years — still got it."</div>
+        </div>
+        <div class="wl-corner">
+          <div class="wl-event">Your Event</div>
+          <div>★ Reelday</div>
+        </div>
+      </div>
+      <div class="wl-progress"><div class="wl-progress-fill" id="wlFill"></div></div>
+    </div>
+    <div class="wall-thumbs" id="wallThumbs"></div>
+  </div>
+</section>
+
+<!-- TESTIMONIAL -->
+<section class="quote-section">
+  <div class="quote-inner">
+    <div class="eyebrow" style="justify-content:center;margin-bottom:18px;">— What people say</div>
+    <blockquote>"By the end of the night we had 412 photos we'd never have seen otherwise. Tita Marivic's <em>blurry first dance</em> shot is still my favorite frame in the whole reel."</blockquote>
+    <div class="quote-attr">
+      <div class="quote-avatar"></div>
+      <div>
+        <div class="quote-name">Andrea &amp; JM Cabrera</div>
+        <div class="quote-meta">Manila · June 2026</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features" id="features">
+  <div class="container">
+    <div class="eyebrow">What's inside</div>
+    <h2>A video directed<br/>by your <em>guests.</em></h2>
+    <div class="features-grid">
+      <div class="feat feat-dark feat-wide">
+        <span class="feat-pill">Headline feature</span>
+        <h3>Cinematic <em>live wall</em></h3>
+        <p>Ken Burns pans, crossfades, captions, ambient music — automatic and beautiful.</p>
+        <div class="feat-wall-preview">
+          <div class="fw-bg"></div>
+          <div class="fw-vignette"></div>
+          <div class="fw-badge"><span class="fw-dot"></span>Live</div>
+          <div class="fw-text">"The moment everyone was waiting for."</div>
+        </div>
+      </div>
+      <div class="feat feat-narrow">
+        <span class="feat-pill">EN · FIL</span>
+        <h3><em>Bilingual</em> upload</h3>
+        <p>Guests pick their language. Titas get Filipino, kids get English — captions follow.</p>
+      </div>
+      <div class="feat feat-narrow">
+        <span class="feat-pill">1-tap</span>
+        <h3>Phone <em>moderation</em></h3>
+        <p>Approve, feature, or hide photos from your phone. Auto-approve keeps you present.</p>
+      </div>
+      <div class="feat feat-accent feat-wide">
+        <span class="feat-pill">Forever</span>
+        <h3>Full-quality <em>archive.</em></h3>
+        <p>Every photo and video downloadable as a full-res .zip. Yours to keep forever.</p>
+        <div class="feat-visual">
+          <div style="font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.7);">your-event-photos.zip · 4.2 GB</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- EVENT TYPES -->
+<section class="events">
+  <div class="container">
+    <div class="eyebrow">Event types</div>
+    <h2>One platform.<br/><em>Seven celebrations.</em></h2>
+    <div class="events-grid">
+      <a class="event-tile" href="create.html?type=wedding">
+        <div class="event-tile-bg" style="background:linear-gradient(135deg,#c45a3a,#7a3b2e)"></div>
+        <span class="event-tile-top">01 · Kasal</span>
+        <div><div class="event-tile-name">Wedding</div><div class="event-tile-sub">Kasal</div></div>
+      </a>
+      <a class="event-tile" href="create.html?type=debut">
+        <div class="event-tile-bg" style="background:linear-gradient(135deg,#b6457a,#6b1f49)"></div>
+        <span class="event-tile-top">02 · Ika-18</span>
+        <div><div class="event-tile-name">Debut</div><div class="event-tile-sub">Ika-18</div></div>
+      </a>
+      <a class="event-tile" href="create.html?type=birthday">
+        <div class="event-tile-bg" style="background:linear-gradient(135deg,#d97706,#7c2d12)"></div>
+        <span class="event-tile-top">03 · Kaarawan</span>
+        <div><div class="event-tile-name">Birthday</div><div class="event-tile-sub">Kaarawan</div></div>
+      </a>
+      <a class="event-tile" href="create.html?type=baptism">
+        <div class="event-tile-bg" style="background:linear-gradient(135deg,#3b6ea8,#1e3a5f)"></div>
+        <span class="event-tile-top">04 · Binyag</span>
+        <div><div class="event-tile-name">Baptism</div><div class="event-tile-sub">Binyag</div></div>
+      </a>
+      <a class="event-tile" href="create.html?type=reunion">
+        <div class="event-tile-bg" style="background:linear-gradient(135deg,#2d6a4a,#134e3a)"></div>
+        <span class="event-tile-top">05 · Pagkikita</span>
+        <div><div class="event-tile-name">Reunion</div><div class="event-tile-sub">Pagkikita</div></div>
+      </a>
+      <a class="event-tile" href="create.html?type=corporate">
+        <div class="event-tile-bg" style="background:linear-gradient(135deg,#2a3548,#16202e)"></div>
+        <span class="event-tile-top">06 · Kompanya</span>
+        <div><div class="event-tile-name">Corporate</div><div class="event-tile-sub">Kompanya</div></div>
+      </a>
+      <a class="event-tile" href="create.html?type=memorial">
+        <div class="event-tile-bg" style="background:linear-gradient(135deg,#4a6b4a,#1c2b1a)"></div>
+        <span class="event-tile-top">07 · Alaala</span>
+        <div><div class="event-tile-name">Memorial</div><div class="event-tile-sub">Alaala</div></div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="pricing" id="pricing">
+  <div class="container">
+    <div class="eyebrow" style="justify-content:center;">— Simple pricing</div>
+    <h2>One payment.<br/><em>Sulit forever.</em></h2>
+    <p class="sub">No subscription. No surprise charges. Pick the tier that matches your guest list.</p>
+    <div class="pricing-grid">
+      <div class="price-card">
+        <div class="tier">Intimate</div>
+        <div class="price">₱990<sub> / event</sub></div>
+        <p class="desc">Up to 50 guests. Despedidas, baby showers, salu-salo.</p>
+        <ul>
+          <li>200 uploads</li><li>Live wall, 24h</li>
+          <li>Standard themes</li><li>Watermarked .zip</li>
+        </ul>
+        <a class="btn btn-ghost" href="create.html?plan=intimate">Get started</a>
+      </div>
+      <div class="price-card featured">
+        <div class="tier">★ Celebration</div>
+        <div class="price">₱2,490<sub> / event</sub></div>
+        <p class="desc">Up to 250 guests. Weddings, debuts, big birthdays.</p>
+        <ul>
+          <li>Unlimited uploads</li><li>Live wall, 7 days</li>
+          <li>All 7 themes</li><li>HD .zip + custom poster</li><li>Custom QR poster</li>
+        </ul>
+        <a class="btn btn-accent" href="create.html?plan=celebration">Choose Celebration →</a>
+      </div>
+      <div class="price-card">
+        <div class="tier">Forever</div>
+        <div class="price">₱4,990<sub> / event</sub></div>
+        <p class="desc">500+ guests. White-glove setup, lifetime archive.</p>
+        <ul>
+          <li>Everything in Celebration</li><li>Lifetime archive</li>
+          <li>Coordinator dashboard</li><li>Priority support</li>
+        </ul>
+        <a class="btn btn-ghost" href="create.html?plan=forever">Get started</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="faq" id="faq">
+  <div class="container">
+    <div class="eyebrow" style="justify-content:center;">— Common questions</div>
+    <h2>Mga <em>tanong?</em></h2>
+    <details class="faq-item" open>
+      <summary>Do guests need to download an app?</summary>
+      <p>No. They scan the QR, the upload page opens in any browser, and they share. That's the whole point.</p>
+    </details>
+    <details class="faq-item">
+      <summary>What if the venue Wi-Fi is bad?</summary>
+      <p>Uploads queue locally and finish when signal returns. Guests don't see a spinner — the page says "kept safe, will share soon."</p>
+    </details>
+    <details class="faq-item">
+      <summary>Can we screen photos before they go live?</summary>
+      <p>Yes. One-tap moderation from your phone. Approve, hide, or feature. Defaults to auto-approve so you can stay present.</p>
+    </details>
+    <details class="faq-item">
+      <summary>Do we keep the photos forever?</summary>
+      <p>Yes. Download a full-resolution .zip any time. Forever-tier events stay archived on Reelday for life.</p>
+    </details>
+    <details class="faq-item">
+      <summary>Pwede ba namin gamitin sa Filipino?</summary>
+      <p>Oo naman. Guest upload page is fully bilingual — guests pick EN or FIL. Wall captions follow.</p>
+    </details>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="final-cta">
+  <h2>Your day. Every <em>angle.</em></h2>
+  <a class="btn btn-accent" style="font-size:16px;padding:15px 36px;" href="create.html">Start free — no card needed →</a>
+</section>
+
+<!-- FOOTER -->
+<footer class="site-footer">
+  <div class="site-footer-inner">
+    <div>
+      <div class="brand" style="margin-bottom:14px;">REELDAY<sup>★</sup></div>
+      <p style="color:var(--ink-soft);font-size:14px;max-width:32ch;">The live photo wall for Filipino celebrations. Made in Manila.</p>
+    </div>
+    <div><h4>Product</h4><ul><li><a href="#how">How it works</a></li><li><a href="#pricing">Pricing</a></li><li><a href="#">Themes</a></li><li><a href="#demo">Live demo</a></li></ul></div>
+    <div><h4>Company</h4><ul><li><a href="#">About</a></li><li><a href="#">Press</a></li><li><a href="#">Partners</a></li><li><a href="#">Contact</a></li></ul></div>
+    <div><h4>Legal</h4><ul><li><a href="#">Privacy</a></li><li><a href="#">Terms</a></li><li><a href="#">Refunds</a></li></ul></div>
+  </div>
+  <div class="footer-meta">
+    <span>© 2026 Reelday Inc · Made in Manila</span>
+    <span>★ EVERY SHOT · ONE QR · INSTANTLY</span>
+  </div>
+</footer>
+
+<script>
+/* ── Language toggle ──────────────────────────────── */
+function setLang(lang, btn) {
+  document.querySelectorAll('#langSwitch button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+/* ── Demo upload bar animation ──────────────────── */
+(function() {
+  const bar = document.getElementById('demoBar');
+  const pct = document.getElementById('demoPct');
+  if (!bar) return;
+  let p = 62;
+  const t = setInterval(() => {
+    p = Math.min(p + Math.random() * 10 + 3, 100);
+    bar.style.width = p + '%';
+    if (pct) pct.textContent = p < 100 ? Math.round(p) + '%' : '✓ Sent';
+    if (p >= 100) clearInterval(t);
+  }, 300);
+})();
+
+/* ── Mini wall rotation (step 3 card) ──────────── */
+(function() {
+  const bgs = [
+    'linear-gradient(135deg,#7a3b2e,#c45a3a 60%,#d8a05a)',
+    'linear-gradient(135deg,#1e3a5f,#3b6ea8 60%,#a4c2e3)',
+    'linear-gradient(135deg,#134e3a,#2d6a4a 60%,#8fc4a4)',
+    'linear-gradient(135deg,#4c1d95,#7d3aa8 60%,#c8a2e3)',
+  ];
+  const quotes = [
+    { who: '— Tita Marivic', q: '"First dance, 38 years later."' },
+    { who: '— Kuya Mike',    q: '"Whole family, one frame."' },
+    { who: '— Ate Karen',    q: '"Garden hour. No filter."' },
+    { who: '— Kuya Vince',   q: '"Best night of the year."' },
+  ];
+  let i = 0;
+  setInterval(() => {
+    i = (i + 1) % bgs.length;
+    const bg  = document.getElementById('miniWallBg');
+    const who = document.getElementById('miniWho');
+    const q   = document.getElementById('miniQuote');
+    if (bg)  bg.style.background = bgs[i];
+    if (who) who.textContent = quotes[i].who;
+    if (q)   q.textContent   = quotes[i].q;
+  }, 3500);
+})();
+
+/* ── Full live wall demo ──────────────────────────── */
+(function() {
+  const DURATION = 6500;
+  const slides = [
+    { bg: 'linear-gradient(135deg,#7a3b2e 0%,#c45a3a 60%,#d8a05a 100%)', uploader: '— Tita Marivic · 8:42 pm', quote: '"First dance after 38 years — still got it."' },
+    { bg: 'linear-gradient(135deg,#1e3a5f 0%,#3b6ea8 60%,#a4c2e3 100%)', uploader: '— Kuya Mike · 9:01 pm',    quote: '"The whole family finally in one frame."' },
+    { bg: 'linear-gradient(135deg,#134e3a 0%,#2d6a4a 60%,#8fc4a4 100%)', uploader: '— Ate Karen · 9:18 pm',    quote: '"Garden hour. No filter needed."' },
+    { bg: 'linear-gradient(135deg,#4c1d95 0%,#7d3aa8 60%,#c8a2e3 100%)', uploader: '— Kuya Vince · 9:35 pm',   quote: '"Best night of the year, hands down."' },
+    { bg: 'linear-gradient(135deg,#7c2d12 0%,#d97706 60%,#fbbf6f 100%)', uploader: '— JM · 9:52 pm',           quote: '"The moment everyone was waiting for."' },
+    { bg: 'linear-gradient(135deg,#2a1a14 0%,#5a443a 60%,#8a7468 100%)', uploader: '— Andrea · 10:08 pm',      quote: '"Dancing with Tatay. I will never forget this."' },
+  ];
+
+  let idx = 0, active = 'A', timer;
+  const lA = document.getElementById('wlLayerA'), lB = document.getElementById('wlLayerB');
+  const pA = document.getElementById('wlPicA'),   pB = document.getElementById('wlPicB');
+  const cap = document.getElementById('wlCaption');
+  const upl = document.getElementById('wlUploader');
+  const qt  = document.getElementById('wlQuote');
+  const fill = document.getElementById('wlFill');
+  const thumbs = document.getElementById('wallThumbs');
+
+  slides.forEach((s, i) => {
+    const d = document.createElement('div');
+    d.className = 'wall-thumb' + (i === 0 ? ' wt-active' : '');
+    d.style.background = s.bg;
+    d.addEventListener('click', () => jumpTo(i));
+    thumbs.appendChild(d);
+  });
+
+  function setProgress() {
+    fill.style.transition = 'none'; fill.style.width = '0%';
+    void fill.offsetWidth;
+    fill.style.transition = `width ${DURATION}ms linear`; fill.style.width = '100%';
+  }
+
+  function showSlide(i) {
+    const s   = slides[i];
+    const inL = active === 'A' ? lB : lA;
+    const outL= active === 'A' ? lA : lB;
+    const inP = active === 'A' ? pB : pA;
+    inP.style.background = s.bg;
+    inP.style.animation = 'none'; void inP.offsetWidth; inP.style.animation = '';
+    inL.classList.remove('wl-out'); outL.classList.add('wl-out');
+    active = active === 'A' ? 'B' : 'A';
+    cap.classList.add('wl-fade');
+    setTimeout(() => { upl.textContent = s.uploader; qt.textContent = s.quote; cap.classList.remove('wl-fade'); }, 500);
+    document.querySelectorAll('.wall-thumb').forEach((t,ti) => t.classList.toggle('wt-active', ti === i));
+    setProgress();
+  }
+
+  function jumpTo(i) { clearTimeout(timer); idx = i; showSlide(idx); timer = setTimeout(advance, DURATION); }
+  function advance() {
+    idx = (idx + 1) % slides.length; showSlide(idx);
+    const el = document.getElementById('wlMoments');
+    if (el) el.textContent = parseInt(el.textContent, 10) + Math.floor(Math.random() * 2 + 1);
+    timer = setTimeout(advance, DURATION);
+  }
+
+  showSlide(0);
+  timer = setTimeout(advance, DURATION);
+
+  const obs = new IntersectionObserver(([e]) => {
+    if (!e.isIntersecting) clearTimeout(timer);
+    else timer = setTimeout(advance, DURATION);
+  });
+  obs.observe(document.getElementById('demo'));
+})();
+</script>
+</body>
+</html>

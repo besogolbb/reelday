@@ -8,301 +8,334 @@
 <style>
   body { background: var(--paper); min-height: 100dvh; }
 
-  /* Event header */
+  /* ── Event hero header ─────────────────────────────────── */
   .event-header {
     background: var(--ink); color: var(--paper);
-    padding: 32px 28px 80px;
-    position: relative; overflow: hidden;
+    padding: 32px 28px 96px; position: relative; overflow: hidden;
   }
   .event-header::before {
     content: ''; position: absolute; inset: 0;
     background: radial-gradient(ellipse 60% 80% at 80% 0%, rgba(196,90,58,.3), transparent 60%);
   }
-  .event-header-inner { max-width: 1200px; margin: 0 auto; position: relative; }
-  .event-header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 56px; }
+  .event-header-inner { max-width: 1200px; margin: 0 auto; position: relative; z-index: 2; }
+  .event-header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 56px; gap: 16px; }
   .event-header .brand { color: var(--paper); }
-  .event-header .nav { display: flex; gap: 24px; }
-  .event-header .nav a { color: rgba(251,245,236,.7); font-size: 14px; }
-  .event-header .nav a.active { color: var(--paper); }
-  .event-header .badge {
+  .event-nav { display: flex; gap: 4px; background: rgba(255,255,255,.08); border-radius: 999px; padding: 4px; }
+  .event-nav a {
+    color: rgba(251,245,236,.65); font-size: 13px;
+    padding: 8px 16px; border-radius: 999px; transition: background .2s, color .2s;
+  }
+  .event-nav a:hover { color: var(--paper); background: rgba(255,255,255,.1); }
+  .event-nav a.active { background: rgba(255,255,255,.15); color: var(--paper); }
+  .live-badge {
     display: inline-flex; gap: 8px; align-items: center;
     background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12);
-    border-radius: 999px; padding: 6px 14px;
+    border-radius: 999px; padding: 7px 16px;
     font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
-    color: rgba(251,245,236,.85);
-    margin-bottom: 20px;
+    color: rgba(251,245,236,.85); margin-bottom: 20px;
   }
-  .event-header .badge .dot { width: 8px; height: 8px; border-radius: 50%; background: #2d7a4a; box-shadow: 0 0 0 4px rgba(45,122,74,.3); animation: pulse 1.5s ease infinite; }
+  .live-badge .dot { width: 8px; height: 8px; border-radius: 50%; background: #2d7a4a; box-shadow: 0 0 0 4px rgba(45,122,74,.3); animation: pulse 1.5s ease infinite; }
   @keyframes pulse { 50% { box-shadow: 0 0 0 8px rgba(45,122,74,0); } }
-  .event-header h1 {
-    font-family: var(--display); font-weight: 400;
-    font-size: clamp(48px, 6vw, 88px);
-    line-height: 1; letter-spacing: -.025em;
-    margin-bottom: 12px;
-  }
+  .event-header h1 { font-family: var(--display); font-weight: 400; font-size: clamp(44px,6vw,88px); line-height: 1; letter-spacing: -.025em; margin-bottom: 12px; }
   .event-header h1 em { font-style: italic; color: var(--accent-soft); }
   .event-header .meta { font-family: var(--mono); font-size: 12px; letter-spacing: .14em; color: rgba(251,245,236,.6); text-transform: uppercase; }
 
-  /* stats row */
-  .stats {
+  /* ── Stats row ─────────────────────────────────────────── */
+  .stats-row {
     max-width: 1200px; margin: -48px auto 0;
     padding: 0 28px;
-    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+    display: grid; grid-template-columns: repeat(4,1fr); gap: 12px;
     position: relative; z-index: 5;
   }
-  .stat {
-    background: #fff; border: 1px solid var(--line);
-    border-radius: var(--r-lg);
-    padding: 24px 28px;
-    box-shadow: var(--shadow-soft);
-  }
-  .stat .lbl { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 8px; }
-  .stat .num { font-family: var(--display); font-size: 44px; font-weight: 400; line-height: 1; letter-spacing: -.02em; }
-  .stat .num em { font-style: italic; color: var(--accent); }
-  .stat .delta { font-family: var(--mono); font-size: 11px; color: #2d7a4a; margin-top: 6px; }
+  .stat-card { background: #fff; border: 1px solid var(--line); border-radius: var(--r-lg); padding: 24px 28px; box-shadow: var(--shadow-soft); }
+  .stat-card .lbl { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 8px; }
+  .stat-card .num { font-family: var(--display); font-size: 44px; font-weight: 400; line-height: 1; letter-spacing: -.02em; }
+  .stat-card .num em { font-style: italic; color: var(--accent); }
+  .stat-card .delta { font-family: var(--mono); font-size: 11px; color: #2d7a4a; margin-top: 6px; }
 
-  /* body */
+  /* ── Body layout ───────────────────────────────────────── */
   .body {
     max-width: 1200px; margin: 56px auto 0;
-    padding: 0 28px 96px;
+    padding: 0 28px 120px;
     display: grid; grid-template-columns: 1fr 320px; gap: 32px;
+    align-items: start;
   }
 
-  .panel {
-    background: #fff; border: 1px solid var(--line);
-    border-radius: var(--r-lg);
-    overflow: hidden;
-  }
-  .panel-head {
-    padding: 20px 24px; border-bottom: 1px solid var(--line);
-    display: flex; justify-content: space-between; align-items: center;
-  }
+  /* ── Photo panel ───────────────────────────────────────── */
+  .panel { background: #fff; border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; }
+  .panel-head { padding: 20px 24px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: 12px; }
   .panel-head h2 { font-family: var(--display); font-size: 22px; font-weight: 500; letter-spacing: -.01em; }
-  .panel-head .actions-row { display: flex; gap: 8px; }
-  .panel-head .pill { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); padding: 6px 12px; border-radius: 999px; background: var(--paper-2); }
+  .panel-head .auto-pill { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: #2d7a4a; padding: 6px 12px; border-radius: 999px; background: rgba(45,122,74,.1); border: 1px solid rgba(45,122,74,.2); cursor: pointer; }
+  .panel-head .auto-pill.off { color: var(--ink-soft); background: var(--paper-2); border-color: var(--line); }
 
-  /* photo grid */
-  .photo-grid {
-    display: grid; grid-template-columns: repeat(4, 1fr);
-    gap: 4px; padding: 4px;
+  /* Tabs */
+  .tab-row { display: flex; gap: 4px; padding: 12px 16px; border-bottom: 1px solid var(--line); background: var(--paper-2); }
+  .tab { padding: 8px 14px; border-radius: 999px; font-size: 13px; color: var(--ink-soft); cursor: pointer; transition: background .15s, color .15s; }
+  .tab:hover { background: var(--paper-3); color: var(--ink); }
+  .tab.active { background: var(--ink); color: var(--paper); }
+
+  /* Photo grid */
+  .photo-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 3px; padding: 3px; }
+  .photo-item {
+    aspect-ratio: 1; position: relative; overflow: hidden; cursor: pointer;
   }
-  .photo-grid > div {
-    aspect-ratio: 1; position: relative;
-    overflow: hidden;
-  }
-  .photo-grid > div .actions-overlay {
+  .photo-item .overlay {
     position: absolute; inset: 0;
-    background: linear-gradient(180deg, rgba(0,0,0,0) 50%, rgba(0,0,0,.6) 100%);
+    background: linear-gradient(180deg, transparent 50%, rgba(0,0,0,.65) 100%);
     opacity: 0; transition: opacity .2s ease;
     display: flex; align-items: flex-end; justify-content: space-between;
     padding: 8px;
   }
-  .photo-grid > div:hover .actions-overlay { opacity: 1; }
-  .photo-grid > div .uploader {
-    color: #fff; font-family: var(--display); font-style: italic;
-    font-size: 12px;
+  .photo-item:hover .overlay { opacity: 1; }
+  .photo-item .uploader { color: #fff; font-family: var(--display); font-style: italic; font-size: 12px; }
+  .photo-item .action-btn {
+    background: rgba(255,255,255,.95); border-radius: 999px;
+    padding: 4px 9px; font-family: var(--mono); font-size: 9px;
+    letter-spacing: .12em; text-transform: uppercase; cursor: pointer;
+    border: none; transition: background .15s;
   }
-  .photo-grid > div .actions-btn {
-    background: rgba(255,255,255,.95);
-    border-radius: 999px; padding: 4px 8px;
-    font-family: var(--mono); font-size: 9px;
-    letter-spacing: .12em; text-transform: uppercase;
+  .photo-item .action-btn:hover { background: var(--accent); color: #fff; }
+  .photo-item.pending::after {
+    content: 'PENDING'; position: absolute; top: 8px; left: 8px;
+    font-family: var(--mono); font-size: 9px; letter-spacing: .14em;
+    background: var(--ochre, #d8a05a); color: #fff; border-radius: 4px; padding: 2px 7px;
   }
 
-  /* QR sidebar card */
-  .qr-card {
-    background: #fff; border: 1px solid var(--line);
-    border-radius: var(--r-lg);
-    padding: 28px;
-    text-align: center;
-  }
+  /* Load more */
+  .load-more { padding: 20px; text-align: center; border-top: 1px solid var(--line); }
+
+  /* ── Sidebar ────────────────────────────────────────────── */
+  .sidebar { display: grid; gap: 16px; }
+  .qr-card { background: #fff; border: 1px solid var(--line); border-radius: var(--r-lg); padding: 28px; text-align: center; }
   .qr-card .qr {
-    aspect-ratio: 1; margin-bottom: 16px;
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center;
-    border-radius: 8px; padding: 8px;
-    border: 1px solid var(--line);
+    width: 100%; aspect-ratio: 1; margin-bottom: 16px;
+    border-radius: 10px; border: 12px solid #fff;
+    box-shadow: 0 0 0 1px var(--line);
+    background: repeating-conic-gradient(var(--ink) 0% 25%, #fff 0% 50%) 0 0 / 16px 16px;
   }
-  .qr-card .url { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; color: var(--ink-soft); margin-bottom: 16px; word-break: break-all; }
-  .qr-card .actions-stack { display: grid; gap: 8px; }
+  .qr-card .url { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; color: var(--accent); margin-bottom: 16px; word-break: break-all; }
+  .qr-card .stack { display: grid; gap: 8px; }
 
-  .info-card {
-    background: var(--paper-2); border: 1px solid var(--line);
-    border-radius: var(--r-lg);
-    padding: 24px;
-    margin-top: 16px;
-  }
-  .info-card h3 { font-family: var(--display); font-size: 18px; font-weight: 500; margin-bottom: 12px; }
-  .info-card .row { display: flex; justify-content: space-between; padding: 8px 0; border-top: 1px solid var(--line); font-size: 14px; }
-  .info-card .row:first-of-type { border-top: none; padding-top: 0; }
-  .info-card .row span:first-child { color: var(--ink-soft); }
-  .info-card .row span:last-child { font-weight: 500; }
+  .info-card { background: var(--paper-2); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 24px; }
+  .info-card h3 { font-family: var(--display); font-size: 18px; font-weight: 500; margin-bottom: 14px; }
+  .info-row { display: flex; justify-content: space-between; padding: 9px 0; border-top: 1px solid var(--line); font-size: 14px; }
+  .info-row:first-of-type { border-top: none; padding-top: 0; }
+  .info-row span:first-child { color: var(--ink-soft); }
+  .info-row span:last-child { font-weight: 500; }
 
-  /* tabs */
-  .tab-row { display: flex; gap: 6px; padding: 16px 24px; border-bottom: 1px solid var(--line); }
-  .tab {
-    padding: 8px 14px; border-radius: 999px;
-    font-size: 13px; color: var(--ink-soft);
-    cursor: pointer;
+  /* moderation modal */
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 100; display: none; align-items: center; justify-content: center; }
+  .modal-backdrop.open { display: flex; }
+  .modal { background: var(--paper); border-radius: var(--r-xl); padding: 36px; max-width: 480px; width: 90%; box-shadow: var(--shadow-lift); }
+  .modal h3 { font-family: var(--display); font-size: 24px; font-weight: 500; margin-bottom: 8px; }
+  .modal .modal-photo { width: 100%; aspect-ratio: 1; border-radius: var(--r); margin: 16px 0; }
+  .modal .modal-meta { font-family: var(--mono); font-size: 11px; color: var(--ink-soft); letter-spacing: .14em; text-transform: uppercase; margin-bottom: 24px; }
+  .modal .modal-actions { display: flex; gap: 10px; }
+  .modal .btn-approve { background: #2d7a4a; color: #fff; flex: 1; }
+  .modal .btn-hide    { background: var(--paper-3); color: var(--ink); flex: 1; }
+  .modal .btn-feature { background: var(--accent); color: #fff; flex: 1; }
+
+  @media (max-width: 900px) {
+    .stats-row   { grid-template-columns: repeat(2,1fr); }
+    .body        { grid-template-columns: 1fr; }
+    .photo-grid  { grid-template-columns: repeat(3,1fr); }
+    .event-nav   { display: none; }
   }
-  .tab.active { background: var(--ink); color: var(--paper); }
 </style>
 </head>
-<body id="dashboard-root">
+<body>
 
+<!-- ════ EVENT HEADER ══════════════════════════════════════ -->
 <section class="event-header">
   <div class="event-header-inner">
     <div class="event-header-top">
-      <a class="brand" href="/">REELDAY<sup>★</sup></a>
-      <div class="nav" id="site-nav">
-        <a class="active" href="#">Dashboard</a>
-        <a id="nav-wall" href="#">Wall</a>
-        <a id="nav-upload" href="#">Upload page</a>
-      </div>
+      <a class="brand" href="landing.html">REELDAY<sup>★</sup></a>
+      <nav class="event-nav">
+        <!-- TODO: each nav item links to the same event slug -->
+        <a class="active" href="dashboard.html">Dashboard</a>
+        <a href="wall.html">Live Wall</a>
+        <a href="upload.html">Upload Page</a>
+        <a href="#">Settings</a>
+      </nav>
     </div>
-    <div class="badge"><span class="dot"></span>Live · <span id="guest-count">0</span> guests sharing right now</div>
-    <h1 id="event-title">Loading...</h1>
-    <div class="meta" id="event-meta">---</div>
+    <!-- TODO: Replace with real-time WebSocket count -->
+    <div class="live-badge"><span class="dot"></span>Live · <span id="liveCount">47</span> guests sharing right now</div>
+    <h1 id="eventTitle">Andrea <em>&amp;</em> JM</h1>
+    <div class="meta" id="eventMeta">14 June 2026 · Manila Hotel · Wedding</div>
   </div>
 </section>
 
-<div class="stats">
-  <div class="stat">
+<!-- ════ STATS ═════════════════════════════════════════════ -->
+<!-- TODO: Fetch from GET /api/events/:id/stats, refresh every 10s -->
+<div class="stats-row">
+  <div class="stat-card">
     <div class="lbl">Total uploads</div>
-    <div class="num"><em id="stat-uploads">0</em></div>
-    <div class="delta" id="stat-uploads-delta">---</div>
+    <div class="num"><em id="statTotal">847</em></div>
+    <div class="delta">↑ 32 in last hour</div>
   </div>
-  <div class="stat">
+  <div class="stat-card">
     <div class="lbl">Active guests</div>
-    <div class="num"><em id="stat-guests">0</em></div>
-    <div class="delta" id="stat-guests-delta">---</div>
+    <div class="num"><em id="statGuests">47</em></div>
+    <div class="delta">↑ 12 since 6pm</div>
   </div>
-  <div class="stat">
+  <div class="stat-card">
     <div class="lbl">Pending review</div>
-    <div class="num"><em id="stat-pending">0</em></div>
+    <div class="num"><em id="statPending">3</em></div>
     <div class="delta">Awaiting approval</div>
   </div>
-  <div class="stat">
+  <div class="stat-card">
     <div class="lbl">Storage used</div>
-    <div class="num"><em id="stat-storage">---</em></div>
+    <div class="num"><em>4.2<span style="font-size:.55em">GB</span></em></div>
     <div class="delta" style="color:var(--ink-soft);">of unlimited</div>
   </div>
 </div>
 
+<!-- ════ BODY ══════════════════════════════════════════════ -->
 <div class="body">
+
+  <!-- ── Photo stream panel ───────────────────────────────── -->
   <div>
     <div class="panel">
       <div class="panel-head">
         <h2>Photo stream</h2>
-        <span class="pill" id="approve-status">Auto-approve · ON</span>
+        <!-- TODO: PATCH /api/events/:id {auto_approve: bool} -->
+        <button class="auto-pill" id="autoBtn" onclick="toggleAutoApprove()">Auto-approve · ON</button>
       </div>
       <div class="tab-row">
-        <span class="tab active" id="tab-all">All · 0</span>
-        <span class="tab" id="tab-pending">Pending · 0</span>
-        <span class="tab">Featured</span>
-        <span class="tab">Hidden</span>
+        <span class="tab active" data-tab="all"       onclick="switchTab(this)">All · 847</span>
+        <span class="tab"        data-tab="pending"   onclick="switchTab(this)">Pending · 3</span>
+        <span class="tab"        data-tab="featured"  onclick="switchTab(this)">Featured · 12</span>
+        <span class="tab"        data-tab="hidden"    onclick="switchTab(this)">Hidden · 0</span>
       </div>
-      <div class="photo-grid" id="photo-grid">
-        <!-- Dynamically populated -->
+
+      <!-- TODO: Replace with paginated fetch from
+           GET /api/events/:id/photos?tab=all&page=1
+           Render each as <img src="..."> replacing placeholders -->
+      <div class="photo-grid" id="photoGrid">
+        <div class="photo-item placeholder placeholder--clay"   onclick="openPhoto('First dance','Tita Marivic')"><div class="overlay"><span class="uploader">Tita Marivic</span><button class="action-btn">Feature</button></div></div>
+        <div class="photo-item placeholder placeholder--ochre"  onclick="openPhoto('Garden','Kuya Mike')"><div class="overlay"><span class="uploader">Kuya Mike</span><button class="action-btn">Feature</button></div></div>
+        <div class="photo-item placeholder placeholder--coral"  onclick="openPhoto('Reception','Ate Karen')"><div class="overlay"><span class="uploader">Ate Karen</span><button class="action-btn">Feature</button></div></div>
+        <div class="photo-item placeholder placeholder--sage"   onclick="openPhoto('Lola','Kuya Vince')"><div class="overlay"><span class="uploader">Kuya Vince</span><button class="action-btn">Feature</button></div></div>
+        <div class="photo-item placeholder placeholder--paper"  style="color:var(--ink)" onclick="openPhoto('Bouquet','Tita Liza')"><div class="overlay"><span class="uploader">Tita Liza</span><button class="action-btn">Feature</button></div></div>
+        <div class="photo-item placeholder placeholder--clay"   onclick="openPhoto('Speech','JM')"><div class="overlay"><span class="uploader">JM</span><button class="action-btn">Feature</button></div></div>
+        <div class="photo-item placeholder placeholder--coral"  onclick="openPhoto('Ceremony','Andrea')"><div class="overlay"><span class="uploader">Andrea</span><button class="action-btn">Feature</button></div></div>
+        <div class="photo-item placeholder placeholder--ochre"  onclick="openPhoto('Toast','Tito Jun')"><div class="overlay"><span class="uploader">Tito Jun</span><button class="action-btn">Feature</button></div></div>
+        <div class="photo-item placeholder placeholder--sage"   onclick="openPhoto('Cousins','Tin')"><div class="overlay"><span class="uploader">Tin</span><button class="action-btn">Feature</button></div></div>
+        <div class="photo-item placeholder placeholder--ink"    onclick="openPhoto('Dance floor','Mark')"><div class="overlay"><span class="uploader">Mark</span><button class="action-btn">Feature</button></div></div>
+        <div class="photo-item placeholder placeholder--paper"  style="color:var(--ink)" onclick="openPhoto('Family','Pao')"><div class="overlay"><span class="uploader">Pao</span><button class="action-btn">Feature</button></div></div>
+        <div class="photo-item placeholder placeholder--clay pending" onclick="openPhoto('Cake','Tita Bing')"><div class="overlay"><span class="uploader">Tita Bing</span><button class="action-btn">Approve</button></div></div>
+        <div class="photo-item placeholder placeholder--coral"  onclick="openPhoto('Ring','Ate Len')"><div class="overlay"><span class="uploader">Ate Len</span><button class="action-btn">Feature</button></div></div>
+        <div class="photo-item placeholder placeholder--ochre"  onclick="openPhoto('Table','Kuya Rex')"><div class="overlay"><span class="uploader">Kuya Rex</span><button class="action-btn">Feature</button></div></div>
+        <div class="photo-item placeholder placeholder--sage"   onclick="openPhoto('Flowers','Dianne')"><div class="overlay"><span class="uploader">Dianne</span><button class="action-btn">Feature</button></div></div>
+        <div class="photo-item placeholder placeholder--clay"   onclick="openPhoto('Couple','Anon')"><div class="overlay"><span class="uploader">Anon</span><button class="action-btn">Feature</button></div></div>
+      </div>
+      <div class="load-more">
+        <!-- TODO: load next page from API -->
+        <button class="btn btn-ghost" onclick="alert('TODO: load next page from API')">Load more · 831 remaining</button>
       </div>
     </div>
   </div>
 
-  <div>
+  <!-- ── Sidebar ─────────────────────────────────────────── -->
+  <div class="sidebar">
     <div class="qr-card">
       <div class="eyebrow" style="margin-bottom:14px;">— Your event QR</div>
-      <div id="qr-container" class="qr"></div>
-      <div class="url" id="event-url">---</div>
-      <div class="actions-stack">
-        <a id="btn-open-upload" class="btn btn-accent" href="#">Open upload page →</a>
-        <a class="btn btn-ghost" href="#">Download poster .pdf</a>
+      <div class="qr"></div>
+      <div class="url">reelday.ph/e/andrea-jm</div>
+      <div class="stack">
+        <!-- TODO: open upload.html for actual event slug -->
+        <a class="btn btn-accent" href="upload.html">Open upload page →</a>
+        <!-- TODO: generate and serve QR poster PDF -->
+        <button class="btn btn-ghost" onclick="alert('TODO: generate QR poster PDF')">Download poster .pdf</button>
+        <a class="btn btn-ghost" href="wall.html">Open live wall ↗</a>
       </div>
     </div>
 
-    <div class="info-card" id="info-card">
+    <div class="info-card">
       <h3>Event info</h3>
-      <div class="row"><span>Type</span><span id="info-type">---</span></div>
-      <div class="row"><span>Plan</span><span id="info-plan">---</span></div>
-      <div class="row"><span>Wall expires</span><span id="info-expires">---</span></div>
-      <div class="row"><span>Archive</span><span>30 days</span></div>
+      <div class="info-row"><span>Type</span><span>Wedding</span></div>
+      <div class="info-row"><span>Plan</span><span>★ Celebration</span></div>
+      <div class="info-row"><span>Wall expires</span><span>21 Jun 2026</span></div>
+      <div class="info-row"><span>Archive</span><span>30 days</span></div>
+      <div class="info-row"><span>Theme</span><span>Editorial</span></div>
+    </div>
+
+    <!-- Quick actions -->
+    <div style="display:grid;gap:8px;">
+      <!-- TODO: each links to appropriate settings panel -->
+      <button class="btn btn-ghost" style="width:100%;justify-content:flex-start;" onclick="alert('TODO: open wall settings')">Wall settings</button>
+      <button class="btn btn-ghost" style="width:100%;justify-content:flex-start;" onclick="alert('TODO: open download ZIP flow')">Download all photos (.zip)</button>
+      <button class="btn btn-ghost" style="width:100%;justify-content:flex-start;color:var(--accent);" onclick="alert('TODO: confirm then close/archive event')">Close event</button>
     </div>
   </div>
 </div>
 
-<script type="module">
-  import { requireAuth } from '/js/auth.js';
+<!-- ════ MODERATION MODAL ══════════════════════════════════ -->
+<!-- TODO: On Approve/Hide/Feature, call PATCH /api/photos/:id {status: 'approved'|'hidden'|'featured'} -->
+<div class="modal-backdrop" id="modalBackdrop" onclick="closeModal(event)">
+  <div class="modal">
+    <h3 id="modalTitle">Photo</h3>
+    <div class="modal-meta" id="modalMeta"></div>
+    <!-- TODO: Replace with actual <img src="..."> from API -->
+    <div class="modal-photo placeholder placeholder--coral" id="modalPhoto"></div>
+    <div class="modal-actions">
+      <button class="btn btn-approve" onclick="alert('TODO: approve photo via API'); closeModal()">✓ Approve</button>
+      <button class="btn btn-feature" onclick="alert('TODO: feature photo via API'); closeModal()">★ Feature</button>
+      <button class="btn btn-hide"    onclick="alert('TODO: hide photo via API'); closeModal()">Hide</button>
+    </div>
+  </div>
+</div>
 
-  if (requireAuth()) {
-    const params = new URLSearchParams(window.location.search);
-    const slug = params.get('slug');
+<script>
+  /* ════════════════════════════════════════════════════════
+     DASHBOARD STATE
+     TODO: Replace all dummy values with:
+       - Initial load: GET /api/events/:id
+       - Stats refresh: GET /api/events/:id/stats  (every 10s)
+       - Photo stream:  GET /api/events/:id/photos?tab=&page=
+       - Real-time count: WebSocket /ws/events/:id
+  ════════════════════════════════════════════════════════ */
+  let autoApprove = true;
 
-    if (!slug) {
-      window.location.href = '/my-events';
-    } else {
-      loadDashboard(slug);
+  /* ── Tab switching ──────────────────────────────────────── */
+  function switchTab(el) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    // TODO: call fetchPhotos(el.dataset.tab) to reload grid
+    // fetchPhotos(el.dataset.tab);
+  }
+
+  /* ── Auto-approve toggle ────────────────────────────────── */
+  function toggleAutoApprove() {
+    autoApprove = !autoApprove;
+    const btn = document.getElementById('autoBtn');
+    btn.textContent = autoApprove ? 'Auto-approve · ON' : 'Auto-approve · OFF';
+    btn.classList.toggle('off', !autoApprove);
+    // TODO: PATCH /api/events/:id {auto_approve: autoApprove}
+  }
+
+  /* ── Photo modal ────────────────────────────────────────── */
+  function openPhoto(title, uploader) {
+    document.getElementById('modalTitle').textContent = title;
+    document.getElementById('modalMeta').textContent  = 'Uploaded by ' + uploader;
+    document.getElementById('modalBackdrop').classList.add('open');
+  }
+  function closeModal(e) {
+    if (!e || e.target === document.getElementById('modalBackdrop')) {
+      document.getElementById('modalBackdrop').classList.remove('open');
     }
   }
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
-  async function loadDashboard(slug) {
-    try {
-      const [eventRes, uploadsRes, qrRes] = await Promise.all([
-        fetch(`/api/events/${slug}`),
-        fetch(`/api/uploads/${slug}`),
-        fetch(`/api/events/${slug}/qr`)
-      ]);
-
-      const eventData = await eventRes.json();
-      const uploadsData = await uploadsRes.json();
-      const qrData = await qrRes.json();
-
-      if (eventData.error) throw new Error(eventData.message);
-
-      const { event, upload_count } = eventData;
-      const uploads = uploadsData.uploads || [];
-      
-      document.body.setAttribute('data-theme', event.event_type || 'wedding');
-      document.getElementById('event-title').textContent = event.couple_names;
-      document.getElementById('event-meta').textContent = `${event.event_date || 'No date'} · ${event.event_type}`;
-      document.getElementById('stat-uploads').textContent = upload_count;
-      document.getElementById('tab-all').textContent = `All · ${upload_count}`;
-      
-      document.getElementById('nav-wall').href = `/wall/${slug}`;
-      document.getElementById('nav-upload').href = `/upload/${slug}`;
-      document.getElementById('btn-open-upload').href = `/upload/${slug}`;
-      document.getElementById('event-url').textContent = `${window.location.origin}/upload/${slug}`;
-
-      // Info card
-      document.getElementById('info-type').textContent = event.event_type;
-      document.getElementById('info-plan').textContent = `★ ${event.plan}`;
-      
-      // Populate photo grid
-      const photoGrid = document.getElementById('photo-grid');
-      photoGrid.innerHTML = uploads.map(u => `
-        <div class="placeholder ${getRandomPlaceholderClass()}">
-          <img src="${u.file_url}" style="width:100%; height:100%; object-fit:cover;" />
-          <div class="actions-overlay">
-            <span class="uploader">${u.uploader_name || 'Guest'}</span>
-            <span class="actions-btn">Feature</span>
-          </div>
-        </div>
-      `).join('');
-
-      // Load QR
-      if (qrData.qr_code) {
-        document.getElementById('qr-container').style.backgroundImage = `url(${qrData.qr_code})`;
-      }
-    } catch (err) {
-      console.error(err);
-      alert('Failed to load event data');
-    }
-  }
-
-  function getRandomPlaceholderClass() {
-    const classes = ['placeholder--clay', 'placeholder--ochre', 'placeholder--coral', 'placeholder--sage', 'placeholder--ink'];
-    return classes[Math.floor(Math.random() * classes.length)];
-  }
+  /* ── Simulate live counter (replace with WebSocket) ─────── */
+  setInterval(() => {
+    const el = document.getElementById('statTotal');
+    const n = parseInt(el.textContent.replace(/,/g,''), 10);
+    if (Math.random() > 0.6) el.textContent = (n + 1).toLocaleString();
+    // TODO: replace with real-time WebSocket:
+    // const ws = new WebSocket('wss://api.reelday.ph/ws/events/andrea-jm');
+    // ws.onmessage = e => { const d = JSON.parse(e.data); updateStats(d); };
+  }, 4000);
 </script>
-
 </body>
 </html>

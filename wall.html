@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Reelday — Live Wall</title>
+<link rel="stylesheet" href="shared.css" />
+<style>
+  html, body {
+    width: 100vw; height: 100vh; overflow: hidden;
+    background: #1a0f0a; color: #fff;
+    /* TODO: for real fullscreen kiosk display, call document.documentElement.requestFullscreen() */
+  }
+
+  /* ── Photo layer (Ken Burns) ────────────────────────────── */
+  .layer {
+    position: fixed; inset: 0;
+    transition: opacity 1.6s ease;
+    pointer-events: none;
+  }
+  .layer.out { opacity: 0; }
+  .layer .pic {
+    position: absolute; inset: -8%;
+    background-size: cover; background-position: center;
+    animation: kb 14s ease-out forwards;
+    will-change: transform;
+  }
+  @keyframes kb {
+    /* randomised in JS per slide */
+    from { transform: scale(1)    translate(0, 0); }
+    to   { transform: scale(1.14) translate(-2%, -1.5%); }
+  }
+  .layer .vignette {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,.55) 100%),
+      linear-gradient(180deg, rgba(0,0,0,.35) 0%, transparent 25%, transparent 55%, rgba(0,0,0,.75) 100%);
+  }
+
+  /* ── Top ticker ─────────────────────────────────────────── */
+  .ticker {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 10;
+    height: 60px;
+    background: linear-gradient(180deg, rgba(0,0,0,.65), transparent);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 36px;
+  }
+  .ticker .live {
+    display: flex; align-items: center; gap: 10px;
+    font-family: var(--mono, 'JetBrains Mono', monospace);
+    font-size: 12px; letter-spacing: .2em; text-transform: uppercase;
+  }
+  .ticker .live .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: #f0a37a; box-shadow: 0 0 0 4px rgba(240,163,122,.3);
+    animation: pulse 1.5s ease infinite;
+  }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 8px rgba(240,163,122,0); } }
+  .ticker .stats {
+    font-family: var(--mono, 'JetBrains Mono', monospace);
+    font-size: 12px; letter-spacing: .16em; text-transform: uppercase;
+    opacity: .85; display: flex; gap: 28px;
+  }
+  .ticker .stats em { color: #f0a37a; font-style: normal; font-weight: 600; }
+
+  /* ── QR badge ────────────────────────────────────────────── */
+  .qr-badge {
+    position: fixed; top: 76px; right: 32px; z-index: 10;
+    background: rgba(255,255,255,.96); color: #2a1a14;
+    border-radius: 14px; padding: 14px;
+    display: flex; gap: 12px; align-items: center;
+    box-shadow: 0 8px 32px rgba(0,0,0,.5);
+    transition: opacity .4s ease;
+  }
+  .qr-badge .qr {
+    width: 60px; height: 60px; flex-shrink: 0;
+    border-radius: 6px;
+    background: repeating-conic-gradient(#2a1a14 0% 25%, #fff 0% 50%) 0 0 / 8px 8px;
+  }
+  .qr-badge .text { font-family: var(--mono, monospace); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; }
+  .qr-badge .text b { font-family: var(--display, serif); font-style: italic; font-size: 14px; font-weight: 500; text-transform: none; letter-spacing: 0; display: block; margin-bottom: 2px; }
+
+  /* ── Upcoming thumbnails ────────────────────────────────── */
+  .upcoming {
+    position: fixed; right: 36px; top: 50%; transform: translateY(-50%);
+    z-index: 10; display: flex; flex-direction: column; gap: 8px;
+  }
+  .upcoming-thumb {
+    width: 76px; aspect-ratio: 1; border-radius: 10px;
+    border: 2px solid rgba(255,255,255,.2);
+    overflow: hidden; background-size: cover; background-position: center;
+    cursor: pointer; transition: border-color .25s, transform .25s;
+  }
+  .upcoming-thumb:hover { transform: scale(1.06); }
+  .upcoming-thumb.next { border-color: #f0a37a; box-shadow: 0 0 0 4px rgba(240,163,122,.25); }
+
+  /* ── Caption frame ──────────────────────────────────────── */
+  .frame {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 10;
+    padding: 0 64px 56px;
+    display: flex; justify-content: space-between; align-items: flex-end; gap: 32px;
+  }
+  .caption { max-width: 55%; }
+  .caption .uploader {
+    font-family: var(--mono, monospace); font-size: 12px;
+    letter-spacing: .2em; text-transform: uppercase;
+    color: rgba(255,255,255,.65); margin-bottom: 14px;
+    transition: opacity .6s ease;
+  }
+  .caption blockquote {
+    font-family: var(--display, 'Fraunces', serif);
+    font-style: italic; font-weight: 400;
+    font-size: clamp(32px, 4vw, 56px); line-height: 1.1;
+    letter-spacing: -.015em;
+    text-shadow: 0 4px 24px rgba(0,0,0,.55);
+    margin: 0;
+    transition: opacity .6s ease;
+  }
+  .caption.fade .uploader,
+  .caption.fade blockquote { opacity: 0; }
+
+  .corner { text-align: right; font-family: var(--mono, monospace); font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: rgba(255,255,255,.6); flex-shrink: 0; }
+  .corner .names { font-family: var(--display, serif); font-style: italic; font-weight: 400; font-size: 28px; color: #fff; text-transform: none; letter-spacing: -.01em; margin-bottom: 4px; }
+  .corner .names em { color: #f0a37a; }
+
+  /* ── Progress bar (auto-advance indicator) ──────────────── */
+  .slide-progress {
+    position: fixed; bottom: 0; left: 0; right: 0; height: 3px; z-index: 20;
+    background: rgba(255,255,255,.1);
+  }
+  .slide-progress .fill {
+    height: 100%; background: rgba(240,163,122,.8);
+    width: 0; transition: width linear;
+  }
+
+  /* ── Pause overlay ──────────────────────────────────────── */
+  .pause-btn {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    z-index: 15; opacity: 0; pointer-events: none;
+    font-family: var(--mono, monospace); font-size: 13px; letter-spacing: .3em;
+    text-transform: uppercase; background: rgba(0,0,0,.5); border-radius: 999px;
+    padding: 14px 28px; transition: opacity .3s ease;
+    backdrop-filter: blur(8px);
+  }
+  .pause-btn.visible { opacity: 1; pointer-events: auto; }
+
+  /* placeholder colours for demo slides */
+  .bg-clay   { background: linear-gradient(135deg, #d8a892, #7a3b2e); }
+  .bg-ochre  { background: linear-gradient(135deg, #ead8b8, #c98968); }
+  .bg-coral  { background: linear-gradient(135deg, #f0d8c8, #c45a3a); }
+  .bg-sage   { background: linear-gradient(135deg, #c8d8c8, #2d4a3d); }
+  .bg-ink    { background: linear-gradient(135deg, #5a443a, #1a0f0a); }
+</style>
+</head>
+<body>
+
+<!-- ════ PHOTO LAYERS ══════════════════════════════════════ -->
+<!-- Two layers for crossfade — A is active, B is waiting   -->
+<!-- TODO: replace .bg-* classes with background-image: url(photo.jpg) from API -->
+<div class="layer" id="layerA">
+  <div class="pic bg-clay" id="picA"></div>
+  <div class="vignette"></div>
+</div>
+<div class="layer out" id="layerB">
+  <div class="pic bg-ochre" id="picB"></div>
+  <div class="vignette"></div>
+</div>
+
+<!-- ════ TOP TICKER ═══════════════════════════════════════ -->
+<!-- TODO: replace hardcoded values with real-time stats from WebSocket -->
+<div class="ticker">
+  <div class="live"><span class="dot"></span>Live · <span id="tickerName">Andrea &amp; JM Wedding</span></div>
+  <div class="stats">
+    <span><em id="statMoments">847</em> moments</span>
+    <span><em id="statGuests">47</em> guests sharing</span>
+    <span id="statDate">14·06·2026</span>
+  </div>
+</div>
+
+<!-- ════ QR BADGE ═════════════════════════════════════════ -->
+<div class="qr-badge" id="qrBadge">
+  <div class="qr"></div>
+  <!-- TODO: generate real QR for event slug -->
+  <div class="text">Add yours<b>reelday.ph/e/<br/>andrea-jm</b></div>
+</div>
+
+<!-- ════ UPCOMING STRIP ═══════════════════════════════════ -->
+<!-- TODO: render 4 upcoming photos from the queue, update on advance -->
+<div class="upcoming" id="upcoming">
+  <div class="upcoming-thumb next bg-ochre"  onclick="goToSlide(1)"></div>
+  <div class="upcoming-thumb bg-coral"       onclick="goToSlide(2)"></div>
+  <div class="upcoming-thumb bg-sage"        onclick="goToSlide(3)"></div>
+  <div class="upcoming-thumb bg-clay"        onclick="goToSlide(4)"></div>
+</div>
+
+<!-- ════ CAPTION FRAME ════════════════════════════════════ -->
+<div class="frame">
+  <div class="caption" id="caption">
+    <div class="uploader" id="captionUploader">— Tita Marivic · 8:42 pm</div>
+    <blockquote id="captionQuote">"Tito Boy finally took the floor — first dance after 38 years."</blockquote>
+  </div>
+  <div class="corner">
+    <div class="names" id="cornerNames">Andrea <em>&amp;</em> JM</div>
+    <div>★ Powered by Reelday</div>
+  </div>
+</div>
+
+<!-- ════ PROGRESS BAR + PAUSE ════════════════════════════ -->
+<div class="slide-progress"><div class="fill" id="progressFill"></div></div>
+<div class="pause-btn" id="pauseBtn" onclick="togglePause()">⏸ Paused — tap to resume</div>
+
+<script>
+  /* ════════════════════════════════════════════════════════
+     LIVE WALL ENGINE
+     TODO: Replace the demo slides array with a real feed:
+
+     Real data flow:
+       1. Connect to WebSocket: wss://api.reelday.ph/ws/wall/andrea-jm
+       2. Receive messages:
+            { type: 'photo', id, url, uploader, caption, timestamp }
+            { type: 'stats', total, active_guests }
+       3. Push photos into the `slides` queue.
+       4. The slideshow loop below picks from the queue.
+       5. On PATCH /api/events/:id/settings you can remotely
+          control: speed, QR badge visibility, auto-advance.
+
+     For TV / kiosk fullscreen:
+       Call document.documentElement.requestFullscreen() after
+       a user gesture (e.g. the first click on the page).
+  ════════════════════════════════════════════════════════ */
+
+  /* ── Demo slide data ──────────────────────────────────── */
+  const slides = [
+    { bg: 'bg-clay',  uploader: 'Tita Marivic · 8:42 pm', quote: '"Tito Boy finally took the floor — first dance after 38 years."' },
+    { bg: 'bg-ochre', uploader: 'Kuya Mike · 8:58 pm',    quote: '"Lolo and Lola, still the cutest couple in the room."' },
+    { bg: 'bg-coral', uploader: 'Ate Karen · 9:14 pm',    quote: '"The ceremony was perfect. I cried. Everyone cried."' },
+    { bg: 'bg-sage',  uploader: 'Kuya Vince · 9:31 pm',   quote: '"Garden shots at golden hour — they nailed it."' },
+    { bg: 'bg-ink',   uploader: 'JM · 9:45 pm',           quote: '"My favourite photo of the night."' },
+    { bg: 'bg-clay',  uploader: 'Andrea · 10:02 pm',      quote: '"Dancing with Tatay — I will never forget this."' },
+  ];
+
+  /* ── Ken Burns transforms (randomised per slide) ─────── */
+  const kbVariants = [
+    { from: 'scale(1) translate(0,0)',          to: 'scale(1.14) translate(-2%,-1.5%)' },
+    { from: 'scale(1) translate(-2%,0)',        to: 'scale(1.12) translate(1.5%, 2%)' },
+    { from: 'scale(1.05) translate(2%,2%)',     to: 'scale(1.16) translate(-1.5%,-2%)' },
+    { from: 'scale(1) translate(1.5%,-1.5%)',   to: 'scale(1.13) translate(-2%, 2%)' },
+  ];
+
+  const SLIDE_DURATION = 8000; // ms per slide — TODO: make configurable from dashboard
+  const QR_HIDE_AFTER  = 20000; // hide QR badge after 20 s idle
+
+  let currentIdx = 0;
+  let activeLayer = 'A';
+  let paused = false;
+  let timer = null;
+  let progressTimer = null;
+  let progressStart = 0;
+  let qrHideTimer = null;
+
+  const layerA = document.getElementById('layerA');
+  const layerB = document.getElementById('layerB');
+  const picA   = document.getElementById('picA');
+  const picB   = document.getElementById('picB');
+
+  /* ── Show a specific slide ──────────────────────────────── */
+  function showSlide(idx) {
+    const slide = slides[idx % slides.length];
+    const kb    = kbVariants[idx % kbVariants.length];
+
+    // Determine incoming / outgoing layers
+    const inLayer  = activeLayer === 'A' ? layerB : layerA;
+    const outLayer = activeLayer === 'A' ? layerA : layerB;
+    const inPic    = activeLayer === 'A' ? picB    : picA;
+
+    // Set bg on incoming layer
+    inPic.className = 'pic ' + slide.bg;
+
+    // Reset animation
+    inPic.style.animation = 'none';
+    inPic.style.transform = kb.from;
+    void inPic.offsetWidth; // force reflow
+    inPic.style.animation  = '';
+    inPic.style.transform  = '';
+
+    // Crossfade
+    inLayer.classList.remove('out');
+    outLayer.classList.add('out');
+    activeLayer = activeLayer === 'A' ? 'B' : 'A';
+
+    // Fade caption
+    const cap = document.getElementById('caption');
+    cap.classList.add('fade');
+    setTimeout(() => {
+      document.getElementById('captionUploader').textContent = '— ' + slide.uploader;
+      document.getElementById('captionQuote').textContent    = slide.quote;
+      cap.classList.remove('fade');
+    }, 500);
+
+    // Update upcoming strip
+    updateUpcoming(idx);
+  }
+
+  function updateUpcoming(idx) {
+    const thumbs = document.querySelectorAll('.upcoming-thumb');
+    thumbs.forEach((t, i) => {
+      const s = slides[(idx + 1 + i) % slides.length];
+      t.className = 'upcoming-thumb ' + s.bg + (i === 0 ? ' next' : '');
+    });
+  }
+
+  /* ── Auto-advance ──────────────────────────────────────── */
+  function startProgress() {
+    const fill = document.getElementById('progressFill');
+    fill.style.transition = 'none';
+    fill.style.width = '0%';
+    void fill.offsetWidth;
+    fill.style.transition = `width ${SLIDE_DURATION}ms linear`;
+    fill.style.width = '100%';
+    progressStart = Date.now();
+  }
+
+  function advance() {
+    if (paused) return;
+    currentIdx = (currentIdx + 1) % slides.length;
+    showSlide(currentIdx);
+    startProgress();
+    timer = setTimeout(advance, SLIDE_DURATION);
+
+    // TODO: also poll /api/events/:slug/photos?since=lastId for new photos
+    // and inject them into `slides` array
+  }
+
+  /* ── Manual navigation ──────────────────────────────────── */
+  function goToSlide(offset) {
+    clearTimeout(timer);
+    currentIdx = (currentIdx + offset) % slides.length;
+    showSlide(currentIdx);
+    startProgress();
+    timer = setTimeout(advance, SLIDE_DURATION);
+  }
+
+  /* ── Pause / resume ────────────────────────────────────── */
+  function togglePause() {
+    paused = !paused;
+    const btn = document.getElementById('pauseBtn');
+    if (paused) {
+      clearTimeout(timer);
+      btn.textContent = '⏸ Paused — tap to resume';
+      btn.classList.add('visible');
+    } else {
+      btn.classList.remove('visible');
+      timer = setTimeout(advance, SLIDE_DURATION);
+      startProgress();
+    }
+  }
+
+  /* ── Keyboard controls ──────────────────────────────────── */
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === ' ')  goToSlide(1);
+    if (e.key === 'ArrowLeft')                    goToSlide(-1 + slides.length);
+    if (e.key === 'p' || e.key === 'P')           togglePause();
+    if (e.key === 'f' || e.key === 'F')           document.documentElement.requestFullscreen?.();
+    if (e.key === 'q' || e.key === 'Q') {
+      const qr = document.getElementById('qrBadge');
+      qr.style.opacity = qr.style.opacity === '0' ? '1' : '0';
+    }
+  });
+
+  /* ── Click to advance ──────────────────────────────────── */
+  document.body.addEventListener('click', e => {
+    // Don't advance if clicking QR badge or upcoming strip
+    if (e.target.closest('.qr-badge') || e.target.closest('.upcoming') || e.target.closest('.pause-btn')) return;
+    goToSlide(1);
+  });
+
+  /* ── Auto-hide QR badge ─────────────────────────────────── */
+  function resetQrTimer() {
+    clearTimeout(qrHideTimer);
+    document.getElementById('qrBadge').style.opacity = '1';
+    qrHideTimer = setTimeout(() => {
+      document.getElementById('qrBadge').style.opacity = '0';
+    }, QR_HIDE_AFTER);
+  }
+  document.addEventListener('mousemove', resetQrTimer);
+
+  /* ── Simulate live stats update (replace with WebSocket) ── */
+  setInterval(() => {
+    const el = document.getElementById('statMoments');
+    const n  = parseInt(el.textContent, 10);
+    if (Math.random() > 0.5) {
+      el.textContent = n + 1;
+      // TODO: When a real new photo arrives via WebSocket,
+      // push it to slides[] and optionally goToSlide(1)
+    }
+  }, 5000);
+
+  /* ── Init ──────────────────────────────────────────────── */
+  showSlide(0);
+  startProgress();
+  timer = setTimeout(advance, SLIDE_DURATION);
+  resetQrTimer();
+</script>
+</body>
+</html>

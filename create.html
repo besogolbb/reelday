@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Reelday — Create your reel</title>
+<link rel="stylesheet" href="shared.css" />
+<style>
+  body { background: var(--paper); min-height: 100dvh; }
+
+  .create-shell {
+    max-width: 960px; margin: 0 auto;
+    padding: 32px 28px 120px;
+  }
+
+  /* ── Progress bar ─────────────────────────────────────── */
+  .progress-bar { display: flex; gap: 8px; margin: 32px 0 56px; }
+  .progress-step {
+    flex: 1; height: 4px; border-radius: 2px;
+    background: var(--paper-3); position: relative;
+    transition: background .3s ease;
+  }
+  .progress-step.active  { background: var(--accent); }
+  .progress-step.done    { background: var(--accent-deep); }
+  .progress-step .lbl {
+    position: absolute; top: 14px; left: 0;
+    font-family: var(--mono); font-size: 10px;
+    letter-spacing: .14em; text-transform: uppercase;
+    color: var(--ink-faint); white-space: nowrap;
+  }
+  .progress-step.active .lbl,
+  .progress-step.done   .lbl { color: var(--ink); }
+
+  /* ── Step headings ────────────────────────────────────── */
+  .step-title {
+    font-family: var(--display); font-weight: 400;
+    font-size: clamp(32px, 5vw, 52px);
+    letter-spacing: -.025em; line-height: 1.05;
+    margin: 56px 0 12px;
+  }
+  .step-title em { font-style: italic; color: var(--accent); }
+  .step-sub { color: var(--ink-soft); font-size: 17px; margin-bottom: 40px; max-width: 56ch; }
+
+  /* ── Screen sections (only one shown at a time) ─────── */
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* ── Event type picker ────────────────────────────────── */
+  .events-pick {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  .event-pick {
+    background: #fff; border: 1px solid var(--line);
+    border-radius: var(--r-lg); padding: 20px;
+    cursor: pointer; aspect-ratio: 3/4;
+    display: flex; flex-direction: column; justify-content: space-between;
+    transition: border-color .2s ease, transform .2s ease, box-shadow .2s ease;
+    color: var(--ink);
+  }
+  .event-pick:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .event-pick.selected { background: var(--ink); color: var(--paper); border-color: var(--ink); box-shadow: var(--shadow-card); }
+  .event-pick.selected .pic { opacity: .6; }
+  .event-pick .pic { aspect-ratio: 1; border-radius: 10px; margin-bottom: 16px; }
+  .event-pick .name { font-family: var(--display); font-style: italic; font-size: 20px; font-weight: 500; line-height: 1.1; margin-bottom: 4px; }
+  .event-pick .tagalog { font-family: var(--mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; opacity: .7; }
+
+  /* ── Form fields ──────────────────────────────────────── */
+  .form { display: grid; gap: 24px; max-width: 580px; }
+  .field label {
+    font-family: var(--mono); font-size: 11px; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--ink-soft); display: block; margin-bottom: 8px;
+  }
+  .field input,
+  .field textarea,
+  .field select {
+    width: 100%; background: #fff; border: 1px solid var(--line);
+    border-radius: var(--r); padding: 14px 16px; font-size: 16px;
+    transition: border-color .2s ease, box-shadow .2s ease;
+    appearance: none;
+  }
+  .field input:focus,
+  .field textarea:focus,
+  .field select:focus  { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(196,90,58,.12); }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .field-hint { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; color: var(--ink-faint); margin-top: 6px; }
+
+  /* ── Live preview card ────────────────────────────────── */
+  .preview-card {
+    background: #fff; border: 1px solid var(--line);
+    border-radius: var(--r-lg); padding: 32px; margin-top: 36px;
+    display: grid; grid-template-columns: 1fr 180px; gap: 32px; align-items: center;
+    box-shadow: var(--shadow-soft);
+  }
+  .preview-card .preview-text {
+    font-family: var(--display); font-style: italic;
+    font-size: 28px; line-height: 1.2; letter-spacing: -.01em;
+  }
+  .preview-card .preview-meta { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); margin-top: 6px; }
+  .preview-card .qr-mock {
+    aspect-ratio: 1; border-radius: 8px; border: 10px solid #fff;
+    box-shadow: 0 0 0 1px var(--line);
+    background: repeating-conic-gradient(var(--ink) 0% 25%, #fff 0% 50%) 0 0 / 14px 14px;
+  }
+
+  /* ── Theme picker ─────────────────────────────────────── */
+  .theme-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+  .theme-card {
+    border: 2px solid var(--line); border-radius: var(--r-lg); overflow: hidden;
+    cursor: pointer; transition: border-color .2s ease, transform .2s ease;
+  }
+  .theme-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .theme-card.selected { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(196,90,58,.2); }
+  .theme-preview { aspect-ratio: 16/10; position: relative; }
+  .theme-label { padding: 14px 16px; background: #fff; display: flex; justify-content: space-between; align-items: center; }
+  .theme-label .name { font-family: var(--display); font-size: 16px; font-style: italic; }
+  .theme-label .pill { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; background: var(--paper-2); padding: 4px 10px; border-radius: 999px; color: var(--ink-soft); }
+  .theme-card.selected .pill { background: var(--accent); color: #fff; }
+
+  /* theme preview colours */
+  .theme-editorial  .theme-preview { background: linear-gradient(135deg, #fbf5ec 0%, #d8a892 100%); }
+  .theme-polaroid   .theme-preview { background: linear-gradient(135deg, #fff9f0 0%, #f4e4b4 100%); }
+  .theme-cultural   .theme-preview { background: linear-gradient(135deg, #1a0f0a 0%, #4a2c1a 100%); }
+  .theme-banderitas .theme-preview { background: linear-gradient(135deg, #c45a3a 0%, #d8a05a 60%, #3b6ea8 100%); }
+
+  /* ── Checkout summary ─────────────────────────────────── */
+  .summary-grid { display: grid; grid-template-columns: 1fr 360px; gap: 32px; align-items: start; }
+  .summary-card { background: #fff; border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; }
+  .summary-card .head { padding: 20px 24px; border-bottom: 1px solid var(--line); }
+  .summary-card .head h3 { font-family: var(--display); font-size: 22px; font-weight: 500; }
+  .summary-card .row { padding: 16px 24px; display: flex; justify-content: space-between; align-items: baseline; border-top: 1px solid var(--line); font-size: 15px; }
+  .summary-card .row:first-of-type { border-top: none; }
+  .summary-card .row .lbl { color: var(--ink-soft); }
+  .summary-card .row .val { font-weight: 500; }
+  .summary-card .row.total { background: var(--paper-2); font-size: 22px; font-weight: 600; }
+  .summary-card .row.total .val { font-family: var(--display); font-size: 28px; }
+
+  .payment-card { background: #fff; border: 1px solid var(--line); border-radius: var(--r-lg); padding: 24px; }
+  .payment-card h3 { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 20px; }
+  .payment-methods { display: grid; gap: 10px; margin-bottom: 20px; }
+  .pay-option {
+    border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px;
+    display: flex; align-items: center; gap: 12px; cursor: pointer;
+    transition: border-color .2s ease;
+  }
+  .pay-option:hover { border-color: var(--accent); }
+  .pay-option.selected { border-color: var(--accent); background: rgba(196,90,58,.04); }
+  .pay-option .radio {
+    width: 18px; height: 18px; border-radius: 50%;
+    border: 2px solid var(--line); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    transition: border-color .2s ease;
+  }
+  .pay-option.selected .radio { border-color: var(--accent); }
+  .pay-option.selected .radio::after { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+  .pay-option .pay-name { font-size: 15px; font-weight: 500; flex: 1; }
+  .pay-option .pay-meta { font-family: var(--mono); font-size: 10px; color: var(--ink-soft); letter-spacing: .1em; }
+
+  /* ── Nav actions ──────────────────────────────────────── */
+  .actions {
+    display: flex; gap: 12px; justify-content: space-between;
+    margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--line);
+  }
+
+  /* ── Success screen ───────────────────────────────────── */
+  .success-shell { text-align: center; padding: 64px 28px; max-width: 640px; margin: 0 auto; }
+  .success-icon { font-family: var(--display); font-size: 80px; font-style: italic; color: var(--accent); margin-bottom: 24px; }
+  .success-shell h2 { font-family: var(--display); font-size: clamp(36px,5vw,56px); font-weight: 400; letter-spacing: -.025em; margin-bottom: 16px; }
+  .success-shell h2 em { font-style: italic; color: var(--accent); }
+  .success-shell p { color: var(--ink-soft); font-size: 17px; margin-bottom: 36px; max-width: 40ch; margin-left: auto; margin-right: auto; }
+  .success-qr { width: 180px; height: 180px; margin: 0 auto 28px; border-radius: 12px; border: 12px solid #fff; box-shadow: var(--shadow-card); background: repeating-conic-gradient(var(--ink) 0% 25%, #fff 0% 50%) 0 0 / 16px 16px; }
+  .success-url { font-family: var(--mono); font-size: 14px; letter-spacing: .1em; color: var(--accent); margin-bottom: 36px; }
+  .success-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+  @media (max-width: 800px) {
+    .events-pick { grid-template-columns: repeat(2,1fr); }
+    .theme-grid   { grid-template-columns: repeat(2,1fr); }
+    .summary-grid { grid-template-columns: 1fr; }
+    .field-row    { grid-template-columns: 1fr; }
+    .preview-card { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ════ HEADER ════════════════════════════════════════════ -->
+<header class="site-header">
+  <div class="site-header-inner">
+    <a class="brand" href="landing.html">REELDAY<sup>★</sup></a>
+    <nav class="site-nav">
+      <!-- TODO: show user avatar + name when logged in -->
+      <a href="dashboard.html">Dashboard</a>
+    </nav>
+    <div class="site-actions">
+      <div class="lang-switch" id="langSwitch">
+        <button class="active" onclick="setLang('EN',this)">EN</button>
+        <button onclick="setLang('FIL',this)">FIL</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="create-shell">
+
+  <div class="eyebrow" id="stepLabel">— New event · Step 1 of 4</div>
+
+  <!-- Progress bar -->
+  <div class="progress-bar" id="progressBar">
+    <div class="progress-step active" id="ps1"><span class="lbl">Type</span></div>
+    <div class="progress-step"        id="ps2"><span class="lbl">Details</span></div>
+    <div class="progress-step"        id="ps3"><span class="lbl">Theme</span></div>
+    <div class="progress-step"        id="ps4"><span class="lbl">Pay</span></div>
+  </div>
+
+  <!-- ════ STEP 1 — Event type ════════════════════════════ -->
+  <div class="screen active" id="screen1">
+    <h1 class="step-title">What are we <em>celebrating?</em></h1>
+    <p class="step-sub">Pick the type. We'll set the right theme, language defaults, and QR poster style.</p>
+
+    <div class="events-pick">
+      <!-- TODO: data-type maps to API event_type enum -->
+      <div class="event-pick selected" data-type="wedding" onclick="selectEvent(this)">
+        <div class="pic placeholder placeholder--clay"></div>
+        <div><div class="name">Wedding</div><div class="tagalog">Kasal</div></div>
+      </div>
+      <div class="event-pick" data-type="debut" onclick="selectEvent(this)">
+        <div class="pic placeholder placeholder--coral"></div>
+        <div><div class="name">Debut</div><div class="tagalog">Ika-18</div></div>
+      </div>
+      <div class="event-pick" data-type="birthday" onclick="selectEvent(this)">
+        <div class="pic placeholder placeholder--ochre"></div>
+        <div><div class="name">Birthday</div><div class="tagalog">Kaarawan</div></div>
+      </div>
+      <div class="event-pick" data-type="baptism" onclick="selectEvent(this)">
+        <div class="pic placeholder placeholder--sage"></div>
+        <div><div class="name">Baptism</div><div class="tagalog">Binyag</div></div>
+      </div>
+      <div class="event-pick" data-type="reunion" onclick="selectEvent(this)">
+        <div class="pic placeholder placeholder--paper" style="color:var(--ink)"></div>
+        <div><div class="name">Reunion</div><div class="tagalog">Pagkikita</div></div>
+      </div>
+      <div class="event-pick" data-type="corporate" onclick="selectEvent(this)">
+        <div class="pic placeholder placeholder--ink"></div>
+        <div><div class="name">Corporate</div><div class="tagalog">Kompanya</div></div>
+      </div>
+      <div class="event-pick" data-type="memorial" onclick="selectEvent(this)">
+        <div class="pic placeholder placeholder--sage"></div>
+        <div><div class="name">Memorial</div><div class="tagalog">Alaala</div></div>
+      </div>
+      <div class="event-pick" data-type="7th" onclick="selectEvent(this)">
+        <div class="pic placeholder placeholder--coral"></div>
+        <div><div class="name">7th Birthday</div><div class="tagalog">Ika-7</div></div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <a class="btn btn-ghost" href="landing.html">← Back</a>
+      <button class="btn btn-accent" onclick="goStep(2)">Continue → Details</button>
+    </div>
+  </div>
+
+  <!-- ════ STEP 2 — Event details ══════════════════════════ -->
+  <div class="screen" id="screen2">
+    <h1 class="step-title">Tell us the <em>basics.</em></h1>
+    <p class="step-sub">This information appears on your QR poster and the guest upload page.</p>
+
+    <div class="form" id="detailsForm">
+      <div class="field">
+        <label>Event name(s)</label>
+        <!-- TODO: validate — required, max 60 chars -->
+        <input type="text" id="eventName" placeholder="e.g. Andrea &amp; JM" value="Andrea &amp; JM" oninput="updatePreview()" />
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Date</label>
+          <!-- TODO: validate — must be in the future -->
+          <input type="date" id="eventDate" value="2026-06-14" oninput="updatePreview()" />
+        </div>
+        <div class="field">
+          <label>Venue</label>
+          <input type="text" id="eventVenue" placeholder="e.g. Manila Hotel" value="Manila Hotel" oninput="updatePreview()" />
+        </div>
+      </div>
+      <div class="field">
+        <label>Welcome message</label>
+        <textarea rows="2" id="eventWelcome" placeholder="Shown to guests when they open the upload page">Salamat sa pagdating! Scan, share, and become part of the story.</textarea>
+        <div class="field-hint">Max 120 characters · shown on guest upload page</div>
+      </div>
+      <div class="field">
+        <label>Expected guests</label>
+        <!-- TODO: drives plan recommendation / upload limit validation -->
+        <select id="eventGuests">
+          <option value="50">Up to 50</option>
+          <option value="250" selected>Up to 250</option>
+          <option value="500">Up to 500</option>
+          <option value="1000">500+</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Live preview of QR card -->
+    <div class="preview-card">
+      <div>
+        <div class="eyebrow" style="margin-bottom:12px;">— Live preview</div>
+        <div class="preview-text" id="previewName">Andrea &amp; JM</div>
+        <div class="preview-meta" id="previewMeta">Manila Hotel · Wedding · 14 Jun 2026</div>
+      </div>
+      <div class="qr-mock"></div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-ghost" onclick="goStep(1)">← Back</button>
+      <button class="btn btn-accent" onclick="goStep(3)">Continue → Theme</button>
+    </div>
+  </div>
+
+  <!-- ════ STEP 3 — Theme picker ══════════════════════════ -->
+  <div class="screen" id="screen3">
+    <h1 class="step-title">Choose your <em>look.</em></h1>
+    <p class="step-sub">All themes share one type system and one component set. Only the colors and motifs change.</p>
+
+    <!-- TODO: Replace static previews with live mini-iframes of each landing page -->
+    <div class="theme-grid">
+      <div class="theme-card selected" data-theme="editorial" onclick="selectTheme(this)">
+        <div class="theme-preview theme-editorial"></div>
+        <div class="theme-label">
+          <span class="name">Editorial</span>
+          <span class="pill">Selected</span>
+        </div>
+      </div>
+      <div class="theme-card" data-theme="polaroid" onclick="selectTheme(this)">
+        <div class="theme-preview theme-polaroid"></div>
+        <div class="theme-label">
+          <span class="name">Sunlit Polaroid</span>
+          <span class="pill">New</span>
+        </div>
+      </div>
+      <div class="theme-card" data-theme="cultural" onclick="selectTheme(this)">
+        <div class="theme-preview theme-cultural"></div>
+        <div class="theme-label">
+          <span class="name">Filipino Cultural</span>
+          <span class="pill">Popular</span>
+        </div>
+      </div>
+      <div class="theme-card" data-theme="banderitas" onclick="selectTheme(this)">
+        <div class="theme-preview theme-banderitas"></div>
+        <div class="theme-label">
+          <span class="name">Banderitas</span>
+          <span class="pill">Festival</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-ghost" onclick="goStep(2)">← Back</button>
+      <button class="btn btn-accent" onclick="goStep(4)">Continue → Pay</button>
+    </div>
+  </div>
+
+  <!-- ════ STEP 4 — Checkout ══════════════════════════════ -->
+  <div class="screen" id="screen4">
+    <h1 class="step-title">Almost <em>there.</em></h1>
+    <p class="step-sub">Choose how to pay — no subscriptions, ever. One event, one payment.</p>
+
+    <div class="summary-grid">
+      <div>
+        <!-- Order summary -->
+        <div class="summary-card">
+          <div class="head"><h3>Order summary</h3></div>
+          <div class="row"><span class="lbl">Event</span><span class="val" id="summaryName">Andrea &amp; JM · Wedding</span></div>
+          <div class="row"><span class="lbl">Date</span><span class="val" id="summaryDate">14 Jun 2026</span></div>
+          <div class="row"><span class="lbl">Theme</span><span class="val" id="summaryTheme">Editorial</span></div>
+          <div class="row"><span class="lbl">Plan</span><span class="val">★ Celebration</span></div>
+          <div class="row total"><span class="lbl">Total</span><span class="val">₱2,490</span></div>
+        </div>
+
+        <!-- Payment methods -->
+        <div class="payment-card" style="margin-top:16px;">
+          <h3>Payment method</h3>
+          <div class="payment-methods" id="payMethods">
+            <!-- TODO: Wire each option to the corresponding payment gateway:
+                 GCash → GCash Mini App / redirect
+                 Maya  → Maya Checkout API
+                 Card  → Stripe or Paymongo
+                 Bank  → Paymongo DirectDebit
+            -->
+            <div class="pay-option selected" onclick="selectPay(this)">
+              <div class="radio"></div>
+              <span class="pay-name">GCash</span>
+              <span class="pay-meta">Instant</span>
+            </div>
+            <div class="pay-option" onclick="selectPay(this)">
+              <div class="radio"></div>
+              <span class="pay-name">Maya</span>
+              <span class="pay-meta">Instant</span>
+            </div>
+            <div class="pay-option" onclick="selectPay(this)">
+              <div class="radio"></div>
+              <span class="pay-name">Credit / Debit Card</span>
+              <span class="pay-meta">Visa · Mastercard</span>
+            </div>
+            <div class="pay-option" onclick="selectPay(this)">
+              <div class="radio"></div>
+              <span class="pay-name">Bank Transfer</span>
+              <span class="pay-meta">BDO · BPI · UnionBank</span>
+            </div>
+          </div>
+          <!-- TODO: Replace with real payment button that calls gateway API -->
+          <button class="btn btn-accent" style="width:100%;" onclick="simulatePay()">Pay ₱2,490 →</button>
+          <p style="font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);text-align:center;margin-top:12px;">Secured by Paymongo · 256-bit SSL</p>
+        </div>
+      </div>
+
+      <!-- QR preview sidebar -->
+      <div>
+        <div style="background:#fff;border:1px solid var(--line);border-radius:var(--r-lg);padding:28px;text-align:center;">
+          <div class="eyebrow" style="margin-bottom:14px;">— Your QR will look like this</div>
+          <div class="qr-mock" style="width:140px;height:140px;margin:0 auto 16px;border-radius:8px;border:10px solid #fff;box-shadow:0 0 0 1px var(--line);background:repeating-conic-gradient(var(--ink) 0% 25%, #fff 0% 50%) 0 0 / 14px 14px;"></div>
+          <div style="font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--ink-soft);" id="summaryUrl">reelday.ph/e/andrea-jm</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-ghost" onclick="goStep(3)">← Back</button>
+    </div>
+  </div>
+
+  <!-- ════ SUCCESS screen (shown after payment) ═══════════ -->
+  <div class="screen" id="screenSuccess">
+    <div class="success-shell">
+      <div class="success-icon">★</div>
+      <h2>Your reel is <em>live.</em></h2>
+      <p>Your QR is ready to print, your wall is running, and guests can start sharing right now.</p>
+      <div class="success-qr"></div>
+      <div class="success-url" id="successUrl">reelday.ph/e/andrea-jm</div>
+      <div class="success-actions">
+        <!-- TODO: generate and download actual QR poster PDF -->
+        <a class="btn btn-accent" href="dashboard.html">Go to Dashboard →</a>
+        <button class="btn btn-ghost" onclick="alert('TODO: trigger QR poster PDF download')">Download QR Poster</button>
+        <a class="btn btn-ghost" href="wall.html">Preview Live Wall</a>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /create-shell -->
+
+<script>
+  /* ════════════════════════════════════════════════════════
+     CREATE FLOW STATE
+     TODO: Replace this local state object with API calls:
+       POST /api/events  (creates event draft)
+       PATCH /api/events/:id  (updates each step)
+       POST /api/events/:id/checkout  (initiates payment)
+  ════════════════════════════════════════════════════════ */
+  const state = {
+    step: 1,
+    eventType: 'wedding',
+    theme: 'editorial',
+    name: 'Andrea & JM',
+    date: '2026-06-14',
+    venue: 'Manila Hotel',
+    welcome: '',
+    guests: '250',
+    plan: 'celebration',
+    payMethod: 'gcash'
+  };
+
+  /* ── Step navigation ──────────────────────────────────── */
+  function goStep(n) {
+    // validate before advancing
+    if (n > state.step && !validateStep(state.step)) return;
+
+    state.step = n;
+    updateUI();
+    document.querySelector('.create-shell').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function validateStep(s) {
+    if (s === 2) {
+      const name = document.getElementById('eventName').value.trim();
+      if (!name) { alert('Please enter an event name.'); return false; }
+    }
+    return true;
+  }
+
+  function updateUI() {
+    const n = state.step;
+
+    // Update step label
+    document.getElementById('stepLabel').textContent =
+      n <= 4 ? `— New event · Step ${n} of 4` : '';
+
+    // Progress bar
+    for (let i = 1; i <= 4; i++) {
+      const el = document.getElementById('ps' + i);
+      el.classList.remove('active', 'done');
+      if (i < n) el.classList.add('done');
+      if (i === n) el.classList.add('active');
+    }
+
+    // Show correct screen
+    ['screen1','screen2','screen3','screen4','screenSuccess'].forEach(id => {
+      document.getElementById(id).classList.remove('active');
+    });
+    const target = n <= 4 ? 'screen' + n : 'screenSuccess';
+    document.getElementById(target).classList.add('active');
+
+    // Sync summary on step 4
+    if (n === 4) syncSummary();
+  }
+
+  /* ── Event type selection ─────────────────────────────── */
+  function selectEvent(el) {
+    document.querySelectorAll('.event-pick').forEach(e => e.classList.remove('selected'));
+    el.classList.add('selected');
+    state.eventType = el.dataset.type;
+  }
+
+  /* ── Theme selection ──────────────────────────────────── */
+  function selectTheme(el) {
+    document.querySelectorAll('.theme-card').forEach(e => {
+      e.classList.remove('selected');
+      e.querySelector('.pill').textContent = '';
+    });
+    el.classList.add('selected');
+    el.querySelector('.pill').textContent = 'Selected';
+    state.theme = el.dataset.theme;
+  }
+
+  /* ── Live preview update ──────────────────────────────── */
+  function updatePreview() {
+    const name   = document.getElementById('eventName').value  || 'Your event';
+    const date   = document.getElementById('eventDate').value  || '';
+    const venue  = document.getElementById('eventVenue').value || '';
+
+    state.name  = name;
+    state.date  = date;
+    state.venue = venue;
+
+    document.getElementById('previewName').textContent = name;
+
+    // Format date nicely
+    let dateStr = '';
+    if (date) {
+      const d = new Date(date + 'T00:00:00');
+      dateStr = d.toLocaleDateString('en-PH', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+    document.getElementById('previewMeta').textContent =
+      [venue, state.eventType.charAt(0).toUpperCase() + state.eventType.slice(1), dateStr]
+        .filter(Boolean).join(' · ');
+  }
+
+  /* ── Sync checkout summary ────────────────────────────── */
+  function syncSummary() {
+    const d = new Date((state.date || '2026-06-14') + 'T00:00:00');
+    const dateStr = d.toLocaleDateString('en-PH', { day: 'numeric', month: 'short', year: 'numeric' });
+    const slug = state.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/,'');
+
+    document.getElementById('summaryName').textContent =
+      state.name + ' · ' + (state.eventType.charAt(0).toUpperCase() + state.eventType.slice(1));
+    document.getElementById('summaryDate').textContent  = dateStr;
+    document.getElementById('summaryTheme').textContent =
+      state.theme.charAt(0).toUpperCase() + state.theme.slice(1);
+    document.getElementById('summaryUrl').textContent   = 'reelday.ph/e/' + slug;
+    document.getElementById('successUrl').textContent   = 'reelday.ph/e/' + slug;
+  }
+
+  /* ── Payment method selection ─────────────────────────── */
+  function selectPay(el) {
+    document.querySelectorAll('.pay-option').forEach(e => e.classList.remove('selected'));
+    el.classList.add('selected');
+    state.payMethod = el.querySelector('.pay-name').textContent.toLowerCase();
+  }
+
+  /* ── Simulate successful payment ─────────────────────────
+     TODO: Replace with real payment gateway integration.
+     Flow:
+       1. Call POST /api/events/:id/checkout → get payment_url
+       2. Redirect to payment_url (GCash/Maya) or show Stripe modal
+       3. Webhook confirms payment → mark event as paid
+       4. Redirect back here with ?success=1 → show success screen
+  ────────────────────────────────────────────────────────── */
+  function simulatePay() {
+    state.step = 5;
+    updateUI();
+  }
+
+  /* ── Language toggle ──────────────────────────────────── */
+  function setLang(lang, btn) {
+    document.querySelectorAll('#langSwitch button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    // TODO: switch UI copy to Filipino using i18n module
+  }
+
+  /* ── Init: read ?type and ?plan from URL ──────────────────
+     Allows landing page event tiles & pricing CTAs to
+     pre-select type/plan when linking to create.html
+  ────────────────────────────────────────────────────────── */
+  (function init() {
+    const p = new URLSearchParams(location.search);
+    if (p.get('type')) {
+      const match = document.querySelector(`.event-pick[data-type="${p.get('type')}"]`);
+      if (match) {
+        document.querySelectorAll('.event-pick').forEach(e => e.classList.remove('selected'));
+        match.classList.add('selected');
+        state.eventType = p.get('type');
+      }
+    }
+    updatePreview();
+  })();
+</script>
+</body>
+</html>
