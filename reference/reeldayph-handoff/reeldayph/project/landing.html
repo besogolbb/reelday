@@ -3,11 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="theme-color" content="#fdfaf5" />
-<meta name="description" content="Every shot from your celebration. One QR code. Instantly. The cinematic photo-sharing platform for Filipino weddings, debuts, and celebrations." />
 <title>Reelday — Every shot. Every guest. One QR.</title>
-<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-<link rel="stylesheet" href="/css/shared.css" />
+<link rel="stylesheet" href="shared.css" />
 <style>
   body { background: #fdfaf5; }
 
@@ -103,6 +100,7 @@
   .photo-clay   { background: linear-gradient(145deg, #d4a892 0%, #8a3a28 100%); }
   .photo-cream  { background: linear-gradient(145deg, #fdfaf5 0%, #e6d0b0 100%); }
 
+  /* Photo content labels (styled to look like real photo moments) */
   .photo-label {
     position: absolute; inset: 0;
     display: flex; align-items: center; justify-content: center;
@@ -120,6 +118,7 @@
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
 
+  /* Polaroid positions — matching the screenshot layout */
   .pol-1 { width: 230px; top: 2%;  left: 6%;   transform: rotate(-7deg);  z-index: 3; }
   .pol-2 { width: 210px; top: 0%;  right: 2%;  transform: rotate(5deg);   z-index: 5; }
   .pol-3 { width: 220px; bottom: 16%; left: 0%;  transform: rotate(-3.5deg); z-index: 4; }
@@ -132,6 +131,7 @@
   .pol-4:hover { transform: rotate(0deg) scale(1.05) translateY(-4px); }
   .pol-5:hover { transform: rotate(0deg) scale(1.05) translateY(-4px); }
 
+  /* Sticker badges */
   .sticker {
     position: absolute;
     padding: 9px 16px;
@@ -147,7 +147,9 @@
     background: var(--accent); color: #fff;
     transform: rotate(-4deg);
   }
-  .sticker-live::before { content: '★ '; }
+  .sticker-live::before {
+    content: '★ '; 
+  }
   .sticker-count {
     bottom: 28%; right: 2%;
     background: var(--gold); color: var(--ink);
@@ -262,6 +264,7 @@
   .phone-mockup .pm-drop {
     background: #fff; border: 1.5px dashed var(--line-2);
     border-radius: 10px; padding: 16px 12px; text-align: center; margin-bottom: 10px;
+    transition: border-color .2s;
   }
   .phone-mockup .pm-drop-icon {
     width: 36px; height: 36px; background: var(--accent); border-radius: 50%;
@@ -448,6 +451,7 @@
   .feat-dark .feat-visual { background: rgba(255,255,255,.06); }
   .feat-accent .feat-visual { background: rgba(255,255,255,.15); }
 
+  /* Live wall preview inside features */
   .feat-wall-preview {
     border-radius: 10px; overflow: hidden; position: relative;
     aspect-ratio: 21/9; background: #1a0f0a;
@@ -600,59 +604,11 @@
     .pricing-grid { grid-template-columns: 1fr; }
     .price-card.featured { transform: none; }
     .site-nav { display: none; }
-    .wl-frame-inner { padding: 0 20px 20px; }
   }
   @media (max-width: 600px) {
     .hero { padding: 72px 20px 40px; }
     .how, .wall-section, .quote-section, .features, .events, .pricing, .faq, .final-cta { padding-left: 20px; padding-right: 20px; }
     .events-grid { grid-template-columns: repeat(2,1fr); }
-
-    /* hero text */
-    .hero h1 { font-size: clamp(36px, 11vw, 60px); }
-    .hero p { font-size: 16px; }
-    .hero-cta { flex-direction: column; }
-    .hero-cta .btn { width: 100%; justify-content: center; }
-
-    /* stats strip */
-    .hstat .num { font-size: 36px; }
-    .hero-strip { gap: 20px; padding: 20px; }
-
-    /* live wall */
-    .wl-stats { display: none; }
-    .wl-frame-inner { flex-direction: column; align-items: flex-start; padding: 0 16px 16px; gap: 8px; }
-    .wl-caption { max-width: 100%; }
-    .wl-corner { display: none; }
-    .wall-thumbs { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 6px; -webkit-overflow-scrolling: touch; }
-    .wall-thumb { flex: 0 0 80px; }
-
-    /* testimonial */
-    .quote-inner blockquote { font-size: clamp(18px, 5.5vw, 28px); }
-
-    /* events */
-    .event-tile { aspect-ratio: auto; min-height: 130px; padding: 16px 14px; }
-
-    /* features */
-    .feat-wall-preview { aspect-ratio: 4/3; }
-  }
-  @media (max-width: 480px) {
-    /* header: hide login button to prevent overflow */
-    .site-actions .btn-ghost { display: none; }
-
-    /* hero: scale down polaroid stack to fit narrow screens */
-    .polaroid-stage { transform: scale(.8); transform-origin: center top; margin-bottom: -12%; }
-    .hero-strip { grid-template-columns: 1fr 1fr; }
-    .hstat .num { font-size: 28px; }
-    .hstat .lbl { font-size: 10px; }
-
-    /* how it works */
-    .how-card { padding: 24px 18px 20px; }
-    .how-card .big-num { font-size: 72px; }
-
-    /* events */
-    .event-tile-name { font-size: 18px; }
-
-    /* live wall thumbs */
-    .wall-thumb { flex: 0 0 64px; }
   }
 </style>
 </head>
@@ -661,7 +617,7 @@
 <!-- ════ HEADER ════════════════════════════════════════════ -->
 <header class="site-header">
   <div class="site-header-inner">
-    <a class="brand" href="/">REELDAY<sup>★</sup></a>
+    <a class="brand" href="landing.html">REELDAY<sup>★</sup></a>
     <nav class="site-nav">
       <a href="#how">How it works</a>
       <a href="#demo">Live demo</a>
@@ -673,8 +629,7 @@
         <button class="active" onclick="setLang('EN',this)">EN</button>
         <button onclick="setLang('FIL',this)">FIL</button>
       </div>
-      <a class="btn btn-ghost" href="/login" style="padding:10px 18px;font-size:.875rem">Log in</a>
-      <a class="btn btn-accent" href="/create">Start free →</a>
+      <a class="btn btn-accent" href="create.html">Start free →</a>
     </div>
   </div>
 </header>
@@ -693,7 +648,7 @@
       </h1>
       <p>Guests scan one code and upload photos straight to your live cinematic wall — no app, no sign-up, no missed moments.</p>
       <div class="hero-cta">
-        <a class="btn btn-accent" href="/create">Start free →</a>
+        <a class="btn btn-accent" href="create.html">Start free →</a>
         <a class="btn btn-ghost" href="#demo">See live demo</a>
       </div>
       <div class="hero-trust">
@@ -716,6 +671,7 @@
       <div class="sticker sticker-live">Live now</div>
       <div class="sticker sticker-count">847 today</div>
 
+      <!-- Polaroid 1: First dance (coral) -->
       <div class="polaroid pol-1">
         <div class="pic photo-coral" style="width:220px;height:220px;position:relative;">
           <span class="photo-label">First Dance</span>
@@ -723,6 +679,7 @@
         <div class="caption">Tito's mga kuya, finally on the floor</div>
       </div>
 
+      <!-- Polaroid 2: Garden (ochre) -->
       <div class="polaroid pol-2">
         <div class="pic photo-ochre" style="width:200px;height:200px;position:relative;">
           <span class="photo-label">Garden</span>
@@ -730,6 +687,7 @@
         <div class="caption">Ate Andrea's bouquet toss ✦</div>
       </div>
 
+      <!-- Polaroid 3: Lola (sage) -->
       <div class="polaroid pol-3">
         <div class="pic photo-sage" style="width:210px;height:210px;position:relative;">
           <span class="photo-label">Lola</span>
@@ -737,13 +695,15 @@
         <div class="caption">Lolo's speech, 1962 → today</div>
       </div>
 
+      <!-- Polaroid 4: Reception (clay) -->
       <div class="polaroid pol-4">
         <div class="pic photo-clay" style="width:195px;height:195px;position:relative;">
           <span class="photo-label">Reception</span>
         </div>
-        <div class="caption">Grazing table looks unreal</div>
+        <div class="caption">Tinapay table looks unreal</div>
       </div>
 
+      <!-- Polaroid 5: Ceremony (cream) -->
       <div class="polaroid pol-5">
         <div class="pic photo-cream" style="width:210px;height:210px;position:relative;">
           <span class="photo-label">Ceremony</span>
@@ -771,18 +731,20 @@
   </div>
   <div class="how-grid">
 
+    <!-- Step 1: Print QR — real QR poster mockup -->
     <div class="how-card">
       <div class="big-num">1</div>
       <h3>Print your QR</h3>
       <p>Set names, date, theme. Download a print-ready poster. Place it at the welcome table.</p>
       <div class="mockup qr-poster-mockup">
         <div class="pin-badge">QR Poster</div>
-        <div class="poster-title">Your Event Name<br/>&amp; Date</div>
+        <div class="poster-title">Your Event Name<br/>& Date</div>
         <div class="qr-block"></div>
         <div class="poster-meta">reelday.ph/e/your-event<br/>scan to share your moments</div>
       </div>
     </div>
 
+    <!-- Step 2: Upload — real phone screen mockup -->
     <div class="how-card">
       <div class="big-num">2</div>
       <h3>Guests scan &amp; share</h3>
@@ -821,6 +783,7 @@
       </div>
     </div>
 
+    <!-- Step 3: Live wall — real animated mini wall -->
     <div class="how-card">
       <div class="big-num">3</div>
       <h3>Wall goes live</h3>
@@ -894,6 +857,7 @@
     <div class="eyebrow">What's inside</div>
     <h2>A video directed<br/>by your <em>guests.</em></h2>
     <div class="features-grid">
+      <!-- Cinematic live wall — wide dark card with actual animated wall -->
       <div class="feat feat-dark feat-wide">
         <span class="feat-pill">Headline feature</span>
         <h3>Cinematic <em>live wall</em></h3>
@@ -933,37 +897,37 @@
     <div class="eyebrow">Event types</div>
     <h2>One platform.<br/><em>Seven celebrations.</em></h2>
     <div class="events-grid">
-      <a class="event-tile" href="/create?type=wedding">
+      <a class="event-tile" href="create.html?type=wedding">
         <div class="event-tile-bg" style="background:linear-gradient(135deg,#c45a3a,#7a3b2e)"></div>
         <span class="event-tile-top">01 · Kasal</span>
         <div><div class="event-tile-name">Wedding</div><div class="event-tile-sub">Kasal</div></div>
       </a>
-      <a class="event-tile" href="/create?type=debut">
+      <a class="event-tile" href="create.html?type=debut">
         <div class="event-tile-bg" style="background:linear-gradient(135deg,#b6457a,#6b1f49)"></div>
         <span class="event-tile-top">02 · Ika-18</span>
         <div><div class="event-tile-name">Debut</div><div class="event-tile-sub">Ika-18</div></div>
       </a>
-      <a class="event-tile" href="/create?type=birthday">
+      <a class="event-tile" href="create.html?type=birthday">
         <div class="event-tile-bg" style="background:linear-gradient(135deg,#d97706,#7c2d12)"></div>
         <span class="event-tile-top">03 · Kaarawan</span>
         <div><div class="event-tile-name">Birthday</div><div class="event-tile-sub">Kaarawan</div></div>
       </a>
-      <a class="event-tile" href="/create?type=baptism">
+      <a class="event-tile" href="create.html?type=baptism">
         <div class="event-tile-bg" style="background:linear-gradient(135deg,#3b6ea8,#1e3a5f)"></div>
         <span class="event-tile-top">04 · Binyag</span>
         <div><div class="event-tile-name">Baptism</div><div class="event-tile-sub">Binyag</div></div>
       </a>
-      <a class="event-tile" href="/create?type=reunion">
+      <a class="event-tile" href="create.html?type=reunion">
         <div class="event-tile-bg" style="background:linear-gradient(135deg,#2d6a4a,#134e3a)"></div>
         <span class="event-tile-top">05 · Pagkikita</span>
         <div><div class="event-tile-name">Reunion</div><div class="event-tile-sub">Pagkikita</div></div>
       </a>
-      <a class="event-tile" href="/create?type=corporate">
+      <a class="event-tile" href="create.html?type=corporate">
         <div class="event-tile-bg" style="background:linear-gradient(135deg,#2a3548,#16202e)"></div>
         <span class="event-tile-top">06 · Kompanya</span>
         <div><div class="event-tile-name">Corporate</div><div class="event-tile-sub">Kompanya</div></div>
       </a>
-      <a class="event-tile" href="/create?type=memorial">
+      <a class="event-tile" href="create.html?type=memorial">
         <div class="event-tile-bg" style="background:linear-gradient(135deg,#4a6b4a,#1c2b1a)"></div>
         <span class="event-tile-top">07 · Alaala</span>
         <div><div class="event-tile-name">Memorial</div><div class="event-tile-sub">Alaala</div></div>
@@ -984,37 +948,30 @@
         <div class="price">₱990<sub> / event</sub></div>
         <p class="desc">Up to 50 guests. Despedidas, baby showers, salu-salo.</p>
         <ul>
-          <li>200 uploads</li>
-          <li>Live wall, 24h</li>
-          <li>Standard themes</li>
-          <li>Watermarked .zip</li>
+          <li>200 uploads</li><li>Live wall, 24h</li>
+          <li>Standard themes</li><li>Watermarked .zip</li>
         </ul>
-        <a class="btn btn-ghost" href="/create?plan=intimate">Get started</a>
+        <a class="btn btn-ghost" href="create.html?plan=intimate">Get started</a>
       </div>
       <div class="price-card featured">
         <div class="tier">★ Celebration</div>
         <div class="price">₱2,490<sub> / event</sub></div>
         <p class="desc">Up to 250 guests. Weddings, debuts, big birthdays.</p>
         <ul>
-          <li>Unlimited uploads</li>
-          <li>Live wall, 7 days</li>
-          <li>All 7 themes</li>
-          <li>HD .zip + custom poster</li>
-          <li>Custom QR poster</li>
+          <li>Unlimited uploads</li><li>Live wall, 7 days</li>
+          <li>All 7 themes</li><li>HD .zip + custom poster</li><li>Custom QR poster</li>
         </ul>
-        <a class="btn btn-accent" href="/create?plan=celebration">Choose Celebration →</a>
+        <a class="btn btn-accent" href="create.html?plan=celebration">Choose Celebration →</a>
       </div>
       <div class="price-card">
         <div class="tier">Forever</div>
         <div class="price">₱4,990<sub> / event</sub></div>
         <p class="desc">500+ guests. White-glove setup, lifetime archive.</p>
         <ul>
-          <li>Everything in Celebration</li>
-          <li>Lifetime archive</li>
-          <li>Coordinator dashboard</li>
-          <li>Priority support</li>
+          <li>Everything in Celebration</li><li>Lifetime archive</li>
+          <li>Coordinator dashboard</li><li>Priority support</li>
         </ul>
-        <a class="btn btn-ghost" href="/create?plan=forever">Get started</a>
+        <a class="btn btn-ghost" href="create.html?plan=forever">Get started</a>
       </div>
     </div>
   </div>
@@ -1051,7 +1008,7 @@
 <!-- ════ FINAL CTA ═════════════════════════════════════════ -->
 <section class="final-cta">
   <h2>Your day. Every <em>angle.</em></h2>
-  <a class="btn btn-accent" style="font-size:16px;padding:15px 36px;" href="/create">Start free — no card needed →</a>
+  <a class="btn btn-accent" style="font-size:16px;padding:15px 36px;" href="create.html">Start free — no card needed →</a>
 </section>
 
 <!-- ════ FOOTER ════════════════════════════════════════════ -->
@@ -1061,32 +1018,9 @@
       <div class="brand" style="margin-bottom:14px;">REELDAY<sup>★</sup></div>
       <p style="color:var(--ink-soft);font-size:14px;max-width:32ch;">The live photo wall for Filipino celebrations. Made in Manila.</p>
     </div>
-    <div>
-      <h4>Product</h4>
-      <ul>
-        <li><a href="#how">How it works</a></li>
-        <li><a href="#pricing">Pricing</a></li>
-        <li><a href="#features">Features</a></li>
-        <li><a href="#demo">Live demo</a></li>
-      </ul>
-    </div>
-    <div>
-      <h4>Company</h4>
-      <ul>
-        <li><a href="#">About</a></li>
-        <li><a href="#">Press</a></li>
-        <li><a href="#">Partners</a></li>
-        <li><a href="#">Contact</a></li>
-      </ul>
-    </div>
-    <div>
-      <h4>Legal</h4>
-      <ul>
-        <li><a href="#">Privacy</a></li>
-        <li><a href="#">Terms</a></li>
-        <li><a href="#">Refunds</a></li>
-      </ul>
-    </div>
+    <div><h4>Product</h4><ul><li><a href="#how">How it works</a></li><li><a href="#pricing">Pricing</a></li><li><a href="#">Themes</a></li><li><a href="#demo">Live demo</a></li></ul></div>
+    <div><h4>Company</h4><ul><li><a href="#">About</a></li><li><a href="#">Press</a></li><li><a href="#">Partners</a></li><li><a href="#">Contact</a></li></ul></div>
+    <div><h4>Legal</h4><ul><li><a href="#">Privacy</a></li><li><a href="#">Terms</a></li><li><a href="#">Refunds</a></li></ul></div>
   </div>
   <div class="footer-meta">
     <span>© 2026 Reelday Inc · Made in Manila</span>
@@ -1163,8 +1097,6 @@ function setLang(lang, btn) {
   const fill = document.getElementById('wlFill');
   const thumbs = document.getElementById('wallThumbs');
 
-  if (!lA || !thumbs) return;
-
   slides.forEach((s, i) => {
     const d = document.createElement('div');
     d.className = 'wall-thumb' + (i === 0 ? ' wt-active' : '');
@@ -1209,8 +1141,7 @@ function setLang(lang, btn) {
     if (!e.isIntersecting) clearTimeout(timer);
     else timer = setTimeout(advance, DURATION);
   });
-  const demoEl = document.getElementById('demo');
-  if (demoEl) obs.observe(demoEl);
+  obs.observe(document.getElementById('demo'));
 })();
 </script>
 </body>

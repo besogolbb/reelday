@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(git commit *)",
+      "Read(//c/Users/ADMIN/AppData/Local/Temp/reeldayph-handoff/reeldayph/project/**)"
     ]
   }
 }

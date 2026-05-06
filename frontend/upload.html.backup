@@ -1,0 +1,1787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta name="theme-color" content="#fff" />
+  <title>Reelday — Share your moments</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="stylesheet" href="/css/shared.css" />
+  <style>
+    body {
+      min-height: 100dvh;
+      background: var(--paper);
+    }
+
+    /* ── Shell ─────────────────────────────────────── */
+    .upload-shell {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 24px 20px 80px;
+    }
+
+    /* ── Top row ──────────────────────────────────────── */
+    .upload-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0;
+    }
+
+    a.brand {
+      font-family: var(--display);
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--ink);
+      text-decoration: none;
+    }
+    a.brand sup { font-size: .6em; color: var(--accent); vertical-align: super; }
+    a.brand:hover { color: var(--accent); }
+
+    .lang-switch {
+      display: flex;
+      background: var(--paper-2);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 3px;
+      gap: 2px;
+    }
+
+    .lang-switch button {
+      padding: .25rem .7rem;
+      border: none;
+      border-radius: 16px;
+      font-family: var(--mono, monospace);
+      font-size: .7rem;
+      font-weight: 600;
+      letter-spacing: .08em;
+      cursor: pointer;
+      background: transparent;
+      color: var(--ink-soft);
+      transition: background .15s, color .15s;
+    }
+    .lang-switch button.active {
+      background: var(--ink);
+      color: #fff;
+    }
+
+    /* ── Hero ─────────────────────────────────────────── */
+    .upload-hero {
+      text-align: center;
+      padding: 32px 0 40px;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 32px;
+    }
+
+    .upload-hero .brand {
+      display: inline-flex;
+      margin-bottom: 24px;
+      font-size: 16px;
+    }
+
+    .upload-hero h1 {
+      font-family: var(--display);
+      font-size: clamp(36px, 8vw, 56px);
+      font-weight: 400;
+      line-height: 1;
+      letter-spacing: -.02em;
+      color: var(--ink);
+      margin: 0 0 10px;
+    }
+
+    .upload-hero h1 em {
+      font-style: italic;
+      color: var(--accent);
+    }
+
+    .upload-hero .meta {
+      font-family: var(--mono, monospace);
+      font-size: 11px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--ink-soft);
+    }
+
+    .upload-hero .welcome {
+      font-family: var(--display);
+      font-style: italic;
+      font-size: 17px;
+      color: var(--ink-soft);
+      margin-top: 20px;
+      max-width: 32ch;
+      margin-left: auto;
+      margin-right: auto;
+      line-height: 1.5;
+    }
+
+    /* ── Drop zone ──────────────────────────────────────── */
+    .drop {
+      background: #fff;
+      border: 2px dashed var(--line-2);
+      border-radius: var(--r-lg);
+      padding: 40px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      position: relative;
+    }
+
+    .drop:hover, .drop.drag-over {
+      border-color: var(--accent);
+      background: rgba(196,90,58,.03);
+    }
+
+    .drop .icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      margin: 0 auto 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--display);
+      font-size: 32px;
+      font-style: italic;
+      font-weight: 400;
+      line-height: 1;
+      user-select: none;
+    }
+
+    .drop h3 {
+      font-family: var(--display);
+      font-size: 22px;
+      font-weight: 500;
+      color: var(--ink);
+      margin: 0 0 6px;
+    }
+
+    .drop p {
+      color: var(--ink-soft);
+      font-size: 14px;
+      margin: 0 0 20px;
+    }
+
+    .drop input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ── Upload queue (from reference) ─────────────────────── */
+    .queue { margin-top: 24px; display: grid; gap: 8px; }
+
+    .queue-item {
+      display: grid;
+      grid-template-columns: 56px 1fr auto;
+      gap: 12px;
+      align-items: center;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: var(--r);
+      padding: 8px 12px 8px 8px;
+    }
+
+    .queue-item .thumb { aspect-ratio: 1; border-radius: 8px; }
+
+    .queue-item .meta-name { font-weight: 500; font-size: 14px; }
+
+    .queue-item .progress {
+      height: 4px;
+      background: var(--paper-3);
+      border-radius: 2px;
+      margin-top: 4px;
+      overflow: hidden;
+    }
+
+    .queue-item .progress > span { display: block; height: 100%; background: var(--accent); }
+
+    .queue-item .status { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-soft); }
+    .queue-item.done .status { color: #2d7a4a; }
+
+    /* ── Preview ──────────────────────────────────────── */
+    #preview-area {
+      display: none;
+      margin-top: 1rem;
+      border-radius: var(--r);
+      overflow: hidden;
+      position: relative;
+    }
+
+    #preview-area img, #preview-area video {
+      width: 100%;
+      max-height: 280px;
+      object-fit: cover;
+      border-radius: var(--r);
+      display: block;
+    }
+
+    .preview-change {
+      position: absolute;
+      top: .6rem;
+      right: .6rem;
+      background: rgba(0,0,0,.6);
+      color: #fff;
+      border: none;
+      border-radius: 20px;
+      padding: .35rem .85rem;
+      font-size: .75rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: var(--sans);
+    }
+
+    .file-warning {
+      margin-top: .5rem;
+      background: rgba(216,160,90,.12);
+      border: 1px solid rgba(216,160,90,.35);
+      border-radius: var(--r-sm);
+      padding: .5rem .75rem;
+      font-size: .8rem;
+      color: #7a5a20;
+      display: none;
+    }
+
+    /* ── Name / message field cards ──────────────────────── */
+    .name-field {
+      margin-top: 24px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: var(--r);
+      padding: 14px 16px;
+    }
+
+    .name-field label {
+      display: block;
+      font-family: var(--mono, monospace);
+      font-size: 11px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--ink-soft);
+      margin-bottom: 6px;
+    }
+
+    .name-field input[type="text"],
+    .name-field textarea {
+      width: 100%;
+      border: none;
+      outline: none;
+      font-size: 16px;
+      background: transparent;
+      font-family: var(--sans);
+      color: var(--ink);
+      resize: none;
+    }
+
+    /* ── Video toggle ─────────────────────────────────────── */
+    .video-toggle {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      margin-top: 16px;
+      padding: .875rem 1rem;
+      background: var(--paper-2);
+      border: 1.5px solid var(--line-2);
+      border-radius: var(--r-lg);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .video-toggle input[type="checkbox"] {
+      width: 1.25rem;
+      height: 1.25rem;
+      accent-color: var(--accent);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .video-toggle-label { font-size: .9rem; font-weight: 600; color: var(--ink); }
+    .video-toggle-sub   { font-size: .75rem; color: var(--ink-soft); margin-top: .1rem; }
+
+    /* ── Recorder ──────────────────────────────────────── */
+    #recorder-section {
+      display: none;
+      margin-top: 1.25rem;
+      background: var(--ink);
+      border-radius: var(--r-lg);
+      padding: 1.5rem;
+      text-align: center;
+      color: #fff;
+    }
+
+    #recorder-preview {
+      width: 100%;
+      max-height: 220px;
+      border-radius: var(--r);
+      background: #000;
+      margin-bottom: 1rem;
+      display: block;
+    }
+
+    .recorder-timer {
+      font-family: var(--display);
+      font-size: 2rem;
+      margin-bottom: 1rem;
+      letter-spacing: .05em;
+      color: #fff;
+    }
+    .recorder-timer.warning { color: var(--accent-soft); }
+
+    .recorder-controls { display: flex; gap: .75rem; justify-content: center; flex-wrap: wrap; }
+
+    .btn-record {
+      width: 68px;
+      height: 68px;
+      border-radius: 50%;
+      border: 3.5px solid var(--accent-soft);
+      background: var(--accent);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform .1s;
+      flex-shrink: 0;
+    }
+    .btn-record:active { transform: scale(.93); }
+    .btn-record .dot { width: 28px; height: 28px; border-radius: 50%; background: #fff; }
+    .btn-record.recording .dot { border-radius: 6px; width: 22px; height: 22px; }
+
+    .btn-record.recording {
+      border-color: #ff4040;
+      animation: pulse 1.2s infinite;
+    }
+
+    @keyframes pulse {
+      0%,100% { box-shadow: 0 0 0 0 rgba(255,64,64,.4); }
+      50%      { box-shadow: 0 0 0 10px rgba(255,64,64,0); }
+    }
+
+    #recorded-preview-section { display: none; margin-top: 1rem; }
+
+    #recorded-video { width: 100%; border-radius: var(--r); margin-bottom: .75rem; }
+
+    /* ── Progress ──────────────────────────────────────── */
+    .progress-wrap { display: none; margin-top: 1.5rem; }
+
+    .progress-label { font-size: .85rem; color: var(--ink-soft); margin-bottom: .4rem; }
+
+    .progress-bar-bg { height: 8px; background: var(--paper-2); border-radius: 4px; overflow: hidden; }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-soft), var(--accent));
+      border-radius: 4px;
+      transition: width .3s;
+      width: 0%;
+    }
+
+    /* ── Send button ─────────────────────────────────────── */
+    .send-btn {
+      width: 100%;
+      padding: 16px;
+      margin-top: 20px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 999px;
+      font-family: var(--sans);
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      min-height: 56px;
+      transition: background .15s, transform .1s;
+      letter-spacing: .01em;
+      box-shadow: 0 1px 2px rgba(196,90,58,.3), inset 0 1px 0 rgba(255,255,255,.18);
+    }
+    .send-btn:hover:not(:disabled) { background: var(--accent-deep); transform: translateY(-1px); }
+    .send-btn:active  { transform: scale(.98); }
+    .send-btn:disabled { opacity: .55; cursor: not-allowed; transform: none; }
+
+    /* ── Success ──────────────────────────────────────── */
+    #success-screen {
+      display: none;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: var(--r-xl);
+      box-shadow: var(--shadow-card);
+      padding: 3rem 1.5rem;
+      margin-top: 32px;
+      text-align: center;
+    }
+
+    .success-emoji { font-size: 4rem; margin-bottom: 1rem; animation: pop .4s ease; }
+
+    @keyframes pop {
+      0%   { transform: scale(.5); opacity: 0; }
+      80%  { transform: scale(1.15); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .success-title {
+      font-family: var(--display);
+      font-size: 1.6rem;
+      color: var(--ink);
+      margin-bottom: .5rem;
+    }
+
+    .success-sub { color: var(--ink-soft); font-size: .95rem; line-height: 1.5; margin-bottom: 1.75rem; }
+
+    .btn-another {
+      display: inline-block;
+      padding: .75rem 2rem;
+      background: transparent;
+      border: 2px solid var(--accent);
+      color: var(--accent);
+      border-radius: 999px;
+      font-family: var(--sans);
+      font-weight: 600;
+      font-size: .95rem;
+      cursor: pointer;
+      transition: background .15s, color .15s;
+    }
+    .btn-another:hover { background: var(--accent); color: #fff; }
+
+    /* ── Error / Loading ─────────────────────────────────── */
+    #error-screen {
+      display: none;
+      text-align: center;
+      padding: 4rem 2rem;
+      color: var(--ink-soft);
+    }
+
+    .error-emoji { font-size: 3rem; margin-bottom: 1rem; }
+    #loading-state { padding: 4rem 0; text-align: center; }
+
+    /* ── Recently shared ─────────────────────────────────── */
+    .recent {
+      margin-top: 56px;
+    }
+
+    .recent .head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .recent .head h3 {
+      font-family: var(--display);
+      font-size: 18px;
+      font-weight: 500;
+      color: var(--ink);
+      margin: 0;
+    }
+
+    .recent .head .count {
+      font-family: var(--mono, monospace);
+      font-size: 11px;
+      letter-spacing: .14em;
+      color: var(--ink-soft);
+    }
+
+    .recent-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+
+    .recent-grid > div {
+      aspect-ratio: 1;
+      border-radius: 8px;
+      background: var(--line);
+      overflow: hidden;
+    }
+
+    .recent-grid > div img,
+    .recent-grid > div video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    /* ── Footer note ─────────────────────────────────────── */
+    .footer-note {
+      margin-top: 40px;
+      text-align: center;
+      font-family: var(--mono, monospace);
+      font-size: 10px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      opacity: .6;
+    }
+      /* ── Share mode tabs ─────────────────────────────── */
+      .share-tabs {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin-bottom: 20px;
+      }
+
+      .share-tab {
+        background: #fff;
+        border: 1.5px solid var(--line);
+        border-radius: var(--r);
+        padding: 14px 8px 12px;
+        text-align: center;
+        cursor: pointer;
+        transition: border-color .2s, background .2s, transform .15s;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .share-tab:hover { border-color: var(--accent); background: var(--paper-2); }
+      .share-tab.active { border-color: var(--accent); background: var(--paper-2); }
+      .share-tab.active .tab-icon { background: var(--accent); color: #fff; }
+
+      .tab-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: var(--paper-3);
+        color: var(--ink);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background .2s, color .2s;
+      }
+
+      .tab-icon svg {
+        width: 18px;
+        height: 18px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 1.8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .tab-label {
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+        color: var(--ink-soft);
+        line-height: 1.2;
+      }
+
+      .share-tab.active .tab-label { color: var(--accent-deep, #7a3b2e); font-weight: 500; }
+
+      /* ── Share panels ──────────────────────────────── */
+      .share-panel { display: none; }
+      .share-panel.active { display: block; }
+
+      /* ── Panel 2: Record video ────────────────────── */
+      .record-panel {
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: var(--r-lg);
+        overflow: hidden;
+      }
+
+      .record-viewfinder {
+        background: #1a0f0a;
+        aspect-ratio: 16/10;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .record-viewfinder .vf-label {
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: .18em;
+        text-transform: uppercase;
+        color: rgba(255,255,255,.35);
+      }
+
+      .record-viewfinder .vf-corners {
+        position: absolute;
+        inset: 16px;
+        border: 1px solid rgba(255,255,255,.15);
+        border-radius: 8px;
+        pointer-events: none;
+      }
+
+      .record-viewfinder .vf-dot-wrap {
+        position: absolute;
+        top: 14px;
+        right: 14px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .record-viewfinder .vf-time {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: rgba(255,255,255,.7);
+        letter-spacing: .12em;
+      }
+
+      .rec-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #e63946;
+        box-shadow: 0 0 0 3px rgba(230,57,70,.3);
+      }
+
+      .rec-dot.recording { animation: pulse 1s ease infinite; }
+
+      @keyframes pulse { 50% { box-shadow: 0 0 0 6px rgba(230,57,70,0); } }
+
+      .record-controls {
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .record-btn-row {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .rec-btn-main {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        background: #e63946;
+        border: 3px solid #fff;
+        box-shadow: 0 0 0 2px #e63946, 0 4px 16px rgba(230,57,70,.4);
+        cursor: pointer;
+        transition: transform .2s, box-shadow .2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .rec-btn-main:hover { transform: scale(1.06); box-shadow: 0 0 0 2px #e63946, 0 8px 24px rgba(230,57,70,.5); }
+      .rec-btn-main.recording { background: var(--ink); box-shadow: 0 0 0 2px var(--ink), 0 4px 16px rgba(42,26,20,.4); }
+
+      .rec-btn-main svg { width: 24px; height: 24px; }
+
+      .rec-btn-secondary {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: var(--paper-2);
+        border: 1px solid var(--line);
+        cursor: pointer;
+        transition: background .2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .rec-btn-secondary:hover { background: var(--paper-3); }
+
+      .rec-btn-secondary svg {
+        width: 16px;
+        height: 16px;
+        stroke: var(--ink-soft);
+        fill: none;
+        stroke-width: 1.8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .rec-status {
+        text-align: center;
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: .14em;
+        text-transform: uppercase;
+        color: var(--ink-soft);
+      }
+
+      .rec-status.active { color: #e63946; }
+
+      .rec-timer {
+        font-size: 24px;
+        font-family: var(--mono);
+        color: var(--ink);
+        text-align: center;
+        letter-spacing: .1em;
+        display: none;
+      }
+
+      .rec-timer.visible { display: block; }
+
+      /* Recorded clip preview */
+      .clip-preview {
+        background: var(--paper-2);
+        border-radius: var(--r);
+        padding: 12px;
+        display: none;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .clip-preview.visible { display: flex; }
+
+      .clip-thumb {
+        width: 56px;
+        aspect-ratio: 16/9;
+        border-radius: 6px;
+        background: linear-gradient(135deg, #3d1c0a, #c45a3a);
+        flex-shrink: 0;
+      }
+
+      .clip-info { flex: 1; }
+
+      .clip-name {
+        font-weight: 500;
+        font-size: 14px;
+        color: var(--ink);
+        margin-bottom: 3px;
+      }
+
+      .clip-dur {
+        font-family: var(--mono);
+        font-size: 10px;
+        color: var(--ink-soft);
+        letter-spacing: .1em;
+      }
+
+      .clip-del {
+        background: none;
+        border: none;
+        color: var(--ink-faint);
+        font-size: 18px;
+        cursor: pointer;
+        padding: 4px;
+      }
+
+      .clip-del:hover { color: var(--accent); }
+
+      /* ── Panel 3: Live Message ─────────────────────── */
+      .message-panel {
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: var(--r-lg);
+        overflow: hidden;
+      }
+
+      .message-panel .mp-head {
+        background: var(--paper-2);
+        border-bottom: 1px solid var(--line);
+        padding: 14px 18px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .mp-live-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #2d7a4a;
+        box-shadow: 0 0 0 3px rgba(45,122,74,.2);
+        animation: glow 2s ease infinite;
+      }
+
+      @keyframes glow { 50% { box-shadow: 0 0 0 6px rgba(45,122,74,0); } }
+
+      .mp-head-text {
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: .14em;
+        text-transform: uppercase;
+        color: var(--ink-soft);
+      }
+
+      .message-panel .mp-body {
+        padding: 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      /* Photo attach row */
+      .mp-attach-row {
+        display: flex;
+        gap: 8px;
+      }
+
+      .mp-attach-btn {
+        flex:1;
+        background: var(--paper-2);
+        border: 1px solid var(--line);
+        border-radius: var(--r);
+        padding: 10px 8px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 5px;
+        cursor: pointer;
+        transition: border-color .2s, background .2s;
+      }
+
+      .mp-attach-btn:hover { border-color: var(--accent); background: var(--paper-3); }
+
+      .mp-attach-btn svg {
+        width: 20px;
+        height: 20px;
+        stroke: var(--ink-soft);
+        fill: none;
+        stroke-width: 1.8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .mp-attach-btn span {
+        font-family: var(--mono);
+        font-size: 9px;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+        color: var(--ink-soft);
+        text-align: center;
+      }
+
+      /* Attached media row */
+      .mp-media-row {
+        display: flex;
+        gap: 8px;
+        display: none;
+      }
+
+      .mp-media-row.visible { display: flex; }
+
+      .mp-media-thumb {
+        width: 56px;
+        height: 56px;
+        border-radius: 8px;
+        background: linear-gradient(135deg,#e8c5b0,#c45a3a);
+        position: relative;
+        flex-shrink: 0;
+      }
+
+      .mp-media-del {
+        position: absolute;
+        top: -6px;
+        right: -6px;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: var(--ink);
+        color: var(--paper);
+        font-size: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        border: none;
+      }
+
+      .mp-textarea-wrap {
+        background: var(--paper);
+        border: 1.5px solid var(--line);
+        border-radius: var(--r);
+        padding: 12px 14px;
+        transition: border-color .2s, box-shadow .2s;
+      }
+
+      .mp-textarea-wrap:focus-within {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(196,90,58,.1);
+      }
+
+      .mp-textarea-wrap label {
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: .14em;
+        text-transform: uppercase;
+        color: var(--ink-soft);
+        display: block;
+        margin-bottom: 6px;
+      }
+
+      .mp-textarea {
+        width: 100%;
+        border: none;
+        outline: none;
+        background: transparent;
+        font-family: var(--display);
+        font-size: 16px;
+        font-style: italic;
+        color: var(--ink);
+        resize: none;
+        line-height: 1.5;
+        min-height: 72px;
+      }
+
+      .mp-textarea::placeholder { color: var(--ink-faint); }
+
+      /* Live preview of how it looks on wall */
+      .mp-wall-preview {
+        border-radius: var(--r);
+        overflow: hidden;
+        position: relative;
+        aspect-ratio: 16/6;
+        background: #1a0f0a;
+      }
+
+      .mp-wall-bg {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(135deg, #2a1a14 0%, #5a3428 100%);
+      }
+
+      .mp-wall-vignette {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, rgba(0,0,0,.3) 0%, transparent 30%, rgba(0,0,0,.7) 100%);
+      }
+
+      .mp-wall-label {
+        position: absolute;
+        top: 8px;
+        left: 10px;
+        font-family: var(--mono);
+        font-size: 9px;
+        letter-spacing: .14em;
+        text-transform: uppercase;
+        color: rgba(255,255,255,.45);
+      }
+
+      .mp-wall-msg {
+        position: absolute;
+        bottom: 10px;
+        left: 14px;
+        right: 14px;
+        font-family: var(--display);
+        font-style: italic;
+        font-size: 15px;
+        line-height: 1.3;
+        color: #fff;
+        text-shadow: 0 2px 8px rgba(0,0,0,.6);
+      }
+
+      .mp-wall-msg-from {
+        font-family: var(--mono);
+        font-size: 9px;
+        letter-spacing: .14em;
+        text-transform: uppercase;
+        color: rgba(255,255,255,.5);
+        margin-bottom: 4px;
+      }
+
+      .mp-char-count {
+        text-align: right;
+        font-family: var(--mono);
+        font-size: 10px;
+        color: var(--ink-faint);
+        letter-spacing: .1em;
+        margin-top: -8px;
+      }
+
+      .mp-char-count.warn { color: var(--accent); }
+
+      /* ── Success banner ────────────────────────────── */
+      .success-banner {
+        background: rgba(45,122,74,.08);
+        border: 1px solid rgba(45,122,74,.25);
+        border-radius: var(--r);
+        padding: 16px 18px;
+        align-items: center;
+        gap: 12px;
+        margin-top: 14px;
+        display: none;
+      }
+
+      .success-banner.visible { display: flex; }
+
+      .success-banner .s-icon { font-size: 24px; color: #2d7a4a; }
+
+      .success-banner b {
+        display: block;
+        font-family: var(--display);
+        font-size: 17px;
+        font-style: italic;
+        margin-bottom: 2px;
+        color: var(--ink);
+      }
+
+      .success-banner span { font-size: 13px; color: var(--ink-soft); }
+
+      /* ── Send button variants ──────────────────────── */
+      .send-btn.btn-accent {
+        background: var(--accent);
+        color: #fff;
+        box-shadow: 0 1px 2px rgba(196,90,58,.3), inset 0 1px 0 rgba(255,255,255,.18);
+      }
+
+      .send-btn.btn-accent:hover:not(:disabled) { background: var(--accent-deep); }
+  </style>
+</head>
+<body>
+
+<div class="upload-shell">
+
+  <!-- ── Top row ──────────────────────────────────────── -->
+  <div class="upload-top">
+    <a class="brand" href="/">REELDAY<sup>★</sup></a>
+    <div class="lang-switch" id="lang-toggle" aria-label="Choose language">
+      <button class="active" data-lang="en">EN</button>
+      <button data-lang="fil">FIL</button>
+    </div>
+  </div>
+
+  <!-- ── Hero ─────────────────────────────────────────── -->
+  <div class="upload-hero">
+    <a class="brand" href="/">REELDAY<sup>★</sup></a>
+    <h1 id="hero-names">…</h1>
+    <div class="meta" id="hero-date"></div>
+    <div class="welcome" id="hero-welcome"></div>
+  </div>
+
+  <!-- ── Share mode tabs ─────────────────────────────── -->
+  <div class="share-tabs" id="share-tabs" style="display:none;">
+    <div class="share-tab active" onclick="switchTab('gallery', this)">
+      <div class="tab-icon">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      </div>
+      <div class="tab-label">Photos<br/>& Videos</div>
+    </div>
+    <div class="share-tab" onclick="switchTab('record', this)">
+      <div class="tab-icon">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="9" stroke-dasharray="3 2"/></svg>
+      </div>
+      <div class="tab-label">Record<br/>Video</div>
+    </div>
+    <div class="share-tab" onclick="switchTab('message', this)">
+      <div class="tab-icon">
+        <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      </div>
+      <div class="tab-label">Live<br/>Message</div>
+    </div>
+  </div>
+
+  <!-- ── Loading ───────────────────────────────────────────── -->
+  <div id="loading-state"><div class="spinner"></div></div>
+
+  <!-- ── Error ───────────────────────────────────────────── -->
+  <div id="error-screen">
+    <div class="error-emoji">😔</div>
+    <p id="error-msg" style="color:var(--ink-soft);font-size:.95rem;margin-top:.5rem"></p>
+  </div>
+
+  <!-- ── Upload form ─────────────────────────────────────── -->
+  <div id="upload-card" style="display:none;">
+
+      <!-- ════ PANEL 1: Gallery (Photos & Videos) ═════════ -->
+      <div class="share-panel active" id="panel-gallery">
+
+        <!-- Drop zone -->
+        <div class="drop" id="dropzone">
+          <input type="file" id="file-input" multiple accept="image/*,video/*" onchange="handleFiles(event)" />
+          <div class="icon">+</div>
+          <h3 id="dropzone-label">Tap to share</h3>
+          <p>Photos and videos · up to 100 MB each</p>
+          <div class="choose-btn">Choose from gallery</div>
+        </div>
+
+    <!-- Preview -->
+    <div id="preview-area">
+      <img id="preview-img" alt="" style="display:none" />
+      <video id="preview-vid" controls playsinline style="display:none"></video>
+      <button class="preview-change" id="preview-change-btn" data-i18n="changeFile">Change ✕</button>
+    </div>
+
+    <div class="file-warning" id="file-warning" data-i18n="fileWarning">
+      ⚠️ Large file detected. Make sure you have a strong connection before uploading.
+    </div>
+
+    <!-- Progress -->
+    <div class="progress-wrap" id="progress-wrap">
+      <p class="progress-label">
+        <span data-i18n="uploadingLabel">Uploading… </span>
+        <span id="progress-pct">0%</span>
+      </p>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="progress-bar"></div>
+      </div>
+    </div>
+
+    <!-- Recorder -->
+    <div id="recorder-section">
+      <video id="recorder-preview" autoplay muted playsinline></video>
+      <div class="recorder-timer" id="recorder-timer">1:00</div>
+      <div class="recorder-controls">
+        <button class="btn-record" id="btn-record"><div class="dot"></div></button>
+      </div>
+      <div id="recorded-preview-section">
+        <video id="recorded-video" controls playsinline></video>
+        <button class="btn-another" id="btn-rerecord"
+          style="font-size:.85rem;padding:.5rem 1.25rem"
+          data-i18n="rerecordBtn">🔄 Record again</button>
+      </div>
+      <p id="recorder-hint" style="margin-top:.75rem;font-size:.8rem;opacity:.7"
+        data-i18n="recorderHintIdle">Press the button to start recording</p>
+    </div>
+
+    <!-- Name field -->
+    <div class="name-field">
+      <label for="uploader-name">
+        <span data-i18n="nameLabel">Your name</span>
+      </label>
+      <input type="text" id="uploader-name"
+        data-i18n-placeholder="namePlaceholder"
+        placeholder="e.g. Tita Marivic"
+        maxlength="100" autocomplete="name" />
+    </div>
+
+    <!-- Message field -->
+    <div class="name-field">
+      <label for="message" id="message-label" data-i18n="messageLabel">Message for the couple</label>
+      <textarea id="message" rows="3"
+        data-i18n-placeholder="messagePlaceholder"
+        placeholder="Leave them a message… (optional)"
+        maxlength="500"></textarea>
+    </div>
+
+    <!-- Video toggle -->
+    <label class="video-toggle">
+      <input type="checkbox" id="video-msg-toggle" />
+      <div>
+        <div class="video-toggle-label" id="video-toggle-label" data-i18n="videoToggleLabel">Record a video message for them 📌</div>
+        <div class="video-toggle-sub" data-i18n="videoToggleSub">Record a special message (max 60 seconds)</div>
+      </div>
+    </label>
+
+    <!-- Hidden section title (used by JS applyEventCopy) -->
+    <span id="section-title" style="display:none"></span>
+
+    <!-- Submit -->
+    <button class="send-btn" id="btn-submit" disabled data-i18n="submitNoFile">
+      Pick a photo first ✦
+    </button>
+
+    <!-- Upload queue (from reference) -->
+    <div class="queue" id="upload-queue">
+      <div class="queue-item done"><div class="thumb placeholder placeholder--coral"></div><div><div class="meta-name">first-dance.jpg</div><div class="progress"><span style="width:100%;"></span></div></div><div class="status">? Shared</div></div><div class="queue-item"><div class="thumb placeholder placeholder--ochre"></div><div><div class="meta-name">garden-toast.mp4</div><div class="progress"><span style="width:62%;"></span></div></div><div class="status">62%</div></div>
+    </div>
+
+  </div><!-- /upload-card -->
+
+  <!-- ── Success ──────────────────────────────────────── -->
+  <div id="success-screen">
+    <div class="success-emoji" id="success-emoji">✦</div>
+    <h2 class="success-title" id="success-title"></h2>
+    <p  class="success-sub"   id="success-sub"></p>
+    <button class="btn-another" id="btn-upload-another" data-i18n="uploadAnother">
+      📸 Upload another one
+    </button>
+  </div>
+
+  <!-- ── Recently shared ─────────────────────────────────── -->
+  <div class="recent" id="recent-section" style="display:none;">
+    <div class="head">
+      <h3>Recently shared</h3>
+      <span class="count" id="recent-count"></span>
+    </div>
+    <div class="recent-grid" id="recent-grid"></div>
+  </div>
+
+  <!-- ── Footer ──────────────────────────────────────── -->
+  <div class="footer-note">★ Powered by Reelday · reelday.ph</div>
+
+</div><!-- /upload-shell -->
+
+<!-- ── Toast ──────────────────────────────────────── -->
+<div class="toast" id="toast"></div>
+
+<script type="module">
+  // ── Translations (base UI strings) ─────────────────────
+  const STRINGS = {
+    en: {
+      changeFile:        'Change ✕',
+      fileWarning:       '⚠️ Large file detected. Make sure you have a strong connection before uploading.',
+      nameLabel:         "What's your name?",
+      namePlaceholder:   'Enter your name',
+      messageLabel:      'Message for the couple',
+      messagePlaceholder:'Leave them a message… (optional)',
+      videoToggleSub:    'Record a special message (max 60 seconds)',
+      rerecordBtn:       '🔄 Record again',
+      recorderHintIdle:  'Press the button to start recording',
+      recorderHintActive:'Recording… press again to stop',
+      recorderHintDone:  'Recorded! Watch it back before submitting.',
+      uploadingLabel:    'Uploading… ',
+      submitNoFile:      'Pick a photo first ✦',
+      submitNeedsRecord: 'Record your video message first ✦',
+      uploadAnother:     '📸 Upload another one',
+      errorNotFound:     "This event can't be found. Make sure you have the right link.",
+      toastOnlyMedia:    'Only photos and videos are accepted.',
+      toastNeedName:     'Please enter your name first.',
+      toastCameraFail:   "Can't access your camera. Please allow camera permission.",
+      toastUploadFail:   'Upload failed. Please try again.',
+      toastNetworkError: 'Network error. Please try again.',
+      dateLocale:        'en-PH',
+    },
+    fil: {
+      changeFile:        'Palitan ✕',
+      fileWarning:       '⚠️ Malaking file ito. Tiyakin malakas ang iyong koneksyon bago mag-upload.',
+      nameLabel:         'Ano ang pangalan mo?',
+      namePlaceholder:   'Ilagay ang iyong pangalan',
+      messageLabel:      'Mensahe para sa kanila',
+      messagePlaceholder:'Mag-iwan ng mensahe para sa kanila… (optional)',
+      videoToggleSub:    'I-record ang espesyal na mensahe (max 60 segundo)',
+      rerecordBtn:       '🔄 I-record ulit',
+      recorderHintIdle:  'Pindutin ang button para magsimula ng recording',
+      recorderHintActive:'Nagre-record… pindutin ulit para ihinto',
+      recorderHintDone:  'Na-record na! Manood muna bago mag-submit.',
+      uploadingLabel:    'Sine-send na… ',
+      submitNoFile:      'Pumili muna ng larawan ✦',
+      submitNeedsRecord: 'I-record muna ang video message ✦',
+      uploadAnother:     '📸 Mag-upload pa ng isa',
+      errorNotFound:     'Hindi mahanap ang event na ito. Siguraduhin tama ang link.',
+      toastOnlyMedia:    'Tanggap lang ang mga larawan at video.',
+      toastNeedName:     'Ilagay muna ang iyong pangalan.',
+      toastCameraFail:   'Hindi ma-access ang camera. I-allow ang permission.',
+      toastUploadFail:   'Hindi na-upload. Subukang muli.',
+      toastNetworkError: 'Network error. Subukang muli.',
+      dateLocale:        'fil-PH',
+    },
+  };
+
+  // ── Event-type copy (per-language, per-event-type) ─────
+  const EVENT_COPY = {
+    en: {
+      wedding: {
+        title:       '📸 Share your memory',
+        button:      (n) => `Share with ${n} ✦`,
+        success:     (n) => `Your moment has been shared with ${n}. They'll love it! 💕`,
+        placeholder: 'Leave them a message… (optional)',
+        videoLabel:  'Record a video message for them 📌',
+        emoji:       '💍',
+      },
+      debut: {
+        title:       '📸 Share your memory',
+        button:      (n) => `Share at ${n}'s Debut 👑`,
+        success:     (n) => `Thank you! You're now part of ${n}'s debut. 👑`,
+        placeholder: 'Leave a message for the debutante… (optional)',
+        videoLabel:  'Record a video message for the debutante 👑',
+        emoji:       '👑',
+      },
+      birthday: {
+        title:       '🎂 Share the celebration!',
+        button:      (n) => `Share at ${n}'s Birthday 🎂`,
+        success:     (n) => `Thank you! ${n}'s birthday is extra special because of you! 🎉`,
+        placeholder: 'Leave a birthday greeting… (optional)',
+        videoLabel:  'Record a video greeting for the celebrant 🎂',
+        emoji:       '🎂',
+      },
+      seventh_birthday: {
+        title:       '🌟 Join the party!',
+        button:      (n) => `Share at ${n}'s 7th Birthday 🌟`,
+        success:     (n) => `Thank you! ${n}'s day is so special! 🌟`,
+        placeholder: 'Leave a message for the birthday child… (optional)',
+        videoLabel:  'Record a video message for the child 🌟',
+        emoji:       '🌟',
+      },
+      baptism: {
+        title:       '🕊️ Share this blessing',
+        button:      (n) => `Share at ${n}'s Baptism 🕊️`,
+        success:     (n) => `Thank you. We are all blessed on this day. 🕊️`,
+        placeholder: 'Leave a message or blessing… (optional)',
+        videoLabel:  'Record a video blessing 🕊️',
+        emoji:       '🕊️',
+      },
+      reunion: {
+        title:       '🎉 Share the moment!',
+        button:      () => 'Share to our Reunion 🎉',
+        success:     () => 'Thank you! So wonderful to have everyone together! 🎉',
+        placeholder: 'Leave a message for everyone… (optional)',
+        videoLabel:  'Record a video message for the group 🎉',
+        emoji:       '🎉',
+      },
+      corporate: {
+        title:       '📸 Share your moment',
+        button:      () => 'Share to the event gallery 📸',
+        success:     () => 'Thank you! Your photo has been added to the gallery.',
+        placeholder: 'Leave a message… (optional)',
+        videoLabel:  'Record a video message 🎤',
+        emoji:       '🏢',
+      },
+      memorial: {
+        title:       '🕯️ Share your memory',
+        button:      (n) => `Share your memory of ${n} 🕯️`,
+        success:     (n) => `Thank you. Your memory of ${n} will be cherished forever. 🕯️`,
+        placeholder: 'Leave a message or memory… (optional)',
+        videoLabel:  'Record your message 🕯️',
+        emoji:       '🕯️',
+      },
+    },
+    fil: {
+      wedding: {
+        title:       '📸 I-share ang iyong alaala',
+        button:      (n) => `I-share kay ${n} ✦`,
+        success:     (n) => `Na-share mo na ang iyong momento kay ${n}. Mahal nila ito! 💕`,
+        placeholder: 'Mag-iwan ng mensahe para sa kanila… (optional)',
+        videoLabel:  'Video message para sa kanila 💌',
+        emoji:       '💍',
+      },
+      debut: {
+        title:       '📸 I-share ang iyong alaala',
+        button:      (n) => `I-share sa debut ni ${n} 👑`,
+        success:     (n) => `Salamat! Bahagi ka na ng debut ni ${n}. 👑`,
+        placeholder: 'Mag-iwan ng mensahe para sa debutante… (optional)',
+        videoLabel:  'Video message para sa debutante 👑',
+        emoji:       '👑',
+      },
+      birthday: {
+        title:       '📸 I-share ang iyong alaala',
+        button:      (n) => `I-share sa birthday ni ${n} 🎂`,
+        success:     (n) => `Salamat! Mas masaya ang birthday ni ${n} dahil sa iyo! 🎉`,
+        placeholder: 'Mag-iwan ng birthday greeting… (optional)',
+        videoLabel:  'Video greeting para sa celebrant 🎂',
+        emoji:       '🎂',
+      },
+      seventh_birthday: {
+        title:       '📸 I-share ang iyong alaala',
+        button:      (n) => `I-share sa 7th birthday ni ${n} 🌟`,
+        success:     (n) => `Salamat! Espesyal na espesyal ang araw ni ${n}! 🌟`,
+        placeholder: 'Mag-iwan ng mensahe para sa bata… (optional)',
+        videoLabel:  'Video message para sa bata 🌟',
+        emoji:       '🌟',
+      },
+      baptism: {
+        title:       '📸 I-share ang iyong alaala',
+        button:      (n) => `I-share sa binyag ni ${n} 🕊️`,
+        success:     () => `Salamat! Pinagpala tayo sa araw na ito. 🕊️`,
+        placeholder: 'Mag-iwan ng mensahe o pagbati… (optional)',
+        videoLabel:  'Video blessing 🕊️',
+        emoji:       '🕊️',
+      },
+      reunion: {
+        title:       '📸 I-share ang iyong momento',
+        button:      () => 'I-share sa ating reunion 🎉',
+        success:     () => 'Salamat! Masayang makita kayong lahat! 🎉',
+        placeholder: 'Mag-iwan ng mensahe para sa lahat… (optional)',
+        videoLabel:  'Video message para sa grupo 🎉',
+        emoji:       '🎉',
+      },
+      corporate: {
+        title:       'I-share ang iyong momento',
+        button:      () => 'I-share sa event gallery 📸',
+        success:     () => 'Salamat! Naidagdag na ang iyong litrato sa gallery.',
+        placeholder: 'Mag-iwan ng mensahe… (optional)',
+        videoLabel:  'I-record ang iyong mensahe 🎤',
+        emoji:       '🏢',
+      },
+      memorial: {
+        title:       '📸 I-share ang iyong alaala',
+        button:      (n) => `I-share ang iyong alaala kay ${n} 🕯️`,
+        success:     (n) => `Salamat. Ang iyong alaala ay maiingatan magpakailanman. 🕯️`,
+        placeholder: 'Mag-iwan ng mensahe o alaala… (optional)',
+        videoLabel:  'I-record ang iyong mensahe 🕯️',
+        emoji:       '🕯️',
+      },
+    },
+  };
+
+  // ── Theme map ──────────────────────────────────────────
+  const THEME_MAP = {
+    wedding: 'wedding', debut: 'debut', birthday: 'birthday',
+    seventh_birthday: 'seventh_birthday', baptism: 'baptism',
+    reunion: 'reunion', corporate: 'corporate', memorial: 'memorial',
+  };
+
+  // ── App state ──────────────────────────────────────
+  const slug          = location.pathname.split('/').filter(Boolean).pop();
+  let lang            = localStorage.getItem('reelday_lang') || 'en';
+  let eventData       = null;
+  let selectedFile    = null;
+  let recordedBlob    = null;
+  let mediaRecorder   = null;
+  let recorderStream  = null;
+  let countdownInt    = null;
+  let timeLeft        = 60;
+  let isRecording     = false;
+
+  const $ = id => document.getElementById(id);
+
+  const loadingState     = $('loading-state');
+  const errorScreen      = $('error-screen');
+  const uploadCard       = $('upload-card');
+  const successScreen    = $('success-screen');
+  const heroNames        = $('hero-names');
+  const heroDate         = $('hero-date');
+  const fileInput        = $('file-input');
+  const dropzone         = $('dropzone');
+  const previewArea      = $('preview-area');
+  const previewImg       = $('preview-img');
+  const previewVid       = $('preview-vid');
+  const fileWarning      = $('file-warning');
+  const uploaderName     = $('uploader-name');
+  const messageField     = $('message');
+  const videoToggle      = $('video-msg-toggle');
+  const recorderSection  = $('recorder-section');
+  const recorderPreview  = $('recorder-preview');
+  const recorderTimer    = $('recorder-timer');
+  const btnRecord        = $('btn-record');
+  const recordedSection  = $('recorded-preview-section');
+  const recordedVideo    = $('recorded-video');
+  const recorderHint     = $('recorder-hint');
+  const progressWrap     = $('progress-wrap');
+  const progressBar      = $('progress-bar');
+  const progressPct      = $('progress-pct');
+  const btnSubmit        = $('btn-submit');
+  const successTitle     = $('success-title');
+  const successSub       = $('success-sub');
+  const successEmoji     = $('success-emoji');
+  const btnUploadAnother = $('btn-upload-another');
+  const toast            = $('toast');
+  const uploadQueue      = $('upload-queue');
+
+  // ── Helpers ───────────────────────────────────────────
+  function t(key) { return STRINGS[lang]?.[key] ?? STRINGS.en[key] ?? key; }
+
+  function eventCopy() {
+    const type = eventData?.event_type ?? 'wedding';
+    return (EVENT_COPY[lang]?.[type] || EVENT_COPY[lang]?.wedding ||
+            EVENT_COPY.en[type]      || EVENT_COPY.en.wedding);
+  }
+
+  let toastTimer;
+  function showToast(msg, variant = '') {
+    clearTimeout(toastTimer);
+    toast.textContent = msg;
+    toast.className   = `toast${variant ? ' ' + variant : ''}`;
+    requestAnimationFrame(() => toast.classList.add('show'));
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 3500);
+  }
+
+  // ── Theme ─────────────────────────────────────────────
+  function applyTheme(eventType) {
+    const theme = THEME_MAP[eventType] || 'wedding';
+    document.body.setAttribute('data-theme', theme);
+  }
+
+  // ── Translations ────────────────────────────────────────
+  function applyTranslations() {
+    document.documentElement.lang = lang;
+
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const val = t(el.dataset.i18n);
+      if (typeof val === 'string') el.textContent = val;
+    });
+
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+      const val = t(el.dataset.i18nPlaceholder);
+      if (typeof val === 'string') el.placeholder = val;
+    });
+
+    document.querySelectorAll('.lang-switch button').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.lang === lang);
+    });
+  }
+
+  function applyEventCopy() {
+    if (!eventData) return;
+    const copy   = eventCopy();
+    const names  = eventData.couple_names;
+
+    $('section-title').textContent   = copy.title;
+    $('dropzone-label').textContent  = t('dropzoneLabel') || 'Tap to pick a photo or video';
+    $('message-label').textContent   = copy.placeholder
+      ? copy.placeholder.split('…')[0].replace('optional)', '').replace('(', '').trim()
+      : t('messageLabel');
+    messageField.placeholder         = copy.placeholder;
+    $('video-toggle-label').textContent = copy.videoLabel;
+    successEmoji.textContent         = copy.emoji;
+
+    updateSubmitState();
+
+    if (!isRecording && !recordedBlob) recorderHint.textContent = t('recorderHintIdle');
+    else if (isRecording)              recorderHint.textContent = t('recorderHintActive');
+    else                               recorderHint.textContent = t('recorderHintDone');
+
+    if (eventData.event_date) {
+      heroDate.textContent = new Date(eventData.event_date)
+        .toLocaleDateString(t('dateLocale'), { year: 'numeric', month: 'long', day: 'numeric' });
+    }
+  }
+
+  // ── Load event ────────────────────────────────────────
+  async function loadEvent() {
+    try {
+      const res = await fetch(`/api/events/${slug}`);
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      eventData = data.event;
+
+      applyTheme(eventData.event_type);
+      heroNames.textContent  = eventData.couple_names;
+      document.title         = `Reelday — ${eventData.couple_names}`;
+
+      // Populate welcome message if available
+      const heroWelcome = $('hero-welcome');
+      if (eventData.welcome_message && heroWelcome) {
+        heroWelcome.textContent = `"${eventData.welcome_message}"`;
+      }
+
+      loadingState.style.display = 'none';
+      uploadCard.style.display   = 'block';
+
+      applyTranslations();
+      applyEventCopy();
+    } catch {
+      loadingState.style.display = 'none';
+      $('error-msg').textContent = t('errorNotFound');
+      errorScreen.style.display  = 'block';
+    }
+  }
+
+  // ── Language toggle ───────────────────────────────────
+  $('lang-toggle').addEventListener('click', e => {
+    const btn = e.target.closest('.lang-btn');
+    if (!btn || btn.dataset.lang === lang) return;
+    lang = btn.dataset.lang;
+    localStorage.setItem('reelday_lang', lang);
+    applyTranslations();
+    applyEventCopy();
+  });
+
+  // ── File handling ───────────────────────────────────────
+  function handleFile(file) {
+    if (!file) return;
+    if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+      showToast(t('toastOnlyMedia'), 'error');
+      return;
+    }
+
+    selectedFile = file;
+    recordedBlob = null;
+
+    fileWarning.style.display = file.size > 100 * 1024 * 1024 ? 'block' : 'none';
+
+    const url = URL.createObjectURL(file);
+    previewImg.style.display = 'none';
+    previewVid.style.display = 'none';
+
+    if (file.type.startsWith('image/')) {
+      previewImg.src = url; previewImg.style.display = 'block';
+    } else {
+      previewVid.src = url; previewVid.style.display = 'block';
+    }
+
+    dropzone.style.display    = 'none';
+    previewArea.style.display = 'block';
+    updateSubmitState();
+  }
+
+  fileInput.addEventListener('change', () => handleFile(fileInput.files[0]));
+
+  $('preview-change-btn').addEventListener('click', () => {
+    selectedFile              = null;
+    fileInput.value           = '';
+    previewArea.style.display = 'none';
+    dropzone.style.display    = 'block';
+    previewImg.src = previewVid.src = '';
+    fileWarning.style.display = 'none';
+    updateSubmitState();
+  });
+
+  dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag-over'); });
+  dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
+  dropzone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropzone.classList.remove('drag-over');
+    handleFile(e.dataTransfer.files[0]);
+  });
+
+  // ── Recorder ──────────────────────────────────────────
+  videoToggle.addEventListener('change', async () => {
+    if (videoToggle.checked) {
+      recorderSection.style.display = 'block';
+      await startCamera();
+    } else {
+      recorderSection.style.display = 'none';
+      stopRecorder();
+      recordedBlob = null;
+      recordedSection.style.display = 'none';
+    }
+    updateSubmitState();
+  });
+
+  async function startCamera() {
+    try {
+      recorderStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: true });
+      recorderPreview.srcObject = recorderStream;
+    } catch {
+      showToast(t('toastCameraFail'), 'error');
+      videoToggle.checked = false;
+      recorderSection.style.display = 'none';
+    }
+  }
+
+  function stopRecorder() {
+    if (mediaRecorder && isRecording) { mediaRecorder.stop(); isRecording = false; }
+    if (recorderStream) { recorderStream.getTracks().forEach(track => track.stop()); recorderStream = null; }
+    clearInterval(countdownInt);
+    timeLeft = 60; updateTimer();
+    btnRecord.classList.remove('recording');
+    recorderHint.textContent = t('recorderHintIdle');
+  }
+
+  function updateTimer() {
+    const m = Math.floor(timeLeft / 60), s = timeLeft % 60;
+    recorderTimer.textContent = `${m}:${String(s).padStart(2, '0')}`;
+    recorderTimer.classList.toggle('warning', timeLeft <= 10);
+  }
+
+  btnRecord.addEventListener('click', () => isRecording ? mediaRecorder.stop() : startRecording());
+
+  function startRecording() {
+    if (!recorderStream) return;
+    const chunks = [];
+    mediaRecorder = new MediaRecorder(recorderStream, { mimeType: getSupportedMime() });
+    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+    mediaRecorder.onstop = () => {
+      isRecording = false;
+      clearInterval(countdownInt);
+      btnRecord.classList.remove('recording');
+      timeLeft = 60; updateTimer();
+      recordedBlob = new Blob(chunks, { type: mediaRecorder.mimeType });
+      recordedVideo.src = URL.createObjectURL(recordedBlob);
+      recordedSection.style.display = 'block';
+      recorderHint.textContent = t('recorderHintDone');
+      updateSubmitState();
+    };
+    mediaRecorder.start();
+    isRecording = true;
+    btnRecord.classList.add('recording');
+    recorderHint.textContent = t('recorderHintActive');
+    countdownInt = setInterval(() => { timeLeft--; updateTimer(); if (timeLeft <= 0) mediaRecorder.stop(); }, 1000);
+  }
+
+  function getSupportedMime() {
+    const types = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4'];
+    return types.find(type => MediaRecorder.isTypeSupported(type)) || '';
+  }
+
+  $('btn-rerecord').addEventListener('click', async () => {
+    recordedBlob = null;
+    recordedSection.style.display = 'none';
+    timeLeft = 60; updateTimer();
+    recorderHint.textContent = t('recorderHintIdle');
+    if (!recorderStream) await startCamera();
+    updateSubmitState();
+  });
+
+  // ── Submit state ────────────────────────────────────────
+  function updateSubmitState() {
+    const hasFile     = !!selectedFile;
+    const needsRecord = videoToggle.checked && !recordedBlob;
+    btnSubmit.disabled = !hasFile || needsRecord;
+
+    if (!hasFile) {
+      btnSubmit.textContent = t('submitNoFile');
+    } else if (needsRecord) {
+      btnSubmit.textContent = t('submitNeedsRecord');
+    } else if (eventData) {
+      const fn = eventCopy().button;
+      btnSubmit.textContent = typeof fn === 'function' ? fn(eventData.couple_names) : fn;
+    }
+  }
+
+  // ── Upload ────────────────────────────────────────────
+  btnSubmit.addEventListener('click', doUpload);
+
+  async function doUpload() {
+    const name = uploaderName.value.trim();
+    if (!name) { showToast(t('toastNeedName'), 'error'); uploaderName.focus(); return; }
+
+    const fd = new FormData();
+    fd.append('file',             selectedFile);
+    fd.append('uploader_name',    name);
+    fd.append('message',          messageField.value.trim());
+    fd.append('is_video_message', videoToggle.checked ? 'true' : 'false');
+    if (videoToggle.checked && recordedBlob) {
+      const ext = recordedBlob.type.includes('mp4') ? '.mp4' : '.webm';
+      fd.append('video_message', recordedBlob, `video-message${ext}`);
+    }
+
+    btnSubmit.disabled         = true;
+    progressWrap.style.display = 'block';
+    setProgress(0);
+
+    try {
+      const res  = await uploadWithProgress(`/api/uploads/${slug}`, fd, setProgress);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || t('toastUploadFail'));
+      showSuccess(name);
+    } catch (err) {
+      showToast(err.message || t('toastUploadFail'), 'error');
+      btnSubmit.disabled         = false;
+      progressWrap.style.display = 'none';
+    }
+  }
+
+  function setProgress(pct) {
+    progressBar.style.width = `${pct}%`;
+    progressPct.textContent = `${Math.round(pct)}%`;
+  }
+
+  function uploadWithProgress(url, formData, onProgress) {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', url);
+      xhr.upload.onprogress = e => { if (e.lengthComputable) onProgress((e.loaded / e.total) * 100); };
+      xhr.onload  = () => resolve({ ok: xhr.status < 400, json: () => JSON.parse(xhr.responseText), status: xhr.status });
+      xhr.onerror = () => reject(new Error(t('toastNetworkError')));
+      xhr.send(formData);
+    });
+  }
+
+  function showSuccess(name) {
+    uploadCard.style.display    = 'none';
+    progressWrap.style.display  = 'none';
+    successScreen.style.display = 'block';
+    const copy = eventCopy();
+    const titleFn = `Thank you, ${name}!`;
+    successTitle.textContent = lang === 'fil' ? `Salamat, ${name}!` : `Thank you, ${name}!`;
+    const subFn = copy.success;
+    successSub.textContent = typeof subFn === 'function' ? subFn(eventData?.couple_names ?? '') : subFn;
+    stopRecorder();
+  }
+
+  btnUploadAnother.addEventListener('click', () => {
+    successScreen.style.display = 'none';
+    uploadCard.style.display    = 'block';
+    selectedFile = recordedBlob = null;
+    fileInput.value = uploaderName.value = messageField.value = '';
+    videoToggle.checked = false;
+    recorderSection.style.display = recordedSection.style.display = 'none';
+    previewArea.style.display     = 'none';
+    dropzone.style.display        = 'block';
+    progressWrap.style.display    = fileWarning.style.display = 'none';
+    previewImg.src = previewVid.src = '';
+    setProgress(0);
+    updateSubmitState();
+  });
+
+  // ── Init ──────────────────────────────────────────────
+  applyTranslations();
+  loadEvent();
+</script>
+</body>
+</html>
+"" 
+
+
