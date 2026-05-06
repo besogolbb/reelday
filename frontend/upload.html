@@ -1593,14 +1593,15 @@
     const copy   = eventCopy();
     const names  = eventData.couple_names;
 
-    $('section-title').textContent   = copy.title;
+    const sectionTitle = $('section-title');
+    if (sectionTitle) sectionTitle.textContent   = copy.title;
     $('dropzone-label').textContent  = t('dropzoneLabel') || 'Tap to pick a photo or video';
     $('message-label').textContent   = copy.placeholder
       ? copy.placeholder.split('…')[0].replace('optional)', '').replace('(', '').trim()
       : t('messageLabel');
     messageField.placeholder         = copy.placeholder;
     $('video-toggle-label').textContent = copy.videoLabel;
-    successEmoji.textContent         = copy.emoji;
+    if (successEmoji) successEmoji.textContent         = copy.emoji;
 
     updateSubmitState();
 
