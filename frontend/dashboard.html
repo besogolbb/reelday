@@ -621,11 +621,16 @@
       const { uploads } = await uploadsRes.json();
       const { qr_code } = await qrRes.json();
 
+      /* Merge API uploads with any locally-saved uploads (upload page saves here) */
+      const localUploads = readLocalUploads();
+      const apiIds = new Set(uploads.map(u => String(u.id)));
+      const merged = [...uploads, ...localUploads.filter(u => !apiIds.has(String(u.id)))];
+
       applyTheme(event.event_type);
       renderHeader(event);
       renderQR(qr_code);
-      renderStats(uploads);
-      renderGallery(uploads);
+      renderStats(merged);
+      renderGallery(merged);
 
       pageLoading.style.display = 'none';
       dashHeader.style.display  = 'block';
@@ -649,10 +654,13 @@
       const res = await fetch(`/api/uploads/${slug}`);
       if (!res.ok) throw new Error('api down');
       const { uploads } = await res.json();
-      const currentIds  = new Set(allUploads.map(u => u.id));
-      const hasChanges  = uploads.length !== allUploads.length ||
-                          uploads.some(u => !currentIds.has(u.id));
-      if (hasChanges) { renderStats(uploads); renderGallery(uploads); }
+      const localUploads = readLocalUploads();
+      const apiIds = new Set(uploads.map(u => String(u.id)));
+      const merged = [...uploads, ...localUploads.filter(u => !apiIds.has(String(u.id)))];
+      const currentIds = new Set(allUploads.map(u => String(u.id)));
+      const hasChanges = merged.length !== allUploads.length ||
+                         merged.some(u => !currentIds.has(String(u.id)));
+      if (hasChanges) { renderStats(merged); renderGallery(merged); }
     } catch {
       const local = readLocalUploads();
       if (local.length !== allUploads.length) {
