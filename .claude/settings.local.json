@@ -3,7 +3,8 @@
     "allow": [
       "Bash(git push *)",
       "Bash(git commit *)",
-      "Read(//c/Users/ADMIN/AppData/Local/Temp/reeldayph-handoff/reeldayph/project/**)"
+      "Read(//c/Users/ADMIN/AppData/Local/Temp/reeldayph-handoff/reeldayph/project/**)",
+      "PowerShell(Get-ChildItem -Path \"c:\\\\Users\\\\ADMIN\\\\Documents\\\\Claude Code Projects\\\\Reelday.ph\\\\reelday\" -Recurse -Force | Select-Object FullName | ForEach-Object { $_.FullName.Replace\\('c:\\\\Users\\\\ADMIN\\\\Documents\\\\Claude Code Projects\\\\Reelday.ph\\\\', ''\\) })"
     ]
   }
 }

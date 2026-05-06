@@ -357,31 +357,6 @@
 
     .upload-toast.show { transform: translateX(0); }
 
-    /* ── Pause indicator ──────────────────────────────────── */
-    .pause-hud {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%) scale(.8);
-      background: rgba(0,0,0,.65);
-      border-radius: 50%;
-      width: 100px;
-      height: 100px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 2.5rem;
-      z-index: 300;
-      opacity: 0;
-      transition: opacity .25s, transform .25s;
-      pointer-events: none;
-    }
-
-    .pause-hud.show {
-      opacity: 1;
-      transform: translate(-50%, -50%) scale(1);
-    }
-
     /* ── Keyboard hint ────────────────────────────────────── */
     .kb-hint {
       position: fixed;
@@ -492,6 +467,50 @@
       pointer-events: none;
       display: none;
     }
+
+    /* ── Progress bar (auto-advance indicator) ───────────── */
+    .slide-progress {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      z-index: 20;
+      background: rgba(255,255,255,.1);
+      pointer-events: none;
+    }
+
+    .slide-progress .fill {
+      height: 100%;
+      background: rgba(240,163,122,.8);
+      width: 0;
+    }
+
+    /* ── Pause overlay (pill) ─────────────────────────────── */
+    .pause-pill {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 15;
+      opacity: 0;
+      pointer-events: none;
+      font-family: var(--mono);
+      font-size: 13px;
+      letter-spacing: .3em;
+      text-transform: uppercase;
+      background: rgba(0,0,0,.5);
+      border-radius: 999px;
+      padding: 14px 28px;
+      transition: opacity .3s ease;
+      backdrop-filter: blur(8px);
+      white-space: nowrap;
+    }
+
+    .pause-pill.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
   </style>
 </head>
 <body>
@@ -504,7 +523,7 @@
 <div class="ticker" id="ticker-strip">
   <div class="live">
     <span class="dot"></span>
-    <span id="ticker-live-text">Live</span>
+    Live &middot; <span id="ticker-event-name"></span>
   </div>
   <div class="stats" id="ticker-stats"></div>
 </div>
@@ -544,8 +563,8 @@
 <!-- Upload toast -->
 <div class="upload-toast" id="upload-toast"></div>
 
-<!-- Pause indicator -->
-<div class="pause-hud" id="pause-hud">⏸</div>
+<!-- Pause indicator (pill) -->
+<div class="pause-pill" id="pause-pill" onclick="togglePause()">⏸ Paused — tap to resume</div>
 
 <!-- Empty state -->
 <div class="empty-state" id="empty-state">
@@ -556,6 +575,9 @@
   </div>
   <div class="empty-scan-label">📸 I-scan ang QR code</div>
 </div>
+
+<!-- Progress bar -->
+<div class="slide-progress"><div class="fill" id="progress-fill"></div></div>
 
 <!-- Keyboard hint (visible on hover) -->
 <div class="kb-hint">Space/→ Next &nbsp;·&nbsp; ← Prev &nbsp;·&nbsp; F Fullscreen &nbsp;·&nbsp; P Pause</div>
@@ -599,13 +621,30 @@
   const liveCounter      = document.getElementById('live-counter');
   const eventLabelEl     = document.getElementById('event-label-overlay');
   const uploadToast      = document.getElementById('upload-toast');
-  const pauseHud         = document.getElementById('pause-hud');
+  const pausePill        = document.getElementById('pause-pill');
   const emptyState       = document.getElementById('empty-state');
   const emptyEventName   = document.getElementById('empty-event-name');
   const emptyQr          = document.getElementById('empty-qr');
   const tickerTrack      = document.getElementById('ticker-track');
   const tickerSegA       = document.getElementById('ticker-seg-a');
   const tickerSegB       = document.getElementById('ticker-seg-b');
+  const progressFill     = document.getElementById('progress-fill');
+
+  // ── Progress bar ──────────────────────────────────────
+  function startProgress() {
+    if (!progressFill) return;
+    progressFill.style.transition = 'none';
+    progressFill.style.width = '0%';
+    void progressFill.offsetWidth; // force reflow
+    progressFill.style.transition = `width ${SLIDE_DURATION}ms linear`;
+    progressFill.style.width = '100%';
+  }
+
+  function resetProgress() {
+    if (!progressFill) return;
+    progressFill.style.transition = 'none';
+    progressFill.style.width = '0%';
+  }
 
   // ── Theme ─────────────────────────────────────────────
   function applyTheme(eventType) {
@@ -673,38 +712,50 @@
     tickerSegA.textContent = text;
     tickerSegB.textContent = text;
 
-    // Recalculate animation duration: 15px per char as rough estimate
+    // Recalculate animation duration
     const charsPerSeg = text.length;
-    const duration    = Math.max(20, charsPerSeg * 0.18); // seconds
+    const duration    = Math.max(20, charsPerSeg * 0.18);
     if (tickerTrack) tickerTrack.style.animation = `tickerScroll ${duration}s linear infinite`;
 
-    // Update new stats bar
+    // Event name in live segment
+    const eventNameEl = document.getElementById('ticker-event-name');
+    if (eventNameEl && eventData) {
+      eventNameEl.textContent = eventData.couple_names || '';
+    }
+
+    // Stats: moments · guests sharing · date
     const statsEl = document.getElementById('ticker-stats');
-    if (statsEl && eventData) {
+    if (statsEl) {
+      const guestCount = new Set(uploads.map(u => u.uploader_name).filter(Boolean)).size;
+      let dateStr = '';
+      if (eventData && eventData.event_date) {
+        const d = new Date(eventData.event_date);
+        const dd = String(d.getDate()).padStart(2, '0');
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const yyyy = d.getFullYear();
+        dateStr = `${dd}·${mm}·${yyyy}`;
+      }
       statsEl.innerHTML =
-        `<span>${eventData.couple_names || ''}</span>` +
-        `<span><em>${uploads.length}</em> moments</span>`;
+        `<span><em>${uploads.length}</em> moments</span>` +
+        `<span><em>${guestCount}</em> guests sharing</span>` +
+        (dateStr ? `<span>${dateStr}</span>` : '');
     }
   }
 
   // ── Slideshow ─────────────────────────────────────────
   function advance() {
     if (items.length < 2) {
-      // Single item — just keep showing it
       slideTimer = setTimeout(advance, SLIDE_DURATION);
       return;
     }
 
     const nextIdx = (currentIdx + 1) % items.length;
 
-    // Preload next in back layer
     loadMedia(backLayer, items[nextIdx]);
 
-    // Trigger crossfade
     backLayer.style.opacity  = '1';
     frontLayer.style.opacity = '0';
 
-    // After crossfade: swap layer refs, update state
     setTimeout(() => {
       const tmp = frontLayer;
       frontLayer = backLayer;
@@ -713,6 +764,8 @@
       updateOverlay(items[currentIdx]);
       updateUpcoming();
     }, TRANSITION_DURATION);
+
+    startProgress();
 
     if (!isPaused) {
       slideTimer = setTimeout(advance, SLIDE_DURATION);
@@ -730,6 +783,7 @@
     overlay.style.display = 'flex';
     emptyState.classList.remove('visible');
     updateUpcoming();
+    startProgress();
 
     if (items.length > 1) {
       slideTimer = setTimeout(advance, SLIDE_DURATION);
@@ -739,7 +793,6 @@
   function prevSlide() {
     clearTimeout(slideTimer);
     const prevIdx = (currentIdx - 1 + items.length) % items.length;
-    // Fake advance backward by overriding currentIdx so advance() picks prevIdx
     currentIdx = (prevIdx - 1 + items.length) % items.length;
     advance();
   }
@@ -751,12 +804,13 @@
 
   function togglePause() {
     isPaused = !isPaused;
-    pauseHud.classList.toggle('show', isPaused);
+    if (pausePill) pausePill.classList.toggle('visible', isPaused);
     if (!isPaused) {
       slideTimer = setTimeout(advance, SLIDE_DURATION);
-      setTimeout(() => pauseHud.classList.remove('show'), 800);
+      startProgress();
+      setTimeout(() => { if (pausePill) pausePill.classList.remove('visible'); }, 800);
     } else {
-      // Pause video if current slide is video
+      resetProgress();
       const vid = frontLayer.querySelector('video');
       if (vid) vid.pause();
     }
