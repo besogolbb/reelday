@@ -152,16 +152,17 @@
     .qr-card .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; color: var(--ink-faint); text-transform: uppercase; margin-bottom: 14px; }
     .qr-card .qr {
       aspect-ratio: 1; margin-bottom: 16px;
-      background:
-        linear-gradient(45deg, var(--ink) 25%, transparent 25%),
-        linear-gradient(-45deg, var(--ink) 25%, transparent 25%),
-        linear-gradient(45deg, transparent 75%, var(--ink) 75%),
-        linear-gradient(-45deg, transparent 75%, var(--ink) 75%);
-      background-size: 14px 14px;
-      background-position: 0 0, 0 7px, 7px -7px, -7px 0;
       border-radius: 8px; padding: 8px;
       border: 12px solid #fff;
       box-shadow: 0 0 0 1px var(--line);
+      display: flex; align-items: center; justify-content: center;
+      background: var(--paper-2);
+      overflow: hidden;
+    }
+    .qr-card .qr img {
+      width: 100%; height: 100%;
+      border-radius: 4px;
+      object-fit: contain;
     }
     .qr-card .url { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; color: var(--ink-soft); margin-bottom: 16px; word-break: break-all; }
     .actions-stack { display: grid; gap: 8px; }
@@ -284,7 +285,7 @@
   <div>
     <div class="qr-card">
       <div class="eyebrow" style="margin-bottom:14px;">— Your event QR</div>
-      <div class="qr" id="qr-wrap"></div>
+      <div class="qr" id="qr-wrap"><img id="qr-img" alt="Event QR Code" style="width:100%;height:100%;object-fit:contain;" /></div>
       <div class="url" id="qr-url">reelday.ph/e/andrea-jm</div>
       <div class="actions-stack">
         <a class="btn btn-accent" id="btn-open-upload" href="#" target="_blank" rel="noopener">Open upload page →</a>
@@ -353,6 +354,7 @@
   const eventDate      = $('event-date');
   const photoGrid      = $('photo-grid');
   const qrWrap         = $('qr-wrap');
+  const qrImg          = $('qr-img');
   const qrUrl          = $('qr-url');
   const toast          = $('toast');
   const tabRow         = $('tab-row');
@@ -446,7 +448,7 @@
   function renderQR(dataUrl) {
     const uploadUrl = `${location.protocol}//${location.host}/upload/${slug}`;
 
-    if (qrWrap) qrWrap.style.backgroundImage = `url(${dataUrl})`;
+    if (qrImg && dataUrl) qrImg.src = dataUrl;
 
     qrUrl.textContent = uploadUrl;
 
