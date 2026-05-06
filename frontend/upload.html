@@ -226,6 +226,8 @@ body { background: var(--paper); min-height: 100dvh; }
 /* ── Name field ──────────────────────────────────────── */
 .name-field { margin-top: 14px; background: #fff; border: 1px solid var(--line); border-radius: var(--r); padding: 12px 16px; transition: border-color .2s, box-shadow .2s; }
 .name-field:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(196,90,58,.1); }
+.name-field.error { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(196,90,58,.15); animation: shake .3s ease; }
+@keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
 .name-field label { font-family: var(--mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); display: block; margin-bottom: 4px; }
 .name-field input { width: 100%; border: none; outline: none; font-size: 15px; background: transparent; color: var(--ink); }
 
@@ -310,7 +312,14 @@ body { background: var(--paper); min-height: 100dvh; }
     </div>
     <div class="queue" id="galleryQueue"></div>
 
-    <!-- Message + wall preview integrated -->
+    <!-- Name — required, comes first -->
+    <div class="name-field" id="nameField" style="margin-top:14px;">
+      <label>Your name <span style="color:var(--accent)">*</span></label>
+      <input type="text" id="galleryName" placeholder="e.g. Tita Marivic, JM's cousin"
+        oninput="onNameInput(this)" />
+    </div>
+
+    <!-- Message + wall preview -->
     <div class="gallery-msg">
       <div class="mp-textarea-wrap" style="margin-top:14px;">
         <label>Add a message (optional)</label>
@@ -328,11 +337,6 @@ body { background: var(--paper); min-height: 100dvh; }
       </div>
     </div>
 
-    <div class="name-field" style="margin-top:14px;">
-      <label>Your name (optional)</label>
-      <input type="text" id="galleryName" placeholder="e.g. Tita Marivic, JM's cousin"
-        oninput="document.getElementById('msgFrom').textContent='— '+(this.value||'Your name')" />
-    </div>
     <button class="btn btn-primary send-btn" onclick="handleSend('gallery')">Share moments →</button>
     <div class="success-banner" id="gallerySuccess">
       <div class="s-icon">★</div>
@@ -473,6 +477,12 @@ body { background: var(--paper); min-height: 100dvh; }
     document.getElementById('uploadHero').classList.remove('hero-loading');
   }
 
+  /* ── Name field ────────────────────────────────────── */
+  function onNameInput(input) {
+    document.getElementById('msgFrom').textContent = '— ' + (input.value || 'Your name');
+    document.getElementById('nameField').classList.remove('error');
+  }
+
   /* ── Tab switching ─────────────────────────────────── */
   function switchTab(id, el) {
     document.querySelectorAll('.share-tab').forEach(t => t.classList.remove('active'));
@@ -493,10 +503,14 @@ body { background: var(--paper); min-height: 100dvh; }
   }
 
   /* ── Gallery ───────────────────────────────────────── */
+  let firstUploadDataUrl = null;
+
   function handleFiles(e) {
     const files = Array.from(e.target.files);
     const queue = document.getElementById('galleryQueue');
-    files.forEach(f => {
+    const isFirst = !firstUploadDataUrl;
+
+    files.forEach((f, i) => {
       const reader = new FileReader();
       const id = 'qi' + Date.now() + Math.random().toString(36).slice(2,6);
       const item = document.createElement('div');
@@ -509,7 +523,15 @@ body { background: var(--paper); min-height: 100dvh; }
       queue.appendChild(item);
       reader.onload = ev => {
         const th = document.getElementById(thumbId);
-        if (th) { th.style.backgroundImage = `url(${ev.target.result})`; th.style.backgroundSize = 'cover'; th.style.backgroundPosition = 'center'; }
+        if (th) {
+          th.style.backgroundImage = `url(${ev.target.result})`;
+          th.style.backgroundSize = 'cover';
+          th.style.backgroundPosition = 'center';
+        }
+        if (isFirst && i === 0) {
+          firstUploadDataUrl = ev.target.result;
+          document.getElementById('wallPreviewBg').style.backgroundImage = `url(${ev.target.result})`;
+        }
       };
       reader.readAsDataURL(f);
       let prog = 0;
@@ -518,7 +540,7 @@ body { background: var(--paper); min-height: 100dvh; }
         const b = document.getElementById('b'+id);
         const s = document.getElementById('s'+id);
         if (b) b.style.width = prog+'%';
-        if (s) s.textContent = prog < 100 ? Math.round(prog)+'%' : '✓ Shared';
+        if (s) s.textContent = prog < 100 ? Math.round(prog)+'%' : '✓ Complete';
         if (prog >= 100) { clearInterval(t); item.classList.add('done'); }
       }, 200);
     });
@@ -668,6 +690,17 @@ body { background: var(--paper); min-height: 100dvh; }
   /* ── Send ──────────────────────────────────────────── */
   function handleSend(mode) {
     if (mode === 'record' && !recordedBlob) return;
+
+    if (mode === 'gallery') {
+      const name = document.getElementById('galleryName').value.trim();
+      if (!name) {
+        const field = document.getElementById('nameField');
+        field.classList.add('error');
+        document.getElementById('galleryName').focus();
+        setTimeout(() => field.classList.remove('error'), 800);
+        return;
+      }
+    }
 
     /* TODO: POST to /api/events/:slug/upload or /api/events/:slug/message */
     const bannerId = mode === 'gallery' ? 'gallerySuccess' : 'recordSuccess';
