@@ -168,9 +168,11 @@
     .caption { max-width: 55%; }
 
     .caption .uploader {
-      font-family: var(--mono); font-size: 12px;
-      letter-spacing: .2em; text-transform: uppercase;
-      color: rgba(255,255,255,.65); margin-bottom: 14px;
+      font-family: var(--mono); font-size: clamp(16px, 1.4vw, 22px);
+      font-weight: 600;
+      letter-spacing: .22em; text-transform: uppercase;
+      color: #fff; margin-bottom: 22px;
+      text-shadow: 0 4px 24px rgba(0,0,0,.55);
       transition: opacity .5s ease;
     }
 
