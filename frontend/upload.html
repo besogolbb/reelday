@@ -266,9 +266,83 @@ body { background: var(--paper); min-height: 100dvh; }
 
 /* ── Loading state ───────────────────────────────────── */
 .hero-loading { opacity: .35; }
+
+/* ── Thank-you screen ────────────────────────────────── */
+.ty-screen {
+  position: fixed; inset: 0; z-index: 200;
+  display: none; flex-direction: column; align-items: center; justify-content: center;
+  background: #0e0807; overflow: hidden;
+}
+.ty-screen.visible { display: flex; }
+.ty-bg {
+  position: absolute; inset: -8%; background-size: cover; background-position: center;
+  animation: wall-kb 14s ease-in-out infinite alternate;
+}
+.ty-vignette {
+  position: absolute; inset: 0;
+  background: linear-gradient(160deg, rgba(10,6,4,.55) 0%, rgba(10,6,4,.82) 100%);
+}
+.ty-body {
+  position: relative; z-index: 2; text-align: center;
+  padding: 40px 28px; max-width: 400px; width: 100%;
+}
+.ty-star { font-size: 36px; color: var(--gold); margin-bottom: 20px; }
+.ty-heading {
+  font-family: var(--display); font-weight: 400; font-style: italic;
+  font-size: clamp(52px,14vw,88px); color: #fdfaf5;
+  line-height: .95; letter-spacing: -.03em; margin-bottom: 12px;
+}
+.ty-sub {
+  font-family: var(--mono); font-size: 10px; letter-spacing: .2em;
+  text-transform: uppercase; color: rgba(253,250,245,.45); margin-bottom: 32px;
+}
+.ty-card {
+  background: rgba(253,250,245,.07); border: 1px solid rgba(253,250,245,.12);
+  border-radius: var(--r-lg); padding: 18px; display: flex; gap: 16px; align-items: center;
+  text-align: left; margin-bottom: 28px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.06);
+}
+.ty-thumb {
+  width: 64px; height: 64px; border-radius: 10px;
+  background-size: cover; background-position: center;
+  background-color: rgba(255,255,255,.1); flex-shrink: 0;
+}
+.ty-card-name {
+  font-weight: 600; font-size: 15px; color: #fdfaf5; margin-bottom: 4px;
+}
+.ty-card-msg {
+  font-family: var(--display); font-style: italic; font-size: 13px;
+  color: rgba(253,250,245,.6); line-height: 1.4;
+}
+.ty-btn {
+  background: rgba(253,250,245,.12); color: #fdfaf5;
+  border: 1px solid rgba(253,250,245,.2); border-radius: 999px;
+  padding: 14px 28px; font-size: 14px; font-weight: 500; cursor: pointer;
+  transition: background .2s;
+}
+.ty-btn:hover { background: rgba(253,250,245,.2); }
 </style>
 </head>
 <body>
+
+<!-- ══ Thank-you screen ══════════════════════════════════ -->
+<div class="ty-screen" id="tyScreen">
+  <div class="ty-bg" id="tyBg"></div>
+  <div class="ty-vignette"></div>
+  <div class="ty-body">
+    <div class="ty-star">★</div>
+    <div class="ty-heading">Salamat!</div>
+    <div class="ty-sub">Your moment is on the wall</div>
+    <div class="ty-card">
+      <div class="ty-thumb" id="tyThumb"></div>
+      <div>
+        <div class="ty-card-name" id="tyCardName"></div>
+        <div class="ty-card-msg" id="tyCardMsg"></div>
+      </div>
+    </div>
+    <button class="ty-btn" onclick="uploadMore()">Upload more →</button>
+  </div>
+</div>
 
 <div class="upload-shell">
 
@@ -717,24 +791,68 @@ body { background: var(--paper); min-height: 100dvh; }
   function handleSend(mode) {
     if (mode === 'record' && !recordedBlob) return;
 
-    if (mode === 'gallery') {
-      const name = document.getElementById('galleryName').value.trim();
-      if (!name) {
-        const field = document.getElementById('nameField');
-        field.classList.add('error');
-        document.getElementById('galleryName').focus();
-        setTimeout(() => field.classList.remove('error'), 800);
-        return;
-      }
+    const nameInput = mode === 'gallery'
+      ? document.getElementById('galleryName')
+      : document.getElementById('recordName');
+    const name = nameInput ? nameInput.value.trim() : '';
+
+    if (!name) {
+      const field = document.getElementById('nameField');
+      field.classList.add('error');
+      nameInput && nameInput.focus();
+      setTimeout(() => field.classList.remove('error'), 800);
+      return;
     }
 
-    /* TODO: POST to /api/events/:slug/upload or /api/events/:slug/message */
-    const bannerId = mode === 'gallery' ? 'gallerySuccess' : 'recordSuccess';
-    document.getElementById(bannerId).classList.add('visible');
+    const msg = (document.getElementById('msgText') || {}).value || '';
+    const thumbUrl = Object.values(itemDataUrls)[0] || null;
 
-    const el = document.getElementById('recentCount');
-    const cur = parseInt(el.textContent, 10) || 0;
-    el.textContent = (cur + 1) + ' today';
+    /* Save to localStorage so dashboard can read it */
+    const slug = currentEvent && currentEvent.slug ? currentEvent.slug : 'demo';
+    const localKey = `reelday_uploads_${slug}`;
+    try {
+      const existing = JSON.parse(localStorage.getItem(localKey) || '[]');
+      existing.unshift({
+        id: Date.now(),
+        uploader_name: name,
+        message: msg,
+        thumb: thumbUrl,
+        timestamp: new Date().toISOString(),
+        status: 'pending',
+        featured: false,
+      });
+      localStorage.setItem(localKey, JSON.stringify(existing.slice(0, 200)));
+    } catch { /* storage full */ }
+
+    /* TODO: POST to /api/events/:slug/upload */
+    showThankYou(name, msg, thumbUrl);
+  }
+
+  function showThankYou(name, msg, thumbUrl) {
+    const bg = document.getElementById('tyBg');
+    if (thumbUrl) bg.style.backgroundImage = `url(${thumbUrl})`;
+    else if (currentEvent && currentEvent.cover)
+      bg.style.backgroundImage = `url(${currentEvent.cover})`;
+
+    const thumb = document.getElementById('tyThumb');
+    if (thumbUrl) thumb.style.backgroundImage = `url(${thumbUrl})`;
+
+    document.getElementById('tyCardName').textContent = name;
+    document.getElementById('tyCardMsg').textContent  = msg || 'No message added.';
+
+    document.getElementById('tyScreen').classList.add('visible');
+  }
+
+  function uploadMore() {
+    document.getElementById('tyScreen').classList.remove('visible');
+    document.getElementById('galleryQueue').innerHTML = '';
+    document.getElementById('galleryName').value = '';
+    if (document.getElementById('msgText')) document.getElementById('msgText').value = '';
+    document.querySelector('#panel-gallery .send-btn').textContent = 'Share moments →';
+    Object.keys(itemDataUrls).forEach(k => delete itemDataUrls[k]);
+    if (currentEvent && currentEvent.cover)
+      document.getElementById('wallPreviewBg').style.backgroundImage = `url(${currentEvent.cover})`;
+    updateMsgPreview();
   }
 
   loadEvent();

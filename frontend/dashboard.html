@@ -517,7 +517,13 @@
       const cls = placeholderClasses[i % placeholderClasses.length];
       const label = u.uploader_name || 'Guest';
       const actionBtn = getActionButton(u);
-      return `<div class="placeholder ${cls}">${label}<div class="actions-overlay"><span class="uploader">${label}</span>${actionBtn}</div></div>`;
+      const bgStyle = u.thumb
+        ? `style="background-image:url(${u.thumb});background-size:cover;background-position:center;"`
+        : '';
+      const msgPreview = u.message
+        ? `<div style="font-family:var(--display);font-style:italic;font-size:12px;color:var(--ink-soft);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px;">"${u.message}"</div>`
+        : '';
+      return `<div class="placeholder ${cls}" ${bgStyle}>${u.thumb ? '' : label}<div class="actions-overlay"><span class="uploader">${label}</span>${msgPreview}${actionBtn}</div></div>`;
     }).join('');
   }
 
@@ -590,23 +596,47 @@
       document.getElementById('stats-row').style.display = 'grid';
       dashMain.style.display    = 'grid';
     } catch (err) {
-      pageLoading.style.display       = 'none';
-      $('page-error-msg').textContent = err.message || 'Failed to load event.';
-      pageError.style.display         = 'block';
+      /* API not available — fall back to localStorage (local demo mode) */
+      const localUploads = (() => {
+        try { return JSON.parse(localStorage.getItem(`reelday_uploads_${slug}`) || '[]'); }
+        catch { return []; }
+      })();
+
+      const p = new URLSearchParams(location.search);
+      const demoEvent = {
+        couple_names: p.get('name') || slug,
+        event_type:   p.get('theme') || 'wedding',
+        event_date:   p.get('date')  || '',
+        plan:         'demo',
+      };
+
+      applyTheme(demoEvent.event_type);
+      renderHeader(demoEvent);
+      renderStats(localUploads);
+      renderGallery(localUploads);
+
+      pageLoading.style.display = 'none';
+      dashHeader.style.display  = 'block';
+      document.getElementById('stats-row').style.display = 'grid';
+      dashMain.style.display    = 'grid';
     }
   }
 
   async function refreshUploads() {
     try {
       const res = await fetch(`/api/uploads/${slug}`);
-      if (!res.ok) return;
-      const { uploads } = await res.json();
-      const currentIds  = new Set(allUploads.map(u => u.id));
-      const hasChanges  = uploads.length !== allUploads.length ||
-                          uploads.some(u => !currentIds.has(u.id));
-      if (hasChanges) {
-        renderStats(uploads);
-        renderGallery(uploads);
+      if (res.ok) {
+        const { uploads } = await res.json();
+        const currentIds  = new Set(allUploads.map(u => u.id));
+        const hasChanges  = uploads.length !== allUploads.length ||
+                            uploads.some(u => !currentIds.has(u.id));
+        if (hasChanges) { renderStats(uploads); renderGallery(uploads); }
+      } else {
+        /* refresh from localStorage in local demo mode */
+        const localUploads = JSON.parse(localStorage.getItem(`reelday_uploads_${slug}`) || '[]');
+        if (localUploads.length !== allUploads.length) {
+          renderStats(localUploads); renderGallery(localUploads);
+        }
       }
     } catch { /* silent */ }
   }
