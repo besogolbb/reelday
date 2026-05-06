@@ -511,10 +511,9 @@ body { background: var(--paper); min-height: 100dvh; }
   async function loadEvent() {
     const p = new URLSearchParams(location.search);
 
-    /* Read slug from ?slug= query param, or from URL path (e.g. /upload/andrea-jm) */
-    const pathSlug = location.pathname
-      .split('/').filter(s => s && !s.endsWith('.html')).pop() || null;
-    const slug = p.get('slug') || p.get('event') || pathSlug;
+    /* Read slug from ?slug= query param first, then from path /upload/<slug> */
+    const pathMatch = location.pathname.match(/\/upload\/([^/?#]+)/);
+    const slug = p.get('slug') || p.get('event') || (pathMatch ? pathMatch[1] : null);
 
     let event = null;
 
