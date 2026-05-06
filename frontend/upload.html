@@ -3,137 +3,200 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <meta name="theme-color" content="#2a1a14" />
+  <meta name="theme-color" content="#fff" />
   <title>Reelday — Share your moments</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="stylesheet" href="/css/shared.css" />
   <style>
     body {
       min-height: 100dvh;
+      background: var(--paper);
+    }
+
+    /* ── Shell ─────────────────────────────────────────────── */
+    .upload-shell {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 24px 20px 80px;
+    }
+
+    /* ── Top row ──────────────────────────────────────────── */
+    .upload-top {
       display: flex;
-      flex-direction: column;
+      justify-content: space-between;
       align-items: center;
+      margin-bottom: 0;
+    }
+
+    a.brand {
+      font-family: var(--display);
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--ink);
+      text-decoration: none;
+    }
+    a.brand sup { font-size: .6em; color: var(--accent); vertical-align: super; }
+    a.brand:hover { color: var(--accent); }
+
+    .lang-switch {
+      display: flex;
+      background: var(--paper-2);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 3px;
+      gap: 2px;
+    }
+
+    .lang-switch button {
+      padding: .25rem .7rem;
+      border: none;
+      border-radius: 16px;
+      font-family: var(--mono, monospace);
+      font-size: .7rem;
+      font-weight: 600;
+      letter-spacing: .08em;
+      cursor: pointer;
+      background: transparent;
+      color: var(--ink-soft);
+      transition: background .15s, color .15s;
+    }
+    .lang-switch button.active {
+      background: var(--ink);
+      color: #fff;
     }
 
     /* ── Hero ─────────────────────────────────────────────── */
-    .hero {
-      width: 100%;
-      background: var(--ink);
-      color: #fff;
+    .upload-hero {
       text-align: center;
-      padding: 2.5rem 1.5rem 3.5rem;
-      position: relative;
+      padding: 32px 0 40px;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 32px;
     }
 
-    .hero-brand {
+    .upload-hero h1 {
       font-family: var(--display);
-      font-size: .875rem;
-      letter-spacing: .18em;
+      font-size: clamp(36px, 8vw, 56px);
+      font-weight: 400;
+      line-height: 1;
+      letter-spacing: -.02em;
+      color: var(--ink);
+      margin: 0 0 10px;
+    }
+
+    .upload-hero h1 em {
+      font-style: italic;
+      color: var(--accent);
+    }
+
+    .upload-hero .meta {
+      font-family: var(--mono, monospace);
+      font-size: 11px;
+      letter-spacing: .14em;
       text-transform: uppercase;
-      opacity: .6;
-      margin-bottom: .75rem;
+      color: var(--ink-soft);
     }
 
-    a.hero-brand-link {
-      color: inherit;
-      text-decoration: none;
-      display: block;
-    }
-    a.hero-brand-link:hover { opacity: 1; }
-
-    .hero-names {
+    .upload-hero .welcome {
       font-family: var(--display);
-      font-size: clamp(1.75rem, 6vw, 2.75rem);
-      line-height: 1.2;
-      font-weight: 600;
-      margin-bottom: .5rem;
-      color: #fff;
-    }
-
-    .hero-date { font-size: .875rem; opacity: .7; letter-spacing: .05em; color: #fff; }
-
-    .hero-divider {
-      position: absolute; bottom: -1px; left: 0; width: 100%;
-      overflow: hidden; line-height: 0;
-    }
-    .hero-divider svg { display: block; width: 100%; height: 40px; }
-
-    /* Language toggle */
-    .lang-toggle {
-      position: absolute; top: 1rem; right: 1rem;
-      display: flex;
-      background: rgba(255,255,255,.12);
-      border-radius: 20px;
-      padding: 3px; gap: 2px;
-    }
-
-    .lang-btn {
-      padding: .25rem .7rem; border: none; border-radius: 16px;
-      font-family: var(--sans); font-size: .75rem; font-weight: 600;
-      letter-spacing: .05em; cursor: pointer;
-      background: transparent; color: rgba(255,255,255,.6);
-      transition: background .15s, color .15s;
-    }
-    .lang-btn.active { background: #fff; color: var(--ink); }
-
-    /* ── Upload card ──────────────────────────────────────── */
-    .upload-card {
-      width: 100%; max-width: 520px;
-      background: #fff;
-      border: 1px solid var(--line);
-      border-radius: var(--r-xl);
-      box-shadow: var(--shadow-card);
-      padding: 2rem 1.5rem 2.5rem;
-      margin: -1.25rem 1rem 2rem;
-      position: relative; z-index: 1;
-    }
-
-    .section-title {
-      font-family: var(--display); font-size: 1.1rem; color: var(--ink);
-      margin-bottom: 1.25rem; display: flex; align-items: center; gap: .5rem;
+      font-style: italic;
+      font-size: 17px;
+      color: var(--ink-soft);
+      margin-top: 20px;
+      max-width: 32ch;
+      margin-left: auto;
+      margin-right: auto;
+      line-height: 1.5;
     }
 
     /* ── Drop zone ────────────────────────────────────────── */
-    .dropzone {
-      border: 2.5px dashed var(--accent-soft);
+    .drop {
+      background: #fff;
+      border: 2px dashed var(--line-2);
       border-radius: var(--r-lg);
-      padding: 2.5rem 1rem;
-      text-align: center; cursor: pointer;
+      padding: 40px 24px;
+      text-align: center;
+      cursor: pointer;
       transition: border-color .2s, background .2s;
-      background: var(--paper);
       position: relative;
     }
 
-    .dropzone:hover, .dropzone.drag-over {
+    .drop:hover, .drop.drag-over {
       border-color: var(--accent);
-      background: rgba(196,90,58,.04);
+      background: rgba(196,90,58,.03);
     }
 
-    .dropzone input[type="file"] {
-      position: absolute; inset: 0; opacity: 0; cursor: pointer;
-      width: 100%; height: 100%;
+    .drop .icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      margin: 0 auto 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--display);
+      font-size: 32px;
+      font-style: italic;
+      font-weight: 400;
+      line-height: 1;
+      user-select: none;
     }
 
-    .dropzone-icon { font-size: 3rem; margin-bottom: .5rem; }
-    .dropzone-label { font-weight: 600; color: var(--ink); font-size: 1rem; margin-bottom: .25rem; }
-    .dropzone-sub   { font-size: .8rem; color: var(--ink-soft); }
+    .drop h3 {
+      font-family: var(--display);
+      font-size: 22px;
+      font-weight: 500;
+      color: var(--ink);
+      margin: 0 0 6px;
+    }
+
+    .drop p {
+      color: var(--ink-soft);
+      font-size: 14px;
+      margin: 0 0 20px;
+    }
+
+    .drop input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
 
     /* ── Preview ──────────────────────────────────────────── */
     #preview-area {
-      display: none; margin-top: 1rem;
-      border-radius: var(--r); overflow: hidden; position: relative;
+      display: none;
+      margin-top: 1rem;
+      border-radius: var(--r);
+      overflow: hidden;
+      position: relative;
     }
 
     #preview-area img, #preview-area video {
-      width: 100%; max-height: 280px; object-fit: cover;
-      border-radius: var(--r); display: block;
+      width: 100%;
+      max-height: 280px;
+      object-fit: cover;
+      border-radius: var(--r);
+      display: block;
     }
 
     .preview-change {
-      position: absolute; top: .6rem; right: .6rem;
-      background: rgba(0,0,0,.6); color: #fff; border: none;
-      border-radius: 20px; padding: .35rem .85rem;
-      font-size: .75rem; font-weight: 600; cursor: pointer;
+      position: absolute;
+      top: .6rem;
+      right: .6rem;
+      background: rgba(0,0,0,.6);
+      color: #fff;
+      border: none;
+      border-radius: 20px;
+      padding: .35rem .85rem;
+      font-size: .75rem;
+      font-weight: 600;
+      cursor: pointer;
       font-family: var(--sans);
     }
 
@@ -142,48 +205,63 @@
       background: rgba(216,160,90,.12);
       border: 1px solid rgba(216,160,90,.35);
       border-radius: var(--r-sm);
-      padding: .5rem .75rem; font-size: .8rem; color: #7a5a20; display: none;
+      padding: .5rem .75rem;
+      font-size: .8rem;
+      color: #7a5a20;
+      display: none;
     }
 
-    /* ── Form ─────────────────────────────────────────────── */
-    .form-group { margin-top: 1.25rem; }
-
-    .form-group label {
-      display: block; font-weight: 600; font-size: .875rem;
-      color: var(--ink); margin-bottom: .4rem;
-    }
-
-    .form-group input[type="text"],
-    .form-group textarea {
-      width: 100%; padding: .8rem 1rem;
-      border: 1.5px solid var(--line-2);
+    /* ── Name / message field cards ──────────────────────── */
+    .name-field {
+      margin-top: 24px;
+      background: #fff;
+      border: 1px solid var(--line);
       border-radius: var(--r);
-      font-family: var(--sans); font-size: 1rem;
-      color: var(--ink); background: #fff;
-      transition: border-color .15s, box-shadow .15s;
-      outline: none; resize: none;
+      padding: 14px 16px;
     }
 
-    .form-group input[type="text"]:focus,
-    .form-group textarea:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(196,90,58,.12);
+    .name-field label {
+      display: block;
+      font-family: var(--mono, monospace);
+      font-size: 11px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--ink-soft);
+      margin-bottom: 6px;
+    }
+
+    .name-field input[type="text"],
+    .name-field textarea {
+      width: 100%;
+      border: none;
+      outline: none;
+      font-size: 16px;
+      background: transparent;
+      font-family: var(--sans);
+      color: var(--ink);
+      resize: none;
     }
 
     /* ── Video toggle ─────────────────────────────────────── */
     .video-toggle {
-      display: flex; align-items: center; gap: .75rem;
-      margin-top: 1.25rem; padding: .875rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      margin-top: 16px;
+      padding: .875rem 1rem;
       background: var(--paper-2);
       border: 1.5px solid var(--line-2);
       border-radius: var(--r-lg);
-      cursor: pointer; user-select: none;
+      cursor: pointer;
+      user-select: none;
     }
 
     .video-toggle input[type="checkbox"] {
-      width: 1.25rem; height: 1.25rem;
+      width: 1.25rem;
+      height: 1.25rem;
       accent-color: var(--accent);
-      cursor: pointer; flex-shrink: 0;
+      cursor: pointer;
+      flex-shrink: 0;
     }
 
     .video-toggle-label { font-size: .9rem; font-weight: 600; color: var(--ink); }
@@ -191,33 +269,47 @@
 
     /* ── Recorder ─────────────────────────────────────────── */
     #recorder-section {
-      display: none; margin-top: 1.25rem;
+      display: none;
+      margin-top: 1.25rem;
       background: var(--ink);
       border-radius: var(--r-lg);
-      padding: 1.5rem; text-align: center; color: #fff;
+      padding: 1.5rem;
+      text-align: center;
+      color: #fff;
     }
 
     #recorder-preview {
-      width: 100%; max-height: 220px;
-      border-radius: var(--r); background: #000;
-      margin-bottom: 1rem; display: block;
+      width: 100%;
+      max-height: 220px;
+      border-radius: var(--r);
+      background: #000;
+      margin-bottom: 1rem;
+      display: block;
     }
 
     .recorder-timer {
-      font-family: var(--display); font-size: 2rem;
-      margin-bottom: 1rem; letter-spacing: .05em; color: #fff;
+      font-family: var(--display);
+      font-size: 2rem;
+      margin-bottom: 1rem;
+      letter-spacing: .05em;
+      color: #fff;
     }
     .recorder-timer.warning { color: var(--accent-soft); }
 
     .recorder-controls { display: flex; gap: .75rem; justify-content: center; flex-wrap: wrap; }
 
     .btn-record {
-      width: 68px; height: 68px;
+      width: 68px;
+      height: 68px;
       border-radius: 50%;
       border: 3.5px solid var(--accent-soft);
       background: var(--accent);
-      cursor: pointer; display: flex; align-items: center; justify-content: center;
-      transition: transform .1s; flex-shrink: 0;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform .1s;
+      flex-shrink: 0;
     }
     .btn-record:active { transform: scale(.93); }
     .btn-record .dot { width: 28px; height: 28px; border-radius: 50%; background: #fff; }
@@ -242,35 +334,43 @@
     .progress-bar-fill {
       height: 100%;
       background: linear-gradient(90deg, var(--accent-soft), var(--accent));
-      border-radius: 4px; transition: width .3s; width: 0%;
+      border-radius: 4px;
+      transition: width .3s;
+      width: 0%;
     }
 
-    /* ── Submit ───────────────────────────────────────────── */
-    .btn-submit {
-      margin-top: 1.75rem; width: 100%;
-      padding: 1rem 1.5rem;
-      background: var(--accent); color: #fff; border: none;
+    /* ── Send button ──────────────────────────────────────── */
+    .send-btn {
+      width: 100%;
+      padding: 16px;
+      margin-top: 20px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
       border-radius: 999px;
-      font-family: var(--sans); font-size: 1.05rem; font-weight: 600;
-      cursor: pointer; min-height: 56px;
+      font-family: var(--sans);
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      min-height: 56px;
       transition: background .15s, transform .1s;
       letter-spacing: .01em;
       box-shadow: 0 1px 2px rgba(196,90,58,.3), inset 0 1px 0 rgba(255,255,255,.18);
     }
-    .btn-submit:hover:not(:disabled) { background: var(--accent-deep); transform: translateY(-1px); }
-    .btn-submit:active  { transform: scale(.98); }
-    .btn-submit:disabled { opacity: .55; cursor: not-allowed; transform: none; }
+    .send-btn:hover:not(:disabled) { background: var(--accent-deep); transform: translateY(-1px); }
+    .send-btn:active  { transform: scale(.98); }
+    .send-btn:disabled { opacity: .55; cursor: not-allowed; transform: none; }
 
     /* ── Success ──────────────────────────────────────────── */
     #success-screen {
-      display: none; width: 100%; max-width: 520px;
+      display: none;
       background: #fff;
       border: 1px solid var(--line);
       border-radius: var(--r-xl);
       box-shadow: var(--shadow-card);
       padding: 3rem 1.5rem;
-      margin: -1.25rem 1rem 2rem;
-      text-align: center; position: relative; z-index: 1;
+      margin-top: 32px;
+      text-align: center;
     }
 
     .success-emoji { font-size: 4rem; margin-bottom: 1rem; animation: pop .4s ease; }
@@ -282,153 +382,241 @@
     }
 
     .success-title {
-      font-family: var(--display); font-size: 1.6rem;
-      color: var(--ink); margin-bottom: .5rem;
+      font-family: var(--display);
+      font-size: 1.6rem;
+      color: var(--ink);
+      margin-bottom: .5rem;
     }
 
     .success-sub { color: var(--ink-soft); font-size: .95rem; line-height: 1.5; margin-bottom: 1.75rem; }
 
     .btn-another {
-      display: inline-block; padding: .75rem 2rem;
+      display: inline-block;
+      padding: .75rem 2rem;
       background: transparent;
       border: 2px solid var(--accent);
       color: var(--accent);
       border-radius: 999px;
-      font-family: var(--sans); font-weight: 600; font-size: .95rem;
-      cursor: pointer; transition: background .15s, color .15s;
+      font-family: var(--sans);
+      font-weight: 600;
+      font-size: .95rem;
+      cursor: pointer;
+      transition: background .15s, color .15s;
     }
     .btn-another:hover { background: var(--accent); color: #fff; }
 
     /* ── Error / Loading ──────────────────────────────────── */
     #error-screen {
-      display: none; width: 100%; max-width: 520px;
-      text-align: center; padding: 4rem 2rem;
+      display: none;
+      text-align: center;
+      padding: 4rem 2rem;
       color: var(--ink-soft);
     }
 
     .error-emoji { font-size: 3rem; margin-bottom: 1rem; }
-    #loading-state { padding: 4rem 0; }
+    #loading-state { padding: 4rem 0; text-align: center; }
+
+    /* ── Recently shared ──────────────────────────────────── */
+    .recent {
+      margin-top: 56px;
+    }
+
+    .recent .head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .recent .head h3 {
+      font-family: var(--display);
+      font-size: 18px;
+      font-weight: 500;
+      color: var(--ink);
+      margin: 0;
+    }
+
+    .recent .head .count {
+      font-family: var(--mono, monospace);
+      font-size: 11px;
+      letter-spacing: .14em;
+      color: var(--ink-soft);
+    }
+
+    .recent-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+
+    .recent-grid .thumb {
+      aspect-ratio: 1;
+      border-radius: 8px;
+      background: var(--line);
+      overflow: hidden;
+    }
+
+    .recent-grid .thumb img,
+    .recent-grid .thumb video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    /* ── Footer note ──────────────────────────────────────── */
+    .footer-note {
+      margin-top: 40px;
+      text-align: center;
+      font-family: var(--mono, monospace);
+      font-size: 11px;
+      letter-spacing: .10em;
+      color: var(--ink-soft);
+      opacity: .6;
+    }
   </style>
 </head>
 <body>
 
-<!-- ── Hero ──────────────────────────────────────────────── -->
-<div class="hero" id="hero">
-  <div class="lang-toggle" id="lang-toggle" aria-label="Choose language">
-    <button class="lang-btn active" data-lang="en">EN</button>
-    <button class="lang-btn"        data-lang="fil">FIL</button>
+<div class="upload-shell">
+
+  <!-- ── Top row ──────────────────────────────────────────── -->
+  <div class="upload-top">
+    <a class="brand" href="/">REELDAY<sup>★</sup></a>
+    <div class="lang-switch" id="lang-toggle" aria-label="Choose language">
+      <button class="active" data-lang="en">EN</button>
+      <button data-lang="fil">FIL</button>
+    </div>
   </div>
 
-  <a href="/" class="hero-brand hero-brand-link">Reelday ✦</a>
-  <h1 class="hero-names" id="hero-names">…</h1>
-  <p class="hero-date"   id="hero-date"></p>
-
-  <div class="hero-divider">
-    <svg viewBox="0 0 1200 40" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-      <path id="hero-wave" d="M0,40 C300,0 900,0 1200,40 L1200,40 L0,40 Z" style="fill: var(--paper)" />
-    </svg>
-  </div>
-</div>
-
-<!-- ── Loading ───────────────────────────────────────────── -->
-<div id="loading-state"><div class="spinner"></div></div>
-
-<!-- ── Error ─────────────────────────────────────────────── -->
-<div id="error-screen">
-  <div class="error-emoji">😔</div>
-  <p id="error-msg" style="color:var(--ink-soft);font-size:.95rem;margin-top:.5rem"></p>
-</div>
-
-<!-- ── Upload card ───────────────────────────────────────── -->
-<div class="upload-card" id="upload-card" style="display:none">
-
-  <p class="section-title" id="section-title">📸 Share your memory</p>
-
-  <div class="dropzone" id="dropzone">
-    <input type="file" id="file-input" accept="image/*,video/*" />
-    <div class="dropzone-icon">📷</div>
-    <p class="dropzone-label" id="dropzone-label">Tap to pick a photo or video</p>
-    <p class="dropzone-sub">JPG, PNG, HEIC, MP4 · max 500 MB</p>
+  <!-- ── Hero ─────────────────────────────────────────────── -->
+  <div class="upload-hero">
+    <h1 id="hero-names">…</h1>
+    <div class="meta" id="hero-date"></div>
+    <div class="welcome" id="hero-welcome"></div>
   </div>
 
-  <div id="preview-area">
-    <img id="preview-img" alt="" style="display:none" />
-    <video id="preview-vid" controls playsinline style="display:none"></video>
-    <button class="preview-change" id="preview-change-btn" data-i18n="changeFile">Change ✕</button>
+  <!-- ── Loading ───────────────────────────────────────────── -->
+  <div id="loading-state"><div class="spinner"></div></div>
+
+  <!-- ── Error ─────────────────────────────────────────────── -->
+  <div id="error-screen">
+    <div class="error-emoji">😔</div>
+    <p id="error-msg" style="color:var(--ink-soft);font-size:.95rem;margin-top:.5rem"></p>
   </div>
 
-  <div class="file-warning" id="file-warning" data-i18n="fileWarning">
-    ⚠️ Large file detected. Make sure you have a strong connection before uploading.
-  </div>
+  <!-- ── Upload form ───────────────────────────────────────── -->
+  <div id="upload-card" style="display:none">
 
-  <div class="form-group">
-    <label for="uploader-name">
-      <span data-i18n="nameLabel">What's your name?</span>
-      <span style="color:var(--accent)"> *</span>
+    <!-- Drop zone -->
+    <div class="drop" id="dropzone">
+      <input type="file" id="file-input" accept="image/*,video/*" />
+      <div class="icon">+</div>
+      <h3 id="dropzone-label">Tap to share</h3>
+      <p>Photos and videos · up to 500MB each</p>
+    </div>
+
+    <!-- Preview -->
+    <div id="preview-area">
+      <img id="preview-img" alt="" style="display:none" />
+      <video id="preview-vid" controls playsinline style="display:none"></video>
+      <button class="preview-change" id="preview-change-btn" data-i18n="changeFile">Change ✕</button>
+    </div>
+
+    <div class="file-warning" id="file-warning" data-i18n="fileWarning">
+      ⚠️ Large file detected. Make sure you have a strong connection before uploading.
+    </div>
+
+    <!-- Progress -->
+    <div class="progress-wrap" id="progress-wrap">
+      <p class="progress-label">
+        <span data-i18n="uploadingLabel">Uploading… </span>
+        <span id="progress-pct">0%</span>
+      </p>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="progress-bar"></div>
+      </div>
+    </div>
+
+    <!-- Recorder -->
+    <div id="recorder-section">
+      <video id="recorder-preview" autoplay muted playsinline></video>
+      <div class="recorder-timer" id="recorder-timer">1:00</div>
+      <div class="recorder-controls">
+        <button class="btn-record" id="btn-record"><div class="dot"></div></button>
+      </div>
+      <div id="recorded-preview-section">
+        <video id="recorded-video" controls playsinline></video>
+        <button class="btn-another" id="btn-rerecord"
+          style="font-size:.85rem;padding:.5rem 1.25rem"
+          data-i18n="rerecordBtn">🔄 Record again</button>
+      </div>
+      <p id="recorder-hint" style="margin-top:.75rem;font-size:.8rem;opacity:.7"
+        data-i18n="recorderHintIdle">Press the button to start recording</p>
+    </div>
+
+    <!-- Name field -->
+    <div class="name-field">
+      <label for="uploader-name">
+        <span data-i18n="nameLabel">Your name</span>
+      </label>
+      <input type="text" id="uploader-name"
+        data-i18n-placeholder="namePlaceholder"
+        placeholder="e.g. Tita Marivic"
+        maxlength="100" autocomplete="name" />
+    </div>
+
+    <!-- Message field -->
+    <div class="name-field">
+      <label for="message" id="message-label" data-i18n="messageLabel">Message for the couple</label>
+      <textarea id="message" rows="3"
+        data-i18n-placeholder="messagePlaceholder"
+        placeholder="Leave them a message… (optional)"
+        maxlength="500"></textarea>
+    </div>
+
+    <!-- Video toggle -->
+    <label class="video-toggle">
+      <input type="checkbox" id="video-msg-toggle" />
+      <div>
+        <div class="video-toggle-label" id="video-toggle-label" data-i18n="videoToggleLabel">Record a video message for them 💌</div>
+        <div class="video-toggle-sub" data-i18n="videoToggleSub">Record a special message (max 60 seconds)</div>
+      </div>
     </label>
-    <input type="text" id="uploader-name"
-      data-i18n-placeholder="namePlaceholder"
-      placeholder="Enter your name"
-      maxlength="100" autocomplete="name" />
+
+    <!-- Hidden section title (used by JS applyEventCopy) -->
+    <span id="section-title" style="display:none"></span>
+
+    <!-- Submit -->
+    <button class="send-btn" id="btn-submit" disabled data-i18n="submitNoFile">
+      Pick a photo first ✦
+    </button>
+
+  </div><!-- /upload-card -->
+
+  <!-- ── Success ───────────────────────────────────────────── -->
+  <div id="success-screen">
+    <div class="success-emoji" id="success-emoji">✦</div>
+    <h2 class="success-title" id="success-title"></h2>
+    <p  class="success-sub"   id="success-sub"></p>
+    <button class="btn-another" id="btn-upload-another" data-i18n="uploadAnother">
+      📸 Upload another one
+    </button>
   </div>
 
-  <div class="form-group">
-    <label for="message" id="message-label" data-i18n="messageLabel">Message for the couple</label>
-    <textarea id="message" rows="3"
-      data-i18n-placeholder="messagePlaceholder"
-      placeholder="Leave them a message… (optional)"
-      maxlength="500"></textarea>
+  <!-- ── Recently shared ───────────────────────────────────── -->
+  <div class="recent" id="recent-section" style="display:none">
+    <div class="head">
+      <h3>Recently shared</h3>
+      <span class="count" id="recent-count"></span>
+    </div>
+    <div class="recent-grid" id="recent-grid"></div>
   </div>
 
-  <label class="video-toggle">
-    <input type="checkbox" id="video-msg-toggle" />
-    <div>
-      <div class="video-toggle-label" id="video-toggle-label" data-i18n="videoToggleLabel">Record a video message for them 💌</div>
-      <div class="video-toggle-sub"   data-i18n="videoToggleSub">Record a special message (max 60 seconds)</div>
-    </div>
-  </label>
+  <!-- ── Footer ────────────────────────────────────────────── -->
+  <div class="footer-note">★ Powered by Reelday · reelday.ph</div>
 
-  <div id="recorder-section">
-    <video id="recorder-preview" autoplay muted playsinline></video>
-    <div class="recorder-timer" id="recorder-timer">1:00</div>
-    <div class="recorder-controls">
-      <button class="btn-record" id="btn-record"><div class="dot"></div></button>
-    </div>
-    <div id="recorded-preview-section">
-      <video id="recorded-video" controls playsinline></video>
-      <button class="btn-another" id="btn-rerecord"
-        style="font-size:.85rem;padding:.5rem 1.25rem"
-        data-i18n="rerecordBtn">🔄 Record again</button>
-    </div>
-    <p id="recorder-hint" style="margin-top:.75rem;font-size:.8rem;opacity:.7"
-      data-i18n="recorderHintIdle">Press the button to start recording</p>
-  </div>
-
-  <div class="progress-wrap" id="progress-wrap">
-    <p class="progress-label">
-      <span data-i18n="uploadingLabel">Uploading… </span>
-      <span id="progress-pct">0%</span>
-    </p>
-    <div class="progress-bar-bg">
-      <div class="progress-bar-fill" id="progress-bar"></div>
-    </div>
-  </div>
-
-  <button class="btn-submit" id="btn-submit" disabled data-i18n="submitNoFile">
-    Pick a photo first ✦
-  </button>
-
-</div>
-
-<!-- ── Success ───────────────────────────────────────────── -->
-<div id="success-screen">
-  <div class="success-emoji" id="success-emoji">✦</div>
-  <h2 class="success-title" id="success-title"></h2>
-  <p  class="success-sub"   id="success-sub"></p>
-  <button class="btn-another" id="btn-upload-another" data-i18n="uploadAnother">
-    📸 Upload another one
-  </button>
-</div>
+</div><!-- /upload-shell -->
 
 <!-- ── Toast ─────────────────────────────────────────────── -->
 <div class="toast" id="toast"></div>
@@ -713,7 +901,7 @@
       if (typeof val === 'string') el.placeholder = val;
     });
 
-    document.querySelectorAll('.lang-btn').forEach(btn => {
+    document.querySelectorAll('.lang-switch button').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.lang === lang);
     });
   }
@@ -755,6 +943,12 @@
       applyTheme(eventData.event_type);
       heroNames.textContent  = eventData.couple_names;
       document.title         = `Reelday — ${eventData.couple_names}`;
+
+      // Populate welcome message if available
+      const heroWelcome = $('hero-welcome');
+      if (eventData.welcome_message && heroWelcome) {
+        heroWelcome.textContent = `"${eventData.welcome_message}"`;
+      }
 
       loadingState.style.display = 'none';
       uploadCard.style.display   = 'block';

@@ -3,19 +3,27 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#0a0a0a" />
+  <meta name="theme-color" content="#1a0f0a" />
   <title>Reelday Live Wall</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="stylesheet" href="/css/shared.css" />
   <style>
-    /* ── Base ─────────────────────────────────────────── */
+    /* ── Variables ───────────────────────────────────────── */
+    :root {
+      --mono: 'DM Mono', 'Courier New', monospace;
+      --display: 'Playfair Display', Georgia, serif;
+      --ink: #2a1a14;
+      --gold: #f0a37a;
+    }
+
+    /* ── Base ─────────────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     html, body {
       width: 100vw;
       height: 100vh;
       overflow: hidden;
-      background: #0a0a0a;
+      background: #1a0f0a;
       color: #fff;
       font-family: var(--body-font, 'DM Sans', sans-serif);
       cursor: none;
@@ -23,7 +31,7 @@
 
     body.show-cursor { cursor: default; }
 
-    /* ── Slide layers ─────────────────────────────────── */
+    /* ── Slide layers ─────────────────────────────────────── */
     .slide-layer {
       position: fixed;
       inset: 0;
@@ -42,7 +50,7 @@
       will-change: transform;
     }
 
-    /* ── Ken Burns variants ───────────────────────────── */
+    /* ── Ken Burns variants ───────────────────────────────── */
     @keyframes kb1 {
       from { transform: scale(1)    translate(0,    0); }
       to   { transform: scale(1.1)  translate(-1.5%, -1%); }
@@ -64,128 +72,245 @@
       to   { transform: scale(1.09) translate(-0.5%, -1.5%); }
     }
 
-    /* ── Top ticker ───────────────────────────────────── */
-    .ticker-strip {
+    /* ── Vignette overlay on slide layers ────────────────── */
+    .slide-layer::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,.6) 100%),
+        linear-gradient(180deg, rgba(0,0,0,.3) 0%, transparent 30%, transparent 60%, rgba(0,0,0,.7) 100%);
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    /* ── Top ticker ───────────────────────────────────────── */
+    .ticker {
       position: fixed;
       top: 0;
       left: 0;
       right: 0;
-      height: 48px;
-      z-index: 100;
-      overflow: hidden;
+      height: 56px;
+      z-index: 10;
+      background: linear-gradient(180deg, rgba(0,0,0,.7), transparent);
       display: flex;
       align-items: center;
+      justify-content: space-between;
+      padding: 0 32px;
     }
 
-    /* Semi-transparent accent background via pseudo-element
-       so text stays fully opaque */
-    .ticker-strip::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: var(--accent, #e8735a);
-      opacity: .88;
-    }
-
-    .ticker-track {
+    .ticker .live {
       display: flex;
-      white-space: nowrap;
       align-items: center;
-      position: relative;
-      z-index: 1;
-      will-change: transform;
+      gap: 10px;
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: .18em;
+      text-transform: uppercase;
     }
 
-    .ticker-segment {
-      padding-right: 4rem;
-      font-size: .9rem;
+    .ticker .live .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--gold);
+      box-shadow: 0 0 0 4px rgba(240,163,122,.3);
+      animation: pulse 1.5s ease infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes pulse {
+      50% { box-shadow: 0 0 0 8px rgba(240,163,122,0); }
+    }
+
+    .ticker .stats {
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      opacity: .85;
+      display: flex;
+      gap: 24px;
+    }
+
+    .ticker .stats em {
+      color: var(--gold);
+      font-style: normal;
       font-weight: 600;
-      letter-spacing: .04em;
-      color: #fff;
-      text-shadow: 0 1px 3px rgba(0,0,0,.3);
     }
 
-    @keyframes tickerScroll {
-      from { transform: translateX(0); }
-      to   { transform: translateX(-50%); }
+    /* Hidden compat segments for existing JS */
+    #ticker-seg-a,
+    #ticker-seg-b {
+      display: none;
     }
 
-    /* ── Bottom overlay ───────────────────────────────── */
-    .overlay-bottom {
+    /* ── Caption frame ────────────────────────────────────── */
+    .frame {
       position: fixed;
       bottom: 0;
       left: 0;
       right: 0;
-      height: 220px;
-      z-index: 50;
-      background: linear-gradient(to bottom, transparent 0%, rgba(0,0,0,.78) 100%);
+      z-index: 10;
+      padding: 0 64px 64px;
       display: flex;
-      align-items: flex-end;
       justify-content: space-between;
-      padding: 0 2.5rem 1.75rem;
+      align-items: flex-end;
+      gap: 32px;
       pointer-events: none;
     }
 
-    .overlay-left {
-      max-width: 55%;
+    .caption {
+      max-width: 60%;
     }
 
-    .uploader-name {
-      font-size: clamp(1.1rem, 2.5vw, 1.5rem);
-      font-weight: 600;
-      text-shadow: 0 2px 8px rgba(0,0,0,.6);
-      margin-bottom: .35rem;
-      line-height: 1.3;
+    .caption .uploader {
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.7);
+      margin-bottom: 12px;
     }
 
-    .uploader-message {
+    .caption blockquote {
+      font-family: var(--display);
       font-style: italic;
-      font-size: clamp(.85rem, 1.8vw, 1.1rem);
-      opacity: .85;
-      text-shadow: 0 1px 6px rgba(0,0,0,.5);
-      max-width: 480px;
-      line-height: 1.4;
+      font-weight: 400;
+      font-size: clamp(28px, 3.5vw, 52px);
+      line-height: 1.15;
+      letter-spacing: -.015em;
+      text-shadow: 0 4px 24px rgba(0,0,0,.5);
       display: -webkit-box;
-      -webkit-line-clamp: 2;
+      -webkit-line-clamp: 3;
       -webkit-box-orient: vertical;
       overflow: hidden;
     }
 
-    .overlay-right {
+    .corner {
       text-align: right;
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.6);
       flex-shrink: 0;
     }
 
-    .live-counter {
-      font-size: clamp(1rem, 2vw, 1.3rem);
-      font-weight: 600;
-      text-shadow: 0 2px 8px rgba(0,0,0,.6);
-      margin-bottom: .35rem;
-    }
-
-    .event-label-overlay {
-      font-size: clamp(.75rem, 1.5vw, .95rem);
-      opacity: .75;
-      text-shadow: 0 1px 4px rgba(0,0,0,.5);
-      font-family: var(--heading-font, 'Playfair Display', serif);
+    .corner .names {
+      font-family: var(--display);
       font-style: italic;
-    }
-
-    .watermark {
-      position: fixed;
-      bottom: 1.5rem;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 51;
-      font-size: .7rem;
-      letter-spacing: .16em;
-      text-transform: uppercase;
-      opacity: .35;
+      font-weight: 400;
+      font-size: 28px;
       color: #fff;
-      pointer-events: none;
+      text-transform: none;
+      letter-spacing: -.01em;
+      margin-bottom: 4px;
     }
 
-    /* ── Floating emojis ──────────────────────────────── */
+    .corner .names em {
+      color: var(--gold);
+      font-style: normal;
+    }
+
+    .corner .moments {
+      margin-bottom: 6px;
+    }
+
+    /* ── QR badge ─────────────────────────────────────────── */
+    .qr-badge {
+      position: fixed;
+      top: 80px;
+      right: 32px;
+      z-index: 10;
+      background: rgba(255,255,255,.95);
+      border-radius: 14px;
+      padding: 12px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      color: var(--ink);
+      box-shadow: 0 8px 32px rgba(0,0,0,.4);
+    }
+
+    .qr-badge .qr {
+      width: 56px;
+      height: 56px;
+      background:
+        linear-gradient(45deg,  #2a1a14 25%, transparent 25%),
+        linear-gradient(-45deg, #2a1a14 25%, transparent 25%),
+        linear-gradient(45deg,  transparent 75%, #2a1a14 75%),
+        linear-gradient(-45deg, transparent 75%, #2a1a14 75%);
+      background-size: 8px 8px;
+      background-position: 0 0, 0 4px, 4px -4px, -4px 0;
+      border-radius: 4px;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    .qr-badge .qr img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      border-radius: 4px;
+    }
+
+    .qr-badge .text {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--ink);
+    }
+
+    .qr-badge .text b {
+      font-family: var(--display);
+      font-style: italic;
+      font-size: 14px;
+      font-weight: 500;
+      text-transform: none;
+      letter-spacing: 0;
+      display: block;
+      margin-bottom: 2px;
+      color: var(--ink);
+    }
+
+    /* ── Upcoming thumbnails column ───────────────────────── */
+    .upcoming {
+      position: fixed;
+      right: 32px;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .upcoming-thumb {
+      width: 72px;
+      aspect-ratio: 1;
+      border-radius: 10px;
+      border: 2px solid rgba(255,255,255,.2);
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .upcoming-thumb.next {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 4px rgba(240,163,122,.2);
+    }
+
+    .upcoming-thumb img,
+    .upcoming-thumb video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    /* ── Floating emojis ──────────────────────────────────── */
     #emoji-container {
       position: fixed;
       inset: 0;
@@ -209,13 +334,13 @@
       100% { transform: translateY(-95vh)  scale(1.6); opacity: 0; }
     }
 
-    /* ── Upload toast ─────────────────────────────────── */
+    /* ── Upload toast ─────────────────────────────────────── */
     .upload-toast {
       position: fixed;
       bottom: 5rem;
       right: 2rem;
       background: rgba(10,10,10,.9);
-      border-left: 4px solid var(--accent, #e8735a);
+      border-left: 4px solid var(--accent, #f0a37a);
       color: #fff;
       padding: 1rem 1.4rem;
       border-radius: 10px;
@@ -232,7 +357,7 @@
 
     .upload-toast.show { transform: translateX(0); }
 
-    /* ── Pause indicator ──────────────────────────────── */
+    /* ── Pause indicator ──────────────────────────────────── */
     .pause-hud {
       position: fixed;
       top: 50%;
@@ -257,7 +382,7 @@
       transform: translate(-50%, -50%) scale(1);
     }
 
-    /* ── Keyboard hint ────────────────────────────────── */
+    /* ── Keyboard hint ────────────────────────────────────── */
     .kb-hint {
       position: fixed;
       bottom: 1.5rem;
@@ -273,7 +398,7 @@
 
     body:hover .kb-hint { opacity: 1; }
 
-    /* ── Empty state ──────────────────────────────────── */
+    /* ── Empty state ──────────────────────────────────────── */
     .empty-state {
       display: none;
       position: fixed;
@@ -298,7 +423,7 @@
     }
 
     .empty-event-name {
-      font-family: var(--heading-font, 'Playfair Display', serif);
+      font-family: var(--display);
       font-size: clamp(2.5rem, 7vw, 5rem);
       font-weight: 600;
       margin-bottom: 1rem;
@@ -353,7 +478,7 @@
       50%     { opacity: .7;  transform: scale(1.03); }
     }
 
-    /* ── Slide counter (debug / coordinator) ──────────── */
+    /* ── Slide counter (debug / coordinator) ──────────────── */
     .slide-indicator {
       position: fixed;
       top: 60px;
@@ -375,26 +500,43 @@
 <div class="slide-layer" id="layer-a"></div>
 <div class="slide-layer" id="layer-b" style="opacity:0"></div>
 
-<!-- Zone 3 — Top ticker -->
-<div class="ticker-strip" id="ticker-strip">
-  <div class="ticker-track" id="ticker-track">
-    <span class="ticker-segment" id="ticker-seg-a">Loading…</span>
-    <span class="ticker-segment" id="ticker-seg-b">Loading…</span>
+<!-- Top ticker (reference style) -->
+<div class="ticker" id="ticker-strip">
+  <div class="live">
+    <span class="dot"></span>
+    <span id="ticker-live-text">Live</span>
+  </div>
+  <div class="stats" id="ticker-stats"></div>
+</div>
+
+<!-- Hidden compat elements — existing JS writes to these IDs -->
+<span id="ticker-seg-a" style="display:none">Loading…</span>
+<span id="ticker-seg-b" style="display:none">Loading…</span>
+
+<!-- Caption frame (reference style) -->
+<div class="frame" id="overlay" style="display:none">
+  <div class="caption">
+    <div class="uploader" id="uploader-name"></div>
+    <blockquote id="uploader-message"></blockquote>
+  </div>
+  <div class="corner">
+    <div class="names" id="event-label-overlay"></div>
+    <div class="moments" id="live-counter"></div>
+    <div>&#9733; Powered by Reelday</div>
   </div>
 </div>
 
-<!-- Zone 2 — Bottom overlay -->
-<div class="overlay-bottom" id="overlay" style="display:none">
-  <div class="overlay-left">
-    <div class="uploader-name"    id="uploader-name"></div>
-    <div class="uploader-message" id="uploader-message"></div>
-  </div>
-  <div class="overlay-right">
-    <div class="live-counter"       id="live-counter"></div>
-    <div class="event-label-overlay" id="event-label-overlay"></div>
+<!-- QR corner badge -->
+<div class="qr-badge" id="qr-badge" style="display:none">
+  <div class="qr" id="wall-qr-img"></div>
+  <div class="text">
+    Add yours
+    <b id="wall-upload-url">reelday.ph/upload/…</b>
   </div>
 </div>
-<div class="watermark">Reelday ✦</div>
+
+<!-- Upcoming thumbnails column -->
+<div class="upcoming" id="upcoming-col"></div>
 
 <!-- Floating emojis -->
 <div id="emoji-container"></div>
@@ -534,7 +676,15 @@
     // Recalculate animation duration: 15px per char as rough estimate
     const charsPerSeg = text.length;
     const duration    = Math.max(20, charsPerSeg * 0.18); // seconds
-    tickerTrack.style.animation = `tickerScroll ${duration}s linear infinite`;
+    if (tickerTrack) tickerTrack.style.animation = `tickerScroll ${duration}s linear infinite`;
+
+    // Update new stats bar
+    const statsEl = document.getElementById('ticker-stats');
+    if (statsEl && eventData) {
+      statsEl.innerHTML =
+        `<span>${eventData.couple_names || ''}</span>` +
+        `<span><em>${uploads.length}</em> moments</span>`;
+    }
   }
 
   // ── Slideshow ─────────────────────────────────────────
@@ -561,6 +711,7 @@
       backLayer  = tmp;
       currentIdx = nextIdx;
       updateOverlay(items[currentIdx]);
+      updateUpcoming();
     }, TRANSITION_DURATION);
 
     if (!isPaused) {
@@ -578,6 +729,7 @@
     updateOverlay(items[0]);
     overlay.style.display = 'flex';
     emptyState.classList.remove('visible');
+    updateUpcoming();
 
     if (items.length > 1) {
       slideTimer = setTimeout(advance, SLIDE_DURATION);
@@ -764,6 +916,9 @@
       updateCounter(uploads.length);
       updateTicker(uploads);
 
+      // Populate QR badge
+      initQrBadge(event, slug);
+
       if (items.length > 0) {
         startSlideshow();
         scheduleRandomEmoji();
@@ -779,6 +934,68 @@
       document.getElementById('empty-tagline').textContent =
         `Could not load: ${slug}`;
       emptyState.classList.add('visible');
+    }
+  }
+
+  // ── QR Badge ──────────────────────────────────────────
+  async function initQrBadge(event, eventSlug) {
+    const badge     = document.getElementById('qr-badge');
+    const urlEl     = document.getElementById('wall-upload-url');
+    const qrImgWrap = document.getElementById('wall-qr-img');
+
+    const uploadUrl = `reelday.ph/upload/${eventSlug}`;
+    if (urlEl) urlEl.textContent = uploadUrl;
+    if (badge) badge.style.display = 'flex';
+
+    // Try to load actual QR from API
+    try {
+      const res = await fetch(`/api/events/${eventSlug}/qr`);
+      if (res.ok) {
+        const { qr_code } = await res.json();
+        if (qr_code && qrImgWrap) {
+          // Replace checkerboard with real QR image
+          qrImgWrap.innerHTML = '';
+          qrImgWrap.style.background = 'none';
+          const img = document.createElement('img');
+          img.src = qr_code;
+          img.alt = 'QR Code';
+          qrImgWrap.appendChild(img);
+        }
+      }
+    } catch { /* checkerboard fallback stays */ }
+  }
+
+  // ── Upcoming thumbnails ────────────────────────────────
+  function updateUpcoming() {
+    const col = document.getElementById('upcoming-col');
+    if (!col || items.length < 2) {
+      if (col) col.innerHTML = '';
+      return;
+    }
+
+    const thumbCount = Math.min(4, items.length - 1);
+    col.innerHTML = '';
+
+    for (let i = 0; i < thumbCount; i++) {
+      const idx  = (currentIdx + 1 + i) % items.length;
+      const item = items[idx];
+      const div  = document.createElement('div');
+      div.className = 'upcoming-thumb' + (i === 0 ? ' next' : '');
+
+      if (item.file_type === 'video') {
+        const vid = document.createElement('video');
+        vid.src      = item.file_url;
+        vid.muted    = true;
+        vid.preload  = 'metadata';
+        div.appendChild(vid);
+      } else {
+        const img = document.createElement('img');
+        img.src = item.file_url;
+        img.alt = item.uploader_name || '';
+        div.appendChild(img);
+      }
+
+      col.appendChild(div);
     }
   }
 

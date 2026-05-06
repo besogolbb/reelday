@@ -287,7 +287,7 @@
 </section>
 
 <!-- ── Stats (overlapping header) ────────────────────────── -->
-<div class="stats">
+<div class="stats" id="stats-row" style="display:none">
   <div class="stat">
     <div class="lbl">Total uploads</div>
     <div class="num"><em id="stat-total">0</em></div>
@@ -378,10 +378,6 @@
         <button class="btn btn-ghost" id="btn-download-qr"
           data-en="📥 Download QR Code" data-fil="📥 I-download ang QR">
           📥 Download QR Code
-        </button>
-        <button class="btn btn-ghost" id="btn-copy-link"
-          data-en="🔗 Copy Guest Link" data-fil="🔗 Kopyahin ang Link">
-          🔗 Copy Guest Link
         </button>
       </div>
     </div>
@@ -566,27 +562,22 @@
     qrDataUrl = dataUrl;
     const uploadUrl = `${location.protocol}//${location.host}/upload/${slug}`;
 
-    qrWrap.innerHTML = `<img src="${dataUrl}" alt="QR Code" style="width:100%;height:100%;object-fit:contain;border-radius:4px" />`;
+    qrWrap.innerHTML = `<img src="${dataUrl}" alt="QR Code" style="width:100%;height:auto;display:block;border-radius:4px" />`;
+    qrWrap.style.backgroundImage = 'none';
+    qrWrap.style.backgroundSize  = 'auto';
     qrUrl.textContent = uploadUrl;
 
     const openBtn = $('btn-open-upload');
     if (openBtn) openBtn.href = uploadUrl;
 
-    $('btn-download-qr').onclick = () => {
+    const dlBtn = $('btn-download-qr');
+    if (dlBtn) dlBtn.onclick = () => {
       const a = document.createElement('a');
       a.href     = dataUrl;
       a.download = `reelday-qr-${slug}.png`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-    };
-
-    $('btn-copy-link').onclick = () => {
-      navigator.clipboard.writeText(uploadUrl).then(() => {
-        showToast('Link copied! 🔗', 'success');
-      }).catch(() => {
-        showToast('Copy failed — try manually.', 'error');
-      });
     };
   }
 
@@ -803,6 +794,7 @@
 
       pageLoading.style.display = 'none';
       dashHeader.style.display  = 'block';
+      document.getElementById('stats-row').style.display = 'grid';
       dashMain.style.display    = 'block';
 
       // ── Payment banner ────────────────────────────────
