@@ -21,553 +21,228 @@
     .pay-banner.banner-pending { background: rgba(216,160,90,.15); border-bottom: 1px solid rgba(216,160,90,.3); color: #7a5a20; }
     .pay-banner a { color: inherit; font-weight: 700; text-decoration: underline; }
 
-    /* ── Header ───────────────────────────────────────── */
-    .dash-header {
-      background: var(--ink);
-      color: #fff;
-      padding: 1.5rem 0 3.5rem;
-      position: relative;
+    /* ── Event header ─────────────────────────────────────── */
+    .event-header {
+      background: var(--ink); color: var(--paper);
+      padding: 32px 28px 80px;
+      position: relative; overflow: hidden;
+    }
+    .event-header::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(ellipse 60% 80% at 80% 0%, rgba(196,90,58,.3), transparent 60%);
+    }
+    .event-header-inner { max-width: 1200px; margin: 0 auto; position: relative; }
+    .event-header-top {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 56px; flex-wrap: wrap; gap: 1rem;
+    }
+    .event-header .brand { color: var(--paper); }
+    .event-header-nav { display: flex; gap: 24px; align-items: center; }
+    .event-header-nav a { color: rgba(251,245,236,.7); font-size: 14px; text-decoration: none; transition: color .15s; }
+    .event-header-nav a:hover { color: var(--paper); }
+    .event-header-nav a.active { color: var(--paper); }
+    .event-header-top-right { display: flex; align-items: center; gap: 10px; }
+
+    .event-header .live-badge {
+      display: inline-flex; gap: 8px; align-items: center;
+      background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12);
+      border-radius: 999px; padding: 6px 14px;
+      font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
+      color: rgba(251,245,236,.85); margin-bottom: 20px; width: fit-content;
+    }
+    .event-header .live-badge .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #2d7a4a; box-shadow: 0 0 0 4px rgba(45,122,74,.3);
+      animation: pulse 1.5s ease infinite; flex-shrink: 0;
+    }
+    @keyframes pulse { 50% { box-shadow: 0 0 0 8px rgba(45,122,74,0); } }
+
+    .event-header h1 {
+      font-family: var(--display); font-weight: 400;
+      font-size: clamp(40px, 6vw, 80px);
+      line-height: 1; letter-spacing: -.025em; margin-bottom: 12px; color: var(--paper);
+    }
+    .event-header h1 em { font-style: italic; color: var(--accent-soft); }
+
+    .event-header-meta {
+      font-family: var(--mono); font-size: 12px; letter-spacing: .14em;
+      color: rgba(251,245,236,.6); text-transform: uppercase;
+      display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
     }
 
-    .header-inner {
-      max-width: 1100px;
-      margin-inline: auto;
-      padding-inline: 1.5rem;
-    }
-
-    .header-top {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 2rem;
-    }
-
-    .header-logo {
-      font-family: var(--display);
-      font-size: 1.1rem;
-      letter-spacing: .12em;
-      text-transform: uppercase;
-      opacity: .75;
-      color: #fff;
-      text-decoration: none;
-    }
-
-    .header-body { display: flex; flex-direction: column; gap: .5rem; }
-
-    .event-type-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: .4rem;
-      background: rgba(255,255,255,.12);
-      border: 1px solid rgba(255,255,255,.2);
-      border-radius: 999px;
-      padding: .25rem .85rem;
-      font-family: var(--mono);
-      font-size: .72rem;
-      font-weight: 600;
-      letter-spacing: .08em;
-      text-transform: uppercase;
-      width: fit-content;
-      color: #fff;
-    }
-
-    .event-names {
-      font-family: var(--display);
-      font-size: clamp(1.8rem, 5vw, 3rem);
-      line-height: 1.15;
-      font-weight: 600;
-      color: #fff;
-    }
-
-    .event-meta { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-top: .25rem; }
-    .event-date { font-size: .9rem; opacity: .75; color: #fff; }
-
-    .plan-badge {
-      font-family: var(--mono);
-      font-size: .68rem;
-      font-weight: 600;
-      letter-spacing: .08em;
-      text-transform: uppercase;
-      padding: .2rem .7rem;
-      border-radius: 999px;
-    }
-
-    .plan-libre       { background: rgba(255,255,255,.12); color: rgba(255,255,255,.85); }
-    .plan-pending     { background: rgba(216,160,90,.25);  color: #fbbf24; }
-    .plan-selebrasyon { background: rgba(196,90,58,.3);    color: #fff; }
-    .plan-pro         { background: rgba(216,160,90,.3);   color: #f5d090; }
-
-    /* Nav links in header */
-    .header-nav-link {
-      color: rgba(255,255,255,.75);
-      font-size: .82rem;
-      text-decoration: none;
-      padding: .35rem .7rem;
-      border: 1px solid rgba(255,255,255,.2);
-      border-radius: var(--r-sm);
-      transition: background .15s;
-    }
-    .header-nav-link:hover { background: rgba(255,255,255,.12); }
-
-    /* Lang toggle in dark header */
-    .lang-toggle {
-      display: flex;
-      background: rgba(255,255,255,.12);
-      border-radius: 20px;
-      padding: 3px;
-      gap: 2px;
-    }
-    .lang-btn {
-      padding: .22rem .6rem;
-      border: none;
-      border-radius: 16px;
-      font-family: var(--sans);
-      font-size: .72rem;
-      font-weight: 600;
-      letter-spacing: .05em;
-      cursor: pointer;
-      background: transparent;
-      color: rgba(255,255,255,.65);
-      transition: background .15s, color .15s;
-    }
+    /* Lang toggle */
+    .lang-toggle { display: flex; background: rgba(255,255,255,.12); border-radius: 20px; padding: 3px; gap: 2px; }
+    .lang-btn { padding: .22rem .6rem; border: none; border-radius: 16px; font-family: var(--sans); font-size: .72rem; font-weight: 600; letter-spacing: .05em; cursor: pointer; background: transparent; color: rgba(255,255,255,.65); transition: background .15s, color .15s; }
     .lang-btn.active { background: rgba(255,255,255,.9); color: var(--ink); }
 
     /* Live wall button */
-    .btn-live-wall {
-      background: rgba(255,255,255,.12);
-      color: #fff;
-      border: 1px solid rgba(255,255,255,.25);
-      border-radius: 999px;
-      padding: .55rem 1.1rem;
-      font-family: var(--sans);
-      font-size: .85rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background .15s;
-      white-space: nowrap;
-    }
+    .btn-live-wall { background: rgba(255,255,255,.12); color: #fff; border: 1px solid rgba(255,255,255,.25); border-radius: 999px; padding: .45rem 1rem; font-family: var(--sans); font-size: .8rem; font-weight: 600; cursor: pointer; transition: background .15s; white-space: nowrap; }
     .btn-live-wall:hover { background: rgba(255,255,255,.22); }
 
-    .header-divider {
-      position: absolute;
-      bottom: -1px; left: 0; width: 100%; overflow: hidden; line-height: 0;
-    }
-    .header-divider svg { display: block; width: 100%; height: 48px; }
+    .header-nav-link { color: rgba(255,255,255,.75); font-size: .82rem; text-decoration: none; transition: color .15s; }
+    .header-nav-link:hover { color: #fff; }
 
-    /* ── Main layout ──────────────────────────────────── */
-    .dash-main {
-      max-width: 1100px;
-      margin-inline: auto;
-      padding: 2rem 1.5rem 4rem;
+    /* ── Stats (overlapping header) ──────────────────────── */
+    .stats {
+      max-width: 1200px; margin: -48px auto 0;
+      padding: 0 28px;
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+      position: relative; z-index: 5;
     }
-
-    /* ── Stats row ────────────────────────────────────── */
-    .stats-row {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 1rem;
-      margin-bottom: 1.75rem;
-    }
-
-    .stat-card {
-      background: #fff;
-      border: 1px solid var(--line);
-      border-radius: var(--r-lg);
-      padding: 1.25rem 1rem;
+    .stat {
+      background: #fff; border: 1px solid var(--line);
+      border-radius: var(--r-lg); padding: 24px 28px;
       box-shadow: var(--shadow-soft);
-      text-align: center;
-      transition: transform .2s, box-shadow .2s;
     }
+    .stat .lbl { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 8px; }
+    .stat .num { font-family: var(--display); font-size: 44px; font-weight: 400; line-height: 1; letter-spacing: -.02em; }
+    .stat .num em { font-style: italic; color: var(--accent); }
+    .stat .delta { font-family: var(--mono); font-size: 11px; color: #2d7a4a; margin-top: 6px; }
 
-    .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-card); }
-
-    .stat-icon { font-size: 1.75rem; margin-bottom: .35rem; line-height: 1; }
-
-    .stat-number {
-      font-family: var(--display);
-      font-size: 2rem;
-      font-weight: 600;
-      color: var(--ink);
-      line-height: 1;
-      margin-bottom: .2rem;
-    }
-
-    .stat-label {
-      font-family: var(--mono);
-      font-size: .7rem; font-weight: 600; color: var(--ink-faint);
-      text-transform: uppercase; letter-spacing: .1em;
-    }
-
-    /* ── Two-column layout (QR + gallery) ─────────────── */
-    .dash-grid {
-      display: grid;
-      grid-template-columns: 320px 1fr;
-      gap: 1.5rem;
+    /* ── Body grid ────────────────────────────────────────── */
+    .dash-body {
+      max-width: 1200px; margin: 56px auto 0;
+      padding: 0 28px 96px;
+      display: grid; grid-template-columns: 1fr 320px; gap: 32px;
       align-items: start;
     }
 
-    /* ── QR card ──────────────────────────────────────── */
-    .qr-card {
-      background: #fff;
-      border: 1px solid var(--line);
-      border-radius: var(--r-lg);
-      box-shadow: var(--shadow-soft);
-      padding: 1.75rem;
-      position: sticky;
-      top: 1.5rem;
+    /* ── Panel ────────────────────────────────────────────── */
+    .panel { background: #fff; border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; }
+    .panel-head { padding: 20px 24px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; }
+    .panel-head h2 { font-family: var(--display); font-size: 22px; font-weight: 500; letter-spacing: -.01em; color: var(--ink); }
+    .pill { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); padding: 6px 12px; border-radius: 999px; background: var(--paper-2); }
+
+    /* ── Tab row ──────────────────────────────────────────── */
+    .tab-row { display: flex; gap: 6px; padding: 16px 24px; border-bottom: 1px solid var(--line); }
+    .g-tab { padding: 8px 14px; border-radius: 999px; font-size: 13px; color: var(--ink-soft); cursor: pointer; border: none; background: transparent; font-family: var(--sans); transition: background .15s, color .15s; }
+    .g-tab.active { background: var(--ink); color: var(--paper); }
+
+    /* ── Photo grid ───────────────────────────────────────── */
+    .photo-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 4px; padding: 4px;
     }
-
-    .qr-card-title {
-      font-family: var(--display);
-      font-size: 1.05rem;
-      color: var(--ink);
-      margin-bottom: 1.25rem;
-      display: flex;
-      align-items: center;
-      gap: .5rem;
-    }
-
-    .qr-image-wrap {
-      background: var(--paper-2);
-      border-radius: var(--r);
-      padding: 1.25rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 1rem;
-      min-height: 180px;
-    }
-
-    #qr-img { width: 100%; max-width: 200px; border-radius: 8px; }
-
-    .qr-url {
-      text-align: center;
-      font-family: var(--mono);
-      font-size: .75rem;
-      color: var(--ink-soft);
-      word-break: break-all;
-      margin-bottom: 1.25rem;
-      padding: .5rem .75rem;
-      background: var(--paper-2);
-      border: 1px solid var(--line);
-      border-radius: var(--r-sm);
-    }
-
-    .qr-actions { display: flex; flex-direction: column; gap: .65rem; }
-
-    .btn-qr-action {
-      width: 100%;
-      padding: .7rem 1rem;
-      border-radius: 999px;
-      font-family: var(--sans);
-      font-size: .9rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all .2s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: .5rem;
-      min-height: 44px;
-    }
-
-    .btn-qr-primary {
-      background: var(--accent); color: #fff; border: none;
-      box-shadow: 0 1px 2px rgba(196,90,58,.3);
-    }
-    .btn-qr-primary:hover { background: var(--accent-deep); }
-
-    .btn-qr-outline {
-      background: transparent; color: var(--accent);
-      border: 1.5px solid var(--accent);
-    }
-    .btn-qr-outline:hover { background: var(--accent); color: #fff; }
-
-    /* ── Gallery panel ────────────────────────────────── */
-    .gallery-panel {
-      background: #fff;
-      border: 1px solid var(--line);
-      border-radius: var(--r-lg);
-      box-shadow: var(--shadow-soft);
-      overflow: hidden;
-    }
-
-    .gallery-header {
-      padding: 1.25rem 1.5rem 0;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 1rem;
-    }
-
-    .gallery-title { font-family: var(--display); font-size: 1.05rem; color: var(--ink); }
-
-    .gallery-tabs {
-      display: flex; gap: .25rem;
-      background: var(--paper-2);
-      border-radius: var(--r);
-      padding: 3px;
-    }
-
-    .g-tab {
-      padding: .45rem 1rem;
-      border: none;
-      border-radius: calc(var(--r) - 2px);
-      background: transparent;
-      color: var(--ink-soft);
-      font-family: var(--sans);
-      font-weight: 600;
-      font-size: .83rem;
-      cursor: pointer;
-      transition: all .18s;
-      white-space: nowrap;
-    }
-
-    .g-tab.active { background: #fff; color: var(--ink); box-shadow: var(--shadow-soft); }
-
-    .gallery-body { padding: 1.25rem 1.5rem 1.5rem; }
-
-    /* ── Photo/video grid ─────────────────────────────── */
-    .gallery-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: .75rem;
-    }
-
     .gallery-item {
-      position: relative;
-      aspect-ratio: 1;
-      border-radius: var(--r);
-      overflow: hidden;
-      cursor: pointer;
-      background: var(--paper-2);
+      aspect-ratio: 1; position: relative; overflow: hidden;
+      background: var(--paper-2); cursor: pointer;
     }
-
     .gallery-item img,
-    .gallery-item video {
-      width: 100%; height: 100%; object-fit: cover; display: block;
-      transition: transform .3s;
-    }
-
+    .gallery-item video { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .3s; }
     .gallery-item:hover img,
     .gallery-item:hover video { transform: scale(1.04); }
 
     .gallery-item-overlay {
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(to top, rgba(0,0,0,.65) 0%, transparent 50%);
-      display: flex;
-      align-items: flex-end;
-      justify-content: space-between;
-      padding: .5rem .6rem;
-      opacity: 0;
-      transition: opacity .2s;
+      position: absolute; inset: 0;
+      background: linear-gradient(180deg, rgba(0,0,0,0) 50%, rgba(0,0,0,.6) 100%);
+      opacity: 0; transition: opacity .2s ease;
+      display: flex; align-items: flex-end; justify-content: space-between;
+      padding: 8px;
     }
-
     .gallery-item:hover .gallery-item-overlay { opacity: 1; }
+    .item-name { color: #fff; font-family: var(--display); font-style: italic; font-size: 12px; max-width: 70%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .feature-btn { background: rgba(255,255,255,.95); border-radius: 999px; padding: 4px 8px; font-family: var(--mono); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; border: none; cursor: pointer; flex-shrink: 0; }
 
-    .btn-delete-item {
-      position: absolute;
-      top: .35rem; right: .35rem;
-      width: 26px; height: 26px;
-      border-radius: 50%;
-      background: rgba(0,0,0,.55);
-      border: none; color: #fff; font-size: .75rem;
-      cursor: pointer;
-      display: none; align-items: center; justify-content: center;
-      line-height: 1; z-index: 10;
-    }
+    .btn-delete-item { position: absolute; top: .35rem; right: .35rem; width: 26px; height: 26px; border-radius: 50%; background: rgba(0,0,0,.55); border: none; color: #fff; font-size: .75rem; cursor: pointer; display: none; align-items: center; justify-content: center; line-height: 1; z-index: 10; }
     .gallery-item:hover .btn-delete-item { display: flex; }
 
-    .btn-delete-vm {
-      background: none;
-      border: 1px solid rgba(196,90,58,.3);
-      color: var(--accent);
-      border-radius: 50%;
-      width: 28px; height: 28px;
-      font-size: .75rem;
-      cursor: pointer; flex-shrink: 0;
-      display: flex; align-items: center; justify-content: center;
-      margin-left: .4rem;
-    }
-    .btn-delete-vm:hover { background: var(--accent); color: #fff; }
+    .play-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.25); pointer-events: none; }
+    .play-btn-circle { width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,.9); display: flex; align-items: center; justify-content: center; font-size: 1rem; padding-left: 3px; }
+    .vm-badge { position: absolute; top: .4rem; right: .4rem; background: var(--accent); color: #fff; border-radius: 999px; padding: .1rem .45rem; font-size: .65rem; font-weight: 700; }
 
-    .item-name { font-size: .72rem; font-weight: 600; color: #fff; max-width: 70%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .item-time { font-size: .65rem; color: rgba(255,255,255,.8); }
-
-    .play-overlay {
-      position: absolute; inset: 0;
-      display: flex; align-items: center; justify-content: center;
-      background: rgba(0,0,0,.25);
-    }
-
-    .play-btn-circle {
-      width: 44px; height: 44px;
-      border-radius: 50%;
-      background: rgba(255,255,255,.9);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1rem; padding-left: 3px;
-    }
-
-    .vm-badge {
-      position: absolute; top: .4rem; right: .4rem;
-      background: var(--accent); color: #fff;
-      border-radius: 999px;
-      padding: .1rem .45rem; font-size: .65rem; font-weight: 700;
-    }
-
+    /* ── Gallery empty state ──────────────────────────────── */
     .gallery-empty { text-align: center; padding: 3rem 1rem; color: var(--ink-soft); }
     .gallery-empty-icon { font-size: 3rem; margin-bottom: .75rem; }
     .gallery-empty p { font-size: .9rem; }
 
-    /* ── Video messages list ──────────────────────────── */
-    .vm-list { display: flex; flex-direction: column; gap: .75rem; }
-
-    .vm-item {
-      display: flex; align-items: center; gap: 1rem;
-      padding: 1rem;
-      background: var(--paper);
-      border-radius: var(--r);
-      transition: background .15s;
-    }
+    /* ── Video messages list ──────────────────────────────── */
+    .vm-list { display: flex; flex-direction: column; gap: .75rem; padding: 1rem 1.5rem; }
+    .vm-item { display: flex; align-items: center; gap: 1rem; padding: 1rem; background: var(--paper); border-radius: var(--r); transition: background .15s; }
     .vm-item:hover { background: var(--paper-2); }
-
-    .vm-avatar {
-      width: 44px; height: 44px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, var(--accent-soft), var(--accent));
-      color: #fff;
-      font-weight: 700; font-size: 1.1rem;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-    }
-
+    .vm-avatar { width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, var(--accent-soft), var(--accent)); color: #fff; font-weight: 700; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .vm-info { flex: 1; min-width: 0; }
     .vm-name { font-weight: 600; font-size: .9rem; color: var(--ink); margin-bottom: .15rem; }
     .vm-meta { font-size: .75rem; color: var(--ink-soft); }
-
-    .btn-play {
-      padding: .45rem 1rem;
-      background: var(--accent); color: #fff;
-      border: none; border-radius: 999px;
-      font-family: var(--sans); font-size: .8rem; font-weight: 600;
-      cursor: pointer; transition: background .15s;
-      white-space: nowrap; flex-shrink: 0;
-    }
+    .btn-play { padding: .45rem 1rem; background: var(--accent); color: #fff; border: none; border-radius: 999px; font-family: var(--sans); font-size: .8rem; font-weight: 600; cursor: pointer; transition: background .15s; white-space: nowrap; flex-shrink: 0; }
     .btn-play:hover { background: var(--accent-deep); }
+    .btn-delete-vm { background: none; border: 1px solid rgba(196,90,58,.3); color: var(--accent); border-radius: 50%; width: 28px; height: 28px; font-size: .75rem; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; margin-left: .4rem; }
+    .btn-delete-vm:hover { background: var(--accent); color: #fff; }
 
-    /* ── Download bar ─────────────────────────────────── */
-    .download-bar {
-      margin-top: 1.25rem; padding-top: 1.25rem;
-      border-top: 1px solid var(--line);
-      display: flex; align-items: center; justify-content: space-between;
-      flex-wrap: wrap; gap: .75rem;
-    }
-
+    /* ── Download bar ─────────────────────────────────────── */
+    .download-bar { margin: 1rem 1.5rem 1.5rem; padding-top: 1rem; border-top: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .75rem; }
     .download-count { font-size: .85rem; color: var(--ink-soft); }
-
-    .btn-download-all {
-      padding: .6rem 1.25rem;
-      background: var(--ink); color: #fff;
-      border: none; border-radius: 999px;
-      font-family: var(--sans); font-size: .88rem; font-weight: 600;
-      cursor: pointer; transition: opacity .15s;
-      display: flex; align-items: center; gap: .5rem;
-    }
+    .btn-download-all { padding: .6rem 1.25rem; background: var(--ink); color: #fff; border: none; border-radius: 999px; font-family: var(--sans); font-size: .88rem; font-weight: 600; cursor: pointer; transition: opacity .15s; display: flex; align-items: center; gap: .5rem; }
     .btn-download-all:hover { opacity: .85; }
 
-    /* ── Refresh indicator ────────────────────────────── */
-    .refresh-dot {
-      width: 7px; height: 7px;
-      border-radius: 50%;
-      background: var(--accent-soft);
-      display: inline-block; margin-left: .4rem;
-      animation: blink 2s infinite;
+    /* ── QR card (sidebar) ────────────────────────────────── */
+    .qr-card {
+      background: #fff; border: 1px solid var(--line);
+      border-radius: var(--r-lg); padding: 28px; text-align: center;
     }
-    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+    .qr-eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; color: var(--ink-faint); text-transform: uppercase; margin-bottom: 14px; }
+    .qr-placeholder {
+      aspect-ratio: 1; margin-bottom: 16px;
+      background:
+        linear-gradient(45deg, var(--ink) 25%, transparent 25%),
+        linear-gradient(-45deg, var(--ink) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, var(--ink) 75%),
+        linear-gradient(-45deg, transparent 75%, var(--ink) 75%);
+      background-size: 14px 14px;
+      background-position: 0 0, 0 7px, 7px -7px, -7px 0;
+      border-radius: 8px;
+      border: 12px solid #fff;
+      box-shadow: 0 0 0 1px var(--line);
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden;
+    }
+    .qr-placeholder img { width: 100%; height: 100%; object-fit: contain; }
+    .qr-url { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; color: var(--ink-soft); margin-bottom: 16px; word-break: break-all; }
+    .actions-stack { display: grid; gap: 8px; }
 
-    /* ── Lightbox ─────────────────────────────────────── */
-    .lightbox {
-      display: none; position: fixed; inset: 0;
-      background: rgba(0,0,0,.92); z-index: 1000;
-      align-items: center; justify-content: center; padding: 1rem;
+    /* ── Info card ────────────────────────────────────────── */
+    .info-card {
+      background: var(--paper-2); border: 1px solid var(--line);
+      border-radius: var(--r-lg); padding: 24px; margin-top: 16px;
     }
+    .info-card h3 { font-family: var(--display); font-size: 18px; font-weight: 500; margin-bottom: 12px; color: var(--ink); }
+    .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-top: 1px solid var(--line); font-size: 14px; }
+    .info-row:first-of-type { border-top: none; padding-top: 0; }
+    .info-row span:first-child { color: var(--ink-soft); }
+    .info-row span:last-child { font-weight: 500; color: var(--ink); }
+
+    /* ── Lightbox ─────────────────────────────────────────── */
+    .lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.92); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
     .lightbox.open { display: flex; }
-
-    .lb-close {
-      position: fixed; top: 1rem; right: 1rem;
-      width: 44px; height: 44px;
-      border-radius: 50%;
-      background: rgba(255,255,255,.15); border: none;
-      color: #fff; font-size: 1.4rem; cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      z-index: 1001; transition: background .15s;
-    }
+    .lb-close { position: fixed; top: 1rem; right: 1rem; width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,.15); border: none; color: #fff; font-size: 1.4rem; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 1001; transition: background .15s; }
     .lb-close:hover { background: rgba(255,255,255,.28); }
-
-    .lb-nav {
-      position: fixed; top: 50%; transform: translateY(-50%);
-      width: 48px; height: 48px;
-      border-radius: 50%;
-      background: rgba(255,255,255,.12); border: none;
-      color: #fff; font-size: 1.4rem; cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      transition: background .15s; z-index: 1001;
-    }
+    .lb-nav { position: fixed; top: 50%; transform: translateY(-50%); width: 48px; height: 48px; border-radius: 50%; background: rgba(255,255,255,.12); border: none; color: #fff; font-size: 1.4rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background .15s; z-index: 1001; }
     .lb-nav:hover { background: rgba(255,255,255,.25); }
-    .lb-prev { left: .75rem; }
-    .lb-next { right: .75rem; }
-
-    .lb-body {
-      max-width: 900px; width: 100%;
-      display: flex; flex-direction: column;
-      align-items: center; gap: 1rem;
-    }
-
-    #lb-media {
-      width: 100%; max-height: 75vh;
-      display: flex; align-items: center; justify-content: center;
-    }
-
-    #lb-media img, #lb-media video {
-      max-width: 100%; max-height: 75vh;
-      border-radius: 8px; object-fit: contain; display: block;
-    }
-
+    .lb-prev { left: .75rem; } .lb-next { right: .75rem; }
+    .lb-body { max-width: 900px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 1rem; }
+    #lb-media { width: 100%; max-height: 75vh; display: flex; align-items: center; justify-content: center; }
+    #lb-media img, #lb-media video { max-width: 100%; max-height: 75vh; border-radius: 8px; object-fit: contain; display: block; }
     .lb-meta { text-align: center; color: #fff; }
     .lb-uploader { font-weight: 600; font-size: 1rem; margin-bottom: .25rem; }
     .lb-message  { font-size: .875rem; opacity: .7; max-width: 500px; line-height: 1.5; }
     .lb-counter  { font-size: .75rem; opacity: .5; margin-top: .25rem; }
 
-    /* ── Loading + error states ───────────────────────── */
-    .page-loading {
-      display: flex; align-items: center; justify-content: center;
-      min-height: 60vh;
-    }
-
-    .page-error {
-      display: none; text-align: center;
-      padding: 6rem 2rem; color: var(--ink-soft);
-    }
+    /* ── Loading + error states ───────────────────────────── */
+    .page-loading { display: flex; align-items: center; justify-content: center; min-height: 60vh; }
+    .page-error { display: none; text-align: center; padding: 6rem 2rem; color: var(--ink-soft); }
     .page-error-icon { font-size: 3rem; margin-bottom: 1rem; }
 
-    /* ── Responsive ───────────────────────────────────── */
-    @media (max-width: 900px) {
-      .dash-grid { grid-template-columns: 1fr; }
-      .qr-card { position: static; }
+    /* ── Responsive ───────────────────────────────────────── */
+    @media (max-width: 1024px) {
+      .dash-body { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: repeat(2, 1fr); }
     }
-
     @media (max-width: 640px) {
-      .stats-row { grid-template-columns: repeat(2, 1fr); }
-      .gallery-grid { grid-template-columns: repeat(2, 1fr); }
-      .header-inner { padding-inline: 1rem; }
-      .dash-main { padding-inline: 1rem; }
-    }
-
-    @media (max-width: 380px) {
-      .stats-row { grid-template-columns: repeat(2, 1fr); gap: .6rem; }
-      .stat-number { font-size: 1.6rem; }
+      .photo-grid { grid-template-columns: repeat(2, 1fr); }
+      .stats { padding: 0 16px; margin-top: -32px; }
+      .dash-body { padding: 0 16px 64px; margin-top: 40px; }
+      .event-header { padding: 24px 16px 72px; }
+      .event-header h1 { font-size: 36px; }
+      .event-header-top { margin-bottom: 32px; }
     }
   </style>
 </head>
@@ -578,154 +253,155 @@
   <span id="pay-banner-text"></span>
 </div>
 
-<!-- ── Header ────────────────────────────────────────────── -->
-<header class="dash-header" id="dash-header" style="display:none">
-  <div class="header-inner">
-    <div class="header-top">
-      <a href="/" class="header-logo">Reelday ✦</a>
-      <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
-        <div id="dash-nav-links" style="display:flex;gap:.5rem;align-items:center"></div>
+<!-- ── Event header ───────────────────────────────────────── -->
+<section class="event-header" id="dash-header" style="display:none">
+  <div class="event-header-inner">
+    <div class="event-header-top">
+      <a class="brand" href="/">REELDAY<sup>★</sup></a>
+      <div class="event-header-nav">
+        <a class="active" href="#">Dashboard</a>
+        <a id="wall-nav-link" href="#">Wall</a>
+        <a id="upload-nav-link" href="#">Upload page</a>
+        <a href="#">Settings</a>
+      </div>
+      <div class="event-header-top-right">
+        <div id="dash-nav-links"></div>
         <div class="lang-toggle" id="lang-toggle">
           <button class="lang-btn active" data-lang="en">EN</button>
           <button class="lang-btn" data-lang="fil">FIL</button>
         </div>
         <button class="btn-live-wall" id="btn-live-wall"
-          data-en="📺 Open Live Wall" data-fil="📺 Buksan ang Live Wall">📺 Open Live Wall</button>
+          data-en="📺 Live Wall" data-fil="📺 Live Wall">📺 Live Wall</button>
       </div>
     </div>
 
-    <div class="header-body">
-      <div class="event-type-badge" id="event-type-badge">💍 Kasalan</div>
-      <h1 class="event-names" id="event-names">—</h1>
-      <div class="event-meta">
-        <span class="event-date" id="event-date"></span>
-        <span class="plan-badge" id="plan-badge">Libre</span>
-      </div>
+    <div class="live-badge"><span class="dot"></span>Live · <span id="live-count">guests sharing</span></div>
+    <h1 id="event-names">—</h1>
+    <div class="event-header-meta">
+      <span id="event-date"></span>
+      <!-- kept for JS compatibility, not visible -->
+      <span id="event-type-badge" style="display:none"></span>
+      <span id="plan-badge" style="display:none"></span>
     </div>
   </div>
+</section>
 
-  <div class="header-divider">
-    <svg viewBox="0 0 1200 48" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M0,48 C400,0 800,0 1200,48 L1200,48 L0,48 Z" style="fill:var(--paper)" />
-    </svg>
+<!-- ── Stats (overlapping header) ────────────────────────── -->
+<div class="stats">
+  <div class="stat">
+    <div class="lbl">Total uploads</div>
+    <div class="num"><em id="stat-total">0</em></div>
+    <div class="delta">All media</div>
   </div>
-</header>
+  <div class="stat">
+    <div class="lbl">Photos</div>
+    <div class="num"><em id="stat-photos">0</em></div>
+    <div class="delta">Images shared</div>
+  </div>
+  <div class="stat">
+    <div class="lbl">Videos</div>
+    <div class="num"><em id="stat-videos">0</em></div>
+    <div class="delta">Clips shared</div>
+  </div>
+  <div class="stat">
+    <div class="lbl">Messages</div>
+    <div class="num"><em id="stat-vms">0</em></div>
+    <div class="delta">Video messages</div>
+  </div>
+</div>
 
-<!-- ── Page loading ──────────────────────────────────────── -->
+<!-- ── Page loading ───────────────────────────────────────── -->
 <div class="page-loading" id="page-loading">
   <div class="spinner"></div>
 </div>
 
-<!-- ── Page error ────────────────────────────────────────── -->
+<!-- ── Page error ─────────────────────────────────────────── -->
 <div class="page-error" id="page-error">
   <div class="page-error-icon">😔</div>
   <p id="page-error-msg" style="font-size:.95rem">Event not found.</p>
 </div>
 
-<!-- ── Main ──────────────────────────────────────────────── -->
-<main class="dash-main" id="dash-main" style="display:none">
+<!-- ── Main body ──────────────────────────────────────────── -->
+<div class="dash-body" id="dash-main" style="display:none">
 
-  <!-- Stats -->
-  <div class="stats-row">
-    <div class="stat-card">
-      <div class="stat-icon">📸</div>
-      <div class="stat-number" id="stat-total">0</div>
-      <div class="stat-label" data-en="Total" data-fil="Lahat">Total</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon">🖼️</div>
-      <div class="stat-number" id="stat-photos">0</div>
-      <div class="stat-label" data-en="Photos" data-fil="Litrato">Photos</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon">🎬</div>
-      <div class="stat-number" id="stat-videos">0</div>
-      <div class="stat-label" data-en="Videos" data-fil="Videos">Videos</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon">💌</div>
-      <div class="stat-number" id="stat-vms">0</div>
-      <div class="stat-label" data-en="Messages" data-fil="Mensahe">Messages</div>
+  <!-- ── Gallery panel (left) ───────────────────────────── -->
+  <div>
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Photo stream</h2>
+        <span class="pill">Auto-approve · ON</span>
+      </div>
+      <div class="tab-row">
+        <button class="g-tab active" data-tab="all" data-en="All" data-fil="Lahat">All</button>
+        <button class="g-tab" data-tab="vm" data-en="Video Messages" data-fil="Video Messages">Video Messages</button>
+      </div>
+
+      <!-- All uploads -->
+      <div id="tab-all">
+        <div class="photo-grid" id="gallery-grid"></div>
+        <div class="gallery-empty" id="gallery-empty" style="display:none">
+          <div class="gallery-empty-icon">📭</div>
+          <p data-en="No uploads yet. Share the QR code with your guests!" data-fil="Wala pang uploads. I-share ang QR code sa inyong mga bisita!">No uploads yet. Share the QR code with your guests!</p>
+        </div>
+      </div>
+
+      <!-- Video messages -->
+      <div id="tab-vm" style="display:none">
+        <div class="vm-list" id="vm-list"></div>
+        <div class="gallery-empty" id="vm-empty" style="display:none">
+          <div class="gallery-empty-icon">💌</div>
+          <p data-en="No video messages yet." data-fil="Wala pang video messages.">No video messages yet.</p>
+        </div>
+      </div>
+
+      <!-- Download bar -->
+      <div class="download-bar">
+        <span class="download-count" id="download-count">0 files</span>
+        <button class="btn-download-all" id="btn-download-all"
+          data-en="📥 Download All" data-fil="📥 I-download lahat">
+          📥 Download All
+        </button>
+      </div>
     </div>
   </div>
 
-  <!-- Two-col grid -->
-  <div class="dash-grid">
-
-    <!-- QR card -->
+  <!-- ── Sidebar (right) ────────────────────────────────── -->
+  <div>
     <div class="qr-card">
-      <p class="qr-card-title" data-en="🔗 Guest Upload Link" data-fil="🔗 Link para sa Bisita">🔗 Guest Upload Link</p>
-
-      <div class="qr-image-wrap" id="qr-wrap">
-        <div class="spinner"></div>
+      <div class="qr-eyebrow">— Your event QR</div>
+      <div class="qr-placeholder" id="qr-wrap">
+        <div class="spinner" style="margin:auto"></div>
       </div>
-
       <div class="qr-url" id="qr-url">—</div>
-
-      <div class="qr-actions">
-        <button class="btn-qr-action btn-qr-primary" id="btn-download-qr"
+      <div class="actions-stack">
+        <a class="btn btn-accent" id="btn-open-upload" href="#" target="_blank" rel="noopener">Open upload page →</a>
+        <button class="btn btn-ghost" id="btn-download-qr"
           data-en="📥 Download QR Code" data-fil="📥 I-download ang QR">
           📥 Download QR Code
         </button>
-        <button class="btn-qr-action btn-qr-outline" id="btn-copy-link"
+        <button class="btn btn-ghost" id="btn-copy-link"
           data-en="🔗 Copy Guest Link" data-fil="🔗 Kopyahin ang Link">
           🔗 Copy Guest Link
         </button>
       </div>
     </div>
 
-    <!-- Gallery panel -->
-    <div class="gallery-panel">
-      <div class="gallery-header">
-        <div style="display:flex;align-items:center;gap:.5rem">
-          <span class="gallery-title" data-en="Gallery" data-fil="Gallery">Gallery</span>
-          <span class="refresh-dot" title="Auto-refreshes every 10s"></span>
-        </div>
-        <div class="gallery-tabs">
-          <button class="g-tab active" data-tab="all" data-en="All" data-fil="Lahat">All</button>
-          <button class="g-tab" data-tab="vm" data-en="Video Messages" data-fil="Video Messages">Video Messages</button>
-        </div>
-      </div>
-
-      <div class="gallery-body">
-        <!-- All uploads grid -->
-        <div id="tab-all">
-          <div class="gallery-grid" id="gallery-grid"></div>
-          <div class="gallery-empty" id="gallery-empty" style="display:none">
-            <div class="gallery-empty-icon">📭</div>
-            <p data-en="No uploads yet. Share the QR code with your guests!" data-fil="Wala pang uploads. I-share ang QR code sa inyong mga bisita!">No uploads yet. Share the QR code with your guests!</p>
-          </div>
-        </div>
-
-        <!-- Video messages list -->
-        <div id="tab-vm" style="display:none">
-          <div class="vm-list" id="vm-list"></div>
-          <div class="gallery-empty" id="vm-empty" style="display:none">
-            <div class="gallery-empty-icon">💌</div>
-            <p data-en="No video messages yet." data-fil="Wala pang video messages.">No video messages yet.</p>
-          </div>
-        </div>
-
-        <!-- Download bar -->
-        <div class="download-bar">
-          <span class="download-count" id="download-count">0 files</span>
-          <button class="btn-download-all" id="btn-download-all"
-            data-en="📥 Download All" data-fil="📥 I-download lahat">
-            📥 Download All
-          </button>
-        </div>
-      </div>
+    <div class="info-card">
+      <h3>Event info</h3>
+      <div class="info-row"><span>Type</span><span id="info-type">—</span></div>
+      <div class="info-row"><span>Plan</span><span id="info-plan">—</span></div>
+      <div class="info-row"><span>Wall expires</span><span id="info-expires">—</span></div>
+      <div class="info-row"><span>Archive</span><span>30 days</span></div>
     </div>
-
   </div>
-</main>
+
+</div>
 
 <!-- ── Lightbox ───────────────────────────────────────────── -->
 <div class="lightbox" id="lightbox" role="dialog" aria-modal="true">
   <button class="lb-close" id="lb-close" aria-label="Close">✕</button>
   <button class="lb-nav lb-prev" id="lb-prev" aria-label="Previous">‹</button>
   <button class="lb-nav lb-next" id="lb-next" aria-label="Next">›</button>
-
   <div class="lb-body">
     <div id="lb-media"></div>
     <div class="lb-meta">
@@ -774,34 +450,34 @@
   const isTrial     = params.get('trial') === 'true';
   let allUploads    = [];
   let lbIndex       = 0;
-  let lbItems       = [];   // items currently navigable in lightbox
+  let lbItems       = [];
   let qrDataUrl     = '';
   let activeTab     = 'all';
 
   // ── DOM refs ──────────────────────────────────────────
   const $ = id => document.getElementById(id);
 
-  const dashHeader    = $('dash-header');
-  const pageLoading   = $('page-loading');
-  const pageError     = $('page-error');
-  const dashMain      = $('dash-main');
-  const eventNames    = $('event-names');
-  const eventDate     = $('event-date');
+  const dashHeader     = $('dash-header');
+  const pageLoading    = $('page-loading');
+  const pageError      = $('page-error');
+  const dashMain       = $('dash-main');
+  const eventNames     = $('event-names');
+  const eventDate      = $('event-date');
   const eventTypeBadge = $('event-type-badge');
-  const planBadge     = $('plan-badge');
-  const qrWrap        = $('qr-wrap');
-  const qrUrl         = $('qr-url');
-  const galleryGrid   = $('gallery-grid');
-  const galleryEmpty  = $('gallery-empty');
-  const vmList        = $('vm-list');
-  const vmEmpty       = $('vm-empty');
-  const downloadCount = $('download-count');
-  const lightbox      = $('lightbox');
-  const lbMedia       = $('lb-media');
-  const lbUploader    = $('lb-uploader');
-  const lbMessage     = $('lb-message');
-  const lbCounter     = $('lb-counter');
-  const toast         = $('toast');
+  const planBadge      = $('plan-badge');
+  const qrWrap         = $('qr-wrap');
+  const qrUrl          = $('qr-url');
+  const galleryGrid    = $('gallery-grid');
+  const galleryEmpty   = $('gallery-empty');
+  const vmList         = $('vm-list');
+  const vmEmpty        = $('vm-empty');
+  const downloadCount  = $('download-count');
+  const lightbox       = $('lightbox');
+  const lbMedia        = $('lb-media');
+  const lbUploader     = $('lb-uploader');
+  const lbMessage      = $('lb-message');
+  const lbCounter      = $('lb-counter');
+  const toast          = $('toast');
 
   // ── Helpers ───────────────────────────────────────────
   function timeAgo(dateStr) {
@@ -844,12 +520,14 @@
     eventNames.textContent = event.couple_names;
     document.title         = `Reelday — ${event.couple_names}`;
 
+    const meta = THEME_MAP[event.event_type] || THEME_MAP.wedding;
+
     if (event.event_date) {
-      eventDate.textContent = formatDate(event.event_date);
+      eventDate.textContent = formatDate(event.event_date) + ' · ' + meta.label;
     }
 
-    const plan    = event.plan || 'libre';
-    const isPaid  = event.is_paid;
+    const plan      = event.plan || 'libre';
+    const isPaid    = event.is_paid;
     const isPending = !isPaid && plan !== 'libre';
 
     if (isPending) {
@@ -862,12 +540,25 @@
       planBadge.textContent = 'PRO ✓';
       planBadge.className   = 'plan-badge plan-pro';
     } else {
-      planBadge.textContent = 'LIBRE';
+      planBadge.textContent = plan.toUpperCase();
       planBadge.className   = 'plan-badge plan-libre';
     }
 
-    $('btn-live-wall').onclick = () =>
-      window.open(`/wall/${slug}`, '_blank');
+    // Nav links
+    const wallLink   = $('wall-nav-link');
+    const uploadLink = $('upload-nav-link');
+    if (wallLink)   wallLink.href   = `/wall/${slug}`;
+    if (uploadLink) uploadLink.href = `/upload/${slug}`;
+
+    // Info card
+    const infoType    = $('info-type');
+    const infoPlan    = $('info-plan');
+    const infoExpires = $('info-expires');
+    if (infoType)    infoType.textContent = meta.label;
+    if (infoPlan)    infoPlan.textContent = plan.charAt(0).toUpperCase() + plan.slice(1) + (isPaid ? ' ✓' : '');
+    if (infoExpires && event.wall_expires_at) infoExpires.textContent = formatDate(event.wall_expires_at);
+
+    $('btn-live-wall').onclick = () => window.open(`/wall/${slug}`, '_blank');
   }
 
   // ── Render QR ─────────────────────────────────────────
@@ -875,8 +566,11 @@
     qrDataUrl = dataUrl;
     const uploadUrl = `${location.protocol}//${location.host}/upload/${slug}`;
 
-    qrWrap.innerHTML = `<img id="qr-img" src="${dataUrl}" alt="QR Code" />`;
+    qrWrap.innerHTML = `<img src="${dataUrl}" alt="QR Code" style="width:100%;height:100%;object-fit:contain;border-radius:4px" />`;
     qrUrl.textContent = uploadUrl;
+
+    const openBtn = $('btn-open-upload');
+    if (openBtn) openBtn.href = uploadUrl;
 
     $('btn-download-qr').onclick = () => {
       const a = document.createElement('a');
@@ -898,9 +592,9 @@
 
   // ── Render stats ──────────────────────────────────────
   function renderStats(uploads) {
-    const photos  = uploads.filter(u => !u.is_video_message && u.file_type === 'photo').length;
-    const videos  = uploads.filter(u => !u.is_video_message && u.file_type === 'video').length;
-    const vms     = uploads.filter(u => u.is_video_message).length;
+    const photos = uploads.filter(u => !u.is_video_message && u.file_type === 'photo').length;
+    const videos = uploads.filter(u => !u.is_video_message && u.file_type === 'video').length;
+    const vms    = uploads.filter(u => u.is_video_message).length;
 
     $('stat-total').textContent  = uploads.length;
     $('stat-photos').textContent = photos;
@@ -929,8 +623,7 @@
   // ── Render gallery grid ───────────────────────────────
   function renderGallery(uploads) {
     allUploads = uploads;
-
-    lbItems = uploads;
+    lbItems    = uploads;
 
     if (!uploads.length) {
       galleryGrid.innerHTML = '';
@@ -940,7 +633,6 @@
       galleryGrid.innerHTML = uploads.map((u, i) => {
         const isVideo = u.file_type === 'video';
         const name    = escHtml(u.uploader_name || 'Guest');
-        const time    = timeAgo(u.created_at);
         const vmMark  = u.is_video_message ? '<div class="vm-badge">💌</div>' : '';
 
         const media = isVideo
@@ -954,13 +646,12 @@
             ${vmMark}
             <div class="gallery-item-overlay">
               <span class="item-name">${name}</span>
-              <span class="item-time">${time}</span>
+              <button class="feature-btn" onclick="event.stopPropagation()">Feature</button>
             </div>
             <button class="btn-delete-item" data-id="${escHtml(u.id)}" title="Burahin">✕</button>
           </div>`;
       }).join('');
 
-      // Attach click via delegation
       galleryGrid.onclick = e => {
         const delBtn = e.target.closest('.btn-delete-item');
         if (delBtn) { deleteUpload(delBtn.dataset.id); return; }
@@ -1025,8 +716,6 @@
   function renderLightboxSlide() {
     const u = allUploads[lbIndex];
     if (!u) return;
-
-    // Stop any previous video
     const prevVideo = lbMedia.querySelector('video');
     if (prevVideo) prevVideo.pause();
 
@@ -1049,20 +738,10 @@
   }
 
   $('lb-close').onclick = closeLightbox;
+  $('lb-prev').onclick  = () => { lbIndex = (lbIndex - 1 + allUploads.length) % allUploads.length; renderLightboxSlide(); };
+  $('lb-next').onclick  = () => { lbIndex = (lbIndex + 1) % allUploads.length; renderLightboxSlide(); };
 
-  $('lb-prev').onclick = () => {
-    lbIndex = (lbIndex - 1 + allUploads.length) % allUploads.length;
-    renderLightboxSlide();
-  };
-
-  $('lb-next').onclick = () => {
-    lbIndex = (lbIndex + 1) % allUploads.length;
-    renderLightboxSlide();
-  };
-
-  lightbox.addEventListener('click', e => {
-    if (e.target === lightbox) closeLightbox();
-  });
+  lightbox.addEventListener('click', e => { if (e.target === lightbox) closeLightbox(); });
 
   document.addEventListener('keydown', e => {
     if (!lightbox.classList.contains('open')) return;
@@ -1080,9 +759,9 @@
       data.files.forEach((f, i) => {
         setTimeout(() => {
           const a = document.createElement('a');
-          a.href     = f.url;
-          a.target   = '_blank';
-          a.rel      = 'noopener';
+          a.href   = f.url;
+          a.target = '_blank';
+          a.rel    = 'noopener';
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
@@ -1122,9 +801,9 @@
       renderStats(uploads);
       renderGallery(uploads);
 
-      pageLoading.style.display  = 'none';
-      dashHeader.style.display   = 'block';
-      dashMain.style.display     = 'block';
+      pageLoading.style.display = 'none';
+      dashHeader.style.display  = 'block';
+      dashMain.style.display    = 'block';
 
       // ── Payment banner ────────────────────────────────
       const banner     = $('pay-banner');
@@ -1141,9 +820,9 @@
         banner.style.display = 'flex';
       }
     } catch (err) {
-      pageLoading.style.display   = 'none';
+      pageLoading.style.display       = 'none';
       $('page-error-msg').textContent = err.message || 'Failed to load event.';
-      pageError.style.display     = 'block';
+      pageError.style.display         = 'block';
     }
   }
 
