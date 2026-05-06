@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Reelday — Share your moments</title>
-<link rel="stylesheet" href="css/shared.css" />
+<link rel="stylesheet" href="shared.css" />
 <style>
   body { background: var(--paper); min-height: 100dvh; }
 
@@ -171,7 +171,7 @@
     border-radius: var(--r); overflow: hidden; position: relative;
     aspect-ratio: 16/6; background: #1a0f0a;
   }
-  .mp-wall-bg { position: absolute; inset: -5%; background-image: url(/images/newlyweds.png); background-size: cover; background-position: center; }
+  .mp-wall-bg { position: absolute; inset: -5%; background-size: cover; background-position: center; }
   .mp-wall-vignette { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.3) 0%, transparent 30%, rgba(0,0,0,.7) 100%); }
   .mp-wall-label { position: absolute; top: 8px; left: 10px; font-family: var(--mono); font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: rgba(255,255,255,.45); }
   .mp-wall-msg { position: absolute; bottom: 10px; left: 14px; right: 14px; font-family: var(--display); font-style: italic; font-size: 15px; line-height: 1.3; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,.6); }
@@ -220,6 +220,9 @@
   .recent-grid > div { aspect-ratio: 1; border-radius: 7px; background-size: cover; background-position: center; }
 
   .footer-note { text-align: center; margin-top: 48px; font-family: var(--mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-faint); }
+
+  /* ── Loading state ───────────────────────────────────── */
+  .hero-loading { opacity: .4; filter: blur(2px); transition: opacity .3s, filter .3s; }
 </style>
 </head>
 <body>
@@ -235,12 +238,11 @@
     </div>
   </div>
 
-  <!-- Event hero -->
-  <!-- TODO: populate from GET /api/events/:slug -->
-  <div class="upload-hero">
-    <h1 id="heroName">Andrea <em>&amp;</em> JM</h1>
-    <div class="meta">14 June 2026 · Manila Hotel</div>
-    <div class="welcome">"Salamat sa pagdating! Scan, share, and become part of the story."</div>
+  <!-- Event hero — populated from URL params / API -->
+  <div class="upload-hero hero-loading" id="uploadHero">
+    <h1 id="heroName">&nbsp;</h1>
+    <div class="meta" id="heroMeta">&nbsp;</div>
+    <div class="welcome" id="heroWelcome">&nbsp;</div>
   </div>
 
   <!-- ── Share mode tabs ────────────────────────────────── -->
@@ -280,20 +282,9 @@
       <input type="text" id="galleryName" placeholder="e.g. Tita Marivic, JM's cousin" />
     </div>
 
-    <div class="queue" id="galleryQueue">
-      <div class="queue-item done">
-        <div class="q-thumb placeholder placeholder--coral"></div>
-        <div><div class="q-name">first-dance.jpg</div><div class="q-prog"><span style="width:100%"></span></div></div>
-        <div class="q-status">✓ Shared</div>
-      </div>
-      <div class="queue-item">
-        <div class="q-thumb placeholder placeholder--ochre"></div>
-        <div><div class="q-name">garden-toast.mp4</div><div class="q-prog"><span id="demoBar1" style="width:62%"></span></div></div>
-        <div class="q-status" id="demoPct1">62%</div>
-      </div>
-    </div>
+    <div class="queue" id="galleryQueue"></div>
 
-    <button class="btn btn-primary send-btn" onclick="handleSend('gallery')">Send 2 moments →</button>
+    <button class="btn btn-primary send-btn" onclick="handleSend('gallery')">Share moments →</button>
     <div class="success-banner" id="gallerySuccess">
       <div class="s-icon">★</div>
       <div><b>Your moments are live!</b><span>They'll appear on the wall in a few seconds.</span></div>
@@ -396,7 +387,7 @@
 
         <!-- Live wall preview -->
         <div class="mp-wall-preview">
-          <div class="mp-wall-bg"></div>
+          <div class="mp-wall-bg" id="wallPreviewBg"></div>
           <div class="mp-wall-vignette"></div>
           <div class="mp-wall-label">Preview · how it looks on wall</div>
           <div class="mp-wall-msg">
@@ -424,18 +415,10 @@
   <div class="recent">
     <div class="recent-head">
       <h3>Recently shared</h3>
-      <span class="count" id="recentCount">847 today</span>
+      <span class="count" id="recentCount">0 today</span>
     </div>
-    <div class="recent-grid">
-      <div style="background-image:url(/images/First%20kiss.png)"></div>
-      <div style="background-image:url(/images/First%20dance%20after%2038%20years.png)"></div>
-      <div style="background-image:url(/images/Ate%20Andrea%27s%20bouquet%20toss.png)"></div>
-      <div style="background-image:url(/images/Garden%20hour.png)"></div>
-      <div style="background-image:url(/images/The%20whole%20family%20finally%20in%20one%20frame.png)"></div>
-      <div style="background-image:url(/images/Grazing%20table%20looks%20unreal.png)"></div>
-      <div style="background-image:url(/images/Lolo%27s%20speech%2C%201962%20%E2%86%92%20today.png)"></div>
-      <div style="background-image:url(/images/Best%20night%20of%20the%20year%2C%20hands%20down.png)"></div>
-      <div style="background-image:url(/images/Dancing%20with%20Tatay.%20I%20will%20never%20forget%20this.png)"></div>
+    <div class="recent-grid" id="recentGrid">
+      <!-- populated by loadEvent() -->
     </div>
   </div>
 
@@ -443,7 +426,90 @@
 </div>
 
 <script>
-  /* ── Tab switching ─────────────────────────────────── */
+  /* ════════════════════════════════════════════════════
+     EVENT DATA — reads URL params, falls back to defaults.
+     Replace fetch() call with real API when backend is ready.
+  ════════════════════════════════════════════════════ */
+
+  const DEMO_PHOTOS = [
+    '/images/First%20kiss.png',
+    '/images/First%20dance%20after%2038%20years.png',
+    '/images/Ate%20Andrea%27s%20bouquet%20toss.png',
+    '/images/Garden%20hour.png',
+    '/images/The%20whole%20family%20finally%20in%20one%20frame.png',
+    '/images/Grazing%20table%20looks%20unreal.png',
+    '/images/Lolo%27s%20speech%2C%201962%20%E2%86%92%20today.png',
+    '/images/Best%20night%20of%20the%20year%2C%20hands%20down.png',
+    '/images/Dancing%20with%20Tatay.%20I%20will%20never%20forget%20this.png',
+  ];
+
+  async function loadEvent() {
+    const p = new URLSearchParams(location.search);
+    const slug = p.get('slug') || p.get('event') || 'andrea-jm';
+
+    let event = null;
+
+    /* TODO: uncomment when API is live
+    try {
+      const res = await fetch(`/api/events/${slug}`);
+      if (res.ok) event = await res.json();
+    } catch (e) { console.warn('API unavailable, using URL params'); }
+    */
+
+    // Fall back to URL params or defaults
+    if (!event) {
+      event = {
+        slug:    slug,
+        name:    p.get('name')    || 'Andrea & JM',
+        date:    p.get('date')    || '14 June 2026',
+        venue:   p.get('venue')   || 'Manila Hotel',
+        theme:   p.get('theme')   || 'wedding',
+        welcome: p.get('welcome') || 'Salamat sa pagdating! Scan, share, and become part of the story.',
+        cover:   p.get('cover')   || '/images/newlyweds.png',
+        count:   parseInt(p.get('count') || '847', 10),
+      };
+    }
+
+    applyEvent(event);
+  }
+
+  function applyEvent(ev) {
+    // Theme
+    document.body.setAttribute('data-theme', ev.theme || 'wedding');
+
+    // Hero title — italicise the "&" if present
+    const nameHtml = ev.name.replace(/\s*&\s*/, ' <em>&amp;</em> ');
+    document.getElementById('heroName').innerHTML = nameHtml;
+    document.getElementById('heroMeta').textContent =
+      [ev.date, ev.venue].filter(Boolean).join(' · ').toUpperCase();
+    document.getElementById('heroWelcome').textContent = `"${ev.welcome}"`;
+
+    // Page title
+    document.title = `Reelday — ${ev.name}`;
+
+    // Wall preview background
+    if (ev.cover) {
+      document.getElementById('wallPreviewBg').style.backgroundImage = `url(${ev.cover})`;
+    }
+
+    // Recent grid
+    const grid = document.getElementById('recentGrid');
+    const photos = ev.photos || DEMO_PHOTOS;
+    grid.innerHTML = photos.slice(0, 9).map(src =>
+      `<div style="background-image:url(${src})"></div>`
+    ).join('');
+
+    // Recent count
+    document.getElementById('recentCount').textContent = `${ev.count} today`;
+
+    // Reveal hero
+    document.getElementById('uploadHero').classList.remove('hero-loading');
+  }
+
+  /* ════════════════════════════════════════════════
+     UI INTERACTIONS
+  ════════════════════════════════════════════════ */
+
   function switchTab(id, el) {
     document.querySelectorAll('.share-tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.share-panel').forEach(p => p.classList.remove('active'));
@@ -451,7 +517,6 @@
     document.getElementById('panel-' + id).classList.add('active');
   }
 
-  /* ── Language ──────────────────────────────────────── */
   function setLang(lang, btn) {
     document.querySelectorAll('#langSwitch button').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
@@ -482,25 +547,10 @@
         if (p >= 100) { clearInterval(t); item.classList.add('done'); }
       }, 200);
     });
-    // update button
     const total = document.querySelectorAll('#galleryQueue .queue-item').length;
-    document.querySelector('#panel-gallery .send-btn').textContent = `Send ${total} moment${total>1?'s':''} →`;
+    document.querySelector('#panel-gallery .send-btn').textContent =
+      `Send ${total} moment${total>1?'s':''} →`;
   }
-
-  /* ── Gallery: animate demo progress bar ───────────── */
-  (function() {
-    const bar = document.getElementById('demoBar1');
-    const pct = document.getElementById('demoPct1');
-    if (!bar) return;
-    let p = 62;
-    const t = setInterval(() => {
-      p = Math.min(p + Math.random()*10+4, 100);
-      bar.style.width = p+'%';
-      if (pct) pct.textContent = p < 100 ? Math.round(p)+'%' : '✓ Shared';
-      const item = bar.closest('.queue-item');
-      if (p >= 100) { clearInterval(t); if (item) item.classList.add('done'); }
-    }, 280);
-  })();
 
   /* ── Record video ──────────────────────────────────── */
   let recording = false, recInterval, recSecs = 0;
@@ -515,7 +565,6 @@
     const sendBtn = document.getElementById('recordSendBtn');
 
     if (!recording) {
-      // Start recording
       /* TODO: real camera:
          const stream = await navigator.mediaDevices.getUserMedia({video:true,audio:true});
          const mr = new MediaRecorder(stream);
@@ -532,7 +581,7 @@
       recInterval = setInterval(() => {
         recSecs++;
         timer.textContent = fmt(recSecs);
-        if (recSecs >= 60) stopRecord(); // max 60s
+        if (recSecs >= 60) stopRecord();
       }, 1000);
     } else {
       stopRecord();
@@ -555,8 +604,6 @@
     icon.innerHTML = '<circle cx="12" cy="12" r="6"/>';
     status.textContent = 'Recording saved'; status.classList.remove('active');
     lbl.textContent = 'Camera ready';
-
-    // Show clip preview
     dur.textContent = fmt(recSecs);
     preview.classList.add('visible');
     sendBtn.style.display = 'block';
@@ -596,11 +643,13 @@
              POST to /api/events/:slug/message for live message */
     const successId = { gallery: 'gallerySuccess', record: 'recordSuccess', message: 'messageSuccess' }[mode];
     document.getElementById(successId).classList.add('visible');
-    // bump recent count
     const el = document.getElementById('recentCount');
     const n  = parseInt(el.textContent, 10);
     el.textContent = (n + 1) + ' today';
   }
+
+  /* ── Boot ──────────────────────────────────────────── */
+  loadEvent();
 </script>
 </body>
 </html>
