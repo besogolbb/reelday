@@ -277,19 +277,59 @@
     font-family: var(--mono); font-size: 9px; letter-spacing: .14em; text-transform: uppercase;
   }
 
-  /* ── Step 2: QR icon visual (no poster wrapper) ───────── */
-  .how-qr-visual {
-    display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 18px 0;
+  /* ── Step 2: QR Poster mockup ─────────────────────────── */
+  .how-qr-poster {
+    display: flex; flex-direction: column; align-items: center; padding: 14px 0 6px;
   }
-  .how-qr-icon {
-    width: 68px; height: 68px; border-radius: 10px; overflow: hidden;
-    border: 3px solid rgba(253,250,245,.14);
-    box-shadow: 0 4px 20px rgba(0,0,0,.5), 0 0 0 6px rgba(253,250,245,.04);
+  .qr-poster-card {
+    background: #fdfaf5; border-radius: 14px; padding: 16px 16px 14px;
+    box-shadow: 0 6px 32px rgba(0,0,0,.65), 0 0 0 1px rgba(253,250,245,.06);
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    width: 158px;
   }
-  .how-qr-icon img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .how-qr-caption {
-    font-family: var(--mono); font-size: 8px; letter-spacing: .18em;
-    text-transform: uppercase; color: rgba(253,250,245,.3); text-align: center; line-height: 1.6;
+  .qp-logo {
+    font-family: var(--mono); font-size: 8px; letter-spacing: .22em;
+    text-transform: uppercase; color: var(--accent); font-weight: 500;
+  }
+  .qp-event {
+    font-family: var(--display); font-style: italic; font-size: 15px;
+    line-height: 1.2; text-align: center; color: var(--ink); letter-spacing: -.01em;
+  }
+  .qp-date {
+    font-family: var(--mono); font-size: 8px; letter-spacing: .16em;
+    text-transform: uppercase; color: var(--ink-faint); text-align: center;
+  }
+  .qp-qr {
+    width: 92px; height: 92px; position: relative;
+    background: #fff; padding: 7px;
+    border: 1px solid rgba(42,26,20,.12); border-radius: 4px;
+    overflow: hidden;
+  }
+  .qp-qr-data {
+    position: absolute; inset: 7px;
+    background-image: repeating-conic-gradient(var(--ink) 0% 25%, transparent 0% 50%);
+    background-size: 7px 7px; opacity: .78;
+  }
+  .qp-finder {
+    position: absolute; z-index: 3;
+    width: 21px; height: 21px;
+    border: 3px solid var(--ink); border-radius: 2px; background: #fff;
+  }
+  .qp-finder::after {
+    content: ''; position: absolute; inset: 2px;
+    background: var(--ink); border-radius: 0.5px;
+  }
+  .qp-finder.f-tl { top: 7px; left: 7px; }
+  .qp-finder.f-tr { top: 7px; right: 7px; }
+  .qp-finder.f-bl { bottom: 7px; left: 7px; }
+  .qp-url {
+    font-family: var(--mono); font-size: 7.5px; letter-spacing: .1em;
+    color: var(--accent); text-align: center; text-transform: lowercase;
+    padding-top: 6px; border-top: 1px solid rgba(42,26,20,.08); width: 100%;
+  }
+  .qp-scan-label {
+    font-family: var(--mono); font-size: 7px; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--ink-faint); text-align: center; margin-top: -2px;
   }
 
   /* ── Phone mockup on dark card ────────────────────────── */
@@ -481,27 +521,50 @@
   .wall-thumb.wt-active { opacity: 1; border-color: var(--accent); }
 
   /* ════════════════════════════════════════════════════════
-     TESTIMONIAL
+     TESTIMONIALS
   ════════════════════════════════════════════════════════ */
-  .quote-section { padding: 100px 28px; background: #fdfaf5; position: relative; overflow: hidden; }
-  .quote-section::before {
-    content: '"'; position: absolute;
-    font-family: var(--display); font-style: italic;
-    font-size: 500px; line-height: 1;
-    color: var(--accent); opacity: .05;
-    top: -60px; left: 40px; pointer-events: none;
+  .testimonials {
+    padding: 100px 28px;
+    background: linear-gradient(160deg, #160b07 0%, #241209 50%, #160b07 100%);
+    position: relative; overflow: hidden;
   }
-  .quote-inner { max-width: 880px; margin: 0 auto; text-align: center; position: relative; }
-  .quote-inner blockquote {
-    font-family: var(--display); font-style: italic;
-    font-size: clamp(24px, 3vw, 38px);
-    line-height: 1.35; letter-spacing: -.01em;
-    color: var(--ink); font-weight: 400; margin-bottom: 32px;
+  .testimonials-inner { max-width: 1100px; margin: 0 auto; position: relative; }
+  .testimonials-head { text-align: center; margin-bottom: 56px; }
+  .testimonials-head h2 {
+    font-family: var(--display); font-weight: 400;
+    font-size: clamp(36px, 4.5vw, 56px);
+    letter-spacing: -.025em; line-height: 1.06; color: #fdfaf5;
+    margin-top: 16px;
   }
-  .quote-attr { display: flex; align-items: center; justify-content: center; gap: 16px; }
-  .quote-avatar { width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg, #e8c5b0, #c45a3a); }
-  .quote-name { font-weight: 600; font-size: 15px; color: var(--ink); text-align: left; }
-  .quote-meta { font-family: var(--mono); font-size: 10px; color: var(--ink-soft); letter-spacing: .12em; text-transform: uppercase; text-align: left; }
+  .testimonials-head h2 em { font-style: italic; color: rgba(216,160,90,.9); }
+  .testi-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 20px; }
+  .testi-card {
+    background: rgba(253,250,245,.04); border: 1px solid rgba(253,250,245,.08);
+    border-radius: 20px; padding: 32px;
+    display: flex; flex-direction: column; gap: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.35), 0 20px 50px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.06);
+    transition: transform .35s cubic-bezier(.22,1,.36,1), box-shadow .35s ease;
+  }
+  .testi-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 6px 20px rgba(0,0,0,.5), 0 40px 80px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.10);
+  }
+  .testi-stars { color: rgba(216,160,90,.9); font-size: 14px; letter-spacing: 3px; }
+  .testi-quote {
+    font-family: var(--display); font-style: italic;
+    font-size: clamp(15px, 1.6vw, 19px); line-height: 1.5;
+    color: rgba(253,250,245,.88); letter-spacing: -.01em; font-weight: 400; flex: 1;
+  }
+  .testi-attr {
+    display: flex; align-items: center; gap: 14px;
+    padding-top: 20px; border-top: 1px solid rgba(253,250,245,.08);
+  }
+  .testi-avatar {
+    width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+    border: 1px solid rgba(253,250,245,.12);
+  }
+  .testi-name { font-weight: 600; font-size: 14px; color: #fdfaf5; }
+  .testi-meta { font-family: var(--mono); font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: rgba(216,160,90,.6); margin-top: 3px; }
 
   /* ════════════════════════════════════════════════════════
      FEATURES
@@ -585,18 +648,24 @@
   .events h2 em { font-style: italic; color: var(--accent); }
   .events-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; }
   .event-tile {
-    border: 1px solid var(--line); border-radius: var(--r);
+    border: 1px solid rgba(255,255,255,.12); border-radius: var(--r);
     padding: 20px 18px 18px; aspect-ratio: 3/4;
     display: flex; flex-direction: column; justify-content: space-between;
     position: relative; overflow: hidden; cursor: pointer;
     transition: border-color .25s, transform .25s, box-shadow .25s;
-    background: #fff; text-decoration: none; color: var(--ink);
+    background: #1a0f0a; text-decoration: none; color: #fff;
   }
-  .event-tile:hover { border-color: var(--accent); transform: translateY(-3px); box-shadow: 0 12px 32px rgba(42,26,20,.1); }
-  .event-tile-bg { position: absolute; inset: 0; opacity: .15; }
-  .event-tile-top { position: relative; z-index: 2; font-family: var(--mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); }
-  .event-tile-name { position: relative; z-index: 2; font-family: var(--display); font-size: 22px; font-style: italic; font-weight: 400; line-height: 1.1; }
-  .event-tile-sub  { position: relative; z-index: 2; font-family: var(--mono); font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); margin-top: 3px; }
+  .event-tile:hover { border-color: rgba(255,255,255,.3); transform: translateY(-4px); box-shadow: 0 16px 40px rgba(0,0,0,.35); }
+  .event-tile-bg { position: absolute; inset: 0; opacity: 1; background-size: cover; background-position: center; }
+  .event-tile-overlay {
+    position: absolute; inset: 0; z-index: 1;
+    background: linear-gradient(180deg, rgba(0,0,0,.18) 0%, rgba(0,0,0,.6) 100%);
+    transition: background .25s;
+  }
+  .event-tile:hover .event-tile-overlay { background: linear-gradient(180deg, rgba(0,0,0,.08) 0%, rgba(0,0,0,.48) 100%); }
+  .event-tile-top { position: relative; z-index: 2; font-family: var(--mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: rgba(255,255,255,.6); }
+  .event-tile-name { position: relative; z-index: 2; font-family: var(--display); font-size: 22px; font-style: italic; font-weight: 400; line-height: 1.1; color: #fff; }
+  .event-tile-sub  { position: relative; z-index: 2; font-family: var(--mono); font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: rgba(255,255,255,.45); margin-top: 3px; }
 
   /* ════════════════════════════════════════════════════════
      PRICING
@@ -694,6 +763,7 @@
     .features-grid { grid-template-columns: 1fr; }
     .feat-wide, .feat-narrow { grid-column: 1; }
     .events-grid { grid-template-columns: repeat(2,1fr); }
+    .testi-grid { grid-template-columns: 1fr; gap: 16px; }
     .pricing-grid { grid-template-columns: 1fr; }
     .price-card.featured { transform: none; }
     .site-nav { display: none; }
@@ -701,7 +771,7 @@
   }
   @media (max-width: 600px) {
     .hero { padding: 72px 20px 40px; }
-    .how, .wall-section, .quote-section, .features, .events, .pricing, .faq, .final-cta { padding-left: 20px; padding-right: 20px; }
+    .how, .wall-section, .testimonials, .features, .events, .pricing, .faq, .final-cta { padding-left: 20px; padding-right: 20px; }
     .events-grid { grid-template-columns: repeat(2,1fr); }
 
     /* hide polaroid stack — absolutely-positioned pile breaks on narrow screens */
@@ -725,8 +795,9 @@
     .wall-thumbs { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 6px; -webkit-overflow-scrolling: touch; }
     .wall-thumb { flex: 0 0 80px; }
 
-    /* testimonial */
-    .quote-inner blockquote { font-size: clamp(18px, 5.5vw, 28px); }
+    /* testimonials */
+    .testi-grid { grid-template-columns: 1fr; }
+    .testi-card { padding: 24px; }
 
     /* events */
     .event-tile { aspect-ratio: auto; min-height: 130px; padding: 16px 14px; }
@@ -940,9 +1011,20 @@
       <div class="big-num">2</div>
       <h3>Generate event QR</h3>
       <p>Download a print-ready QR poster. Place it at the welcome table — guests do the rest.</p>
-      <div class="how-qr-visual">
-        <div class="how-qr-icon"><img src="/images/gcash-qr.jpeg" alt="Event QR code" /></div>
-        <div class="how-qr-caption">reelday.ph/e/andrea-jm<br/>scan to share your moments</div>
+      <div class="how-qr-poster">
+        <div class="qr-poster-card">
+          <div class="qp-logo">Reelday ★</div>
+          <div class="qp-event">Andrea &amp; JM<br/>Cabrera</div>
+          <div class="qp-date">June 7 · 2026</div>
+          <div class="qp-qr">
+            <div class="qp-qr-data"></div>
+            <div class="qp-finder f-tl"></div>
+            <div class="qp-finder f-tr"></div>
+            <div class="qp-finder f-bl"></div>
+          </div>
+          <div class="qp-url">reelday.ph/e/andrea-jm</div>
+          <div class="qp-scan-label">Scan to share moments</div>
+        </div>
       </div>
     </div>
 
@@ -1035,17 +1117,51 @@
   </div>
 </section>
 
-<!-- ════ TESTIMONIAL ═══════════════════════════════════════ -->
-<section class="quote-section">
-  <div class="quote-inner">
-    <div class="eyebrow" style="justify-content:center;margin-bottom:18px;">— What people say</div>
-    <blockquote>"By the end of the night we had 412 photos we'd never have seen otherwise. Tita Marivic's <em>blurry first dance</em> shot is still my favorite frame in the whole reel."</blockquote>
-    <div class="quote-attr">
-      <div class="quote-avatar"></div>
-      <div>
-        <div class="quote-name">Andrea &amp; JM Cabrera</div>
-        <div class="quote-meta">Manila · June 2026</div>
+<!-- ════ TESTIMONIALS ══════════════════════════════════════ -->
+<section class="testimonials">
+  <div class="testimonials-inner">
+    <div class="testimonials-head">
+      <div class="eyebrow" style="justify-content:center;margin-bottom:16px;color:rgba(216,160,90,.7);">— What people say</div>
+      <h2>Real moments.<br/><em>Real reactions.</em></h2>
+    </div>
+    <div class="testi-grid">
+
+      <div class="testi-card">
+        <div class="testi-stars">★★★★★</div>
+        <div class="testi-quote">"By the end of the night we had 412 photos we'd never have seen otherwise. Tita Marivic's blurry first-dance shot is still my favorite frame in the whole reel."</div>
+        <div class="testi-attr">
+          <div class="testi-avatar" style="background:linear-gradient(135deg,#e8c5b0,#c45a3a)"></div>
+          <div>
+            <div class="testi-name">Andrea &amp; JM Cabrera</div>
+            <div class="testi-meta">Wedding · Manila · June 2026</div>
+          </div>
+        </div>
       </div>
+
+      <div class="testi-card">
+        <div class="testi-stars">★★★★★</div>
+        <div class="testi-quote">"Every table had the QR card. By midnight we had 300+ photos from all our titas and lolos — people I didn't even know could use their phones like that."</div>
+        <div class="testi-attr">
+          <div class="testi-avatar" style="background:linear-gradient(135deg,#e8a4c5,#b6457a)"></div>
+          <div>
+            <div class="testi-name">Clarissa Santos</div>
+            <div class="testi-meta">Debut · Quezon City · March 2026</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="testi-card">
+        <div class="testi-stars">★★★★★</div>
+        <div class="testi-quote">"First time all 47 of us were in one place after 12 years. The wall captured every angle — even Lolo's speech that someone filmed from across the room."</div>
+        <div class="testi-attr">
+          <div class="testi-avatar" style="background:linear-gradient(135deg,#8fc4a4,#2d6a4a)"></div>
+          <div>
+            <div class="testi-name">The Reyes Family</div>
+            <div class="testi-meta">Reunion · Batangas · February 2026</div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 </section>
@@ -1057,37 +1173,44 @@
     <h2 data-i18n="events-h2">One platform.<br/><em>Seven celebrations.</em></h2>
     <div class="events-grid">
       <a class="event-tile" href="/create?type=wedding">
-        <div class="event-tile-bg" style="background:linear-gradient(135deg,#c45a3a,#7a3b2e)"></div>
+        <div class="event-tile-bg" style="background-image:url(/images/First%20kiss.png)"></div>
+        <div class="event-tile-overlay"></div>
         <span class="event-tile-top">01 · Kasal</span>
         <div><div class="event-tile-name">Wedding</div><div class="event-tile-sub">Kasal</div></div>
       </a>
       <a class="event-tile" href="/create?type=debut">
-        <div class="event-tile-bg" style="background:linear-gradient(135deg,#b6457a,#6b1f49)"></div>
+        <div class="event-tile-bg" style="background:linear-gradient(160deg,#e891c0 0%,#b6457a 45%,#6b1f49 100%)"></div>
+        <div class="event-tile-overlay"></div>
         <span class="event-tile-top">02 · Ika-18</span>
         <div><div class="event-tile-name">Debut</div><div class="event-tile-sub">Ika-18</div></div>
       </a>
       <a class="event-tile" href="/create?type=birthday">
-        <div class="event-tile-bg" style="background:linear-gradient(135deg,#d97706,#7c2d12)"></div>
+        <div class="event-tile-bg" style="background-image:url(/images/Grazing%20table%20looks%20unreal.png)"></div>
+        <div class="event-tile-overlay"></div>
         <span class="event-tile-top">03 · Kaarawan</span>
         <div><div class="event-tile-name">Birthday</div><div class="event-tile-sub">Kaarawan</div></div>
       </a>
       <a class="event-tile" href="/create?type=baptism">
-        <div class="event-tile-bg" style="background:linear-gradient(135deg,#3b6ea8,#1e3a5f)"></div>
+        <div class="event-tile-bg" style="background:linear-gradient(160deg,#a4c2e3 0%,#3b6ea8 45%,#1e3a5f 100%)"></div>
+        <div class="event-tile-overlay"></div>
         <span class="event-tile-top">04 · Binyag</span>
         <div><div class="event-tile-name">Baptism</div><div class="event-tile-sub">Binyag</div></div>
       </a>
       <a class="event-tile" href="/create?type=reunion">
-        <div class="event-tile-bg" style="background:linear-gradient(135deg,#2d6a4a,#134e3a)"></div>
+        <div class="event-tile-bg" style="background-image:url(/images/The%20whole%20family%20finally%20in%20one%20frame.png)"></div>
+        <div class="event-tile-overlay"></div>
         <span class="event-tile-top">05 · Pagkikita</span>
         <div><div class="event-tile-name">Reunion</div><div class="event-tile-sub">Pagkikita</div></div>
       </a>
       <a class="event-tile" href="/create?type=corporate">
-        <div class="event-tile-bg" style="background:linear-gradient(135deg,#2a3548,#16202e)"></div>
+        <div class="event-tile-bg" style="background:linear-gradient(160deg,#3d5a78 0%,#2a3548 45%,#16202e 100%)"></div>
+        <div class="event-tile-overlay"></div>
         <span class="event-tile-top">06 · Kompanya</span>
         <div><div class="event-tile-name">Corporate</div><div class="event-tile-sub">Kompanya</div></div>
       </a>
       <a class="event-tile" href="/create?type=memorial">
-        <div class="event-tile-bg" style="background:linear-gradient(135deg,#4a6b4a,#1c2b1a)"></div>
+        <div class="event-tile-bg" style="background-image:url(/images/Garden%20hour.png)"></div>
+        <div class="event-tile-overlay"></div>
         <span class="event-tile-top">07 · Alaala</span>
         <div><div class="event-tile-name">Memorial</div><div class="event-tile-sub">Alaala</div></div>
       </a>
