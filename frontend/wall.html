@@ -6,770 +6,510 @@
   <meta name="theme-color" content="#1a0f0a" />
   <title>Reelday Live Wall</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-  <link rel="stylesheet" href="/css/shared.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,500;1,400;1,500&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
   <style>
-    /* ── Variables ───────────────────────────────────────── */
     :root {
-      --mono: 'DM Mono', 'Courier New', monospace;
-      --display: 'Playfair Display', Georgia, serif;
-      --ink: #2a1a14;
+      --mono: 'JetBrains Mono', 'DM Mono', monospace;
+      --display: 'Fraunces', 'Playfair Display', Georgia, serif;
       --gold: #f0a37a;
+      --ink: #2a1a14;
     }
 
-    /* ── Base ─────────────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     html, body {
-      width: 100vw;
-      height: 100vh;
-      overflow: hidden;
-      background: #1a0f0a;
-      color: #fff;
-      font-family: var(--body-font, 'DM Sans', sans-serif);
-      cursor: none;
+      width: 100vw; height: 100vh; overflow: hidden;
+      background: #1a0f0a; color: #fff;
     }
 
-    body.show-cursor { cursor: default; }
-
-    /* ── Slide layers ─────────────────────────────────────── */
-    .slide-layer {
-      position: fixed;
-      inset: 0;
+    /* ── Photo layers (Ken Burns) ──────────────────────────── */
+    .layer {
+      position: fixed; inset: 0;
+      transition: opacity 1.6s ease;
+      pointer-events: none;
       z-index: 1;
-      overflow: hidden;
-      transition: opacity 2s ease;
-      will-change: opacity;
     }
+    .layer.out { opacity: 0; }
 
-    .slide-layer img,
-    .slide-layer video {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
+    .layer .pic {
+      position: absolute; inset: -8%;
+      background-size: cover; background-position: center;
       will-change: transform;
     }
 
-    /* ── Ken Burns variants ───────────────────────────────── */
+    /* Ken Burns variants — JS picks one per slide */
     @keyframes kb1 {
-      from { transform: scale(1)    translate(0,    0); }
-      to   { transform: scale(1.1)  translate(-1.5%, -1%); }
+      from { transform: scale(1)    translate(0, 0); }
+      to   { transform: scale(1.14) translate(-2%, -1.5%); }
     }
     @keyframes kb2 {
-      from { transform: scale(1)    translate(0,    0); }
-      to   { transform: scale(1.1)  translate(1.5%, -1%); }
+      from { transform: scale(1)    translate(-2%, 0); }
+      to   { transform: scale(1.12) translate(1.5%, 2%); }
     }
     @keyframes kb3 {
-      from { transform: scale(1.05) translate(-1%,  0.5%); }
-      to   { transform: scale(1.12) translate(1%,  -1.5%); }
+      from { transform: scale(1.05) translate(2%, 2%); }
+      to   { transform: scale(1.16) translate(-1.5%, -2%); }
     }
     @keyframes kb4 {
-      from { transform: scale(1.08) translate(1%,   1%); }
-      to   { transform: scale(1)    translate(-1%,   0); }
-    }
-    @keyframes kb5 {
-      from { transform: scale(1)    translate(0.5%,  0); }
-      to   { transform: scale(1.09) translate(-0.5%, -1.5%); }
+      from { transform: scale(1)    translate(1.5%, -1.5%); }
+      to   { transform: scale(1.13) translate(-2%, 2%); }
     }
 
-    /* ── Vignette overlay on slide layers ────────────────── */
-    .slide-layer::after {
-      content: '';
-      position: absolute;
-      inset: 0;
+    .layer .vignette {
+      position: absolute; inset: 0;
       background:
-        radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,.6) 100%),
-        linear-gradient(180deg, rgba(0,0,0,.3) 0%, transparent 30%, transparent 60%, rgba(0,0,0,.7) 100%);
-      pointer-events: none;
-      z-index: 2;
+        radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,.55) 100%),
+        linear-gradient(180deg, rgba(0,0,0,.35) 0%, transparent 25%, transparent 55%, rgba(0,0,0,.75) 100%);
     }
 
-    /* ── Top ticker ───────────────────────────────────────── */
+    /* ── Top ticker ─────────────────────────────────────────── */
     .ticker {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 56px;
-      z-index: 10;
-      background: linear-gradient(180deg, rgba(0,0,0,.7), transparent);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 32px;
+      position: fixed; top: 0; left: 0; right: 0; z-index: 10;
+      height: 60px;
+      background: linear-gradient(180deg, rgba(0,0,0,.65), transparent);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 36px;
     }
 
     .ticker .live {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-family: var(--mono);
-      font-size: 12px;
-      letter-spacing: .18em;
-      text-transform: uppercase;
+      display: flex; align-items: center; gap: 10px;
+      font-family: var(--mono); font-size: 12px;
+      letter-spacing: .2em; text-transform: uppercase;
     }
 
     .ticker .live .dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background: var(--gold);
-      box-shadow: 0 0 0 4px rgba(240,163,122,.3);
-      animation: pulse 1.5s ease infinite;
-      flex-shrink: 0;
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--gold); box-shadow: 0 0 0 4px rgba(240,163,122,.3);
+      animation: pulse 1.5s ease infinite; flex-shrink: 0;
     }
 
-    @keyframes pulse {
-      50% { box-shadow: 0 0 0 8px rgba(240,163,122,0); }
-    }
+    @keyframes pulse { 50% { box-shadow: 0 0 0 8px rgba(240,163,122,0); } }
 
     .ticker .stats {
-      font-family: var(--mono);
-      font-size: 12px;
-      letter-spacing: .14em;
-      text-transform: uppercase;
-      opacity: .85;
-      display: flex;
-      gap: 24px;
+      font-family: var(--mono); font-size: 12px;
+      letter-spacing: .16em; text-transform: uppercase;
+      opacity: .85; display: flex; gap: 28px;
     }
 
-    .ticker .stats em {
-      color: var(--gold);
-      font-style: normal;
-      font-weight: 600;
-    }
+    .ticker .stats em { color: var(--gold); font-style: normal; font-weight: 600; }
 
-    /* Hidden compat segments for existing JS */
-    #ticker-seg-a,
-    #ticker-seg-b {
-      display: none;
-    }
-
-    /* ── Caption frame ────────────────────────────────────── */
-    .frame {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      z-index: 10;
-      padding: 0 64px 64px;
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-      gap: 32px;
-      pointer-events: none;
-    }
-
-    .caption {
-      max-width: 60%;
-    }
-
-    .caption .uploader {
-      font-family: var(--mono);
-      font-size: 12px;
-      letter-spacing: .18em;
-      text-transform: uppercase;
-      color: rgba(255,255,255,.7);
-      margin-bottom: 12px;
-    }
-
-    .caption blockquote {
-      font-family: var(--display);
-      font-style: italic;
-      font-weight: 400;
-      font-size: clamp(28px, 3.5vw, 52px);
-      line-height: 1.15;
-      letter-spacing: -.015em;
-      text-shadow: 0 4px 24px rgba(0,0,0,.5);
-      display: -webkit-box;
-      -webkit-line-clamp: 3;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-
-    .corner {
-      text-align: right;
-      font-family: var(--mono);
-      font-size: 11px;
-      letter-spacing: .18em;
-      text-transform: uppercase;
-      color: rgba(255,255,255,.6);
-      flex-shrink: 0;
-    }
-
-    .corner .names {
-      font-family: var(--display);
-      font-style: italic;
-      font-weight: 400;
-      font-size: 28px;
-      color: #fff;
-      text-transform: none;
-      letter-spacing: -.01em;
-      margin-bottom: 4px;
-    }
-
-    .corner .names em {
-      color: var(--gold);
-      font-style: normal;
-    }
-
-    .corner .moments {
-      margin-bottom: 6px;
-    }
-
-    /* ── QR badge ─────────────────────────────────────────── */
+    /* ── QR badge ────────────────────────────────────────────── */
     .qr-badge {
-      position: fixed;
-      top: 80px;
-      right: 32px;
-      z-index: 10;
-      background: rgba(255,255,255,.95);
-      border-radius: 14px;
-      padding: 12px;
-      display: flex;
-      gap: 12px;
-      align-items: center;
-      color: var(--ink);
-      box-shadow: 0 8px 32px rgba(0,0,0,.4);
+      position: fixed; top: 76px; right: 32px; z-index: 10;
+      background: rgba(255,255,255,.96); color: var(--ink);
+      border-radius: 14px; padding: 14px;
+      display: none; gap: 12px; align-items: center;
+      box-shadow: 0 8px 32px rgba(0,0,0,.5);
+      transition: opacity .4s ease;
     }
 
     .qr-badge .qr {
-      width: 56px;
-      height: 56px;
-      background:
-        linear-gradient(45deg,  #2a1a14 25%, transparent 25%),
-        linear-gradient(-45deg, #2a1a14 25%, transparent 25%),
-        linear-gradient(45deg,  transparent 75%, #2a1a14 75%),
-        linear-gradient(-45deg, transparent 75%, #2a1a14 75%);
-      background-size: 8px 8px;
-      background-position: 0 0, 0 4px, 4px -4px, -4px 0;
-      border-radius: 4px;
-      flex-shrink: 0;
-      overflow: hidden;
+      width: 60px; height: 60px; flex-shrink: 0;
+      border-radius: 6px; overflow: hidden;
+      background: repeating-conic-gradient(var(--ink) 0% 25%, #fff 0% 50%) 0 0 / 8px 8px;
     }
 
-    .qr-badge .qr img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-      border-radius: 4px;
-    }
+    .qr-badge .qr img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
     .qr-badge .text {
-      font-family: var(--mono);
-      font-size: 10px;
-      letter-spacing: .14em;
-      text-transform: uppercase;
-      color: var(--ink);
+      font-family: var(--mono); font-size: 10px;
+      letter-spacing: .12em; text-transform: uppercase; color: var(--ink);
     }
 
     .qr-badge .text b {
-      font-family: var(--display);
-      font-style: italic;
-      font-size: 14px;
-      font-weight: 500;
-      text-transform: none;
-      letter-spacing: 0;
-      display: block;
-      margin-bottom: 2px;
-      color: var(--ink);
+      font-family: var(--display); font-style: italic;
+      font-size: 14px; font-weight: 500;
+      text-transform: none; letter-spacing: 0;
+      display: block; margin-bottom: 2px; color: var(--ink);
     }
 
-    /* ── Upcoming thumbnails column ───────────────────────── */
+    /* ── Upcoming thumbnails ────────────────────────────────── */
     .upcoming {
-      position: fixed;
-      right: 32px;
-      top: 50%;
-      transform: translateY(-50%);
-      z-index: 10;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
+      position: fixed; right: 36px; top: 50%; transform: translateY(-50%);
+      z-index: 10; display: flex; flex-direction: column; gap: 8px;
     }
 
     .upcoming-thumb {
-      width: 72px;
-      aspect-ratio: 1;
-      border-radius: 10px;
+      width: 76px; aspect-ratio: 1; border-radius: 10px;
       border: 2px solid rgba(255,255,255,.2);
-      overflow: hidden;
+      overflow: hidden; background-size: cover; background-position: center;
+      cursor: pointer; transition: border-color .25s, transform .25s;
       flex-shrink: 0;
     }
 
+    .upcoming-thumb:hover { transform: scale(1.06); }
+
     .upcoming-thumb.next {
       border-color: var(--gold);
-      box-shadow: 0 0 0 4px rgba(240,163,122,.2);
+      box-shadow: 0 0 0 4px rgba(240,163,122,.25);
     }
 
-    .upcoming-thumb img,
-    .upcoming-thumb video {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-
-    /* ── Floating emojis ──────────────────────────────────── */
-    #emoji-container {
-      position: fixed;
-      inset: 0;
-      z-index: 60;
+    /* ── Caption frame ──────────────────────────────────────── */
+    .frame {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 10;
+      padding: 0 64px 56px;
+      display: none; justify-content: space-between; align-items: flex-end; gap: 32px;
       pointer-events: none;
-      overflow: hidden;
+    }
+
+    .caption { max-width: 55%; }
+
+    .caption .uploader {
+      font-family: var(--mono); font-size: 12px;
+      letter-spacing: .2em; text-transform: uppercase;
+      color: rgba(255,255,255,.65); margin-bottom: 14px;
+      transition: opacity .5s ease;
+    }
+
+    .caption blockquote {
+      font-family: var(--display); font-style: italic; font-weight: 400;
+      font-size: clamp(32px, 4vw, 56px); line-height: 1.1;
+      letter-spacing: -.015em;
+      text-shadow: 0 4px 24px rgba(0,0,0,.55);
+      margin: 0; transition: opacity .5s ease;
+    }
+
+    .caption.fade .uploader,
+    .caption.fade blockquote { opacity: 0; }
+
+    .corner {
+      text-align: right; font-family: var(--mono); font-size: 11px;
+      letter-spacing: .2em; text-transform: uppercase;
+      color: rgba(255,255,255,.6); flex-shrink: 0;
+    }
+
+    .corner .names {
+      font-family: var(--display); font-style: italic; font-weight: 400;
+      font-size: 28px; color: #fff; text-transform: none;
+      letter-spacing: -.01em; margin-bottom: 4px;
+    }
+
+    .corner .names em { color: var(--gold); font-style: normal; }
+
+    /* ── Progress bar ───────────────────────────────────────── */
+    .slide-progress {
+      position: fixed; bottom: 0; left: 0; right: 0; height: 3px; z-index: 20;
+      background: rgba(255,255,255,.1); pointer-events: none;
+    }
+
+    .slide-progress .fill {
+      height: 100%; background: rgba(240,163,122,.8); width: 0;
+    }
+
+    /* ── Pause overlay ──────────────────────────────────────── */
+    .pause-btn {
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      z-index: 15; opacity: 0; pointer-events: none;
+      font-family: var(--mono); font-size: 13px; letter-spacing: .3em;
+      text-transform: uppercase; background: rgba(0,0,0,.5); border-radius: 999px;
+      padding: 14px 28px; transition: opacity .3s ease;
+      backdrop-filter: blur(8px); white-space: nowrap;
+    }
+
+    .pause-btn.visible { opacity: 1; pointer-events: auto; }
+
+    /* ── Floating emojis ────────────────────────────────────── */
+    #emoji-container {
+      position: fixed; inset: 0; z-index: 60;
+      pointer-events: none; overflow: hidden;
     }
 
     .float-emoji {
-      position: absolute;
-      bottom: 0;
-      line-height: 1;
+      position: absolute; bottom: 0; line-height: 1;
       animation: floatUp linear forwards;
-      pointer-events: none;
-      user-select: none;
+      pointer-events: none; user-select: none;
     }
 
     @keyframes floatUp {
-      0%   { transform: translateY(0)      scale(1);   opacity: 1; }
+      0%   { transform: translateY(0)     scale(1);   opacity: 1; }
       70%  { opacity: 1; }
-      100% { transform: translateY(-95vh)  scale(1.6); opacity: 0; }
+      100% { transform: translateY(-95vh) scale(1.6); opacity: 0; }
     }
 
-    /* ── Upload toast ─────────────────────────────────────── */
+    /* ── Upload toast ───────────────────────────────────────── */
     .upload-toast {
-      position: fixed;
-      bottom: 5rem;
-      right: 2rem;
-      background: rgba(10,10,10,.9);
-      border-left: 4px solid var(--accent, #f0a37a);
-      color: #fff;
-      padding: 1rem 1.4rem;
-      border-radius: 10px;
-      font-size: .95rem;
-      font-weight: 500;
-      line-height: 1.4;
-      max-width: 280px;
-      z-index: 200;
-      transform: translateX(120%);
-      transition: transform .4s cubic-bezier(.22,.68,0,1.2);
-      pointer-events: none;
+      position: fixed; bottom: 4rem; left: 50%; transform: translateX(-50%) translateY(8px);
+      background: rgba(10,10,10,.9); border: 1px solid rgba(240,163,122,.4);
+      color: #fff; padding: .9rem 1.6rem; border-radius: 999px;
+      font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
+      z-index: 200; opacity: 0; transition: opacity .4s, transform .4s;
+      pointer-events: none; white-space: nowrap;
       box-shadow: 0 4px 24px rgba(0,0,0,.4);
     }
 
-    .upload-toast.show { transform: translateX(0); }
+    .upload-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-    /* ── Keyboard hint ────────────────────────────────────── */
+    /* ── Keyboard hint ──────────────────────────────────────── */
     .kb-hint {
-      position: fixed;
-      bottom: 1.5rem;
-      right: 2rem;
-      font-size: .65rem;
-      color: rgba(255,255,255,.3);
-      letter-spacing: .06em;
-      z-index: 200;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity .3s;
+      position: fixed; bottom: 1rem; right: 1.5rem;
+      font-family: var(--mono); font-size: .6rem;
+      color: rgba(255,255,255,.25); letter-spacing: .1em;
+      z-index: 200; pointer-events: none;
+      opacity: 0; transition: opacity .3s;
     }
 
     body:hover .kb-hint { opacity: 1; }
 
-    /* ── Empty state ──────────────────────────────────────── */
+    /* ── Empty state ────────────────────────────────────────── */
     .empty-state {
-      display: none;
-      position: fixed;
-      inset: 0;
-      z-index: 2;
-      background: linear-gradient(45deg, var(--primary, #3d1f2d) 0%, var(--primary-light, #5c3048) 50%, var(--accent, #e8735a) 100%);
-      background-size: 400% 400%;
-      animation: gradientShift 8s ease infinite;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 2rem;
+      display: none; position: fixed; inset: 0; z-index: 2;
+      background: linear-gradient(135deg, #3d1f2d 0%, #5c3048 50%, #c45a3a 100%);
+      background-size: 400% 400%; animation: gradShift 8s ease infinite;
+      flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; padding: 2rem;
     }
 
     .empty-state.visible { display: flex; }
 
-    @keyframes gradientShift {
+    @keyframes gradShift {
       0%   { background-position: 0%   50%; }
       50%  { background-position: 100% 50%; }
       100% { background-position: 0%   50%; }
     }
 
     .empty-event-name {
-      font-family: var(--display);
-      font-size: clamp(2.5rem, 7vw, 5rem);
-      font-weight: 600;
-      margin-bottom: 1rem;
-      text-shadow: 0 4px 20px rgba(0,0,0,.4);
+      font-family: var(--display); font-style: italic;
+      font-size: clamp(2.5rem, 7vw, 5rem); font-weight: 400;
+      margin-bottom: 1rem; text-shadow: 0 4px 20px rgba(0,0,0,.4);
     }
 
     .empty-tagline {
-      font-size: clamp(1rem, 2.5vw, 1.5rem);
-      opacity: .85;
-      margin-bottom: 2.5rem;
-      letter-spacing: .06em;
+      font-family: var(--mono); font-size: clamp(.85rem, 2vw, 1.1rem);
+      letter-spacing: .1em; text-transform: uppercase;
+      opacity: .8; margin-bottom: 2.5rem;
     }
 
     .empty-qr-wrap {
-      background: #fff;
-      border-radius: 20px;
-      padding: 1.25rem;
-      margin-bottom: 1.5rem;
-      box-shadow: 0 8px 40px rgba(0,0,0,.3);
-    }
-
-    #empty-qr {
-      display: block;
-      width: clamp(160px, 20vw, 240px);
-      height: clamp(160px, 20vw, 240px);
-      border-radius: 10px;
-    }
-
-    .empty-scan-label {
-      font-size: clamp(.9rem, 2vw, 1.1rem);
-      opacity: .9;
-      letter-spacing: .04em;
-      font-weight: 600;
-    }
-
-    /* Pulsing ring behind QR */
-    .qr-pulse {
+      background: #fff; border-radius: 20px; padding: 1.25rem;
+      margin-bottom: 1.5rem; box-shadow: 0 8px 40px rgba(0,0,0,.3);
       position: relative;
     }
 
-    .qr-pulse::before {
-      content: '';
-      position: absolute;
-      inset: -12px;
-      border-radius: 28px;
-      border: 2px solid rgba(255,255,255,.35);
+    .empty-qr-wrap::before {
+      content: ''; position: absolute; inset: -12px;
+      border-radius: 28px; border: 2px solid rgba(255,255,255,.3);
       animation: ringPulse 2.5s ease-in-out infinite;
     }
 
     @keyframes ringPulse {
-      0%,100% { opacity: .35; transform: scale(1); }
-      50%     { opacity: .7;  transform: scale(1.03); }
+      0%,100% { opacity: .3; transform: scale(1); }
+      50%     { opacity: .7; transform: scale(1.03); }
     }
 
-    /* ── Slide counter (debug / coordinator) ──────────────── */
-    .slide-indicator {
-      position: fixed;
-      top: 60px;
-      right: 1.5rem;
-      background: rgba(0,0,0,.5);
-      color: rgba(255,255,255,.5);
-      font-size: .65rem;
-      padding: .25rem .6rem;
-      border-radius: 999px;
-      z-index: 101;
-      pointer-events: none;
-      display: none;
+    #empty-qr {
+      display: block;
+      width: clamp(160px, 20vw, 240px); height: clamp(160px, 20vw, 240px);
+      border-radius: 10px;
     }
 
-    /* ── Progress bar (auto-advance indicator) ───────────── */
-    .slide-progress {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 3px;
-      z-index: 20;
-      background: rgba(255,255,255,.1);
-      pointer-events: none;
-    }
-
-    .slide-progress .fill {
-      height: 100%;
-      background: rgba(240,163,122,.8);
-      width: 0;
-    }
-
-    /* ── Pause overlay (pill) ─────────────────────────────── */
-    .pause-pill {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      z-index: 15;
-      opacity: 0;
-      pointer-events: none;
-      font-family: var(--mono);
-      font-size: 13px;
-      letter-spacing: .3em;
-      text-transform: uppercase;
-      background: rgba(0,0,0,.5);
-      border-radius: 999px;
-      padding: 14px 28px;
-      transition: opacity .3s ease;
-      backdrop-filter: blur(8px);
-      white-space: nowrap;
-    }
-
-    .pause-pill.visible {
-      opacity: 1;
-      pointer-events: auto;
+    .empty-scan-label {
+      font-family: var(--mono); font-size: clamp(.85rem, 2vw, 1rem);
+      letter-spacing: .1em; text-transform: uppercase; opacity: .9;
     }
   </style>
 </head>
 <body>
 
-<!-- Zone 1 — Media layers -->
-<div class="slide-layer" id="layer-a"></div>
-<div class="slide-layer" id="layer-b" style="opacity:0"></div>
+<!-- ════ PHOTO LAYERS ══════════════════════════════════════ -->
+<div class="layer" id="layer-a">
+  <div class="pic" id="pic-a"></div>
+  <div class="vignette"></div>
+</div>
+<div class="layer out" id="layer-b">
+  <div class="pic" id="pic-b"></div>
+  <div class="vignette"></div>
+</div>
 
-<!-- Top ticker (reference style) -->
-<div class="ticker" id="ticker-strip">
+<!-- ════ TOP TICKER ═══════════════════════════════════════ -->
+<div class="ticker">
   <div class="live">
     <span class="dot"></span>
-    Live &middot; <span id="ticker-event-name"></span>
+    Live &middot; <span id="ticker-name"></span>
   </div>
   <div class="stats" id="ticker-stats"></div>
 </div>
 
-<!-- Hidden compat elements — existing JS writes to these IDs -->
-<span id="ticker-seg-a" style="display:none">Loading…</span>
-<span id="ticker-seg-b" style="display:none">Loading…</span>
+<!-- ════ QR BADGE ═════════════════════════════════════════ -->
+<div class="qr-badge" id="qr-badge">
+  <div class="qr" id="qr-img-wrap"></div>
+  <div class="text">
+    Add yours
+    <b id="qr-url">reelday.ph/upload/…</b>
+  </div>
+</div>
 
-<!-- Caption frame (reference style) -->
-<div class="frame" id="overlay" style="display:none">
-  <div class="caption">
-    <div class="uploader" id="uploader-name"></div>
-    <blockquote id="uploader-message"></blockquote>
+<!-- ════ UPCOMING STRIP ═══════════════════════════════════ -->
+<div class="upcoming" id="upcoming-col"></div>
+
+<!-- ════ CAPTION FRAME ════════════════════════════════════ -->
+<div class="frame" id="frame">
+  <div class="caption" id="caption">
+    <div class="uploader" id="caption-uploader"></div>
+    <blockquote id="caption-quote"></blockquote>
   </div>
   <div class="corner">
-    <div class="names" id="event-label-overlay"></div>
-    <div class="moments" id="live-counter"></div>
+    <div class="names" id="corner-names"></div>
     <div>&#9733; Powered by Reelday</div>
   </div>
 </div>
 
-<!-- QR corner badge -->
-<div class="qr-badge" id="qr-badge" style="display:none">
-  <div class="qr" id="wall-qr-img"></div>
-  <div class="text">
-    Add yours
-    <b id="wall-upload-url">reelday.ph/upload/…</b>
-  </div>
-</div>
+<!-- ════ PROGRESS + PAUSE ═════════════════════════════════ -->
+<div class="slide-progress"><div class="fill" id="progress-fill"></div></div>
+<div class="pause-btn" id="pause-btn" onclick="togglePause()">⏸ Paused — tap to resume</div>
 
-<!-- Upcoming thumbnails column -->
-<div class="upcoming" id="upcoming-col"></div>
-
-<!-- Floating emojis -->
+<!-- ════ EXTRAS ═══════════════════════════════════════════ -->
 <div id="emoji-container"></div>
-
-<!-- Upload toast -->
 <div class="upload-toast" id="upload-toast"></div>
+<div class="kb-hint">Space / → Next &nbsp;·&nbsp; ← Prev &nbsp;·&nbsp; F Fullscreen &nbsp;·&nbsp; P Pause &nbsp;·&nbsp; Q Toggle QR</div>
 
-<!-- Pause indicator (pill) -->
-<div class="pause-pill" id="pause-pill" onclick="togglePause()">⏸ Paused — tap to resume</div>
-
-<!-- Empty state -->
+<!-- ════ EMPTY STATE ══════════════════════════════════════ -->
 <div class="empty-state" id="empty-state">
-  <div class="empty-event-name" id="empty-event-name"></div>
-  <div class="empty-tagline" id="empty-tagline">Scan para mag-share ng inyong photos!</div>
-  <div class="qr-pulse empty-qr-wrap">
+  <div class="empty-event-name" id="empty-event-name">Reelday</div>
+  <div class="empty-tagline">Scan para mag-share ng inyong photos!</div>
+  <div class="empty-qr-wrap">
     <img id="empty-qr" alt="QR Code" />
   </div>
-  <div class="empty-scan-label">📸 I-scan ang QR code</div>
+  <div class="empty-scan-label">📸 I-scan ang QR code para magsimula</div>
 </div>
 
-<!-- Progress bar -->
-<div class="slide-progress"><div class="fill" id="progress-fill"></div></div>
-
-<!-- Keyboard hint (visible on hover) -->
-<div class="kb-hint">Space/→ Next &nbsp;·&nbsp; ← Prev &nbsp;·&nbsp; F Fullscreen &nbsp;·&nbsp; P Pause</div>
-
 <script type="module">
-  // ── Constants ────────────────────────────────────────
-  const SLIDE_DURATION      = 5000;  // ms per slide
-  const TRANSITION_DURATION = 2000;  // crossfade duration (matches CSS 2s)
-  const KB_ANIMS = ['kb1','kb2','kb3','kb4','kb5'];
+  /* ══════════════════════════════════════════════════════════
+     CONFIG
+  ══════════════════════════════════════════════════════════ */
+  const SLIDE_DURATION   = 8000;  // ms per slide
+  const FADE_DURATION    = 1600;  // ms for crossfade (matches CSS 1.6s)
+  const KB_DURATION      = 14;    // seconds for Ken Burns
+  const KB_ANIMS         = ['kb1', 'kb2', 'kb3', 'kb4'];
+  const POLL_INTERVAL    = 15000; // ms between refresh polls
+  const QR_HIDE_AFTER    = 20000; // ms before QR badge auto-hides
 
   const THEME_META = {
-    wedding:          { emoji: ['💗','🎉','✨','🥂','💍','🌸','💒'], label: (n) => `${n} · Kasalan` },
-    debut:            { emoji: ['👑','💗','✨','🌹','💃','🎀','⭐'], label: (n) => `${n} · Debut` },
-    birthday:         { emoji: ['🎂','🎉','🎊','🎈','✨','💫','🥳'],  label: (n) => `${n} · Kaarawan` },
-    seventh_birthday: { emoji: ['🌟','🎊','🎈','⭐','✨','🎉','🎀'], label: (n) => `${n} · 7th Birthday` },
-    baptism:          { emoji: ['🕊️','✨','💙','🌊','🙏','🌿','🤍'], label: (n) => `${n} · Binyag` },
-    reunion:          { emoji: ['🎉','🥂','💗','✨','🎊','🤗','🍻'], label: (n) => `${n} · Reunion` },
-    corporate:        { emoji: ['👏','✨','🎉','⭐','🏆','💼','🎯'], label: (n) => n },
-    memorial:         { emoji: ['🕯️','🌹','💙','✨','🙏','🍃','🌿'],  label: (n) => `${n} · Memorial` },
+    wedding:          { emoji: ['💗','🎉','✨','🥂','💍','🌸','💒'], cornerSuffix: '' },
+    debut:            { emoji: ['👑','💗','✨','🌹','💃','🎀','⭐'], cornerSuffix: '' },
+    birthday:         { emoji: ['🎂','🎉','🎊','🎈','✨','💫','🥳'], cornerSuffix: '' },
+    seventh_birthday: { emoji: ['🌟','🎊','🎈','⭐','✨','🎉','🎀'], cornerSuffix: '' },
+    baptism:          { emoji: ['🕊️','✨','💙','🌊','🙏','🌿','🤍'], cornerSuffix: '' },
+    reunion:          { emoji: ['🎉','🥂','💗','✨','🎊','🤗','🍻'], cornerSuffix: '' },
+    corporate:        { emoji: ['👏','✨','🎉','⭐','🏆','💼','🎯'], cornerSuffix: '' },
+    memorial:         { emoji: ['🕯️','🌹','💙','✨','🙏','🍃','🌿'], cornerSuffix: '' },
   };
 
-  // ── State ─────────────────────────────────────────────
-  const slug       = location.pathname.split('/').filter(Boolean).pop() ||
-                     new URLSearchParams(location.search).get('slug');
-  let items        = [];      // filtered upload objects for slideshow
-  let allUploads   = [];      // all uploads (for counter/ticker)
-  let knownIds     = new Set();
-  let currentIdx   = 0;
-  let frontLayer   = document.getElementById('layer-a');
-  let backLayer    = document.getElementById('layer-b');
-  let slideTimer   = null;
-  let isPaused     = false;
-  let isRunning    = false;
-  let eventData    = null;
-  let themeMeta    = THEME_META.wedding;
+  /* ══════════════════════════════════════════════════════════
+     STATE
+  ══════════════════════════════════════════════════════════ */
+  const slug = (() => {
+    const parts = location.pathname.split('/').filter(Boolean);
+    // Expect /wall/:slug
+    if (parts[0] === 'wall' && parts[1]) return parts[1];
+    return new URLSearchParams(location.search).get('slug') || parts.pop() || null;
+  })();
 
-  // ── DOM refs ──────────────────────────────────────────
-  const overlay          = document.getElementById('overlay');
-  const uploaderName     = document.getElementById('uploader-name');
-  const uploaderMessage  = document.getElementById('uploader-message');
-  const liveCounter      = document.getElementById('live-counter');
-  const eventLabelEl     = document.getElementById('event-label-overlay');
-  const uploadToast      = document.getElementById('upload-toast');
-  const pausePill        = document.getElementById('pause-pill');
-  const emptyState       = document.getElementById('empty-state');
-  const emptyEventName   = document.getElementById('empty-event-name');
-  const emptyQr          = document.getElementById('empty-qr');
-  const tickerTrack      = document.getElementById('ticker-track');
-  const tickerSegA       = document.getElementById('ticker-seg-a');
-  const tickerSegB       = document.getElementById('ticker-seg-b');
-  const progressFill     = document.getElementById('progress-fill');
+  let items      = [];
+  let allUploads = [];
+  let knownIds   = new Set();
+  let currentIdx = 0;
+  let activeLayer = 'A';   // 'A' or 'B'
+  let isPaused   = false;
+  let isRunning  = false;
+  let slideTimer = null;
+  let qrTimer    = null;
+  let eventData  = null;
+  let themeMeta  = THEME_META.wedding;
 
-  // ── Progress bar ──────────────────────────────────────
+  /* ══════════════════════════════════════════════════════════
+     DOM REFS
+  ══════════════════════════════════════════════════════════ */
+  const layerA      = document.getElementById('layer-a');
+  const layerB      = document.getElementById('layer-b');
+  const picA        = document.getElementById('pic-a');
+  const picB        = document.getElementById('pic-b');
+  const frame       = document.getElementById('frame');
+  const caption     = document.getElementById('caption');
+  const capUploader = document.getElementById('caption-uploader');
+  const capQuote    = document.getElementById('caption-quote');
+  const cornerNames = document.getElementById('corner-names');
+  const tickerName  = document.getElementById('ticker-name');
+  const tickerStats = document.getElementById('ticker-stats');
+  const qrBadge     = document.getElementById('qr-badge');
+  const qrImgWrap   = document.getElementById('qr-img-wrap');
+  const qrUrlEl     = document.getElementById('qr-url');
+  const upcomingCol = document.getElementById('upcoming-col');
+  const progressFill= document.getElementById('progress-fill');
+  const pauseBtn    = document.getElementById('pause-btn');
+  const uploadToast = document.getElementById('upload-toast');
+  const emptyState  = document.getElementById('empty-state');
+  const emptyName   = document.getElementById('empty-event-name');
+  const emptyQr     = document.getElementById('empty-qr');
+  const emojiBox    = document.getElementById('emoji-container');
+
+  /* ══════════════════════════════════════════════════════════
+     PROGRESS BAR
+  ══════════════════════════════════════════════════════════ */
   function startProgress() {
-    if (!progressFill) return;
     progressFill.style.transition = 'none';
     progressFill.style.width = '0%';
-    void progressFill.offsetWidth; // force reflow
+    void progressFill.offsetWidth;
     progressFill.style.transition = `width ${SLIDE_DURATION}ms linear`;
     progressFill.style.width = '100%';
   }
 
-  function resetProgress() {
-    if (!progressFill) return;
+  function stopProgress() {
+    const computed = getComputedStyle(progressFill).width;
     progressFill.style.transition = 'none';
-    progressFill.style.width = '0%';
+    progressFill.style.width = computed;
   }
 
-  // ── Theme ─────────────────────────────────────────────
-  function applyTheme(eventType) {
-    const theme = Object.keys(THEME_META).includes(eventType) ? eventType : 'wedding';
-    document.body.setAttribute('data-theme', theme);
-    themeMeta = THEME_META[theme];
-  }
+  /* ══════════════════════════════════════════════════════════
+     SLIDE ENGINE
+  ══════════════════════════════════════════════════════════ */
+  function showSlide(idx) {
+    if (items.length === 0) return;
+    const item  = items[idx % items.length];
+    const kbAnim = KB_ANIMS[idx % KB_ANIMS.length];
 
-  // ── Media loading ─────────────────────────────────────
-  function pickKB() {
-    return KB_ANIMS[Math.floor(Math.random() * KB_ANIMS.length)];
-  }
+    // Determine in/out layers
+    const inLayer  = activeLayer === 'A' ? layerB : layerA;
+    const outLayer = activeLayer === 'A' ? layerA : layerB;
+    const inPic    = activeLayer === 'A' ? picB   : picA;
 
-  function loadMedia(layer, item) {
-    layer.innerHTML = '';
-    const anim     = pickKB();
-    const duration = ((SLIDE_DURATION + TRANSITION_DURATION) / 1000).toFixed(1);
-    const style    = `width:100%;height:100%;object-fit:cover;animation:${anim} ${duration}s ease-in-out forwards`;
+    // Load photo via background-image (no CORS restrictions, no flicker)
+    inPic.style.backgroundImage = `url('${item.file_url}')`;
 
-    if (item.file_type === 'video') {
-      const vid = document.createElement('video');
-      vid.src          = item.file_url;
-      vid.autoplay     = true;
-      vid.muted        = true;
-      vid.loop         = true;
-      vid.playsInline  = true;
-      vid.style.cssText = style;
-      layer.appendChild(vid);
-    } else {
-      const img = document.createElement('img');
-      img.src           = item.file_url;
-      img.alt           = item.uploader_name || '';
-      img.style.cssText = style;
-      layer.appendChild(img);
-    }
-  }
+    // Restart Ken Burns animation cleanly
+    inPic.style.animation = 'none';
+    void inPic.offsetWidth; // force reflow
+    inPic.style.animation = `${kbAnim} ${KB_DURATION}s ease-out forwards`;
 
-  // ── Overlay update ────────────────────────────────────
-  function updateOverlay(item) {
-    const name = item.uploader_name || 'Panauhin';
-    uploaderName.textContent    = `📸 Kuha ni ${name}`;
-    uploaderMessage.textContent = item.message || '';
-  }
+    // Crossfade layers
+    inLayer.classList.remove('out');
+    outLayer.classList.add('out');
+    activeLayer = activeLayer === 'A' ? 'B' : 'A';
 
-  function updateCounter(count) {
-    liveCounter.textContent = `❤️ ${count.toLocaleString()} moment${count !== 1 ? 's' : ''} shared`;
-  }
-
-  function updateEventLabel() {
-    if (!eventData) return;
-    const fn = themeMeta.label;
-    eventLabelEl.textContent = typeof fn === 'function' ? fn(eventData.couple_names) : eventData.couple_names;
-  }
-
-  // ── Ticker ────────────────────────────────────────────
-  function buildTickerText(uploads) {
-    if (!uploads.length) return '📸 Waiting for guests to share…';
-    return uploads
-      .map(u => `📸 ${u.uploader_name || 'Panauhin'}`)
-      .join(' · ') + ' · ';
-  }
-
-  function updateTicker(uploads) {
-    const text = buildTickerText(uploads);
-    tickerSegA.textContent = text;
-    tickerSegB.textContent = text;
-
-    // Recalculate animation duration
-    const charsPerSeg = text.length;
-    const duration    = Math.max(20, charsPerSeg * 0.18);
-    if (tickerTrack) tickerTrack.style.animation = `tickerScroll ${duration}s linear infinite`;
-
-    // Event name in live segment
-    const eventNameEl = document.getElementById('ticker-event-name');
-    if (eventNameEl && eventData) {
-      eventNameEl.textContent = eventData.couple_names || '';
-    }
-
-    // Stats: moments · guests sharing · date
-    const statsEl = document.getElementById('ticker-stats');
-    if (statsEl) {
-      const guestCount = new Set(uploads.map(u => u.uploader_name).filter(Boolean)).size;
-      let dateStr = '';
-      if (eventData && eventData.event_date) {
-        const d = new Date(eventData.event_date);
-        const dd = String(d.getDate()).padStart(2, '0');
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const yyyy = d.getFullYear();
-        dateStr = `${dd}·${mm}·${yyyy}`;
-      }
-      statsEl.innerHTML =
-        `<span><em>${uploads.length}</em> moments</span>` +
-        `<span><em>${guestCount}</em> guests sharing</span>` +
-        (dateStr ? `<span>${dateStr}</span>` : '');
-    }
-  }
-
-  // ── Slideshow ─────────────────────────────────────────
-  function advance() {
-    if (items.length < 2) {
-      slideTimer = setTimeout(advance, SLIDE_DURATION);
-      return;
-    }
-
-    const nextIdx = (currentIdx + 1) % items.length;
-
-    loadMedia(backLayer, items[nextIdx]);
-
-    backLayer.style.opacity  = '1';
-    frontLayer.style.opacity = '0';
-
+    // Fade caption out, swap text, fade in
+    caption.classList.add('fade');
     setTimeout(() => {
-      const tmp = frontLayer;
-      frontLayer = backLayer;
-      backLayer  = tmp;
-      currentIdx = nextIdx;
-      updateOverlay(items[currentIdx]);
-      updateUpcoming();
-    }, TRANSITION_DURATION);
+      updateCaption(item);
+      caption.classList.remove('fade');
+    }, 500);
 
+    // Update upcoming strip
+    updateUpcoming(idx);
+
+    // Show frame
+    frame.style.display = 'flex';
+  }
+
+  function advance() {
+    if (isPaused || items.length === 0) return;
+
+    const nextIdx = items.length === 1 ? 0 : (currentIdx + 1) % items.length;
+    currentIdx = nextIdx;
+    showSlide(currentIdx);
     startProgress();
 
-    if (!isPaused) {
-      slideTimer = setTimeout(advance, SLIDE_DURATION);
-    }
+    slideTimer = setTimeout(advance, SLIDE_DURATION);
   }
 
   function startSlideshow() {
@@ -777,73 +517,170 @@
     isRunning = true;
 
     currentIdx = 0;
-    loadMedia(frontLayer, items[0]);
-    frontLayer.style.opacity = '1';
-    updateOverlay(items[0]);
-    overlay.style.display = 'flex';
-    emptyState.classList.remove('visible');
-    updateUpcoming();
+    showSlide(0);
     startProgress();
+    emptyState.classList.remove('visible');
 
     if (items.length > 1) {
       slideTimer = setTimeout(advance, SLIDE_DURATION);
     }
   }
 
-  function prevSlide() {
+  function goTo(idx) {
     clearTimeout(slideTimer);
-    const prevIdx = (currentIdx - 1 + items.length) % items.length;
-    currentIdx = (prevIdx - 1 + items.length) % items.length;
-    advance();
-  }
-
-  function nextSlide() {
-    clearTimeout(slideTimer);
-    advance();
-  }
-
-  function togglePause() {
-    isPaused = !isPaused;
-    if (pausePill) pausePill.classList.toggle('visible', isPaused);
-    if (!isPaused) {
+    currentIdx = ((idx % items.length) + items.length) % items.length;
+    showSlide(currentIdx);
+    startProgress();
+    if (!isPaused && items.length > 1) {
       slideTimer = setTimeout(advance, SLIDE_DURATION);
-      startProgress();
-      setTimeout(() => { if (pausePill) pausePill.classList.remove('visible'); }, 800);
-    } else {
-      resetProgress();
-      const vid = frontLayer.querySelector('video');
-      if (vid) vid.pause();
     }
   }
 
-  // ── Floating emojis ───────────────────────────────────
+  /* ══════════════════════════════════════════════════════════
+     PAUSE / RESUME
+  ══════════════════════════════════════════════════════════ */
+  function togglePause() {
+    isPaused = !isPaused;
+    pauseBtn.classList.toggle('visible', isPaused);
+    if (isPaused) {
+      clearTimeout(slideTimer);
+      stopProgress();
+    } else {
+      startProgress();
+      if (items.length > 1) slideTimer = setTimeout(advance, SLIDE_DURATION);
+    }
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     CAPTION & CORNER
+  ══════════════════════════════════════════════════════════ */
+  function formatTime(iso) {
+    if (!iso) return '';
+    try {
+      const d = new Date(iso);
+      return d.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase();
+    } catch { return ''; }
+  }
+
+  function updateCaption(item) {
+    const name = item.uploader_name || 'Panauhin';
+    const time = formatTime(item.created_at);
+    capUploader.textContent = `— ${name}${time ? ' · ' + time : ''}`;
+    capQuote.textContent    = item.message || '';
+  }
+
+  function updateCorner() {
+    if (!eventData) return;
+    // Split at " & " or " and " to wrap the ampersand in <em>
+    const raw = eventData.couple_names || '';
+    const parts = raw.split(/\s+(?:&|and)\s+/i);
+    if (parts.length === 2) {
+      cornerNames.innerHTML = `${parts[0]} <em>&amp;</em> ${parts[1]}`;
+    } else {
+      cornerNames.textContent = raw;
+    }
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     TICKER
+  ══════════════════════════════════════════════════════════ */
+  function updateTicker(uploads) {
+    // Live segment: event name
+    if (eventData) tickerName.textContent = eventData.couple_names || '';
+
+    // Stats: moments · guests · date
+    const guestSet   = new Set(uploads.map(u => u.uploader_name).filter(Boolean));
+    let dateStr = '';
+    if (eventData && eventData.event_date) {
+      try {
+        const d  = new Date(eventData.event_date);
+        const dd = String(d.getDate()).padStart(2, '0');
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        dateStr  = `${dd}·${mm}·${d.getFullYear()}`;
+      } catch { /* skip */ }
+    }
+
+    tickerStats.innerHTML =
+      `<span><em>${uploads.length}</em> moments</span>` +
+      `<span><em>${guestSet.size}</em> guests sharing</span>` +
+      (dateStr ? `<span>${dateStr}</span>` : '');
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     UPCOMING STRIP
+  ══════════════════════════════════════════════════════════ */
+  function updateUpcoming(idx) {
+    if (items.length < 2) { upcomingCol.innerHTML = ''; return; }
+
+    const count = Math.min(4, items.length - 1);
+    upcomingCol.innerHTML = '';
+    for (let i = 0; i < count; i++) {
+      const item = items[(idx + 1 + i) % items.length];
+      const div  = document.createElement('div');
+      div.className = 'upcoming-thumb' + (i === 0 ? ' next' : '');
+      div.style.backgroundImage = `url('${item.file_url}')`;
+      const target = idx + 1 + i;
+      div.onclick = () => goTo(target);
+      upcomingCol.appendChild(div);
+    }
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     QR BADGE
+  ══════════════════════════════════════════════════════════ */
+  async function initQrBadge(eventSlug) {
+    qrUrlEl.textContent = `reelday.ph/upload/${eventSlug}`;
+    qrBadge.style.display = 'flex';
+    resetQrTimer();
+
+    try {
+      const res = await fetch(`/api/events/${eventSlug}/qr`);
+      if (!res.ok) return;
+      const { qr_code } = await res.json();
+      if (qr_code) {
+        qrImgWrap.style.background = 'none';
+        const img = document.createElement('img');
+        img.src = qr_code; img.alt = 'QR Code';
+        qrImgWrap.appendChild(img);
+      }
+    } catch { /* checkerboard fallback stays */ }
+  }
+
+  function resetQrTimer() {
+    clearTimeout(qrTimer);
+    qrBadge.style.opacity = '1';
+    qrTimer = setTimeout(() => { qrBadge.style.opacity = '0'; }, QR_HIDE_AFTER);
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     FLOATING EMOJIS
+  ══════════════════════════════════════════════════════════ */
   function spawnEmoji(count = 1) {
     const pool = themeMeta.emoji;
     for (let i = 0; i < count; i++) {
       setTimeout(() => {
-        const el        = document.createElement('div');
-        el.className    = 'float-emoji';
-        el.textContent  = pool[Math.floor(Math.random() * pool.length)];
-        el.style.left   = `${5 + Math.random() * 88}%`;
+        const el = document.createElement('div');
+        el.className  = 'float-emoji';
+        el.textContent = pool[Math.floor(Math.random() * pool.length)];
+        el.style.left = `${5 + Math.random() * 88}%`;
         el.style.fontSize = `${1.4 + Math.random() * 1.8}rem`;
-        const dur       = 3.5 + Math.random() * 2.5;
-        el.style.animationDuration = `${dur}s`;
-        el.style.animationTimingFunction = 'ease-out';
-        document.getElementById('emoji-container').appendChild(el);
+        el.style.animationDuration = `${3.5 + Math.random() * 2.5}s`;
+        emojiBox.appendChild(el);
         el.addEventListener('animationend', () => el.remove());
       }, i * 200);
     }
   }
 
   function scheduleRandomEmoji() {
-    const delay = 8000 + Math.random() * 7000;
     setTimeout(() => {
-      if (isRunning) spawnEmoji(2 + Math.floor(Math.random() * 2));
+      if (isRunning && !isPaused) spawnEmoji(2 + Math.floor(Math.random() * 2));
       scheduleRandomEmoji();
-    }, delay);
+    }, 8000 + Math.random() * 7000);
   }
 
-  // ── Toast ─────────────────────────────────────────────
+  /* ══════════════════════════════════════════════════════════
+     TOAST
+  ══════════════════════════════════════════════════════════ */
   let toastTimer;
   function showToast(msg) {
     clearTimeout(toastTimer);
@@ -852,41 +689,9 @@
     toastTimer = setTimeout(() => uploadToast.classList.remove('show'), 3500);
   }
 
-  // ── Keyboard controls ─────────────────────────────────
-  let cursorTimer;
-  document.addEventListener('mousemove', () => {
-    document.body.classList.add('show-cursor');
-    clearTimeout(cursorTimer);
-    cursorTimer = setTimeout(() => document.body.classList.remove('show-cursor'), 3000);
-  });
-
-  document.addEventListener('keydown', e => {
-    switch (e.key) {
-      case ' ':
-      case 'ArrowRight':
-        e.preventDefault();
-        if (isRunning) nextSlide();
-        break;
-      case 'ArrowLeft':
-        e.preventDefault();
-        if (isRunning) prevSlide();
-        break;
-      case 'f':
-      case 'F':
-        if (!document.fullscreenElement) {
-          document.documentElement.requestFullscreen().catch(() => {});
-        } else {
-          document.exitFullscreen();
-        }
-        break;
-      case 'p':
-      case 'P':
-        if (isRunning) togglePause();
-        break;
-    }
-  });
-
-  // ── Refresh & new upload detection ────────────────────
+  /* ══════════════════════════════════════════════════════════
+     POLL FOR NEW UPLOADS
+  ══════════════════════════════════════════════════════════ */
   async function refreshUploads() {
     try {
       const res = await fetch(`/api/uploads/${slug}`);
@@ -895,23 +700,19 @@
 
       allUploads = uploads;
       const slideable = uploads.filter(u => !u.is_video_message);
+      const newOnes   = slideable.filter(u => !knownIds.has(u.id));
 
-      // Detect new arrivals (skip on first load — knownIds will be populated then)
-      const newOnes = slideable.filter(u => !knownIds.has(u.id));
-
-      if (newOnes.length > 0 && isRunning) {
-        // Only show notifications after initial load
+      if (newOnes.length > 0) {
         newOnes.forEach(u => knownIds.add(u.id));
-        const newest = newOnes[0];
-        const name   = newest.uploader_name || 'Panauhin';
-        showToast(`✨ ${name} just shared a moment!`);
-        spawnEmoji(3 + Math.floor(Math.random() * 2));
 
-        // Add new items to slideshow queue
-        items = slideable;
+        if (isRunning) {
+          items = slideable;
+          const name = newOnes[0].uploader_name || 'Panauhin';
+          showToast(`✨ ${name} just shared a moment!`);
+          spawnEmoji(3 + Math.floor(Math.random() * 2));
+        }
       }
 
-      // Start slideshow if we were in empty state and now have items
       if (!isRunning && slideable.length > 0) {
         items = slideable;
         slideable.forEach(u => knownIds.add(u.id));
@@ -919,28 +720,69 @@
         scheduleRandomEmoji();
       }
 
-      updateCounter(uploads.length);
       updateTicker(uploads);
-    } catch { /* silent — wall should never crash */ }
+    } catch { /* wall must never crash */ }
   }
 
-  // ── Empty state ───────────────────────────────────────
+  /* ══════════════════════════════════════════════════════════
+     EMPTY STATE
+  ══════════════════════════════════════════════════════════ */
   async function showEmptyState(event) {
-    emptyEventName.textContent = event.couple_names;
+    emptyName.textContent = event.couple_names || 'Reelday';
     emptyState.classList.add('visible');
 
     try {
       const res = await fetch(`/api/events/${slug}/qr`);
-      const { qr_code } = await res.json();
-      emptyQr.src = qr_code;
+      if (res.ok) {
+        const { qr_code } = await res.json();
+        if (qr_code) emptyQr.src = qr_code;
+      }
     } catch { /* QR optional */ }
   }
 
-  // ── Init ──────────────────────────────────────────────
+  /* ══════════════════════════════════════════════════════════
+     KEYBOARD + MOUSE
+  ══════════════════════════════════════════════════════════ */
+  document.addEventListener('keydown', e => {
+    switch (e.key) {
+      case ' ':
+      case 'ArrowRight':
+        e.preventDefault();
+        if (isRunning) goTo(currentIdx + 1);
+        break;
+      case 'ArrowLeft':
+        e.preventDefault();
+        if (isRunning) goTo(currentIdx - 1);
+        break;
+      case 'f': case 'F':
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        } else {
+          document.exitFullscreen();
+        }
+        break;
+      case 'p': case 'P':
+        if (isRunning) togglePause();
+        break;
+      case 'q': case 'Q':
+        qrBadge.style.opacity = qrBadge.style.opacity === '0' ? '1' : '0';
+        break;
+    }
+  });
+
+  document.addEventListener('mousemove', resetQrTimer);
+
+  document.body.addEventListener('click', e => {
+    if (e.target.closest('.qr-badge') || e.target.closest('.upcoming') || e.target.closest('.pause-btn')) return;
+    if (isRunning) goTo(currentIdx + 1);
+  });
+
+  /* ══════════════════════════════════════════════════════════
+     INIT
+  ══════════════════════════════════════════════════════════ */
   async function init() {
     if (!slug) {
-      emptyEventName.textContent = 'Reelday';
-      document.getElementById('empty-tagline').textContent = 'No event slug in URL.';
+      emptyName.textContent = 'Reelday';
       emptyState.classList.add('visible');
       return;
     }
@@ -959,19 +801,20 @@
       eventData  = event;
       allUploads = uploads;
 
-      applyTheme(event.event_type);
-      updateEventLabel();
+      // Apply event theme
+      const themeKey = Object.keys(THEME_META).includes(event.event_type) ? event.event_type : 'wedding';
+      themeMeta = THEME_META[themeKey];
+      document.body.setAttribute('data-theme', themeKey);
+
       document.title = `Live Wall — ${event.couple_names}`;
+
+      updateCorner();
+      updateTicker(uploads);
+      await initQrBadge(slug);
 
       const slideable = uploads.filter(u => !u.is_video_message);
       slideable.forEach(u => knownIds.add(u.id));
       items = slideable;
-
-      updateCounter(uploads.length);
-      updateTicker(uploads);
-
-      // Populate QR badge
-      initQrBadge(event, slug);
 
       if (items.length > 0) {
         startSlideshow();
@@ -980,76 +823,11 @@
         await showEmptyState(event);
       }
 
-      // Poll for new uploads every 15s
-      setInterval(refreshUploads, 15000);
+      setInterval(refreshUploads, POLL_INTERVAL);
 
-    } catch (err) {
-      emptyEventName.textContent = 'Event not found';
-      document.getElementById('empty-tagline').textContent =
-        `Could not load: ${slug}`;
+    } catch {
+      emptyName.textContent = 'Event not found';
       emptyState.classList.add('visible');
-    }
-  }
-
-  // ── QR Badge ──────────────────────────────────────────
-  async function initQrBadge(event, eventSlug) {
-    const badge     = document.getElementById('qr-badge');
-    const urlEl     = document.getElementById('wall-upload-url');
-    const qrImgWrap = document.getElementById('wall-qr-img');
-
-    const uploadUrl = `reelday.ph/upload/${eventSlug}`;
-    if (urlEl) urlEl.textContent = uploadUrl;
-    if (badge) badge.style.display = 'flex';
-
-    // Try to load actual QR from API
-    try {
-      const res = await fetch(`/api/events/${eventSlug}/qr`);
-      if (res.ok) {
-        const { qr_code } = await res.json();
-        if (qr_code && qrImgWrap) {
-          // Replace checkerboard with real QR image
-          qrImgWrap.innerHTML = '';
-          qrImgWrap.style.background = 'none';
-          const img = document.createElement('img');
-          img.src = qr_code;
-          img.alt = 'QR Code';
-          qrImgWrap.appendChild(img);
-        }
-      }
-    } catch { /* checkerboard fallback stays */ }
-  }
-
-  // ── Upcoming thumbnails ────────────────────────────────
-  function updateUpcoming() {
-    const col = document.getElementById('upcoming-col');
-    if (!col || items.length < 2) {
-      if (col) col.innerHTML = '';
-      return;
-    }
-
-    const thumbCount = Math.min(4, items.length - 1);
-    col.innerHTML = '';
-
-    for (let i = 0; i < thumbCount; i++) {
-      const idx  = (currentIdx + 1 + i) % items.length;
-      const item = items[idx];
-      const div  = document.createElement('div');
-      div.className = 'upcoming-thumb' + (i === 0 ? ' next' : '');
-
-      if (item.file_type === 'video') {
-        const vid = document.createElement('video');
-        vid.src      = item.file_url;
-        vid.muted    = true;
-        vid.preload  = 'metadata';
-        div.appendChild(vid);
-      } else {
-        const img = document.createElement('img');
-        img.src = item.file_url;
-        img.alt = item.uploader_name || '';
-        div.appendChild(img);
-      }
-
-      col.appendChild(div);
     }
   }
 
