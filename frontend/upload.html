@@ -517,6 +517,525 @@
       color: var(--ink-faint);
       opacity: .6;
     }
+      /* ── Share mode tabs ─────────────────────────────── */
+      .share-tabs {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin-bottom: 20px;
+      }
+
+      .share-tab {
+        background: #fff;
+        border: 1.5px solid var(--line);
+        border-radius: var(--r);
+        padding: 14px 8px 12px;
+        text-align: center;
+        cursor: pointer;
+        transition: border-color .2s, background .2s, transform .15s;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .share-tab:hover { border-color: var(--accent); background: var(--paper-2); }
+      .share-tab.active { border-color: var(--accent); background: var(--paper-2); }
+      .share-tab.active .tab-icon { background: var(--accent); color: #fff; }
+
+      .tab-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: var(--paper-3);
+        color: var(--ink);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background .2s, color .2s;
+      }
+
+      .tab-icon svg {
+        width: 18px;
+        height: 18px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 1.8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .tab-label {
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+        color: var(--ink-soft);
+        line-height: 1.2;
+      }
+
+      .share-tab.active .tab-label { color: var(--accent-deep, #7a3b2e); font-weight: 500; }
+
+      /* ── Share panels ──────────────────────────────── */
+      .share-panel { display: none; }
+      .share-panel.active { display: block; }
+
+      /* ── Panel 2: Record video ────────────────────── */
+      .record-panel {
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: var(--r-lg);
+        overflow: hidden;
+      }
+
+      .record-viewfinder {
+        background: #1a0f0a;
+        aspect-ratio: 16/10;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .record-viewfinder .vf-label {
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: .18em;
+        text-transform: uppercase;
+        color: rgba(255,255,255,.35);
+      }
+
+      .record-viewfinder .vf-corners {
+        position: absolute;
+        inset: 16px;
+        border: 1px solid rgba(255,255,255,.15);
+        border-radius: 8px;
+        pointer-events: none;
+      }
+
+      .record-viewfinder .vf-dot-wrap {
+        position: absolute;
+        top: 14px;
+        right: 14px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .record-viewfinder .vf-time {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: rgba(255,255,255,.7);
+        letter-spacing: .12em;
+      }
+
+      .rec-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #e63946;
+        box-shadow: 0 0 0 3px rgba(230,57,70,.3);
+      }
+
+      .rec-dot.recording { animation: pulse 1s ease infinite; }
+
+      @keyframes pulse { 50% { box-shadow: 0 0 0 6px rgba(230,57,70,0); } }
+
+      .record-controls {
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .record-btn-row {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .rec-btn-main {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        background: #e63946;
+        border: 3px solid #fff;
+        box-shadow: 0 0 0 2px #e63946, 0 4px 16px rgba(230,57,70,.4);
+        cursor: pointer;
+        transition: transform .2s, box-shadow .2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .rec-btn-main:hover { transform: scale(1.06); box-shadow: 0 0 0 2px #e63946, 0 8px 24px rgba(230,57,70,.5); }
+      .rec-btn-main.recording { background: var(--ink); box-shadow: 0 0 0 2px var(--ink), 0 4px 16px rgba(42,26,20,.4); }
+
+      .rec-btn-main svg { width: 24px; height: 24px; }
+
+      .rec-btn-secondary {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: var(--paper-2);
+        border: 1px solid var(--line);
+        cursor: pointer;
+        transition: background .2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .rec-btn-secondary:hover { background: var(--paper-3); }
+
+      .rec-btn-secondary svg {
+        width: 16px;
+        height: 16px;
+        stroke: var(--ink-soft);
+        fill: none;
+        stroke-width: 1.8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .rec-status {
+        text-align: center;
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: .14em;
+        text-transform: uppercase;
+        color: var(--ink-soft);
+      }
+
+      .rec-status.active { color: #e63946; }
+
+      .rec-timer {
+        font-size: 24px;
+        font-family: var(--mono);
+        color: var(--ink);
+        text-align: center;
+        letter-spacing: .1em;
+        display: none;
+      }
+
+      .rec-timer.visible { display: block; }
+
+      /* Recorded clip preview */
+      .clip-preview {
+        background: var(--paper-2);
+        border-radius: var(--r);
+        padding: 12px;
+        display: none;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .clip-preview.visible { display: flex; }
+
+      .clip-thumb {
+        width: 56px;
+        aspect-ratio: 16/9;
+        border-radius: 6px;
+        background: linear-gradient(135deg, #3d1c0a, #c45a3a);
+        flex-shrink: 0;
+      }
+
+      .clip-info { flex: 1; }
+
+      .clip-name {
+        font-weight: 500;
+        font-size: 14px;
+        color: var(--ink);
+        margin-bottom: 3px;
+      }
+
+      .clip-dur {
+        font-family: var(--mono);
+        font-size: 10px;
+        color: var(--ink-soft);
+        letter-spacing: .1em;
+      }
+
+      .clip-del {
+        background: none;
+        border: none;
+        color: var(--ink-faint);
+        font-size: 18px;
+        cursor: pointer;
+        padding: 4px;
+      }
+
+      .clip-del:hover { color: var(--accent); }
+
+      /* ── Panel 3: Live Message ─────────────────────── */
+      .message-panel {
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: var(--r-lg);
+        overflow: hidden;
+      }
+
+      .message-panel .mp-head {
+        background: var(--paper-2);
+        border-bottom: 1px solid var(--line);
+        padding: 14px 18px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .mp-live-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #2d7a4a;
+        box-shadow: 0 0 0 3px rgba(45,122,74,.2);
+        animation: glow 2s ease infinite;
+      }
+
+      @keyframes glow { 50% { box-shadow: 0 0 0 6px rgba(45,122,74,0); } }
+
+      .mp-head-text {
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: .14em;
+        text-transform: uppercase;
+        color: var(--ink-soft);
+      }
+
+      .message-panel .mp-body {
+        padding: 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      /* Photo attach row */
+      .mp-attach-row {
+        display: flex;
+        gap: 8px;
+      }
+
+      .mp-attach-btn {
+        flex:1;
+        background: var(--paper-2);
+        border: 1px solid var(--line);
+        border-radius: var(--r);
+        padding: 10px 8px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 5px;
+        cursor: pointer;
+        transition: border-color .2s, background .2s;
+      }
+
+      .mp-attach-btn:hover { border-color: var(--accent); background: var(--paper-3); }
+
+      .mp-attach-btn svg {
+        width: 20px;
+        height: 20px;
+        stroke: var(--ink-soft);
+        fill: none;
+        stroke-width: 1.8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .mp-attach-btn span {
+        font-family: var(--mono);
+        font-size: 9px;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+        color: var(--ink-soft);
+        text-align: center;
+      }
+
+      /* Attached media row */
+      .mp-media-row {
+        display: flex;
+        gap: 8px;
+        display: none;
+      }
+
+      .mp-media-row.visible { display: flex; }
+
+      .mp-media-thumb {
+        width: 56px;
+        height: 56px;
+        border-radius: 8px;
+        background: linear-gradient(135deg,#e8c5b0,#c45a3a);
+        position: relative;
+        flex-shrink: 0;
+      }
+
+      .mp-media-del {
+        position: absolute;
+        top: -6px;
+        right: -6px;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: var(--ink);
+        color: var(--paper);
+        font-size: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        border: none;
+      }
+
+      .mp-textarea-wrap {
+        background: var(--paper);
+        border: 1.5px solid var(--line);
+        border-radius: var(--r);
+        padding: 12px 14px;
+        transition: border-color .2s, box-shadow .2s;
+      }
+
+      .mp-textarea-wrap:focus-within {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(196,90,58,.1);
+      }
+
+      .mp-textarea-wrap label {
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: .14em;
+        text-transform: uppercase;
+        color: var(--ink-soft);
+        display: block;
+        margin-bottom: 6px;
+      }
+
+      .mp-textarea {
+        width: 100%;
+        border: none;
+        outline: none;
+        background: transparent;
+        font-family: var(--display);
+        font-size: 16px;
+        font-style: italic;
+        color: var(--ink);
+        resize: none;
+        line-height: 1.5;
+        min-height: 72px;
+      }
+
+      .mp-textarea::placeholder { color: var(--ink-faint); }
+
+      /* Live preview of how it looks on wall */
+      .mp-wall-preview {
+        border-radius: var(--r);
+        overflow: hidden;
+        position: relative;
+        aspect-ratio: 16/6;
+        background: #1a0f0a;
+      }
+
+      .mp-wall-bg {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(135deg, #2a1a14 0%, #5a3428 100%);
+      }
+
+      .mp-wall-vignette {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, rgba(0,0,0,.3) 0%, transparent 30%, rgba(0,0,0,.7) 100%);
+      }
+
+      .mp-wall-label {
+        position: absolute;
+        top: 8px;
+        left: 10px;
+        font-family: var(--mono);
+        font-size: 9px;
+        letter-spacing: .14em;
+        text-transform: uppercase;
+        color: rgba(255,255,255,.45);
+      }
+
+      .mp-wall-msg {
+        position: absolute;
+        bottom: 10px;
+        left: 14px;
+        right: 14px;
+        font-family: var(--display);
+        font-style: italic;
+        font-size: 15px;
+        line-height: 1.3;
+        color: #fff;
+        text-shadow: 0 2px 8px rgba(0,0,0,.6);
+      }
+
+      .mp-wall-msg-from {
+        font-family: var(--mono);
+        font-size: 9px;
+        letter-spacing: .14em;
+        text-transform: uppercase;
+        color: rgba(255,255,255,.5);
+        margin-bottom: 4px;
+      }
+
+      .mp-char-count {
+        text-align: right;
+        font-family: var(--mono);
+        font-size: 10px;
+        color: var(--ink-faint);
+        letter-spacing: .1em;
+        margin-top: -8px;
+      }
+
+      .mp-char-count.warn { color: var(--accent); }
+
+      /* ── Success banner ────────────────────────────── */
+      .success-banner {
+        background: rgba(45,122,74,.08);
+        border: 1px solid rgba(45,122,74,.25);
+        border-radius: var(--r);
+        padding: 16px 18px;
+        align-items: center;
+        gap: 12px;
+        margin-top: 14px;
+        display: none;
+      }
+
+      .success-banner.visible { display: flex; }
+
+      .success-banner .s-icon { font-size: 24px; color: #2d7a4a; }
+
+      .success-banner b {
+        display: block;
+        font-family: var(--display);
+        font-size: 17px;
+        font-style: italic;
+        margin-bottom: 2px;
+        color: var(--ink);
+      }
+
+      .success-banner span { font-size: 13px; color: var(--ink-soft); }
+
+      /* ── Send button variants ──────────────────────── */
+      .send-btn.btn-accent {
+        background: var(--accent);
+        color: #fff;
+        box-shadow: 0 1px 2px rgba(196,90,58,.3), inset 0 1px 0 rgba(255,255,255,.18);
+      }
+
+      .send-btn.btn-accent:hover:not(:disabled) { background: var(--accent-deep); }
+
+      /* ── Recent grid ─────────────────────────────────────── */
+      .recent { margin-top: 48px; }
+      .recent .recent-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+      .recent .recent-head h3 { font-family: var(--display); font-size: 17px; font-weight: 500; }
+      .recent .recent-head .count { font-family: var(--mono); font-size: 10px; letter-spacing: .14em; color: var(--ink-soft); }
+      .recent-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 5px; }
+      .recent-grid > div { aspect-ratio: 1; border-radius: 7px; }
+
+      .footer-note { text-align: center; margin-top: 48px; font-family: var(--mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-faint); }
   </style>
 </head>
 <body>
@@ -540,6 +1059,28 @@
     <div class="welcome" id="hero-welcome"></div>
   </div>
 
+  <!-- ── Share mode tabs ─────────────────────────────── -->
+  <div class="share-tabs" id="share-tabs" style="display:none;">
+    <div class="share-tab active" onclick="switchTab('gallery', this)">
+      <div class="tab-icon">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      </div>
+      <div class="tab-label">Photos<br/>& Videos</div>
+    </div>
+    <div class="share-tab" onclick="switchTab('record', this)">
+      <div class="tab-icon">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="9" stroke-dasharray="3 2"/></svg>
+      </div>
+      <div class="tab-label">Record<br/>Video</div>
+    </div>
+    <div class="share-tab" onclick="switchTab('message', this)">
+      <div class="tab-icon">
+        <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      </div>
+      <div class="tab-label">Live<br/>Message</div>
+    </div>
+  </div>
+
   <!-- ── Loading ───────────────────────────────────────────── -->
   <div id="loading-state"><div class="spinner"></div></div>
 
@@ -552,94 +1093,185 @@
   <!-- ── Upload form ─────────────────────────────────────── -->
   <div id="upload-card" style="display:none;">
 
-    <!-- Drop zone -->
-    <div class="drop" id="dropzone">
-      <input type="file" id="file-input" accept="image/*,video/*" />
-      <div class="icon">+</div>
-      <h3 id="dropzone-label">Tap to share</h3>
-      <p>Photos and videos · up to 500MB each</p>
-    </div>
+    <!-- ════ PANEL 1: Gallery (Photos & Videos) ═════════ -->
+    <div class="share-panel active" id="panel-gallery">
 
-    <!-- Preview -->
-    <div id="preview-area">
-      <img id="preview-img" alt="" style="display:none" />
-      <video id="preview-vid" controls playsinline style="display:none"></video>
-      <button class="preview-change" id="preview-change-btn" data-i18n="changeFile">Change ✕</button>
-    </div>
-
-    <div class="file-warning" id="file-warning" data-i18n="fileWarning">
-      ⚠️ Large file detected. Make sure you have a strong connection before uploading.
-    </div>
-
-    <!-- Progress -->
-    <div class="progress-wrap" id="progress-wrap">
-      <p class="progress-label">
-        <span data-i18n="uploadingLabel">Uploading… </span>
-        <span id="progress-pct">0%</span>
-      </p>
-      <div class="progress-bar-bg">
-        <div class="progress-bar-fill" id="progress-bar"></div>
+      <!-- Drop zone -->
+      <div class="drop" id="dropzone">
+        <input type="file" id="file-input" multiple accept="image/*,video/*" onchange="handleFiles(event)" />
+        <div class="icon">+</div>
+        <h3 id="dropzone-label">Tap to share</h3>
+        <p>Photos and videos · up to 100 MB each</p>
+        <div class="choose-btn">Choose from gallery</div>
       </div>
-    </div>
 
-    <!-- Recorder -->
-    <div id="recorder-section">
-      <video id="recorder-preview" autoplay muted playsinline></video>
-      <div class="recorder-timer" id="recorder-timer">1:00</div>
-      <div class="recorder-controls">
-        <button class="btn-record" id="btn-record"><div class="dot"></div></button>
+      <!-- Name field -->
+      <div class="name-field">
+        <label for="uploader-name">
+          <span data-i18n="nameLabel">Your name (optional)</span>
+        </label>
+        <input type="text" id="uploader-name"
+          data-i18n-placeholder="namePlaceholder"
+          placeholder="e.g. Tita Marivic, JM's cousin"
+          maxlength="100" autocomplete="name" />
       </div>
-      <div id="recorded-preview-section">
-        <video id="recorded-video" controls playsinline></video>
-        <button class="btn-another" id="btn-rerecord"
-          style="font-size:.85rem;padding:.5rem 1.25rem"
-          data-i18n="rerecordBtn">🔄 Record again</button>
+
+      <!-- Upload queue -->
+      <div class="queue" id="upload-queue">
+        <div class="queue-item done">
+          <div class="q-thumb placeholder placeholder--coral"></div>
+          <div><div class="q-name">first-dance.jpg</div><div class="q-prog"><span style="width:100%"></span></div></div>
+          <div class="q-status">✓ Shared</div>
+        </div>
+        <div class="queue-item">
+          <div class="q-thumb placeholder placeholder--ochre"></div>
+          <div><div class="q-name">garden-toast.mp4</div><div class="q-prog"><span id="demoBar1" style="width:62%"></span></div></div>
+          <div class="q-status" id="demoPct1">62%</div>
+        </div>
       </div>
-      <p id="recorder-hint" style="margin-top:.75rem;font-size:.8rem;opacity:.7"
-        data-i18n="recorderHintIdle">Press the button to start recording</p>
-    </div>
 
-    <!-- Name field -->
-    <div class="name-field">
-      <label for="uploader-name">
-        <span data-i18n="nameLabel">Your name</span>
-      </label>
-      <input type="text" id="uploader-name"
-        data-i18n-placeholder="namePlaceholder"
-        placeholder="e.g. Tita Marivic"
-        maxlength="100" autocomplete="name" />
-    </div>
+      <!-- Submit -->
+      <button class="btn btn-primary send-btn" id="btn-submit" onclick="handleSend('gallery')" data-i18n="submitNoFile">
+        Send 2 moments →
+      </button>
 
-    <!-- Message field -->
-    <div class="name-field">
-      <label for="message" id="message-label" data-i18n="messageLabel">Message for the couple</label>
-      <textarea id="message" rows="3"
-        data-i18n-placeholder="messagePlaceholder"
-        placeholder="Leave them a message… (optional)"
-        maxlength="500"></textarea>
-    </div>
-
-    <!-- Video toggle -->
-    <label class="video-toggle">
-      <input type="checkbox" id="video-msg-toggle" />
-      <div>
-        <div class="video-toggle-label" id="video-toggle-label" data-i18n="videoToggleLabel">Record a video message for them 📌</div>
-        <div class="video-toggle-sub" data-i18n="videoToggleSub">Record a special message (max 60 seconds)</div>
+      <!-- Success banner -->
+      <div class="success-banner" id="gallerySuccess">
+        <div class="s-icon">★</div>
+        <div><b>Your moments are live!</b><span>They'll appear on the wall in a few seconds.</span></div>
       </div>
-    </label>
 
-    <!-- Hidden section title (used by JS applyEventCopy) -->
-    <span id="section-title" style="display:none"></span>
+    </div><!-- /panel-gallery -->
 
-    <!-- Submit -->
-    <button class="send-btn" id="btn-submit" disabled data-i18n="submitNoFile">
-      Pick a photo first ✦
-    </button>
+    <!-- ════ PANEL 2: Record Video ════════════════════ -->
+    <div class="share-panel" id="panel-record">
 
-    <!-- Upload queue (from reference) -->
-    <div class="queue" id="upload-queue">
-      <div class="queue-item done"><div class="thumb placeholder placeholder--coral"></div><div><div class="meta-name">first-dance.jpg</div><div class="progress"><span style="width:100%;"></span></div></div><div class="status">? Shared</div></div><div class="queue-item"><div class="thumb placeholder placeholder--ochre"></div><div><div class="meta-name">garden-toast.mp4</div><div class="progress"><span style="width:62%;"></span></div></div><div class="status">62%</div></div>
-    </div>
+      <div class="record-panel">
+        <div class="record-viewfinder">
+          <div class="vf-corners"></div>
+          <div class="vf-dot-wrap">
+            <div class="rec-dot" id="recDot"></div>
+            <div class="vf-time" id="recTimeDisplay" style="display:none">00:00</div>
+          </div>
+          <div class="vf-label" id="vfLabel">Camera ready</div>
+        </div>
+        <div class="record-controls">
+          <div class="rec-timer" id="recTimer">00:00</div>
+          <div class="rec-btn-row">
+            <!-- flip camera -->
+            <button class="rec-btn-secondary" onclick="alert('TODO: flip camera via MediaStream API')">
+              <svg viewBox="0 0 24 24"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
+            </button>
+            <!-- record main -->
+            <button class="rec-btn-main" id="recBtn" onclick="toggleRecord()">
+              <svg id="recIcon" viewBox="0 0 24 24" width="24" height="24" fill="white">
+                <circle cx="12" cy="12" r="6"/>
+              </svg>
+            </button>
+            <!-- max duration chip -->
+            <div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;">
+              <span style="font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);text-align:center;line-height:1.3;">Max<br/>60s</span>
+            </div>
+          </div>
+          <div class="rec-status" id="recStatus">Tap to start recording</div>
+
+          <!-- Clip preview (shown after recording) -->
+          <div class="clip-preview" id="clipPreview">
+            <div class="clip-thumb"></div>
+            <div class="clip-info">
+              <div class="clip-name">recorded-clip.mp4</div>
+              <div class="clip-dur" id="clipDur">0:00</div>
+            </div>
+            <button class="clip-del" onclick="discardClip()">✕</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Name field -->
+      <div class="name-field">
+        <label for="recordName">Your name (optional)</label>
+        <input type="text" id="recordName" placeholder="e.g. Tita Marivic" />
+      </div>
+
+      <button class="btn btn-primary send-btn" id="recordSendBtn" onclick="handleSend('record')" style="display:none;">Send video →</button>
+
+      <!-- Success banner -->
+      <div class="success-banner" id="recordSuccess">
+        <div class="s-icon">★</div>
+        <div><b>Your video is live!</b><span>It'll appear on the wall in a few seconds.</span></div>
+      </div>
+
+    </div><!-- /panel-record -->
+
+    <!-- ════ PANEL 3: Live Message ════════════════════ -->
+    <div class="share-panel" id="panel-message">
+
+      <div class="message-panel">
+        <div class="mp-head">
+          <div class="mp-live-dot"></div>
+          <div class="mp-head-text">Goes live on the wall instantly</div>
+        </div>
+        <div class="mp-body">
+
+          <!-- Optional photo/video attach -->
+          <div class="mp-attach-row">
+            <button class="mp-attach-btn" onclick="alert('TODO: open photo picker')">
+              <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              <span>Add photo</span>
+            </button>
+            <button class="mp-attach-btn" onclick="alert('TODO: open video picker')">
+              <svg viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+              <span>Add video</span>
+            </button>
+            <button class="mp-attach-btn" onclick="showAttached()">
+              <svg viewBox="0 0 24 24"><path d="M14.5 10c-.83 0-1.5-.67-1.5-1.5v-5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5z"/><path d="M20.5 10H19V8.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/><path d="M9.5 14c.83 0 1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5S8 21.33 8 20.5v-5c0-.83.67-1.5 1.5-1.5z"/><path d="M3.5 14H5v1.5c0 .83-.67 1.5-1.5 1.5S2 16.33 2 15.5 2.67 14 3.5 14z"/><path d="M14 14.5c0-.83.67-1.5 1.5-1.5h5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5h-5c-.83 0-1.5-.67-1.5-1.5z"/><path d="M15.5 19H14v1.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5-.67-1.5-1.5-1.5z"/><path d="M10 9.5C10 8.67 9.33 8 8.5 8h-5C2.67 8 2 8.67 2 9.5S2.67 11 3.5 11h5c.83 0 1.5-.67 1.5-1.5z"/><path d="M8.5 5H10V3.5C10 2.67 9.33 2 8.5 2S7 2.67 7 3.5 7.67 5 8.5 5z"/></svg>
+              <span>GIF / sticker</span>
+            </button>
+          </div>
+
+          <!-- Attached media preview (demo) -->
+          <div class="mp-media-row" id="mpMediaRow">
+            <div class="mp-media-thumb">
+              <button class="mp-media-del" onclick="document.getElementById('mpMediaRow').classList.remove('visible')">✕</button>
+            </div>
+          </div>
+
+          <!-- Message textarea -->
+          <div class="mp-textarea-wrap">
+            <label for="msgText">Your message</label>
+            <textarea class="mp-textarea" id="msgText" maxlength="160" placeholder="Write something for the wall… "Lolo would have loved this."" oninput="updateMsgPreview()"></textarea>
+          </div>
+          <div class="mp-char-count" id="charCount">0 / 160</div>
+
+          <!-- Live wall preview -->
+          <div class="mp-wall-preview">
+            <div class="mp-wall-bg"></div>
+            <div class="mp-wall-vignette"></div>
+            <div class="mp-wall-label">Preview · how it looks on wall</div>
+            <div class="mp-wall-msg">
+              <div class="mp-wall-msg-from" id="msgFrom">— Your name</div>
+              <div id="msgPreview" style="opacity:.4;font-style:italic;">Your message appears here…</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Name field -->
+      <div class="name-field">
+        <label for="msgName">Your name (optional)</label>
+        <input type="text" id="msgName" placeholder="e.g. Tita Marivic" oninput="document.getElementById('msgFrom').textContent = '— ' + (this.value || 'Your name')" />
+      </div>
+
+      <button class="btn btn-accent send-btn" onclick="handleSend('message')">Send to wall →</button>
+
+      <!-- Success banner -->
+      <div class="success-banner" id="messageSuccess">
+        <div class="s-icon">★</div>
+        <div><b>Your message is live!</b><span>It's on the wall right now.</span></div>
+      </div>
+
+    </div><!-- /panel-message -->
 
   </div><!-- /upload-card -->
 
@@ -1244,9 +1876,132 @@
   // ── Init ──────────────────────────────────────────────
   applyTranslations();
   loadEvent();
+
+  // ── Reference design: Tab switching ───────────────────
+  window.switchTab = function(id, el) {
+    document.querySelectorAll('.share-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.share-panel').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('panel-' + id).classList.add('active');
+  };
+
+  // ── Reference design: Language switch ────────────────
+  window.setLang = function(lang, btn) {
+    document.querySelectorAll('#langSwitch button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  };
+
+  // ── Reference design: Gallery file handling ───────────
+  window.handleFiles = function(e) {
+    const files = Array.from(e.target.files);
+    const queue = document.getElementById('upload-queue');
+    files.forEach(f => {
+      const id = 'qi' + Date.now() + Math.random().toString(36).slice(2,6);
+      const item = document.createElement('div');
+      item.className = 'queue-item'; item.id = id;
+      item.innerHTML = `
+        <div class="q-thumb placeholder placeholder--coral"></div>
+        <div><div class="q-name">${f.name}</div><div class="q-prog"><div id="b${id}" style="width:0%;height:100%;background:var(--accent);border-radius:2px;"></div></div></div>
+        <div class="q-status" id="s${id}">Queued</div>`;
+      queue.appendChild(item);
+      let p = 0;
+      const t = setInterval(() => {
+        p = Math.min(p + Math.random()*18+5, 100);
+        const b = document.getElementById('b'+id);
+        const s = document.getElementById('s'+id);
+        if (b) b.style.width = p+'%';
+        if (s) s.textContent = p < 100 ? Math.round(p)+'%' : '✓ Shared';
+        if (p >= 100) { clearInterval(t); item.classList.add('done'); }
+      }, 200);
+    });
+    const pending = document.querySelectorAll('#upload-queue .queue-item:not(.done)').length;
+    document.querySelector('#panel-gallery .send-btn').textContent = `Send ${files.length} moment${files.length>1?'s':''} →`;
+  };
+
+  // ── Reference design: Record video ───────────────────
+  let recording = false, recInterval, recSecs = 0;
+
+  window.toggleRecord = function() {
+    const btn    = document.getElementById('recBtn');
+    const dot    = document.getElementById('recDot');
+    const status = document.getElementById('recStatus');
+    const timer  = document.getElementById('recTimer');
+    const lbl    = document.getElementById('vfLabel');
+    const icon   = document.getElementById('recIcon');
+    const sendBtn = document.getElementById('recordSendBtn');
+    if (!recording) {
+      recording = true; recSecs = 0;
+      btn.classList.add('recording');
+      dot.classList.add('recording');
+      icon.innerHTML = '<rect x="8" y="8" width="8" height="8" rx="1" fill="white"/>';
+      status.textContent = 'Recording…'; status.classList.add('active');
+      lbl.textContent = '● REC';
+      timer.classList.add('visible');
+      recInterval = setInterval(() => {
+        recSecs++;
+        const m = String(Math.floor(recSecs/60)).padStart(2,'0');
+        const s = String(recSecs%60).padStart(2,'0');
+        timer.textContent = m+':'+s;
+        if (recSecs >= 60) stopRecord();
+      }, 1000);
+    } else { stopRecord(); }
+  };
+
+  window.stopRecord = function() {
+    recording = false; clearInterval(recInterval);
+    const btn    = document.getElementById('recBtn');
+    const dot    = document.getElementById('recDot');
+    const status = document.getElementById('recStatus');
+    const lbl    = document.getElementById('vfLabel');
+    const icon   = document.getElementById('recIcon');
+    const preview = document.getElementById('clipPreview');
+    const dur    = document.getElementById('clipDur');
+    const sendBtn = document.getElementById('recordSendBtn');
+    btn.classList.remove('recording');
+    dot.classList.remove('recording');
+    icon.innerHTML = '<circle cx="12" cy="12" r="6"/>';
+    status.textContent = 'Recording saved'; status.classList.remove('active');
+    lbl.textContent = 'Camera ready';
+    const m = String(Math.floor(recSecs/60)).padStart(2,'0');
+    const s = String(recSecs%60).padStart(2,'0');
+    dur.textContent = m+':'+s;
+    preview.classList.add('visible');
+    sendBtn.style.display = 'block';
+  };
+
+  window.discardClip = function() {
+    document.getElementById('clipPreview').classList.remove('visible');
+    document.getElementById('recordSendBtn').style.display = 'none';
+    document.getElementById('recTimer').classList.remove('visible');
+    document.getElementById('recTimer').textContent = '00:00';
+    document.getElementById('recStatus').textContent = 'Tap to start recording';
+  };
+
+  // ── Reference design: Live message ───────────────────
+  window.updateMsgPreview = function() {
+    const txt = document.getElementById('msgText').value;
+    const preview = document.getElementById('msgPreview');
+    const counter = document.getElementById('charCount');
+    preview.textContent = txt || 'Your message appears here…';
+    preview.style.opacity = txt ? '1' : '0.4';
+    counter.textContent = txt.length + ' / 160';
+    counter.classList.toggle('warn', txt.length > 140);
+  };
+
+  window.showAttached = function() {
+    document.getElementById('mpMediaRow').classList.add('visible');
+  };
+
+  // ── Reference design: Send handler (all modes) ───────
+  window.handleSend = function(mode) {
+    const successId = { gallery: 'gallerySuccess', record: 'recordSuccess', message: 'messageSuccess' }[mode];
+    document.getElementById(successId).classList.add('visible');
+    const el = document.getElementById('recent-count');
+    if (el) { const n = parseInt(el.textContent) || 0; el.textContent = (n + 1) + ' today'; }
+  };
 </script>
 </body>
 </html>
-"" 
+""
 
 
