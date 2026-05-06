@@ -138,6 +138,15 @@
   .info-card .row:first-of-type { border-top: none; padding-top: 0; }
   .info-card .row span:first-child { color: var(--ink-soft); }
   .info-card .row span:last-child { font-weight: 500; }
+
+  /* tabs */
+  .tab-row { display: flex; gap: 6px; padding: 16px 24px; border-bottom: 1px solid var(--line); }
+  .tab {
+    padding: 8px 14px; border-radius: 999px;
+    font-size: 13px; color: var(--ink-soft);
+    cursor: pointer;
+  }
+  .tab.active { background: var(--ink); color: var(--paper); }
 </style>
 </head>
 <body id="dashboard-root">
@@ -152,7 +161,7 @@
         <a id="nav-upload" href="#">Upload page</a>
       </div>
     </div>
-    <div class="badge"><span class="dot"></span>Live event dashboard</div>
+    <div class="badge"><span class="dot"></span>Live · <span id="guest-count">0</span> guests sharing right now</div>
     <h1 id="event-title">Loading...</h1>
     <div class="meta" id="event-meta">---</div>
   </div>
@@ -162,24 +171,41 @@
   <div class="stat">
     <div class="lbl">Total uploads</div>
     <div class="num"><em id="stat-uploads">0</em></div>
+    <div class="delta" id="stat-uploads-delta">---</div>
   </div>
   <div class="stat">
-    <div class="lbl">Event Plan</div>
-    <div class="num"><em id="stat-plan" style="text-transform: capitalize;">---</em></div>
+    <div class="lbl">Active guests</div>
+    <div class="num"><em id="stat-guests">0</em></div>
+    <div class="delta" id="stat-guests-delta">---</div>
   </div>
   <div class="stat">
-    <div class="lbl">Status</div>
-    <div class="num"><em id="stat-status">Active</em></div>
+    <div class="lbl">Pending review</div>
+    <div class="num"><em id="stat-pending">0</em></div>
+    <div class="delta">Awaiting approval</div>
+  </div>
+  <div class="stat">
+    <div class="lbl">Storage used</div>
+    <div class="num"><em id="stat-storage">---</em></div>
+    <div class="delta" style="color:var(--ink-soft);">of unlimited</div>
   </div>
 </div>
 
 <div class="body">
-  <div class="panel">
-    <div class="panel-head">
-      <h2>Event Management</h2>
-    </div>
-    <div style="padding: 40px; text-align: center; color: var(--ink-soft);">
-      <p>Management features coming soon.</p>
+  <div>
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Photo stream</h2>
+        <span class="pill" id="approve-status">Auto-approve · ON</span>
+      </div>
+      <div class="tab-row">
+        <span class="tab active" id="tab-all">All · 0</span>
+        <span class="tab" id="tab-pending">Pending · 0</span>
+        <span class="tab">Featured</span>
+        <span class="tab">Hidden</span>
+      </div>
+      <div class="photo-grid" id="photo-grid">
+        <!-- Dynamically populated -->
+      </div>
     </div>
   </div>
 
@@ -190,13 +216,22 @@
       <div class="url" id="event-url">---</div>
       <div class="actions-stack">
         <a id="btn-open-upload" class="btn btn-accent" href="#">Open upload page →</a>
+        <a class="btn btn-ghost" href="#">Download poster .pdf</a>
       </div>
+    </div>
+
+    <div class="info-card" id="info-card">
+      <h3>Event info</h3>
+      <div class="row"><span>Type</span><span id="info-type">---</span></div>
+      <div class="row"><span>Plan</span><span id="info-plan">---</span></div>
+      <div class="row"><span>Wall expires</span><span id="info-expires">---</span></div>
+      <div class="row"><span>Archive</span><span>30 days</span></div>
     </div>
   </div>
 </div>
 
 <script type="module">
-  import { requireAuth } from './js/auth.js';
+  import { requireAuth } from '/js/auth.js';
 
   if (requireAuth()) {
     const params = new URLSearchParams(window.location.search);
@@ -211,26 +246,49 @@
 
   async function loadDashboard(slug) {
     try {
-      const res = await fetch(`/api/events/${slug}`);
-      const data = await res.json();
-      if (data.error) throw new Error(data.message);
+      const [eventRes, uploadsRes, qrRes] = await Promise.all([
+        fetch(`/api/events/${slug}`),
+        fetch(`/api/uploads/${slug}`),
+        fetch(`/api/events/${slug}/qr`)
+      ]);
 
-      const { event, upload_count } = data;
+      const eventData = await eventRes.json();
+      const uploadsData = await uploadsRes.json();
+      const qrData = await qrRes.json();
+
+      if (eventData.error) throw new Error(eventData.message);
+
+      const { event, upload_count } = eventData;
+      const uploads = uploadsData.uploads || [];
       
       document.body.setAttribute('data-theme', event.event_type || 'wedding');
       document.getElementById('event-title').textContent = event.couple_names;
       document.getElementById('event-meta').textContent = `${event.event_date || 'No date'} · ${event.event_type}`;
       document.getElementById('stat-uploads').textContent = upload_count;
-      document.getElementById('stat-plan').textContent = event.plan;
+      document.getElementById('tab-all').textContent = `All · ${upload_count}`;
       
       document.getElementById('nav-wall').href = `/wall/${slug}`;
       document.getElementById('nav-upload').href = `/upload/${slug}`;
       document.getElementById('btn-open-upload').href = `/upload/${slug}`;
       document.getElementById('event-url').textContent = `${window.location.origin}/upload/${slug}`;
 
+      // Info card
+      document.getElementById('info-type').textContent = event.event_type;
+      document.getElementById('info-plan').textContent = `★ ${event.plan}`;
+      
+      // Populate photo grid
+      const photoGrid = document.getElementById('photo-grid');
+      photoGrid.innerHTML = uploads.map(u => `
+        <div class="placeholder ${getRandomPlaceholderClass()}">
+          <img src="${u.file_url}" style="width:100%; height:100%; object-fit:cover;" />
+          <div class="actions-overlay">
+            <span class="uploader">${u.uploader_name || 'Guest'}</span>
+            <span class="actions-btn">Feature</span>
+          </div>
+        </div>
+      `).join('');
+
       // Load QR
-      const qrRes = await fetch(`/api/events/${slug}/qr`);
-      const qrData = await qrRes.json();
       if (qrData.qr_code) {
         document.getElementById('qr-container').style.backgroundImage = `url(${qrData.qr_code})`;
       }
@@ -238,6 +296,11 @@
       console.error(err);
       alert('Failed to load event data');
     }
+  }
+
+  function getRandomPlaceholderClass() {
+    const classes = ['placeholder--clay', 'placeholder--ochre', 'placeholder--coral', 'placeholder--sage', 'placeholder--ink'];
+    return classes[Math.floor(Math.random() * classes.length)];
   }
 </script>
 
