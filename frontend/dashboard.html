@@ -641,31 +641,33 @@
 
     // Video messages tab
     const vms = uploads.filter(u => u.is_video_message);
-    if (!vms.length) {
-      vmList.innerHTML = '';
-      vmEmpty.style.display = 'block';
-    } else {
-      vmEmpty.style.display = 'none';
-      vmList.innerHTML = vms.map((u, i) => {
-        const vmIndex = uploads.indexOf(u);
-        return `
-          <div class="vm-item">
-            <div class="vm-avatar">${escHtml(initial(u.uploader_name))}</div>
-            <div class="vm-info">
-              <div class="vm-name">${escHtml(u.uploader_name || 'Guest')}</div>
-              <div class="vm-meta">${timeAgo(u.created_at)}</div>
-            </div>
-            <button class="btn-play" data-index="${vmIndex}">▶ I-play</button>
-            <button class="btn-delete-vm" data-id="${escHtml(u.id)}" title="Burahin">✕</button>
-          </div>`;
-      }).join('');
+    if (vmList && vmEmpty) {
+      if (!vms.length) {
+        vmList.innerHTML = '';
+        vmEmpty.style.display = 'block';
+      } else {
+        vmEmpty.style.display = 'none';
+        vmList.innerHTML = vms.map((u, i) => {
+          const vmIndex = uploads.indexOf(u);
+          return `
+            <div class="vm-item">
+              <div class="vm-avatar">${escHtml(initial(u.uploader_name))}</div>
+              <div class="vm-info">
+                <div class="vm-name">${escHtml(u.uploader_name || 'Guest')}</div>
+                <div class="vm-meta">${timeAgo(u.created_at)}</div>
+              </div>
+              <button class="btn-play" data-index="${vmIndex}">▶ I-play</button>
+              <button class="btn-delete-vm" data-id="${escHtml(u.id)}" title="Burahin">✕</button>
+            </div>`;
+        }).join('');
 
-      vmList.onclick = e => {
-        const delBtn = e.target.closest('.btn-delete-vm');
-        if (delBtn) { deleteUpload(delBtn.dataset.id); return; }
-        const btn = e.target.closest('.btn-play');
-        if (btn) openLightbox(Number(btn.dataset.index));
-      };
+        vmList.onclick = e => {
+          const delBtn = e.target.closest('.btn-delete-vm');
+          if (delBtn) { deleteUpload(delBtn.dataset.id); return; }
+          const btn = e.target.closest('.btn-play');
+          if (btn) openLightbox(Number(btn.dataset.index));
+        };
+      }
     }
   }
 
