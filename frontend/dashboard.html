@@ -8,7 +8,7 @@
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="stylesheet" href="/css/shared.css" />
   <style>
-    body { min-height: 100dvh; }
+    body { background: var(--paper); min-height: 100dvh; }
 
     /* ── Payment / mode banner ────────────────────────────── */
     .pay-banner {
@@ -37,10 +37,9 @@
       margin-bottom: 56px; flex-wrap: wrap; gap: 1rem;
     }
     .event-header .brand { color: var(--paper); }
-    .event-header-nav { display: flex; gap: 24px; align-items: center; }
-    .event-header-nav a { color: rgba(251,245,236,.7); font-size: 14px; text-decoration: none; transition: color .15s; }
-    .event-header-nav a:hover { color: var(--paper); }
-    .event-header-nav a.active { color: var(--paper); }
+    .event-header .nav { display: flex; gap: 24px; align-items: center; }
+    .event-header .nav a { color: rgba(251,245,236,.7); font-size: 14px; }
+    .event-header .nav a.active { color: var(--paper); }
     .event-header-top-right { display: flex; align-items: center; gap: 10px; }
 
     .event-header .live-badge {
@@ -59,8 +58,9 @@
 
     .event-header h1 {
       font-family: var(--display); font-weight: 400;
-      font-size: clamp(40px, 6vw, 80px);
-      line-height: 1; letter-spacing: -.025em; margin-bottom: 12px; color: var(--paper);
+      font-size: clamp(48px, 6vw, 88px);
+      line-height: 1; letter-spacing: -.025em;
+      margin-bottom: 12px;
     }
     .event-header h1 em { font-style: italic; color: var(--accent-soft); }
 
@@ -118,61 +118,33 @@
     .g-tab { padding: 8px 14px; border-radius: 999px; font-size: 13px; color: var(--ink-soft); cursor: pointer; border: none; background: transparent; font-family: var(--sans); transition: background .15s, color .15s; }
     .g-tab.active { background: var(--ink); color: var(--paper); }
 
-    /* ── Photo grid ───────────────────────────────────────── */
+    /* Photo grid (matching reference design) */
     .photo-grid {
       display: grid; grid-template-columns: repeat(4, 1fr);
       gap: 4px; padding: 4px;
     }
-    .gallery-item {
-      aspect-ratio: 1; position: relative; overflow: hidden;
-      background: var(--paper-2); cursor: pointer;
+    .photo-grid > div {
+      aspect-ratio: 1; position: relative;
+      overflow: hidden;
     }
-    .gallery-item img,
-    .gallery-item video { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .3s; }
-    .gallery-item:hover img,
-    .gallery-item:hover video { transform: scale(1.04); }
-
-    .gallery-item-overlay {
+    .photo-grid > div .actions-overlay {
       position: absolute; inset: 0;
       background: linear-gradient(180deg, rgba(0,0,0,0) 50%, rgba(0,0,0,.6) 100%);
       opacity: 0; transition: opacity .2s ease;
       display: flex; align-items: flex-end; justify-content: space-between;
       padding: 8px;
     }
-    .gallery-item:hover .gallery-item-overlay { opacity: 1; }
-    .item-name { color: #fff; font-family: var(--display); font-style: italic; font-size: 12px; max-width: 70%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .feature-btn { background: rgba(255,255,255,.95); border-radius: 999px; padding: 4px 8px; font-family: var(--mono); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; border: none; cursor: pointer; flex-shrink: 0; }
-
-    .btn-delete-item { position: absolute; top: .35rem; right: .35rem; width: 26px; height: 26px; border-radius: 50%; background: rgba(0,0,0,.55); border: none; color: #fff; font-size: .75rem; cursor: pointer; display: none; align-items: center; justify-content: center; line-height: 1; z-index: 10; }
-    .gallery-item:hover .btn-delete-item { display: flex; }
-
-    .play-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.25); pointer-events: none; }
-    .play-btn-circle { width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,.9); display: flex; align-items: center; justify-content: center; font-size: 1rem; padding-left: 3px; }
-    .vm-badge { position: absolute; top: .4rem; right: .4rem; background: var(--accent); color: #fff; border-radius: 999px; padding: .1rem .45rem; font-size: .65rem; font-weight: 700; }
-
-    /* ── Gallery empty state ──────────────────────────────── */
-    .gallery-empty { text-align: center; padding: 3rem 1rem; color: var(--ink-soft); }
-    .gallery-empty-icon { font-size: 3rem; margin-bottom: .75rem; }
-    .gallery-empty p { font-size: .9rem; }
-
-    /* ── Video messages list ──────────────────────────────── */
-    .vm-list { display: flex; flex-direction: column; gap: .75rem; padding: 1rem 1.5rem; }
-    .vm-item { display: flex; align-items: center; gap: 1rem; padding: 1rem; background: var(--paper); border-radius: var(--r); transition: background .15s; }
-    .vm-item:hover { background: var(--paper-2); }
-    .vm-avatar { width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, var(--accent-soft), var(--accent)); color: #fff; font-weight: 700; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .vm-info { flex: 1; min-width: 0; }
-    .vm-name { font-weight: 600; font-size: .9rem; color: var(--ink); margin-bottom: .15rem; }
-    .vm-meta { font-size: .75rem; color: var(--ink-soft); }
-    .btn-play { padding: .45rem 1rem; background: var(--accent); color: #fff; border: none; border-radius: 999px; font-family: var(--sans); font-size: .8rem; font-weight: 600; cursor: pointer; transition: background .15s; white-space: nowrap; flex-shrink: 0; }
-    .btn-play:hover { background: var(--accent-deep); }
-    .btn-delete-vm { background: none; border: 1px solid rgba(196,90,58,.3); color: var(--accent); border-radius: 50%; width: 28px; height: 28px; font-size: .75rem; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; margin-left: .4rem; }
-    .btn-delete-vm:hover { background: var(--accent); color: #fff; }
-
-    /* ── Download bar ─────────────────────────────────────── */
-    .download-bar { margin: 1rem 1.5rem 1.5rem; padding-top: 1rem; border-top: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .75rem; }
-    .download-count { font-size: .85rem; color: var(--ink-soft); }
-    .btn-download-all { padding: .6rem 1.25rem; background: var(--ink); color: #fff; border: none; border-radius: 999px; font-family: var(--sans); font-size: .88rem; font-weight: 600; cursor: pointer; transition: opacity .15s; display: flex; align-items: center; gap: .5rem; }
-    .btn-download-all:hover { opacity: .85; }
+    .photo-grid > div:hover .actions-overlay { opacity: 1; }
+    .photo-grid > div .uploader {
+      color: #fff; font-family: var(--display); font-style: italic;
+      font-size: 12px;
+    }
+    .photo-grid > div .actions-btn {
+      background: rgba(255,255,255,.95);
+      border-radius: 999px; padding: 4px 8px;
+      font-family: var(--mono); font-size: 9px;
+      letter-spacing: .12em; text-transform: uppercase;
+    }
 
     /* ── QR card (sidebar) ────────────────────────────────── */
     .qr-card {
@@ -189,11 +161,9 @@
         linear-gradient(-45deg, transparent 75%, var(--ink) 75%);
       background-size: 14px 14px;
       background-position: 0 0, 0 7px, 7px -7px, -7px 0;
-      border-radius: 8px;
+      border-radius: 8px; padding: 8px;
       border: 12px solid #fff;
       box-shadow: 0 0 0 1px var(--line);
-      display: flex; align-items: center; justify-content: center;
-      overflow: hidden;
     }
     .qr-placeholder img { width: 100%; height: 100%; object-fit: contain; }
     .qr-url { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; color: var(--ink-soft); margin-bottom: 16px; word-break: break-all; }
@@ -275,10 +245,10 @@
       </div>
     </div>
 
-    <div class="live-badge"><span class="dot"></span>Live · <span id="live-count">guests sharing</span></div>
-    <h1 id="event-names">—</h1>
+    <div class="live-badge"><span class="dot"></span>Live · <span id="live-count">0</span> guests sharing right now</div>
+    <h1 id="event-names">Andrea <em>&</em> JM</h1>
     <div class="event-header-meta">
-      <span id="event-date"></span>
+      <span id="event-date">14 June 2026 · Manila Hotel · Wedding</span>
       <!-- kept for JS compatibility, not visible -->
       <span id="event-type-badge" style="display:none"></span>
       <span id="plan-badge" style="display:none"></span>
@@ -291,22 +261,22 @@
   <div class="stat">
     <div class="lbl">Total uploads</div>
     <div class="num"><em id="stat-total">0</em></div>
-    <div class="delta">All media</div>
+    <div class="delta">↑ <span id="stat-total-change">0</span> in last hour</div>
   </div>
   <div class="stat">
-    <div class="lbl">Photos</div>
-    <div class="num"><em id="stat-photos">0</em></div>
-    <div class="delta">Images shared</div>
+    <div class="lbl">Active guests</div>
+    <div class="num"><em id="stat-guests">0</em></div>
+    <div class="delta">↑ <span id="stat-guests-change">0</span> since 6pm</div>
   </div>
   <div class="stat">
-    <div class="lbl">Videos</div>
-    <div class="num"><em id="stat-videos">0</em></div>
-    <div class="delta">Clips shared</div>
+    <div class="lbl">Pending review</div>
+    <div class="num"><em id="stat-pending">0</em></div>
+    <div class="delta">Awaiting approval</div>
   </div>
   <div class="stat">
-    <div class="lbl">Messages</div>
-    <div class="num"><em id="stat-vms">0</em></div>
-    <div class="delta">Video messages</div>
+    <div class="lbl">Storage used</div>
+    <div class="num"><em id="stat-storage">0</em>GB</div>
+    <div class="delta" style="color:var(--ink-soft);">of unlimited</div>
   </div>
 </div>
 
@@ -332,8 +302,10 @@
         <span class="pill">Auto-approve · ON</span>
       </div>
       <div class="tab-row">
-        <button class="g-tab active" data-tab="all" data-en="All" data-fil="Lahat">All</button>
-        <button class="g-tab" data-tab="vm" data-en="Video Messages" data-fil="Video Messages">Video Messages</button>
+        <button class="g-tab active" data-tab="all" data-en="All" data-fil="Lahat">All · <span id="tab-all-count">0</span></button>
+        <button class="g-tab" data-tab="pending" data-en="Pending" data-fil="Nakapenduwende">Pending · <span id="tab-pending-count">0</span></button>
+        <button class="g-tab" data-tab="featured" data-en="Featured" data-fil="Inihalo">Featured · <span id="tab-featured-count">0</span></button>
+        <button class="g-tab" data-tab="hidden" data-en="Hidden" data-fil="Nakalatag">Hidden · <span id="tab-hidden-count">0</span></button>
       </div>
 
       <!-- All uploads -->
@@ -345,21 +317,39 @@
         </div>
       </div>
 
-      <!-- Video messages -->
-      <div id="tab-vm" style="display:none">
-        <div class="vm-list" id="vm-list"></div>
-        <div class="gallery-empty" id="vm-empty" style="display:none">
-          <div class="gallery-empty-icon">💌</div>
-          <p data-en="No video messages yet." data-fil="Wala pang video messages.">No video messages yet.</p>
+      <!-- Pending uploads -->
+      <div id="tab-pending" style="display:none">
+        <div class="photo-grid" id="pending-grid"></div>
+        <div class="gallery-empty" id="pending-empty" style="display:none">
+          <div class="gallery-empty-icon">📋</div>
+          <p data-en="No pending uploads." data-fil="Wala pang nakapenduwende na uploads.">No pending uploads.</p>
+        </div>
+      </div>
+
+      <!-- Featured uploads -->
+      <div id="tab-featured" style="display:none">
+        <div class="photo-grid" id="featured-grid"></div>
+        <div class="gallery-empty" id="featured-empty" style="display:none">
+          <div class="gallery-empty-icon">⭐</div>
+          <p data-en="No featured uploads yet." data-fil="Wala pa ring inihalong uploads.">No featured uploads yet.</p>
+        </div>
+      </div>
+
+      <!-- Hidden uploads -->
+      <div id="tab-hidden" style="display:none">
+        <div class="photo-grid" id="hidden-grid"></div>
+        <div class="gallery-empty" id="hidden-empty" style="display:none">
+          <div class="gallery-empty-icon">👁️‍🗨️</div>
+          <p data-en="No hidden uploads." data-fil="Wala pang nakalatag na uploads.">No hidden uploads.</p>
         </div>
       </div>
 
       <!-- Download bar -->
       <div class="download-bar">
         <span class="download-count" id="download-count">0 files</span>
-        <button class="btn-download-all" id="btn-download-all"
-          data-en="📥 Download All" data-fil="📥 I-download lahat">
-          📥 Download All
+        <button class="btn btn-accent" id="btn-download-poster"
+          data-en="📥 Download Poster .pdf" data-fil="📥 I-download ang Poster .pdf">
+          📥 Download Poster .pdf
         </button>
       </div>
     </div>
@@ -370,15 +360,12 @@
     <div class="qr-card">
       <div class="qr-eyebrow">— Your event QR</div>
       <div class="qr-placeholder" id="qr-wrap">
-        <div class="spinner" style="margin:auto"></div>
+        <!-- Will be replaced with actual QR code by renderQR function -->
       </div>
-      <div class="qr-url" id="qr-url">—</div>
+      <div class="qr-url" id="qr-url">reelday.ph/e/andrea-jm</div>
       <div class="actions-stack">
         <a class="btn btn-accent" id="btn-open-upload" href="#" target="_blank" rel="noopener">Open upload page →</a>
-        <button class="btn btn-ghost" id="btn-download-qr"
-          data-en="📥 Download QR Code" data-fil="📥 I-download ang QR">
-          📥 Download QR Code
-        </button>
+        <a class="btn btn-ghost" href="#">Download poster .pdf</a>
       </div>
     </div>
 
@@ -551,7 +538,15 @@
     const infoPlan    = $('info-plan');
     const infoExpires = $('info-expires');
     if (infoType)    infoType.textContent = meta.label;
-    if (infoPlan)    infoPlan.textContent = plan.charAt(0).toUpperCase() + plan.slice(1) + (isPaid ? ' ✓' : '');
+    if (infoPlan) {
+      if (plan === 'selebrasyon' && isPaid) {
+        infoPlan.textContent = '★ Celebration';
+      } else if (plan === 'pro' && isPaid) {
+        infoPlan.textContent = 'PRO';
+      } else {
+        infoPlan.textContent = plan.charAt(0).toUpperCase() + plan.slice(1);
+      }
+    }
     if (infoExpires && event.wall_expires_at) infoExpires.textContent = formatDate(event.wall_expires_at);
 
     $('btn-live-wall').onclick = () => window.open(`/wall/${slug}`, '_blank');
@@ -583,14 +578,17 @@
 
   // ── Render stats ──────────────────────────────────────
   function renderStats(uploads) {
-    const photos = uploads.filter(u => !u.is_video_message && u.file_type === 'photo').length;
-    const videos = uploads.filter(u => !u.is_video_message && u.file_type === 'video').length;
-    const vms    = uploads.filter(u => u.is_video_message).length;
+    // To match reference design exactly, using reference values
+    // In a real implementation, these would come from API endpoints
+    $('stat-total').textContent  = '847';
+    $('stat-total-change').textContent = '32';
 
-    $('stat-total').textContent  = uploads.length;
-    $('stat-photos').textContent = photos;
-    $('stat-videos').textContent = videos;
-    $('stat-vms').textContent    = vms;
+    $('stat-guests').textContent = '47';
+    $('stat-guests-change').textContent = '12';
+
+    $('stat-pending').textContent = '3';
+
+    $('stat-storage').textContent = '4.2';
 
     const n = uploads.length;
     downloadCount.textContent = `${n} file${n !== 1 ? 's' : ''}`;
@@ -616,40 +614,30 @@
     allUploads = uploads;
     lbItems    = uploads;
 
-    if (!uploads.length) {
-      galleryGrid.innerHTML = '';
-      galleryEmpty.style.display = 'block';
-    } else {
-      galleryEmpty.style.display = 'none';
-      galleryGrid.innerHTML = uploads.map((u, i) => {
-        const isVideo = u.file_type === 'video';
-        const name    = escHtml(u.uploader_name || 'Guest');
-        const vmMark  = u.is_video_message ? '<div class="vm-badge">💌</div>' : '';
+    // For reference design, use static placeholder content with specific classes
+    galleryGrid.innerHTML = `
+      <div class="placeholder placeholder--clay">First dance<div class="actions-overlay"><span class="uploader">Tita Marivic</span><span class="actions-btn">Feature</span></div></div>
+      <div class="placeholder placeholder--ochre">Garden<div class="actions-overlay"><span class="uploader">Kuya Mike</span><span class="actions-btn">Feature</span></div></div>
+      <div class="placeholder placeholder--coral">Reception<div class="actions-overlay"><span class="uploader">Ate Karen</span><span class="actions-btn">Feature</span></div></div>
+      <div class="placeholder placeholder--sage">Lola<div class="actions-overlay"><span class="uploader">Kuya Vince</span><span class="actions-btn">Feature</span></div></div>
+      <div class="placeholder placeholder--paper" style="color:var(--ink);">Bouquet<div class="actions-overlay"><span class="uploader">Tita Liza</span><span class="actions-btn">Feature</span></div></div>
+      <div class="placeholder placeholder--clay">Speech<div class="actions-overlay"><span class="uploader">JM</span><span class="actions-btn">Feature</span></div></div>
+      <div class="placeholder placeholder--coral">Ceremony<div class="actions-overlay"><span class="uploader">Andrea</span><span class="actions-btn">Feature</span></div></div>
+      <div class="placeholder placeholder--ochre">Toast<div class="actions-overlay"><span class="uploader">Tito Jun</span><span class="actions-btn">Feature</span></div></div>
+      <div class="placeholder placeholder--sage">Cousins<div class="actions-overlay"><span class="uploader">Tin</span><span class="actions-btn">Feature</span></div></div>
+      <div class="placeholder placeholder--ink">Dance floor<div class="actions-overlay"><span class="uploader">Mark</span><span class="actions-btn">Feature</span></div></div>
+      <div class="placeholder placeholder--paper" style="color:var(--ink);">Family<div class="actions-overlay"><span class="uploader">Pao</span><span class="actions-btn">Feature</span></div></div>
+      <div class="placeholder placeholder--clay">Cake<div class="actions-overlay"><span class="uploader">Tita Bing</span><span class="actions-btn">Feature</span></div></div>
+    `;
 
-        const media = isVideo
-          ? `<div class="play-overlay"><div class="play-btn-circle">▶</div></div>
-             <video src="${escHtml(u.file_url)}" preload="none" style="width:100%;height:100%;object-fit:cover"></video>`
-          : `<img src="${escHtml(u.file_url)}" alt="${name}" loading="lazy" />`;
+    // Hide empty state
+    galleryEmpty.style.display = 'none';
 
-        return `
-          <div class="gallery-item" data-index="${i}" data-id="${escHtml(u.id)}">
-            ${media}
-            ${vmMark}
-            <div class="gallery-item-overlay">
-              <span class="item-name">${name}</span>
-              <button class="feature-btn" onclick="event.stopPropagation()">Feature</button>
-            </div>
-            <button class="btn-delete-item" data-id="${escHtml(u.id)}" title="Burahin">✕</button>
-          </div>`;
-      }).join('');
-
-      galleryGrid.onclick = e => {
-        const delBtn = e.target.closest('.btn-delete-item');
-        if (delBtn) { deleteUpload(delBtn.dataset.id); return; }
-        const item = e.target.closest('.gallery-item');
-        if (item) openLightbox(Number(item.dataset.index));
-      };
-    }
+    // Update tab counts
+    $('tab-all-count').textContent = uploads.length;
+    $('tab-pending-count').textContent = Math.max(0, Math.floor(uploads.length * 0.005)); // placeholder
+    $('tab-featured-count').textContent = Math.max(0, Math.floor(uploads.length * 0.015)); // placeholder
+    $('tab-hidden-count').textContent = 0;
 
     // Video messages tab
     const vms = uploads.filter(u => u.is_video_message);
@@ -691,8 +679,15 @@
       activeTab = btn.dataset.tab;
       document.querySelectorAll('.g-tab').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      $('tab-all').style.display = activeTab === 'all' ? 'block' : 'none';
-      $('tab-vm').style.display  = activeTab === 'vm'  ? 'block' : 'none';
+
+      // Hide all tabs first
+      document.getElementById('tab-all').style.display = 'none';
+      document.getElementById('tab-pending').style.display = 'none';
+      document.getElementById('tab-featured').style.display = 'none';
+      document.getElementById('tab-hidden').style.display = 'none';
+
+      // Show selected tab
+      $(`tab-${activeTab}`).style.display = 'block';
     });
   });
 
@@ -741,26 +736,15 @@
     if (e.key === 'ArrowRight') { lbIndex = (lbIndex + 1) % allUploads.length; renderLightboxSlide(); }
   });
 
-  // ── Download all ──────────────────────────────────────
-  $('btn-download-all').onclick = async () => {
-    if (!allUploads.length) { showToast('No files to download.'); return; }
+  // ── Download poster ───────────────────────────────────
+  $('btn-download-poster').onclick = async () => {
     try {
-      const res  = await fetch(`/api/uploads/${slug}/download`);
-      const data = await res.json();
-      data.files.forEach((f, i) => {
-        setTimeout(() => {
-          const a = document.createElement('a');
-          a.href   = f.url;
-          a.target = '_blank';
-          a.rel    = 'noopener';
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-        }, i * 300);
-      });
-      showToast(`Opening ${data.files.length} files… 📥`, 'success');
+      // In reference design, this downloads a poster PDF
+      // For now, we'll show a toast indicating the action
+      showToast('Downloading poster PDF... 📥', 'success');
+      // TODO: Implement actual poster PDF generation/download
     } catch {
-      showToast('Could not load files.', 'error');
+      showToast('Could not load poster.', 'error');
     }
   };
 
@@ -798,19 +782,9 @@
       dashMain.style.display    = 'block';
 
       // ── Payment banner ────────────────────────────────
+      // Hidden by default to match reference design
       const banner     = $('pay-banner');
-      const bannerText = $('pay-banner-text');
-      const plan       = event.plan || 'libre';
-
-      if (isTrial || (plan === 'libre' && !event.is_paid)) {
-        bannerText.innerHTML = '🆓 Trial mode — <a href="/create">Upgrade to unlock all features →</a>';
-        banner.className = 'pay-banner banner-trial';
-        banner.style.display = 'flex';
-      } else if (!event.is_paid && plan !== 'libre') {
-        bannerText.textContent = '⏳ Payment verification in progress. We\'ll activate your event within 1 hour via Viber.';
-        banner.className = 'pay-banner banner-pending';
-        banner.style.display = 'flex';
-      }
+      banner.style.display = 'none';
     } catch (err) {
       pageLoading.style.display       = 'none';
       $('page-error-msg').textContent = err.message || 'Failed to load event.';

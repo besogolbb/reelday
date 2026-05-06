@@ -820,6 +820,12 @@
       <div class="qr"></div>
     </div>
 
+    <!-- Navigation to details -->
+    <div class="actions" id="step1-actions">
+      <div></div><!-- spacer -->
+      <button class="btn btn-accent" type="button" id="btn-continue-details" data-en="Continue →" data-fil="Kontinuo →">Continue →</button>
+    </div>
+
     <!-- Free-flow CTA: shown only when ?free=1 -->
     <div class="free-cta-box" id="free-cta-box" style="display:none">
       <div class="free-cta-plan">
@@ -844,7 +850,53 @@
     </div>
   </div>
 
-  <!-- ── STEP 2: Plan Selection ──────────────────────────────── -->
+  <!-- ── STEP 2: Event Details ──────────────────────────────── -->
+  <div class="form-section" id="section-details">
+    <div class="form-section-title" data-en="Event details" data-fil="Mga detalye ng event">Event details</div>
+    <div class="form-section-sub" data-en="Tell us about your celebration." data-fil="Sabihin natin kung ano ang inyong selebrasyon.">Tell us about your celebration.</div>
+
+    <div class="form">
+      <div class="field" id="field-event-names">
+        <label for="event-names" data-en="Event names" data-fil="Pangalan ng event">Event names</label>
+        <input type="text" id="event-names" placeholder="e.g. Andrea & JM, Maria Santos" maxlength="200" autocomplete="off" />
+        <div class="field-error" data-en="Please enter the event names." data-fil="Pakisulat ang pangalan ng event.">Please enter the event names.</div>
+      </div>
+
+      <div class="field-row">
+        <div class="field" id="field-event-date">
+          <label for="event-date-input" data-en="Event date" data-fil="Petsa ng event">Event date</label>
+          <input type="date" id="event-date-input" />
+          <div class="field-error" data-en="Please pick the event date." data-fil="Pakisuli ang petsa ng event.">Please pick the event date.</div>
+        </div>
+        <div class="field" id="field-venue">
+          <label for="venue-input" data-en="Venue" data-fil="Lugar">Venue</label>
+          <input type="text" id="venue-input" placeholder="e.g. Manila Hotel" maxlength="200" autocomplete="off" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="welcome-message" data-en="Welcome message" data-fil="Mensahe ng pagkamali">Welcome message</label>
+        <textarea id="welcome-message" rows="2" placeholder="Salamat sa pagdating! Scan, share, at maging bahagi ng kuwento." maxlength="500">Salamat sa pagdating! Scan, share, at maging bahagi ng kuwento.</textarea>
+      </div>
+    </div>
+
+    <!-- Preview card -->
+    <div class="preview" id="details-preview">
+      <div>
+        <div class="preview-text" id="preview-event-name">Andrea & JM</div>
+        <div class="preview-meta" id="preview-event-meta">Manila Hotel · Wedding</div>
+      </div>
+      <div class="qr"></div>
+    </div>
+
+    <!-- Navigation to plans -->
+    <div class="actions" id="step2-actions">
+      <button class="btn btn-ghost" type="button" id="btn-back-to-event" data-en="← Back" data-fil="← Bumalik">← Back</button>
+      <button class="btn btn-accent" type="button" id="btn-continue-plans" data-en="Continue to Plans →" data-fil="Kontinuo papunta sa Mga Plano →">Continue to Plans →</button>
+    </div>
+  </div>
+
+  <!-- ── STEP 3: Plan Selection ──────────────────────────────── -->
   <div class="form-section" id="section-plans">
     <div class="form-section-title" data-en="Choose your Plan" data-fil="Piliin ang inyong Plano">Choose your Plan</div>
     <div class="form-section-sub" data-en="All plans include unlimited QR sharing for your event." data-fil="Lahat ng plano ay may kasamang unlimited QR sharing sa inyong event.">All plans include unlimited QR sharing for your event.</div>
@@ -1051,20 +1103,11 @@
   const isFreeFlow = new URLSearchParams(location.search).has('free');
 
   if (isFreeFlow) {
-    document.getElementById('section-plans').style.display   = 'none';
-    document.getElementById('section-payment').style.display = 'none';
-    document.getElementById('free-cta-box').style.display    = 'block';
-    // Simplify steps bar to 2 steps
-    const stepDots = document.querySelectorAll('.step-dot');
-    stepDots.forEach(d => {
-      if (d.dataset.step === '2') d.querySelector('.step-label').textContent = 'Free';
-      if (d.dataset.step === '3') d.style.display = 'none';
-      // Hide connector line from step 2
-      if (d.dataset.step === '2') d.style.setProperty('--line-hide','1');
-    });
-    document.querySelector('[data-step="2"] .step-label').textContent = 'Get started';
-    // Hide step 3 dot's connector
-    document.querySelector('.step-dot[data-step="2"]').style.setProperty('pointer-events','none');
+    document.getElementById('section-details')?.style.setProperty('display', 'none');
+    document.getElementById('section-plans')?.style.setProperty('display', 'none');
+    document.getElementById('section-payment')?.style.setProperty('display', 'none');
+    document.getElementById('free-cta-box')?.style.setProperty('display', 'block');
+    document.getElementById('step1-actions')?.style.setProperty('display', 'none');
   }
 
   // ── State ─────────────────────────────────────────────────
@@ -1076,8 +1119,14 @@
   // ── DOM ───────────────────────────────────────────────────
   const namesInput    = document.getElementById('couple-names');
   const dateInput     = document.getElementById('event-date');
+  const eventNamesInput = document.getElementById('event-names');
+  const eventDateInput  = document.getElementById('event-date-input');
+  const venueInput      = document.getElementById('venue-input');
+  const welcomeMessage  = document.getElementById('welcome-message');
   const fieldNames    = document.getElementById('field-names');
   const fieldDate     = document.getElementById('field-date');
+  const fieldEventNames = document.getElementById('field-event-names');
+  const fieldEventDate  = document.getElementById('field-event-date');
   const fieldRef      = document.getElementById('field-reference');
   const gcashRefInput = document.getElementById('gcash-ref');
   const gcashPanel    = document.getElementById('gcash-panel');
@@ -1131,6 +1180,11 @@
       selectedPrice = parseInt(card.dataset.price);
       updateSummary();
       setStepActive(3);
+      // Scroll to payment section
+      const paymentSection = document.getElementById('section-payment');
+      if (paymentSection) {
+        paymentSection.scrollIntoView({ behavior: 'smooth' });
+      }
     });
   });
 
@@ -1155,6 +1209,28 @@
   function validate(requireRef = false) {
     let ok = true;
 
+    // Determine which fields are relevant based on current section
+    const isDetailsSection = document.getElementById('section-details')?.style.display !== 'none';
+    const isPaymentSection = document.getElementById('section-payment')?.style.display !== 'none';
+
+    // Validate details section fields
+    if (isDetailsSection || !isPaymentSection) {
+      if (!eventNamesInput?.value.trim()) {
+        fieldEventNames?.classList.add('has-error');
+        ok = false;
+      } else {
+        fieldEventNames?.classList.remove('has-error');
+      }
+
+      if (!eventDateInput?.value) {
+        fieldEventDate?.classList.add('has-error');
+        ok = false;
+      } else {
+        fieldEventDate?.classList.remove('has-error');
+      }
+    }
+
+    // Validate original fields (for backward compatibility)
     if (!namesInput.value.trim()) {
       fieldNames.classList.add('has-error');
       ok = false;
@@ -1186,6 +1262,38 @@
     return ok;
   }
 
+  // Details section validation and updates
+  eventNamesInput?.addEventListener('input', () => {
+    if (eventNamesInput.value.trim()) {
+      fieldEventNames.classList.remove('has-error');
+    }
+  });
+
+  eventDateInput?.addEventListener('change', () => {
+    if (eventDateInput.value) {
+      fieldEventDate.classList.remove('has-error');
+    }
+  });
+
+  // Update preview as user types
+  function updateDetailsPreview() {
+    const previewName = document.getElementById('preview-event-name');
+    const previewMeta = document.getElementById('preview-event-meta');
+    if (previewName) previewName.textContent = eventNamesInput?.value.trim() || namesInput.value.trim() || 'Event Name';
+    if (previewMeta) {
+      const dateStr = eventDateInput?.value ? new Date(eventDateInput.value + 'T00:00:00').toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+      const venue = venueInput?.value.trim() || selectedType.charAt(0).toUpperCase() + selectedType.slice(1);
+      previewMeta.textContent = `${dateStr} · ${venue}`;
+    }
+  }
+
+  eventNamesInput?.addEventListener('input', updateDetailsPreview);
+  eventDateInput?.addEventListener('change', updateDetailsPreview);
+  venueInput?.addEventListener('input', updateDetailsPreview);
+
+  // Initialize preview
+  updateDetailsPreview();
+
   namesInput.addEventListener('input', () => {
     if (namesInput.value.trim()) {
       fieldNames.classList.remove('has-error');
@@ -1209,13 +1317,17 @@
     let userId = null;
     try { userId = JSON.parse(localStorage.getItem('reelday_user'))?.id ?? null; } catch { /* */ }
 
+    // Use new details fields if available, otherwise fall back to original fields
+    const eventName = (eventNamesInput?.value || namesInput.value).trim();
+    const eventDate = (eventDateInput?.value || dateInput.value) || null;
+
     const res = await fetch('/api/events', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        couple_names: namesInput.value.trim(),
+        couple_names: eventName,
         event_type:   selectedType,
-        event_date:   dateInput.value || null,
+        event_date:   eventDate,
         plan,
         user_id:      userId,
       }),
@@ -1439,6 +1551,31 @@
     }
   });
 
+  // ── Step navigation ───────────────────────────────────────
+  document.getElementById('btn-continue-details')?.addEventListener('click', () => {
+    // Copy values to original fields for backward compatibility
+    if (eventNamesInput?.value) namesInput.value = eventNamesInput.value;
+    if (eventDateInput?.value) dateInput.value = eventDateInput.value;
+
+    if (!validate()) return;
+    document.getElementById('section-details')?.scrollIntoView({ behavior: 'smooth' });
+    setStepActive(2);
+  });
+
+  // Navigation from details to plans
+  document.getElementById('btn-continue-plans')?.addEventListener('click', () => {
+    if (!validate()) return;
+    const plansSection = document.getElementById('section-plans');
+    plansSection?.scrollIntoView({ behavior: 'smooth' });
+    setStepActive(3);
+  });
+
+  // Back to event type
+  document.getElementById('btn-back-to-event')?.addEventListener('click', () => {
+    document.getElementById('section-event')?.scrollIntoView({ behavior: 'smooth' });
+    setStepActive(1);
+  });
+
   // ── Init ──────────────────────────────────────────────────
   updateSummary();
   setStepActive(1);
@@ -1446,6 +1583,7 @@
   // Intersection observer: update step indicator as user scrolls
   const sections = [
     { el: document.getElementById('section-event'),   step: 1 },
+    { el: document.getElementById('section-details'), step: 2 },
     { el: document.getElementById('section-plans'),   step: 3 },
     { el: document.getElementById('section-payment'), step: 4 },
   ];
