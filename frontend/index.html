@@ -591,7 +591,8 @@
   ════════════════════════════════════════════════════════ */
   @media (max-width: 960px) {
     .hero-inner { grid-template-columns: 1fr; }
-    .polaroid-stage { max-width: 480px; margin: 0 auto; }
+    /* isolate so internal z-indexes don't bleed over hero-text */
+    .polaroid-stage { max-width: 480px; margin: 0 auto; isolation: isolate; }
     .hero-strip { grid-template-columns: repeat(2,1fr); padding: 24px 28px; }
     .how-grid { grid-template-columns: 1fr; }
     .features-grid { grid-template-columns: 1fr; }
@@ -606,6 +607,9 @@
     .hero { padding: 72px 20px 40px; }
     .how, .wall-section, .quote-section, .features, .events, .pricing, .faq, .final-cta { padding-left: 20px; padding-right: 20px; }
     .events-grid { grid-template-columns: repeat(2,1fr); }
+
+    /* hide polaroid stack — absolutely-positioned pile breaks on narrow screens */
+    .polaroid-stage { display: none; }
 
     /* hero text */
     .hero h1 { font-size: clamp(36px, 11vw, 60px); }
@@ -685,7 +689,7 @@
 
     <!-- Left: copy -->
     <div class="hero-text">
-      <div class="chip"><span class="chip-dot"></span>Built for Filipino celebrations</div>
+      <div class="chip"><span class="chip-dot"></span>Built for every celebrations</div>
       <h1>
         Every shot.<br/>
         <em>Every guest.</em><br/>
