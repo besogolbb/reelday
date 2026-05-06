@@ -611,6 +611,7 @@ body { background: var(--paper); min-height: 100dvh; }
 
   /* ── Gallery ───────────────────────────────────────── */
   const itemDataUrls = {};
+  const itemFiles    = {}; // keep the original File objects for the actual API upload
 
   function handleFiles(e) {
     const files = Array.from(e.target.files);
@@ -636,6 +637,7 @@ body { background: var(--paper); min-height: 100dvh; }
           th.style.backgroundPosition = 'center';
         }
         itemDataUrls[id] = ev.target.result;
+        itemFiles[id]    = f;
         updateWallPreview();
       };
       reader.readAsDataURL(f);
@@ -656,6 +658,7 @@ body { background: var(--paper); min-height: 100dvh; }
     const item = document.getElementById(id);
     if (item) item.remove();
     delete itemDataUrls[id];
+    delete itemFiles[id];
     updateWallPreview();
     updateSendBtn();
   }
@@ -904,7 +907,46 @@ body { background: var(--paper); min-height: 100dvh; }
       img.src = fullUrl;
     });
 
-    /* TODO: POST to /api/events/:slug/upload */
+    /* ── Step 3: POST each file to the API so it's saved on Cloudflare ── */
+    const fileEntries = Object.entries(itemFiles);   // [ [queueId, File], ... ]
+    fileEntries.forEach(([queueId, file], i) => {
+      const entryId = now + i;
+      const fd = new FormData();
+      fd.append('file', file, file.name);
+      fd.append('uploader_name', name);
+      if (i === 0 && msg) fd.append('message', msg);
+
+      fetch(`/api/uploads/${currentEvent.slug}`, { method: 'POST', body: fd })
+        .then(res => res.ok ? res.json() : Promise.reject(res))
+        .then(({ upload }) => {
+          // Patch the localStorage entry with the real cloud id + url
+          try {
+            const stored = JSON.parse(localStorage.getItem(localKey) || '[]');
+            const found  = stored.find(u => u.id === entryId);
+            if (found && upload) {
+              found.id              = upload.id;       // server UUID
+              found.file_url        = upload.file_url; // Cloudflare R2 URL
+              found.file_type       = upload.file_type;
+              found.created_at      = upload.created_at;
+              found.synced          = true;
+              localStorage.setItem(localKey, JSON.stringify(stored));
+            }
+          } catch { /* localStorage may be full — server copy is canonical */ }
+        })
+        .catch(() => { /* offline / API down — localStorage entry remains the only copy */ });
+    });
+
+    // If the user only sent a recorded video (no gallery files), upload that blob
+    if (fileEntries.length === 0 && recordedBlob) {
+      const fd = new FormData();
+      fd.append('file', recordedBlob, 'message.webm');
+      fd.append('uploader_name', name);
+      if (msg) fd.append('message', msg);
+      fd.append('is_video_message', 'true');
+      fetch(`/api/uploads/${currentEvent.slug}`, { method: 'POST', body: fd })
+        .catch(() => { /* silent fail; localStorage holds the metadata */ });
+    }
+
     showThankYou(name, msg, allUrls[0] || null);
   }
 
@@ -944,6 +986,7 @@ body { background: var(--paper); min-height: 100dvh; }
     if (document.getElementById('msgText')) document.getElementById('msgText').value = '';
     document.querySelector('#panel-gallery .send-btn').textContent = 'Share moments →';
     Object.keys(itemDataUrls).forEach(k => delete itemDataUrls[k]);
+    Object.keys(itemFiles).forEach(k => delete itemFiles[k]);
     if (currentEvent && currentEvent.cover)
       document.getElementById('wallPreviewBg').style.backgroundImage = `url(${currentEvent.cover})`;
     updateMsgPreview();
