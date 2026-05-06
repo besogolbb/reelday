@@ -121,7 +121,7 @@ body { background: var(--paper); min-height: 100dvh; }
 .upload-hero .welcome { margin-top: 16px; font-family: var(--display); font-style: italic; font-size: 15px; color: var(--ink-soft); max-width: 32ch; margin-left: auto; margin-right: auto; line-height: 1.5; }
 
 /* ── Share mode tabs ─────────────────────────────────── */
-.share-tabs { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 16px; }
+.share-tabs { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; margin-bottom: 16px; }
 .share-tab {
   background: #fff; border: 1.5px solid var(--line);
   border-radius: var(--r); padding: 14px 8px 12px;
@@ -207,27 +207,8 @@ body { background: var(--paper); min-height: 100dvh; }
 .clip-del  { background: none; border: none; color: var(--ink-faint); font-size: 18px; cursor: pointer; padding: 4px; }
 .clip-del:hover { color: var(--accent); }
 
-/* ── Panel 3: Live message ───────────────────────────── */
-.message-panel { background: #fff; border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; }
-.message-panel .mp-head { background: var(--paper-2); border-bottom: 1px solid var(--line); padding: 14px 18px; display: flex; align-items: center; gap: 10px; }
-.mp-live-dot { width: 8px; height: 8px; border-radius: 50%; background: #2d7a4a; box-shadow: 0 0 0 3px rgba(45,122,74,.2); animation: glow 2s ease infinite; }
-@keyframes glow { 50% { box-shadow: 0 0 0 6px rgba(45,122,74,0); } }
-.mp-head-text { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); }
-.message-panel .mp-body { padding: 18px; display: flex; flex-direction: column; gap: 14px; }
-.mp-attach-row { display: flex; gap: 8px; }
-.mp-attach-btn {
-  flex: 1; background: var(--paper-2); border: 1px solid var(--line);
-  border-radius: var(--r); padding: 10px 8px;
-  display: flex; flex-direction: column; align-items: center; gap: 5px;
-  cursor: pointer; transition: border-color .2s, background .2s;
-}
-.mp-attach-btn:hover { border-color: var(--accent); background: var(--paper-3); }
-.mp-attach-btn svg { width: 20px; height: 20px; stroke: var(--ink-soft); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.mp-attach-btn span { font-family: var(--mono); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-soft); text-align: center; }
-.mp-media-row { display: flex; gap: 8px; display: none; }
-.mp-media-row.visible { display: flex; }
-.mp-media-thumb { width: 56px; height: 56px; border-radius: 8px; background: linear-gradient(135deg,#e8c5b0,#c45a3a); position: relative; flex-shrink: 0; }
-.mp-media-del { position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 50%; background: var(--ink); color: var(--paper); font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: none; }
+/* ── Message section (inside gallery panel) ──────────── */
+.gallery-msg { margin-top: 14px; display: flex; flex-direction: column; gap: 0; }
 .mp-textarea-wrap { background: var(--paper); border: 1.5px solid var(--line); border-radius: var(--r); padding: 12px 14px; transition: border-color .2s, box-shadow .2s; }
 .mp-textarea-wrap:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(196,90,58,.1); }
 .mp-textarea-wrap label { font-family: var(--mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); display: block; margin-bottom: 6px; }
@@ -316,12 +297,6 @@ body { background: var(--paper); min-height: 100dvh; }
       </div>
       <div class="tab-label">Record<br/>Video</div>
     </div>
-    <div class="share-tab" onclick="switchTab('message',this)">
-      <div class="tab-icon">
-        <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-      </div>
-      <div class="tab-label">Live<br/>Message</div>
-    </div>
   </div>
 
   <!-- ════ PANEL 1: Gallery ═════════════════════════════ -->
@@ -333,11 +308,31 @@ body { background: var(--paper); min-height: 100dvh; }
       <p>Photos and videos · up to 100 MB each</p>
       <div class="choose-btn">Choose from gallery</div>
     </div>
-    <div class="name-field">
-      <label>Your name (optional)</label>
-      <input type="text" id="galleryName" placeholder="e.g. Tita Marivic, JM's cousin" />
-    </div>
     <div class="queue" id="galleryQueue"></div>
+
+    <!-- Message + wall preview integrated -->
+    <div class="gallery-msg">
+      <div class="mp-textarea-wrap" style="margin-top:14px;">
+        <label>Add a message (optional)</label>
+        <textarea class="mp-textarea" id="msgText" maxlength="160" placeholder="Write something for the wall… &quot;Lolo would have loved this.&quot;" oninput="updateMsgPreview()"></textarea>
+      </div>
+      <div class="mp-char-count" id="charCount">0 / 160</div>
+      <div class="mp-wall-preview" style="margin-top:10px;">
+        <div class="mp-wall-bg" id="wallPreviewBg"></div>
+        <div class="mp-wall-vignette"></div>
+        <div class="mp-wall-label">Preview · how it looks on wall</div>
+        <div class="mp-wall-msg">
+          <div class="mp-wall-msg-from" id="msgFrom">— Your name</div>
+          <div id="msgPreview" style="opacity:.4;font-style:italic;">Your message appears here…</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="name-field" style="margin-top:14px;">
+      <label>Your name (optional)</label>
+      <input type="text" id="galleryName" placeholder="e.g. Tita Marivic, JM's cousin"
+        oninput="document.getElementById('msgFrom').textContent='— '+(this.value||'Your name')" />
+    </div>
     <button class="btn btn-primary send-btn" onclick="handleSend('gallery')">Share moments →</button>
     <div class="success-banner" id="gallerySuccess">
       <div class="s-icon">★</div>
@@ -392,60 +387,6 @@ body { background: var(--paper); min-height: 100dvh; }
     </div>
   </div>
 
-  <!-- ════ PANEL 3: Live Message ════════════════════════ -->
-  <div class="share-panel" id="panel-message">
-    <div class="message-panel">
-      <div class="mp-head">
-        <div class="mp-live-dot"></div>
-        <div class="mp-head-text">Goes live on the wall instantly</div>
-      </div>
-      <div class="mp-body">
-        <div class="mp-attach-row">
-          <button class="mp-attach-btn" onclick="alert('TODO: open photo picker')">
-            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-            <span>Add photo</span>
-          </button>
-          <button class="mp-attach-btn" onclick="alert('TODO: open video picker')">
-            <svg viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
-            <span>Add video</span>
-          </button>
-          <button class="mp-attach-btn" onclick="showAttached()">
-            <svg viewBox="0 0 24 24"><path d="M14.5 10c-.83 0-1.5-.67-1.5-1.5v-5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5z"/><path d="M20.5 10H19V8.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/><path d="M9.5 14c.83 0 1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5S8 21.33 8 20.5v-5c0-.83.67-1.5 1.5-1.5z"/><path d="M3.5 14H5v1.5c0 .83-.67 1.5-1.5 1.5S2 16.33 2 15.5 2.67 14 3.5 14z"/><path d="M14 14.5c0-.83.67-1.5 1.5-1.5h5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5h-5c-.83 0-1.5-.67-1.5-1.5z"/><path d="M15.5 19H14v1.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5-.67-1.5-1.5-1.5z"/><path d="M10 9.5C10 8.67 9.33 8 8.5 8h-5C2.67 8 2 8.67 2 9.5S2.67 11 3.5 11h5c.83 0 1.5-.67 1.5-1.5z"/><path d="M8.5 5H10V3.5C10 2.67 9.33 2 8.5 2S7 2.67 7 3.5 7.67 5 8.5 5z"/></svg>
-            <span>GIF / sticker</span>
-          </button>
-        </div>
-        <div class="mp-media-row" id="mpMediaRow">
-          <div class="mp-media-thumb">
-            <button class="mp-media-del" onclick="document.getElementById('mpMediaRow').classList.remove('visible')">✕</button>
-          </div>
-        </div>
-        <div class="mp-textarea-wrap">
-          <label>Your message</label>
-          <textarea class="mp-textarea" id="msgText" maxlength="160" placeholder="Write something for the wall… &quot;Lolo would have loved this.&quot;" oninput="updateMsgPreview()"></textarea>
-        </div>
-        <div class="mp-char-count" id="charCount">0 / 160</div>
-        <div class="mp-wall-preview">
-          <div class="mp-wall-bg" id="wallPreviewBg"></div>
-          <div class="mp-wall-vignette"></div>
-          <div class="mp-wall-label">Preview · how it looks on wall</div>
-          <div class="mp-wall-msg">
-            <div class="mp-wall-msg-from" id="msgFrom">— Your name</div>
-            <div id="msgPreview" style="opacity:.4;font-style:italic;">Your message appears here…</div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="name-field">
-      <label>Your name (optional)</label>
-      <input type="text" id="msgName" placeholder="e.g. Tita Marivic" oninput="document.getElementById('msgFrom').textContent='— '+(this.value||'Your name')" />
-    </div>
-    <button class="btn btn-accent send-btn" onclick="handleSend('message')">Send to wall →</button>
-    <div class="success-banner" id="messageSuccess">
-      <div class="s-icon">★</div>
-      <div><b>Your message is live!</b><span>It's on the wall right now.</span></div>
-    </div>
-  </div>
-
   <!-- Recently shared -->
   <div class="recent">
     <div class="recent-head">
@@ -492,14 +433,16 @@ body { background: var(--paper); min-height: 100dvh; }
     }
 
     if (!event) {
-      const name    = p.get('name');
-      const date    = p.get('date');
-      const venue   = p.get('venue');
-      const theme   = p.get('theme')   || 'wedding';
-      const welcome = p.get('welcome');
-      const cover   = p.get('cover');
-      const count   = parseInt(p.get('count') || '0', 10);
-      event = { slug, name, date, venue, theme, welcome, cover, count };
+      event = {
+        slug,
+        name:    p.get('name')    || 'Andrea & JM',
+        date:    p.get('date')    || '14 June 2026',
+        venue:   p.get('venue')   || 'Manila Hotel',
+        theme:   p.get('theme')   || 'wedding',
+        welcome: p.get('welcome') || 'Salamat sa pagdating! Scan, share, and become part of the story.',
+        cover:   p.get('cover')   || 'images/newlyweds.png',
+        count:   parseInt(p.get('count') || '847', 10),
+      };
     }
 
     currentEvent = event;
@@ -509,21 +452,14 @@ body { background: var(--paper); min-height: 100dvh; }
   function applyEvent(ev) {
     document.body.setAttribute('data-theme', ev.theme || 'wedding');
 
-    if (ev.name) {
-      const nameHtml = ev.name.replace(/\s*&\s*/, ' <em>&amp;</em> ');
-      document.getElementById('heroName').innerHTML = nameHtml;
-      document.title = `Reelday — ${ev.name}`;
-    } else {
-      document.getElementById('heroName').innerHTML = '<em>Your event</em>';
-      document.title = 'Reelday';
-    }
+    const nameHtml = ev.name.replace(/\s*&\s*/, ' <em>&amp;</em> ');
+    document.getElementById('heroName').innerHTML = nameHtml;
+    document.title = `Reelday — ${ev.name}`;
 
-    const metaParts = [ev.date, ev.venue].filter(Boolean);
     document.getElementById('heroMeta').textContent =
-      metaParts.length ? metaParts.join(' · ').toUpperCase() : '';
+      [ev.date, ev.venue].filter(Boolean).join(' · ').toUpperCase();
 
-    document.getElementById('heroWelcome').textContent =
-      ev.welcome ? `"${ev.welcome}"` : '';
+    document.getElementById('heroWelcome').textContent = `"${ev.welcome}"`;
 
     if (ev.cover) {
       document.getElementById('wallPreviewBg').style.backgroundImage = `url(${ev.cover})`;
@@ -532,8 +468,7 @@ body { background: var(--paper); min-height: 100dvh; }
     const photos = ev.photos || DEMO_PHOTOS;
     document.getElementById('recentGrid').innerHTML =
       photos.slice(0,9).map(src => `<div style="background-image:url(${src})"></div>`).join('');
-    document.getElementById('recentCount').textContent =
-      ev.count ? `${ev.count} today` : '0 today';
+    document.getElementById('recentCount').textContent = `${ev.count} today`;
 
     document.getElementById('uploadHero').classList.remove('hero-loading');
   }
@@ -729,23 +664,13 @@ body { background: var(--paper); min-height: 100dvh; }
     counter.classList.toggle('warn', txt.length > 140);
   }
 
-  function showAttached() { document.getElementById('mpMediaRow').classList.add('visible'); }
 
   /* ── Send ──────────────────────────────────────────── */
   function handleSend(mode) {
-    if (mode === 'message') {
-      const txt = document.getElementById('msgText').value.trim();
-      if (!txt) {
-        document.getElementById('msgText').focus();
-        document.querySelector('.mp-textarea-wrap').style.borderColor = 'var(--accent)';
-        setTimeout(() => document.querySelector('.mp-textarea-wrap').style.borderColor = '', 1200);
-        return;
-      }
-    }
     if (mode === 'record' && !recordedBlob) return;
 
     /* TODO: POST to /api/events/:slug/upload or /api/events/:slug/message */
-    const bannerId = { gallery:'gallerySuccess', record:'recordSuccess', message:'messageSuccess' }[mode];
+    const bannerId = mode === 'gallery' ? 'gallerySuccess' : 'recordSuccess';
     document.getElementById(bannerId).classList.add('visible');
 
     const el = document.getElementById('recentCount');
