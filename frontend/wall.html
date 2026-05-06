@@ -176,8 +176,8 @@
 
     .caption blockquote {
       font-family: var(--display); font-style: italic; font-weight: 400;
-      font-size: clamp(32px, 4vw, 56px); line-height: 1.1;
-      letter-spacing: -.015em;
+      font-size: clamp(48px, 6vw, 88px); line-height: 1.05;
+      letter-spacing: -.02em;
       text-shadow: 0 4px 24px rgba(0,0,0,.55);
       margin: 0; transition: opacity .5s ease;
     }
@@ -209,24 +209,24 @@
       height: 100%; background: rgba(240,163,122,.8); width: 0;
     }
 
-    /* ── Fullscreen toggle button ───────────────────────────── */
+    /* ── Fullscreen toggle button (YouTube-style, bottom-right) ── */
     .fs-btn {
-      position: fixed; top: 18px; left: 18px; z-index: 12;
-      width: 40px; height: 40px; border-radius: 50%;
-      background: rgba(0,0,0,.45); color: #fff;
-      border: 1px solid rgba(255,255,255,.15);
+      position: fixed; bottom: 18px; right: 18px; z-index: 25;
+      width: 44px; height: 44px; border-radius: 50%;
+      background: rgba(0,0,0,.55); color: #fff;
+      border: 1px solid rgba(255,255,255,.18);
       display: flex; align-items: center; justify-content: center;
       cursor: pointer; opacity: 0; transition: opacity .3s, background .2s, transform .2s;
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
     }
 
-    .fs-btn:hover { background: rgba(0,0,0,.7); transform: scale(1.06); }
+    .fs-btn:hover { background: rgba(0,0,0,.78); transform: scale(1.08); }
 
     body:hover .fs-btn,
     .fs-btn:focus-visible { opacity: 1; }
 
-    .fs-btn svg { width: 18px; height: 18px; }
+    .fs-btn svg { width: 20px; height: 20px; }
 
     /* ── Pause overlay ──────────────────────────────────────── */
     .pause-btn {
@@ -273,7 +273,7 @@
 
     /* ── Keyboard hint ──────────────────────────────────────── */
     .kb-hint {
-      position: fixed; bottom: 1rem; right: 1.5rem;
+      position: fixed; bottom: 1rem; left: 1.5rem;
       font-family: var(--mono); font-size: .6rem;
       color: rgba(255,255,255,.25); letter-spacing: .1em;
       z-index: 200; pointer-events: none;
