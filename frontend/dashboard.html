@@ -563,12 +563,48 @@
     renderGallery(allUploads);
   }
 
+  // ── Read uploads from localStorage ───────────────────
+  function readLocalUploads() {
+    const all = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('reelday_uploads_')) {
+        try { all.push(...JSON.parse(localStorage.getItem(k) || '[]')); } catch { /* skip */ }
+      }
+    }
+    all.sort((a, b) => b.id - a.id);
+    if (slug) {
+      try {
+        const keyed = JSON.parse(localStorage.getItem(`reelday_uploads_${slug}`) || '[]');
+        return keyed.length ? keyed : all;
+      } catch { /* fall through */ }
+    }
+    return all;
+  }
+
+  function renderLocalMode(uploads) {
+    const p = new URLSearchParams(location.search);
+    const demoEvent = {
+      couple_names: p.get('name') || slug || 'Andrea & JM',
+      event_type:   p.get('theme') || 'wedding',
+      event_date:   p.get('date')  || '',
+      plan:         'demo',
+    };
+    applyTheme(demoEvent.event_type);
+    renderHeader(demoEvent);
+    renderStats(uploads);
+    renderGallery(uploads);
+    pageLoading.style.display = 'none';
+    dashHeader.style.display  = 'block';
+    document.getElementById('stats-row').style.display = 'grid';
+    dashMain.style.display    = 'grid';
+  }
+
   // ── Data loading ──────────────────────────────────────
   async function loadAll() {
+    /* No slug — skip API, go straight to localStorage */
     if (!slug) {
-      pageLoading.style.display = 'none';
-      $('page-error-msg').textContent = 'No event slug in URL. Add ?slug=your-slug';
-      pageError.style.display = 'block';
+      renderLocalMode(readLocalUploads());
       return;
     }
 
@@ -595,52 +631,11 @@
       dashHeader.style.display  = 'block';
       document.getElementById('stats-row').style.display = 'grid';
       dashMain.style.display    = 'grid';
-    } catch (err) {
-      /* API not available — fall back to localStorage (local demo mode) */
+    } catch {
+      /* API unavailable — fall back to localStorage */
       try {
-        const p = new URLSearchParams(location.search);
-
-        /* Collect every reelday_uploads_* entry from localStorage */
-        const allLocalUploads = [];
-        for (let i = 0; i < localStorage.length; i++) {
-          const k = localStorage.key(i);
-          if (k && k.startsWith('reelday_uploads_')) {
-            try {
-              const stored = JSON.parse(localStorage.getItem(k) || '[]');
-              allLocalUploads.push(...stored);
-            } catch { /* skip */ }
-          }
-        }
-        /* Sort newest first */
-        allLocalUploads.sort((a, b) => b.id - a.id);
-
-        /* If slug is set, prefer uploads for that slug; otherwise show all */
-        const localUploads = slug
-          ? (() => {
-              try {
-                const keyed = JSON.parse(localStorage.getItem(`reelday_uploads_${slug}`) || '[]');
-                return keyed.length ? keyed : allLocalUploads;
-              } catch { return allLocalUploads; }
-            })()
-          : allLocalUploads;
-
-        const demoEvent = {
-          couple_names: p.get('name') || slug || 'Your Event',
-          event_type:   p.get('theme') || 'wedding',
-          event_date:   p.get('date')  || '',
-          plan:         'demo',
-        };
-
-        applyTheme(demoEvent.event_type);
-        renderHeader(demoEvent);
-        renderStats(localUploads);
-        renderGallery(localUploads);
-
-        pageLoading.style.display = 'none';
-        dashHeader.style.display  = 'block';
-        document.getElementById('stats-row').style.display = 'grid';
-        dashMain.style.display    = 'grid';
-      } catch (innerErr) {
+        renderLocalMode(readLocalUploads());
+      } catch {
         pageLoading.style.display       = 'none';
         $('page-error-msg').textContent = 'Failed to load event data.';
         pageError.style.display         = 'block';
@@ -650,21 +645,20 @@
 
   async function refreshUploads() {
     try {
+      if (!slug) throw new Error('no slug');
       const res = await fetch(`/api/uploads/${slug}`);
-      if (res.ok) {
-        const { uploads } = await res.json();
-        const currentIds  = new Set(allUploads.map(u => u.id));
-        const hasChanges  = uploads.length !== allUploads.length ||
-                            uploads.some(u => !currentIds.has(u.id));
-        if (hasChanges) { renderStats(uploads); renderGallery(uploads); }
-      } else {
-        /* refresh from localStorage in local demo mode */
-        const localUploads = JSON.parse(localStorage.getItem(`reelday_uploads_${slug}`) || '[]');
-        if (localUploads.length !== allUploads.length) {
-          renderStats(localUploads); renderGallery(localUploads);
-        }
+      if (!res.ok) throw new Error('api down');
+      const { uploads } = await res.json();
+      const currentIds  = new Set(allUploads.map(u => u.id));
+      const hasChanges  = uploads.length !== allUploads.length ||
+                          uploads.some(u => !currentIds.has(u.id));
+      if (hasChanges) { renderStats(uploads); renderGallery(uploads); }
+    } catch {
+      const local = readLocalUploads();
+      if (local.length !== allUploads.length) {
+        renderStats(local); renderGallery(local);
       }
-    } catch { /* silent */ }
+    }
   }
 
   // ── Event listeners ──────────────────────────────────
