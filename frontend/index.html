@@ -293,6 +293,7 @@
   }
   .wall-mini-mockup .wm-bg {
     position: absolute; inset: -5%;
+    background-size: cover; background-position: center;
     animation: wm-kb 10s ease-out infinite alternate;
   }
   @keyframes wm-kb { from{transform:scale(1)} to{transform:scale(1.1) translate(-1.5%,-1%)} }
@@ -833,7 +834,7 @@
       <h3>Wall goes live</h3>
       <p>Photos appear on screen within seconds. Ken Burns pans, music, captions, the works.</p>
       <div class="mockup wall-mini-mockup" id="miniWall">
-        <div class="wm-bg" id="miniWallBg" style="background:linear-gradient(135deg,#7a3b2e,#c45a3a 60%,#d8a05a)"></div>
+        <div class="wm-bg" id="miniWallBg" style="background-image:url(/images/First%20dance%20after%2038%20years.png);background-size:cover;background-position:center"></div>
         <div class="wm-vignette"></div>
         <div class="wm-ticker">
           <span class="wm-dot"></span>
@@ -1126,10 +1127,10 @@ function setLang(lang, btn) {
 /* ── Mini wall rotation (step 3 card) ─────────────────── */
 (function() {
   const bgs = [
-    'linear-gradient(135deg,#7a3b2e,#c45a3a 60%,#d8a05a)',
-    'linear-gradient(135deg,#1e3a5f,#3b6ea8 60%,#a4c2e3)',
-    'linear-gradient(135deg,#134e3a,#2d6a4a 60%,#8fc4a4)',
-    'linear-gradient(135deg,#4c1d95,#7d3aa8 60%,#c8a2e3)',
+    'url(/images/First%20dance%20after%2038%20years.png)',
+    'url(/images/The%20whole%20family%20finally%20in%20one%20frame.png)',
+    'url(/images/Garden%20hour.png)',
+    'url(/images/Best%20night%20of%20the%20year%2C%20hands%20down.png)',
   ];
   const quotes = [
     { who: '— Tita Marivic', q: '"First dance, 38 years later."' },
@@ -1143,7 +1144,7 @@ function setLang(lang, btn) {
     const bg  = document.getElementById('miniWallBg');
     const who = document.getElementById('miniWho');
     const q   = document.getElementById('miniQuote');
-    if (bg)  bg.style.background = bgs[i];
+    if (bg)  bg.style.backgroundImage = bgs[i];
     if (who) who.textContent = quotes[i].who;
     if (q)   q.textContent   = quotes[i].q;
   }, 3500);
