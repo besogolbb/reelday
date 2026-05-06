@@ -1668,7 +1668,7 @@
 
   // ── Language toggle ───────────────────────────────────
   $('lang-toggle').addEventListener('click', e => {
-    const btn = e.target.closest('.lang-btn');
+    const btn = e.target.closest('button');
     if (!btn || btn.dataset.lang === lang) return;
     lang = btn.dataset.lang;
     localStorage.setItem('reelday_lang', lang);
