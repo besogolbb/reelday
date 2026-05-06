@@ -10,18 +10,7 @@
   <style>
     body { background: var(--paper); min-height: 100dvh; }
 
-    /* ── Payment / mode banner ────────────────────────────── */
-    .pay-banner {
-      display: none; padding: .75rem 1.25rem; text-align: center;
-      font-family: var(--sans); font-size: .875rem;
-      align-items: center; justify-content: center; gap: .75rem;
-      flex-wrap: wrap; position: sticky; top: 0; z-index: 999;
-    }
-    .pay-banner.banner-trial   { background: var(--accent); color: #fff; }
-    .pay-banner.banner-pending { background: rgba(216,160,90,.15); border-bottom: 1px solid rgba(216,160,90,.3); color: #7a5a20; }
-    .pay-banner a { color: inherit; font-weight: 700; text-decoration: underline; }
-
-    /* ── Event header ─────────────────────────────────────── */
+    /* ── Event header ─────────────────────────────── */
     .event-header {
       background: var(--ink); color: var(--paper);
       padding: 32px 28px 80px;
@@ -38,8 +27,9 @@
     }
     .event-header .brand { color: var(--paper); }
     .event-header .nav { display: flex; gap: 24px; align-items: center; }
-    .event-header .nav a { color: rgba(251,245,236,.7); font-size: 14px; }
+    .event-header .nav a { color: rgba(251,245,236,.7); font-size: 14px; text-decoration: none; transition: color .15s; }
     .event-header .nav a.active { color: var(--paper); }
+    .event-header .nav a:hover { color: var(--paper); }
     .event-header-top-right { display: flex; align-items: center; gap: 10px; }
 
     .event-header .live-badge {
@@ -69,15 +59,6 @@
       color: rgba(251,245,236,.6); text-transform: uppercase;
       display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
     }
-
-    /* Lang toggle */
-    .lang-toggle { display: flex; background: rgba(255,255,255,.12); border-radius: 20px; padding: 3px; gap: 2px; }
-    .lang-btn { padding: .22rem .6rem; border: none; border-radius: 16px; font-family: var(--sans); font-size: .72rem; font-weight: 600; letter-spacing: .05em; cursor: pointer; background: transparent; color: rgba(255,255,255,.65); transition: background .15s, color .15s; }
-    .lang-btn.active { background: rgba(255,255,255,.9); color: var(--ink); }
-
-    /* Live wall button */
-    .btn-live-wall { background: rgba(255,255,255,.12); color: #fff; border: 1px solid rgba(255,255,255,.25); border-radius: 999px; padding: .45rem 1rem; font-family: var(--sans); font-size: .8rem; font-weight: 600; cursor: pointer; transition: background .15s; white-space: nowrap; }
-    .btn-live-wall:hover { background: rgba(255,255,255,.22); }
 
     .header-nav-link { color: rgba(255,255,255,.75); font-size: .82rem; text-decoration: none; transition: color .15s; }
     .header-nav-link:hover { color: #fff; }
@@ -113,12 +94,7 @@
     .panel-head h2 { font-family: var(--display); font-size: 22px; font-weight: 500; letter-spacing: -.01em; color: var(--ink); }
     .pill { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); padding: 6px 12px; border-radius: 999px; background: var(--paper-2); }
 
-    /* ── Tab row ──────────────────────────────────────────── */
-    .tab-row { display: flex; gap: 6px; padding: 16px 24px; border-bottom: 1px solid var(--line); }
-    .g-tab { padding: 8px 14px; border-radius: 999px; font-size: 13px; color: var(--ink-soft); cursor: pointer; border: none; background: transparent; font-family: var(--sans); transition: background .15s, color .15s; }
-    .g-tab.active { background: var(--ink); color: var(--paper); }
-
-    /* Photo grid (matching reference design) */
+    /* ── Photo grid (matching reference design) ───────────── */
     .photo-grid {
       display: grid; grid-template-columns: repeat(4, 1fr);
       gap: 4px; padding: 4px;
@@ -126,6 +102,9 @@
     .photo-grid > div {
       aspect-ratio: 1; position: relative;
       overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--display); font-size: 14px; color: rgba(255,255,255,.9);
+      font-style: italic;
     }
     .photo-grid > div .actions-overlay {
       position: absolute; inset: 0;
@@ -143,8 +122,17 @@
       background: rgba(255,255,255,.95);
       border-radius: 999px; padding: 4px 8px;
       font-family: var(--mono); font-size: 9px;
-      letter-spacing: .12em; text-transform: uppercase;
+      letter-spacing: .12em; text-transform: uppercase; cursor: pointer;
+      border: none;
     }
+
+    /* Placeholder color classes */
+    .placeholder--clay   { background: #b07a5c; }
+    .placeholder--ochre   { background: #c8a45a; }
+    .placeholder--coral   { background: #c45a3a; }
+    .placeholder--sage    { background: #7a9a6a; }
+    .placeholder--ink     { background: #2a1a14; }
+    .placeholder--paper   { background: var(--paper); color: var(--ink) !important; }
 
     /* ── QR card (sidebar) ────────────────────────────────── */
     .qr-card {
@@ -164,8 +152,9 @@
       border-radius: 8px; padding: 8px;
       border: 12px solid #fff;
       box-shadow: 0 0 0 1px var(--line);
+      position: relative; overflow: hidden;
     }
-    .qr-placeholder img { width: 100%; height: 100%; object-fit: contain; }
+    .qr-placeholder img { width: 100%; height: 100%; object-fit: contain; display: block; }
     .qr-url { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; color: var(--ink-soft); margin-bottom: 16px; word-break: break-all; }
     .actions-stack { display: grid; gap: 8px; }
 
@@ -179,22 +168,6 @@
     .info-row:first-of-type { border-top: none; padding-top: 0; }
     .info-row span:first-child { color: var(--ink-soft); }
     .info-row span:last-child { font-weight: 500; color: var(--ink); }
-
-    /* ── Lightbox ─────────────────────────────────────────── */
-    .lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.92); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
-    .lightbox.open { display: flex; }
-    .lb-close { position: fixed; top: 1rem; right: 1rem; width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,.15); border: none; color: #fff; font-size: 1.4rem; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 1001; transition: background .15s; }
-    .lb-close:hover { background: rgba(255,255,255,.28); }
-    .lb-nav { position: fixed; top: 50%; transform: translateY(-50%); width: 48px; height: 48px; border-radius: 50%; background: rgba(255,255,255,.12); border: none; color: #fff; font-size: 1.4rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background .15s; z-index: 1001; }
-    .lb-nav:hover { background: rgba(255,255,255,.25); }
-    .lb-prev { left: .75rem; } .lb-next { right: .75rem; }
-    .lb-body { max-width: 900px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 1rem; }
-    #lb-media { width: 100%; max-height: 75vh; display: flex; align-items: center; justify-content: center; }
-    #lb-media img, #lb-media video { max-width: 100%; max-height: 75vh; border-radius: 8px; object-fit: contain; display: block; }
-    .lb-meta { text-align: center; color: #fff; }
-    .lb-uploader { font-weight: 600; font-size: 1rem; margin-bottom: .25rem; }
-    .lb-message  { font-size: .875rem; opacity: .7; max-width: 500px; line-height: 1.5; }
-    .lb-counter  { font-size: .75rem; opacity: .5; margin-top: .25rem; }
 
     /* ── Loading + error states ───────────────────────────── */
     .page-loading { display: flex; align-items: center; justify-content: center; min-height: 60vh; }
@@ -218,17 +191,12 @@
 </head>
 <body>
 
-<!-- ── Payment / mode banner ─────────────────────────────── -->
-<div class="pay-banner" id="pay-banner">
-  <span id="pay-banner-text"></span>
-</div>
-
 <!-- ── Event header ───────────────────────────────────────── -->
 <section class="event-header" id="dash-header" style="display:none">
   <div class="event-header-inner">
     <div class="event-header-top">
       <a class="brand" href="/">REELDAY<sup>★</sup></a>
-      <div class="event-header-nav">
+      <div class="nav" id="site-nav">
         <a class="active" href="#">Dashboard</a>
         <a id="wall-nav-link" href="#">Wall</a>
         <a id="upload-nav-link" href="#">Upload page</a>
@@ -236,12 +204,6 @@
       </div>
       <div class="event-header-top-right">
         <div id="dash-nav-links"></div>
-        <div class="lang-toggle" id="lang-toggle">
-          <button class="lang-btn active" data-lang="en">EN</button>
-          <button class="lang-btn" data-lang="fil">FIL</button>
-        </div>
-        <button class="btn-live-wall" id="btn-live-wall"
-          data-en="📺 Live Wall" data-fil="📺 Live Wall">📺 Live Wall</button>
       </div>
     </div>
 
@@ -249,9 +211,6 @@
     <h1 id="event-names">Andrea <em>&</em> JM</h1>
     <div class="event-header-meta">
       <span id="event-date">14 June 2026 · Manila Hotel · Wedding</span>
-      <!-- kept for JS compatibility, not visible -->
-      <span id="event-type-badge" style="display:none"></span>
-      <span id="plan-badge" style="display:none"></span>
     </div>
   </div>
 </section>
@@ -294,64 +253,14 @@
 <!-- ── Main body ──────────────────────────────────────────── -->
 <div class="dash-body" id="dash-main" style="display:none">
 
-  <!-- ── Gallery panel (left) ───────────────────────────── -->
+  <!-- ── Photo stream panel (left) ─────────────────────── -->
   <div>
     <div class="panel">
       <div class="panel-head">
         <h2>Photo stream</h2>
-        <span class="pill">Auto-approve · ON</span>
+        <span class="pill" id="approve-status">Auto-approve · ON</span>
       </div>
-      <div class="tab-row">
-        <button class="g-tab active" data-tab="all" data-en="All" data-fil="Lahat">All · <span id="tab-all-count">0</span></button>
-        <button class="g-tab" data-tab="pending" data-en="Pending" data-fil="Nakapenduwende">Pending · <span id="tab-pending-count">0</span></button>
-        <button class="g-tab" data-tab="featured" data-en="Featured" data-fil="Inihalo">Featured · <span id="tab-featured-count">0</span></button>
-        <button class="g-tab" data-tab="hidden" data-en="Hidden" data-fil="Nakalatag">Hidden · <span id="tab-hidden-count">0</span></button>
-      </div>
-
-      <!-- All uploads -->
-      <div id="tab-all">
-        <div class="photo-grid" id="gallery-grid"></div>
-        <div class="gallery-empty" id="gallery-empty" style="display:none">
-          <div class="gallery-empty-icon">📭</div>
-          <p data-en="No uploads yet. Share the QR code with your guests!" data-fil="Wala pang uploads. I-share ang QR code sa inyong mga bisita!">No uploads yet. Share the QR code with your guests!</p>
-        </div>
-      </div>
-
-      <!-- Pending uploads -->
-      <div id="tab-pending" style="display:none">
-        <div class="photo-grid" id="pending-grid"></div>
-        <div class="gallery-empty" id="pending-empty" style="display:none">
-          <div class="gallery-empty-icon">📋</div>
-          <p data-en="No pending uploads." data-fil="Wala pang nakapenduwende na uploads.">No pending uploads.</p>
-        </div>
-      </div>
-
-      <!-- Featured uploads -->
-      <div id="tab-featured" style="display:none">
-        <div class="photo-grid" id="featured-grid"></div>
-        <div class="gallery-empty" id="featured-empty" style="display:none">
-          <div class="gallery-empty-icon">⭐</div>
-          <p data-en="No featured uploads yet." data-fil="Wala pa ring inihalong uploads.">No featured uploads yet.</p>
-        </div>
-      </div>
-
-      <!-- Hidden uploads -->
-      <div id="tab-hidden" style="display:none">
-        <div class="photo-grid" id="hidden-grid"></div>
-        <div class="gallery-empty" id="hidden-empty" style="display:none">
-          <div class="gallery-empty-icon">👁️‍🗨️</div>
-          <p data-en="No hidden uploads." data-fil="Wala pang nakalatag na uploads.">No hidden uploads.</p>
-        </div>
-      </div>
-
-      <!-- Download bar -->
-      <div class="download-bar">
-        <span class="download-count" id="download-count">0 files</span>
-        <button class="btn btn-accent" id="btn-download-poster"
-          data-en="📥 Download Poster .pdf" data-fil="📥 I-download ang Poster .pdf">
-          📥 Download Poster .pdf
-        </button>
-      </div>
+      <div class="photo-grid" id="photo-grid"></div>
     </div>
   </div>
 
@@ -359,9 +268,7 @@
   <div>
     <div class="qr-card">
       <div class="qr-eyebrow">— Your event QR</div>
-      <div class="qr-placeholder" id="qr-wrap">
-        <!-- Will be replaced with actual QR code by renderQR function -->
-      </div>
+      <div class="qr-placeholder" id="qr-wrap"></div>
       <div class="qr-url" id="qr-url">reelday.ph/e/andrea-jm</div>
       <div class="actions-stack">
         <a class="btn btn-accent" id="btn-open-upload" href="#" target="_blank" rel="noopener">Open upload page →</a>
@@ -380,21 +287,6 @@
 
 </div>
 
-<!-- ── Lightbox ───────────────────────────────────────────── -->
-<div class="lightbox" id="lightbox" role="dialog" aria-modal="true">
-  <button class="lb-close" id="lb-close" aria-label="Close">✕</button>
-  <button class="lb-nav lb-prev" id="lb-prev" aria-label="Previous">‹</button>
-  <button class="lb-nav lb-next" id="lb-next" aria-label="Next">›</button>
-  <div class="lb-body">
-    <div id="lb-media"></div>
-    <div class="lb-meta">
-      <div class="lb-uploader" id="lb-uploader"></div>
-      <div class="lb-message"  id="lb-message"></div>
-      <div class="lb-counter"  id="lb-counter"></div>
-    </div>
-  </div>
-</div>
-
 <!-- ── Toast ─────────────────────────────────────────────── -->
 <div class="toast" id="toast"></div>
 
@@ -404,10 +296,12 @@
     let user = null;
     try { user = JSON.parse(localStorage.getItem('reelday_user')); } catch { /* */ }
     const navLinks = document.getElementById('dash-nav-links');
-    if (user) {
-      navLinks.innerHTML = `<a href="/my-events" class="header-nav-link">My Events</a>`;
-    } else {
-      navLinks.innerHTML = `<a href="/login" class="header-nav-link">Login</a>`;
+    if (navLinks) {
+      if (user) {
+        navLinks.innerHTML = '<a href="/my-events" class="header-nav-link">My Events</a>';
+      } else {
+        navLinks.innerHTML = '<a href="/login" class="header-nav-link">Login</a>';
+      }
     }
   }
 
@@ -427,15 +321,9 @@
                       'Hulyo','Agosto','Setyembre','Oktubre','Nobyembre','Disyembre'];
 
   // ── State ─────────────────────────────────────────────
-  const params      = new URLSearchParams(location.search);
-  const slug        = params.get('slug');
-  const isTestMode  = params.get('test_mode') === 'true';
-  const isTrial     = params.get('trial') === 'true';
-  let allUploads    = [];
-  let lbIndex       = 0;
-  let lbItems       = [];
-  let qrDataUrl     = '';
-  let activeTab     = 'all';
+  const params  = new URLSearchParams(location.search);
+  const slug    = params.get('slug');
+  let allUploads = [];
 
   // ── DOM refs ──────────────────────────────────────────
   const $ = id => document.getElementById(id);
@@ -446,55 +334,27 @@
   const dashMain       = $('dash-main');
   const eventNames     = $('event-names');
   const eventDate      = $('event-date');
-  const eventTypeBadge = $('event-type-badge');
-  const planBadge      = $('plan-badge');
+  const photoGrid      = $('photo-grid');
   const qrWrap         = $('qr-wrap');
   const qrUrl          = $('qr-url');
-  const galleryGrid    = $('gallery-grid');
-  const galleryEmpty   = $('gallery-empty');
-  const vmList         = $('vm-list');
-  const vmEmpty        = $('vm-empty');
-  const downloadCount  = $('download-count');
-  const lightbox       = $('lightbox');
-  const lbMedia        = $('lb-media');
-  const lbUploader     = $('lb-uploader');
-  const lbMessage      = $('lb-message');
-  const lbCounter      = $('lb-counter');
   const toast          = $('toast');
 
   // ── Helpers ───────────────────────────────────────────
-  function timeAgo(dateStr) {
-    const s = Math.floor((Date.now() - new Date(dateStr)) / 1000);
-    if (s < 60)             return 'just now';
-    const m = Math.floor(s / 60);
-    if (m < 60)             return `${m}m ago`;
-    const h = Math.floor(m / 60);
-    if (h < 24)             return `${h}h ago`;
-    return `${Math.floor(h / 24)}d ago`;
-  }
-
   function formatDate(dateStr) {
     const d = new Date(dateStr);
     return `${FIL_MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
   }
 
-  function initial(name) {
-    return (name || '?').trim().charAt(0).toUpperCase();
-  }
-
-  let toastTimer;
-  function showToast(msg, variant = '') {
-    clearTimeout(toastTimer);
+  function showToast(msg) {
     toast.textContent = msg;
-    toast.className   = `toast${variant ? ' ' + variant : ''}`;
+    toast.className   = 'toast';
     requestAnimationFrame(() => toast.classList.add('show'));
-    toastTimer = setTimeout(() => toast.classList.remove('show'), 3000);
+    setTimeout(() => toast.classList.remove('show'), 3000);
   }
 
   function applyTheme(eventType) {
     const meta = THEME_MAP[eventType] || THEME_MAP.wedding;
     document.body.setAttribute('data-theme', meta.theme);
-    eventTypeBadge.textContent = `${meta.emoji} ${meta.label}`;
     return meta;
   }
 
@@ -509,24 +369,6 @@
       eventDate.textContent = formatDate(event.event_date) + ' · ' + meta.label;
     }
 
-    const plan      = event.plan || 'libre';
-    const isPaid    = event.is_paid;
-    const isPending = !isPaid && plan !== 'libre';
-
-    if (isPending) {
-      planBadge.textContent = 'PENDING';
-      planBadge.className   = 'plan-badge plan-pending';
-    } else if (plan === 'selebrasyon' && isPaid) {
-      planBadge.textContent = 'SELEBRASYON ✓';
-      planBadge.className   = 'plan-badge plan-selebrasyon';
-    } else if (plan === 'pro' && isPaid) {
-      planBadge.textContent = 'PRO ✓';
-      planBadge.className   = 'plan-badge plan-pro';
-    } else {
-      planBadge.textContent = plan.toUpperCase();
-      planBadge.className   = 'plan-badge plan-libre';
-    }
-
     // Nav links
     const wallLink   = $('wall-nav-link');
     const uploadLink = $('upload-nav-link');
@@ -539,9 +381,10 @@
     const infoExpires = $('info-expires');
     if (infoType)    infoType.textContent = meta.label;
     if (infoPlan) {
-      if (plan === 'selebrasyon' && isPaid) {
+      const plan = event.plan || 'libre';
+      if (plan === 'selebrasyon' && event.is_paid) {
         infoPlan.textContent = '★ Celebration';
-      } else if (plan === 'pro' && isPaid) {
+      } else if (plan === 'pro' && event.is_paid) {
         infoPlan.textContent = 'PRO';
       } else {
         infoPlan.textContent = plan.charAt(0).toUpperCase() + plan.slice(1);
@@ -549,206 +392,71 @@
     }
     if (infoExpires && event.wall_expires_at) infoExpires.textContent = formatDate(event.wall_expires_at);
 
-    $('btn-live-wall').onclick = () => window.open(`/wall/${slug}`, '_blank');
+    // Approve status
+    const approveStatus = $('approve-status');
+    if (approveStatus) {
+      const autoApprove = event.auto_approve !== false;
+      approveStatus.textContent = autoApprove ? 'Auto-approve · ON' : 'Auto-approve · OFF';
+    }
   }
 
   // ── Render QR ─────────────────────────────────────────
   function renderQR(dataUrl) {
-    qrDataUrl = dataUrl;
     const uploadUrl = `${location.protocol}//${location.host}/upload/${slug}`;
 
-    qrWrap.innerHTML = `<img src="${dataUrl}" alt="QR Code" style="width:100%;height:auto;display:block;border-radius:4px" />`;
-    qrWrap.style.backgroundImage = 'none';
-    qrWrap.style.backgroundSize  = 'auto';
+    qrWrap.innerHTML = `<img src="${dataUrl}" alt="QR Code" style="width:100%;height:100%;object-fit:contain;display:block;" />`;
+
     qrUrl.textContent = uploadUrl;
 
     const openBtn = $('btn-open-upload');
     if (openBtn) openBtn.href = uploadUrl;
-
-    const dlBtn = $('btn-download-qr');
-    if (dlBtn) dlBtn.onclick = () => {
-      const a = document.createElement('a');
-      a.href     = dataUrl;
-      a.download = `reelday-qr-${slug}.png`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    };
   }
 
   // ── Render stats ──────────────────────────────────────
   function renderStats(uploads) {
-    // To match reference design exactly, using reference values
-    // In a real implementation, these would come from API endpoints
-    $('stat-total').textContent  = '847';
-    $('stat-total-change').textContent = '32';
+    // These would ideally come from a dedicated API endpoint
+    // For now, compute from uploads data
+    const total = uploads.length;
+    $('stat-total').textContent  = total;
 
-    $('stat-guests').textContent = '47';
-    $('stat-guests-change').textContent = '12';
+    // Guest count: unique uploaders
+    const uniqueGuests = new Set(uploads.map(u => u.uploader_name || 'Anonymous')).size;
+    $('stat-guests').textContent = uniqueGuests || 0;
 
-    $('stat-pending').textContent = '3';
+    // Pending count
+    const pending = uploads.filter(u => u.status === 'pending').length;
+    $('stat-pending').textContent = pending;
 
-    $('stat-storage').textContent = '4.2';
+    // Storage: sum file sizes (if available) or estimate
+    const storageGB = uploads.reduce((sum, u) => sum + ((u.file_size || 0) / (1024*1024*1024)), 0);
+    $('stat-storage').textContent = storageGB.toFixed(1);
 
-    const n = uploads.length;
-    downloadCount.textContent = `${n} file${n !== 1 ? 's' : ''}`;
-  }
-
-  // ── Delete upload ─────────────────────────────────────
-  async function deleteUpload(id) {
-    if (!confirm('Burahin ang file na ito?')) return;
-    try {
-      const res = await fetch(`/api/uploads/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Delete failed');
-      allUploads = allUploads.filter(u => u.id !== id);
-      renderStats(allUploads);
-      renderGallery(allUploads);
-      showToast('File nabura na. 🗑️', 'success');
-    } catch {
-      showToast('Hindi nabura. Subukan ulit.', 'error');
-    }
+    // Update live count
+    const liveCount = $('live-count');
+    if (liveCount) liveCount.textContent = uniqueGuests || 0;
   }
 
   // ── Render gallery grid ───────────────────────────────
   function renderGallery(uploads) {
     allUploads = uploads;
-    lbItems    = uploads;
 
-    // For reference design, use static placeholder content with specific classes
-    galleryGrid.innerHTML = `
-      <div class="placeholder placeholder--clay">First dance<div class="actions-overlay"><span class="uploader">Tita Marivic</span><span class="actions-btn">Feature</span></div></div>
-      <div class="placeholder placeholder--ochre">Garden<div class="actions-overlay"><span class="uploader">Kuya Mike</span><span class="actions-btn">Feature</span></div></div>
-      <div class="placeholder placeholder--coral">Reception<div class="actions-overlay"><span class="uploader">Ate Karen</span><span class="actions-btn">Feature</span></div></div>
-      <div class="placeholder placeholder--sage">Lola<div class="actions-overlay"><span class="uploader">Kuya Vince</span><span class="actions-btn">Feature</span></div></div>
-      <div class="placeholder placeholder--paper" style="color:var(--ink);">Bouquet<div class="actions-overlay"><span class="uploader">Tita Liza</span><span class="actions-btn">Feature</span></div></div>
-      <div class="placeholder placeholder--clay">Speech<div class="actions-overlay"><span class="uploader">JM</span><span class="actions-btn">Feature</span></div></div>
-      <div class="placeholder placeholder--coral">Ceremony<div class="actions-overlay"><span class="uploader">Andrea</span><span class="actions-btn">Feature</span></div></div>
-      <div class="placeholder placeholder--ochre">Toast<div class="actions-overlay"><span class="uploader">Tito Jun</span><span class="actions-btn">Feature</span></div></div>
-      <div class="placeholder placeholder--sage">Cousins<div class="actions-overlay"><span class="uploader">Tin</span><span class="actions-btn">Feature</span></div></div>
-      <div class="placeholder placeholder--ink">Dance floor<div class="actions-overlay"><span class="uploader">Mark</span><span class="actions-btn">Feature</span></div></div>
-      <div class="placeholder placeholder--paper" style="color:var(--ink);">Family<div class="actions-overlay"><span class="uploader">Pao</span><span class="actions-btn">Feature</span></div></div>
-      <div class="placeholder placeholder--clay">Cake<div class="actions-overlay"><span class="uploader">Tita Bing</span><span class="actions-btn">Feature</span></div></div>
-    `;
+    const placeholderClasses = ['placeholder--clay', 'placeholder--ochre', 'placeholder--coral', 'placeholder--sage', 'placeholder--ink', 'placeholder--paper'];
 
-    // Hide empty state
-    galleryEmpty.style.display = 'none';
-
-    // Update tab counts
-    $('tab-all-count').textContent = uploads.length;
-    $('tab-pending-count').textContent = Math.max(0, Math.floor(uploads.length * 0.005)); // placeholder
-    $('tab-featured-count').textContent = Math.max(0, Math.floor(uploads.length * 0.015)); // placeholder
-    $('tab-hidden-count').textContent = 0;
-
-    // Video messages tab
-    const vms = uploads.filter(u => u.is_video_message);
-    if (vmList && vmEmpty) {
-      if (!vms.length) {
-        vmList.innerHTML = '';
-        vmEmpty.style.display = 'block';
-      } else {
-        vmEmpty.style.display = 'none';
-        vmList.innerHTML = vms.map((u, i) => {
-          const vmIndex = uploads.indexOf(u);
-          return `
-            <div class="vm-item">
-              <div class="vm-avatar">${escHtml(initial(u.uploader_name))}</div>
-              <div class="vm-info">
-                <div class="vm-name">${escHtml(u.uploader_name || 'Guest')}</div>
-                <div class="vm-meta">${timeAgo(u.created_at)}</div>
-              </div>
-              <button class="btn-play" data-index="${vmIndex}">▶ I-play</button>
-              <button class="btn-delete-vm" data-id="${escHtml(u.id)}" title="Burahin">✕</button>
-            </div>`;
-        }).join('');
-
-        vmList.onclick = e => {
-          const delBtn = e.target.closest('.btn-delete-vm');
-          if (delBtn) { deleteUpload(delBtn.dataset.id); return; }
-          const btn = e.target.closest('.btn-play');
-          if (btn) openLightbox(Number(btn.dataset.index));
-        };
-      }
-    }
-  }
-
-  function escHtml(str) {
-    return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-
-  // ── Tab switching ─────────────────────────────────────
-  document.querySelectorAll('.g-tab').forEach(btn => {
-    btn.addEventListener('click', () => {
-      activeTab = btn.dataset.tab;
-      document.querySelectorAll('.g-tab').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-
-      // Hide all tabs first
-      document.getElementById('tab-all').style.display = 'none';
-      document.getElementById('tab-pending').style.display = 'none';
-      document.getElementById('tab-featured').style.display = 'none';
-      document.getElementById('tab-hidden').style.display = 'none';
-
-      // Show selected tab
-      $(`tab-${activeTab}`).style.display = 'block';
-    });
-  });
-
-  // ── Lightbox ──────────────────────────────────────────
-  function openLightbox(index) {
-    lbIndex = Math.max(0, Math.min(index, allUploads.length - 1));
-    renderLightboxSlide();
-    lightbox.classList.add('open');
-    document.body.style.overflow = 'hidden';
-  }
-
-  function renderLightboxSlide() {
-    const u = allUploads[lbIndex];
-    if (!u) return;
-    const prevVideo = lbMedia.querySelector('video');
-    if (prevVideo) prevVideo.pause();
-
-    if (u.file_type === 'video') {
-      lbMedia.innerHTML = `<video src="${escHtml(u.file_url)}" controls autoplay playsinline style="max-height:75vh;border-radius:8px;max-width:100%"></video>`;
-    } else {
-      lbMedia.innerHTML = `<img src="${escHtml(u.file_url)}" alt="${escHtml(u.uploader_name || '')}" style="max-height:75vh;border-radius:8px;max-width:100%;object-fit:contain" />`;
+    if (!uploads.length) {
+      photoGrid.innerHTML = `
+        <div style="grid-column:1/-1;text-align:center;padding:48px 16px;color:var(--ink-soft);">
+          <div style="font-size:3rem;margin-bottom:12px;">📭</div>
+          <p>No uploads yet. Share the QR code with your guests!</p>
+        </div>`;
+      return;
     }
 
-    lbUploader.textContent = u.uploader_name || 'Anonymous';
-    lbMessage.textContent  = u.message || '';
-    lbCounter.textContent  = `${lbIndex + 1} of ${allUploads.length}`;
+    photoGrid.innerHTML = uploads.map((u, i) => {
+      const cls = placeholderClasses[i % placeholderClasses.length];
+      const label = u.uploader_name || 'Guest';
+      return `<div class="placeholder ${cls}">${label}<div class="actions-overlay"><span class="uploader">${label}</span><span class="actions-btn">Feature</span></div></div>`;
+    }).join('');
   }
-
-  function closeLightbox() {
-    const video = lbMedia.querySelector('video');
-    if (video) video.pause();
-    lightbox.classList.remove('open');
-    document.body.style.overflow = '';
-  }
-
-  $('lb-close').onclick = closeLightbox;
-  $('lb-prev').onclick  = () => { lbIndex = (lbIndex - 1 + allUploads.length) % allUploads.length; renderLightboxSlide(); };
-  $('lb-next').onclick  = () => { lbIndex = (lbIndex + 1) % allUploads.length; renderLightboxSlide(); };
-
-  lightbox.addEventListener('click', e => { if (e.target === lightbox) closeLightbox(); });
-
-  document.addEventListener('keydown', e => {
-    if (!lightbox.classList.contains('open')) return;
-    if (e.key === 'Escape')     closeLightbox();
-    if (e.key === 'ArrowLeft')  { lbIndex = (lbIndex - 1 + allUploads.length) % allUploads.length; renderLightboxSlide(); }
-    if (e.key === 'ArrowRight') { lbIndex = (lbIndex + 1) % allUploads.length; renderLightboxSlide(); }
-  });
-
-  // ── Download poster ───────────────────────────────────
-  $('btn-download-poster').onclick = async () => {
-    try {
-      // In reference design, this downloads a poster PDF
-      // For now, we'll show a toast indicating the action
-      showToast('Downloading poster PDF... 📥', 'success');
-      // TODO: Implement actual poster PDF generation/download
-    } catch {
-      showToast('Could not load poster.', 'error');
-    }
-  };
 
   // ── Data loading ──────────────────────────────────────
   async function loadAll() {
@@ -782,11 +490,6 @@
       dashHeader.style.display  = 'block';
       document.getElementById('stats-row').style.display = 'grid';
       dashMain.style.display    = 'block';
-
-      // ── Payment banner ────────────────────────────────
-      // Hidden by default to match reference design
-      const banner     = $('pay-banner');
-      banner.style.display = 'none';
     } catch (err) {
       pageLoading.style.display       = 'none';
       $('page-error-msg').textContent = err.message || 'Failed to load event.';
@@ -808,31 +511,6 @@
       }
     } catch { /* silent */ }
   }
-
-  // ── Language toggle ───────────────────────────────────
-  let dashLang = localStorage.getItem('reelday_lang') || 'en';
-
-  function applyDashLang() {
-    document.documentElement.lang = dashLang;
-    document.querySelectorAll('[data-en]').forEach(el => {
-      if (el.children.length === 0) {
-        el.textContent = el.dataset[dashLang] || el.dataset.en;
-      }
-    });
-    document.querySelectorAll('[data-lang]').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.lang === dashLang);
-    });
-  }
-
-  $('lang-toggle')?.addEventListener('click', e => {
-    const btn = e.target.closest('[data-lang]');
-    if (!btn) return;
-    dashLang = btn.dataset.lang;
-    localStorage.setItem('reelday_lang', dashLang);
-    applyDashLang();
-  });
-
-  applyDashLang();
 
   // ── Init ──────────────────────────────────────────────
   loadAll();
