@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Reelday — Create your reel</title>
+<link rel="stylesheet" href="shared.css" />
+<style>
+  body { background: var(--paper); min-height: 100dvh; }
+
+  .create-shell {
+    max-width: 920px; margin: 0 auto;
+    padding: 32px 28px 80px;
+  }
+
+  .progress-bar {
+    display: flex; gap: 8px; margin: 32px 0 48px;
+  }
+  .progress-step {
+    flex: 1; height: 4px; border-radius: 2px;
+    background: var(--paper-3);
+    position: relative;
+  }
+  .progress-step.active { background: var(--accent); }
+  .progress-step.done { background: var(--accent-deep); }
+  .progress-step .lbl {
+    position: absolute; top: 14px; left: 0;
+    font-family: var(--mono); font-size: 10px;
+    letter-spacing: .14em; text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  .progress-step.active .lbl, .progress-step.done .lbl { color: var(--ink); }
+
+  .step-title {
+    font-family: var(--display); font-weight: 400;
+    font-size: clamp(36px, 5vw, 56px);
+    letter-spacing: -.025em; line-height: 1.05;
+    margin: 56px 0 12px;
+  }
+  .step-title em { font-style: italic; color: var(--accent); }
+  .step-sub { color: var(--ink-soft); font-size: 17px; margin-bottom: 40px; max-width: 56ch; }
+
+  /* event type cards */
+  .events-pick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .event-pick {
+    background: #fff; border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 20px; cursor: pointer;
+    aspect-ratio: 3/4;
+    display: flex; flex-direction: column; justify-content: space-between;
+    transition: all .2s ease;
+    color: var(--ink);
+  }
+  .event-pick:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .event-pick.selected {
+    background: var(--ink); color: var(--paper); border-color: var(--ink);
+    box-shadow: var(--shadow-card);
+  }
+  .event-pick .pic {
+    aspect-ratio: 1; border-radius: 12px; margin-bottom: 16px;
+  }
+  .event-pick .name {
+    font-family: var(--display); font-style: italic;
+    font-size: 22px; font-weight: 500; line-height: 1.1;
+    margin-bottom: 4px;
+  }
+  .event-pick .tagalog { font-family: var(--mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; opacity: .7; }
+
+  /* form */
+  .form { display: grid; gap: 24px; max-width: 560px; }
+  .field label { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); display: block; margin-bottom: 8px; }
+  .field input, .field textarea {
+    width: 100%;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+    padding: 14px 16px;
+    font-size: 16px;
+    transition: border-color .2s ease;
+  }
+  .field input:focus, .field textarea:focus { outline: none; border-color: var(--accent); }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+  /* preview card */
+  .preview {
+    background: #fff; border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 32px; margin-top: 32px;
+    display: grid; grid-template-columns: 1fr 200px; gap: 32px;
+    align-items: center;
+  }
+  .preview .preview-text {
+    font-family: var(--display); font-style: italic;
+    font-size: 28px; line-height: 1.2; letter-spacing: -.01em;
+  }
+  .preview .preview-meta { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); margin-top: 6px; }
+  .preview .qr {
+    aspect-ratio: 1;
+    background:
+      linear-gradient(45deg, var(--ink) 25%, transparent 25%),
+      linear-gradient(-45deg, var(--ink) 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, var(--ink) 75%),
+      linear-gradient(-45deg, transparent 75%, var(--ink) 75%);
+    background-size: 12px 12px;
+    background-position: 0 0, 0 6px, 6px -6px, -6px 0;
+    border-radius: 8px;
+    border: 8px solid #fff;
+    box-shadow: 0 0 0 1px var(--line);
+  }
+
+  .actions { display: flex; gap: 12px; justify-content: space-between; margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--line); }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="site-header-inner">
+    <a class="brand" href="landing-1-editorial.html">REELDAY<sup>★</sup></a>
+    <nav class="site-nav"><a href="dashboard.html">Dashboard</a></nav>
+    <div class="site-actions">
+      <div class="lang-switch"><button class="active">EN</button><button>FIL</button></div>
+    </div>
+  </div>
+</header>
+
+<div class="create-shell">
+  <div class="eyebrow">— New event · Step 1 of 4</div>
+
+  <div class="progress-bar">
+    <div class="progress-step active"><span class="lbl">Type</span></div>
+    <div class="progress-step"><span class="lbl">Details</span></div>
+    <div class="progress-step"><span class="lbl">Theme</span></div>
+    <div class="progress-step"><span class="lbl">Pay</span></div>
+  </div>
+
+  <h1 class="step-title">What are we <em>celebrating?</em></h1>
+  <p class="step-sub">Pick the type. We'll set the right theme, language defaults, and QR poster style — you can change anything later.</p>
+
+  <div class="events-pick">
+    <div class="event-pick selected">
+      <div class="pic placeholder placeholder--clay"></div>
+      <div><div class="name">Wedding</div><div class="tagalog">Kasal</div></div>
+    </div>
+    <div class="event-pick">
+      <div class="pic placeholder placeholder--coral"></div>
+      <div><div class="name">Debut</div><div class="tagalog">Ika-18</div></div>
+    </div>
+    <div class="event-pick">
+      <div class="pic placeholder placeholder--ochre"></div>
+      <div><div class="name">Birthday</div><div class="tagalog">Kaarawan</div></div>
+    </div>
+    <div class="event-pick">
+      <div class="pic placeholder placeholder--sage"></div>
+      <div><div class="name">Baptism</div><div class="tagalog">Binyag</div></div>
+    </div>
+    <div class="event-pick">
+      <div class="pic placeholder placeholder--paper"></div>
+      <div><div class="name">Reunion</div><div class="tagalog">Pagkikita</div></div>
+    </div>
+    <div class="event-pick">
+      <div class="pic placeholder placeholder--ink"></div>
+      <div><div class="name">Corporate</div><div class="tagalog">Kompanya</div></div>
+    </div>
+    <div class="event-pick">
+      <div class="pic placeholder placeholder--sage"></div>
+      <div><div class="name">Memorial</div><div class="tagalog">Alaala</div></div>
+    </div>
+    <div class="event-pick">
+      <div class="pic placeholder placeholder--coral"></div>
+      <div><div class="name">7th Birthday</div><div class="tagalog">Ika-7</div></div>
+    </div>
+  </div>
+
+  <h2 class="step-title">Tell us the <em>basics.</em></h2>
+  <div class="form">
+    <div class="field">
+      <label>Event names</label>
+      <input type="text" value="Andrea & JM" />
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Date</label><input type="date" value="2026-06-14" /></div>
+      <div class="field"><label>Venue</label><input type="text" value="Manila Hotel" /></div>
+    </div>
+    <div class="field">
+      <label>Welcome message (shown to guests)</label>
+      <textarea rows="2">Salamat sa pagdating! Scan, share, and become part of the story.</textarea>
+    </div>
+  </div>
+
+  <div class="preview">
+    <div>
+      <div class="eyebrow">— Live preview</div>
+      <div class="preview-text">Andrea & JM<br/>14·06·2026</div>
+      <div class="preview-meta">Manila Hotel · Wedding</div>
+    </div>
+    <div class="qr"></div>
+  </div>
+
+  <div class="actions">
+    <a class="btn btn-ghost" href="landing-1-editorial.html">← Back</a>
+    <a class="btn btn-accent" href="dashboard.html">Continue → Theme</a>
+  </div>
+</div>
+
+</body>
+</html>

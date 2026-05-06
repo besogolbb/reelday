@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Reelday — Live Wall</title>
+<link rel="stylesheet" href="shared.css" />
+<style>
+  html, body { width: 100vw; height: 100vh; overflow: hidden; background: #1a0f0a; color: #fff; }
+
+  /* Photo background layers */
+  .layer {
+    position: fixed; inset: 0;
+    transition: opacity 1.5s ease;
+  }
+  .layer .pic {
+    position: absolute; inset: -5%;
+    background-size: cover; background-position: center;
+    animation: kb 12s ease-out forwards;
+    will-change: transform;
+  }
+  @keyframes kb {
+    from { transform: scale(1) translate(0, 0); }
+    to { transform: scale(1.12) translate(-1.5%, -1%); }
+  }
+  .layer .vignette {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,.6) 100%),
+      linear-gradient(180deg, rgba(0,0,0,.3) 0%, transparent 30%, transparent 60%, rgba(0,0,0,.7) 100%);
+  }
+
+  /* Top ticker */
+  .ticker {
+    position: fixed; top: 0; left: 0; right: 0;
+    height: 56px; z-index: 10;
+    background: linear-gradient(180deg, rgba(0,0,0,.7), transparent);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 32px;
+  }
+  .ticker .live {
+    display: flex; align-items: center; gap: 10px;
+    font-family: var(--mono, 'JetBrains Mono', monospace);
+    font-size: 12px; letter-spacing: .18em; text-transform: uppercase;
+  }
+  .ticker .live .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: #f0a37a; box-shadow: 0 0 0 4px rgba(240,163,122,.3);
+    animation: pulse 1.5s ease infinite;
+  }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 8px rgba(240,163,122,0); } }
+  .ticker .stats {
+    font-family: var(--mono, 'JetBrains Mono', monospace);
+    font-size: 12px; letter-spacing: .14em; text-transform: uppercase;
+    opacity: .85;
+    display: flex; gap: 24px;
+  }
+  .ticker .stats em { color: #f0a37a; font-style: normal; font-weight: 600; }
+
+  /* Caption + uploader */
+  .frame {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    z-index: 10;
+    padding: 0 64px 64px;
+    display: flex; justify-content: space-between; align-items: flex-end;
+    gap: 32px;
+  }
+  .caption {
+    max-width: 60%;
+  }
+  .caption .uploader {
+    font-family: var(--mono, monospace); font-size: 12px;
+    letter-spacing: .18em; text-transform: uppercase;
+    color: rgba(255,255,255,.7);
+    margin-bottom: 12px;
+  }
+  .caption blockquote {
+    font-family: var(--display, 'Fraunces', serif);
+    font-style: italic; font-weight: 400;
+    font-size: clamp(36px, 4vw, 56px);
+    line-height: 1.1; letter-spacing: -.015em;
+    text-shadow: 0 4px 24px rgba(0,0,0,.5);
+  }
+
+  /* Brand corner */
+  .corner {
+    text-align: right;
+    font-family: var(--mono, monospace);
+    font-size: 11px; letter-spacing: .18em; text-transform: uppercase;
+    color: rgba(255,255,255,.6);
+  }
+  .corner .names {
+    font-family: var(--display, serif);
+    font-style: italic; font-weight: 400;
+    font-size: 28px;
+    color: #fff;
+    text-transform: none; letter-spacing: -.01em;
+    margin-bottom: 4px;
+  }
+  .corner .names em { color: #f0a37a; }
+
+  /* Mini upcoming reel */
+  .upcoming {
+    position: fixed; right: 32px; top: 50%; transform: translateY(-50%);
+    z-index: 10;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .upcoming-thumb {
+    width: 72px; aspect-ratio: 1;
+    border-radius: 10px;
+    border: 2px solid rgba(255,255,255,.2);
+    overflow: hidden;
+    background-size: cover; background-position: center;
+  }
+  .upcoming-thumb.next {
+    border-color: #f0a37a;
+    box-shadow: 0 0 0 4px rgba(240,163,122,.2);
+  }
+
+  /* QR corner badge */
+  .qr-badge {
+    position: fixed;
+    top: 80px; right: 32px;
+    z-index: 10;
+    background: rgba(255,255,255,.95);
+    border-radius: 14px;
+    padding: 12px;
+    display: flex; gap: 12px; align-items: center;
+    color: var(--ink, #2a1a14);
+    box-shadow: 0 8px 32px rgba(0,0,0,.4);
+  }
+  .qr-badge .qr {
+    width: 56px; height: 56px;
+    background:
+      linear-gradient(45deg, #2a1a14 25%, transparent 25%),
+      linear-gradient(-45deg, #2a1a14 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #2a1a14 75%),
+      linear-gradient(-45deg, transparent 75%, #2a1a14 75%);
+    background-size: 8px 8px;
+    background-position: 0 0, 0 4px, 4px -4px, -4px 0;
+    border-radius: 4px;
+  }
+  .qr-badge .text {
+    font-family: var(--mono, monospace);
+    font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
+  }
+  .qr-badge .text b {
+    font-family: var(--display, serif); font-style: italic;
+    font-size: 14px; font-weight: 500;
+    text-transform: none; letter-spacing: 0;
+    display: block; margin-bottom: 2px;
+  }
+
+  /* placeholder bg colors */
+  .bg-clay { background: linear-gradient(135deg, #d8a892 0%, #7a3b2e 100%); }
+  .bg-ochre { background: linear-gradient(135deg, #ead8b8 0%, #c98968 100%); }
+  .bg-coral { background: linear-gradient(135deg, #f0d8c8 0%, #c45a3a 100%); }
+  .bg-sage { background: linear-gradient(135deg, #c8d8c8 0%, #2d4a3d 100%); }
+
+  .placeholder-label {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono, monospace);
+    font-size: 14px; letter-spacing: .2em; text-transform: uppercase;
+    color: rgba(255,255,255,.4);
+  }
+</style>
+</head>
+<body>
+
+<div class="layer">
+  <div class="pic bg-clay">
+    <div class="placeholder-label">Photo · first-dance.jpg</div>
+  </div>
+  <div class="vignette"></div>
+</div>
+
+<div class="ticker">
+  <div class="live"><span class="dot"></span>Live · Andrea & JM Wedding</div>
+  <div class="stats">
+    <span><em>847</em> moments</span>
+    <span><em>47</em> guests sharing</span>
+    <span>14·06·2026</span>
+  </div>
+</div>
+
+<div class="qr-badge">
+  <div class="qr"></div>
+  <div class="text">Add yours<b>reelday.ph/e/<br/>andrea-jm</b></div>
+</div>
+
+<div class="upcoming">
+  <div class="upcoming-thumb next bg-ochre"></div>
+  <div class="upcoming-thumb bg-coral"></div>
+  <div class="upcoming-thumb bg-sage"></div>
+  <div class="upcoming-thumb bg-clay"></div>
+</div>
+
+<div class="frame">
+  <div class="caption">
+    <div class="uploader">— Tita Marivic · 8:42pm</div>
+    <blockquote>"Tito Boy finally took the floor — first dance after 38 years."</blockquote>
+  </div>
+  <div class="corner">
+    <div class="names">Andrea <em>&</em> JM</div>
+    <div>★ Powered by Reelday</div>
+  </div>
+</div>
+
+</body>
+</html>

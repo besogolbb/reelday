@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Reelday — Dashboard</title>
+<link rel="stylesheet" href="shared.css" />
+<style>
+  body { background: var(--paper); min-height: 100dvh; }
+
+  /* Event header */
+  .event-header {
+    background: var(--ink); color: var(--paper);
+    padding: 32px 28px 80px;
+    position: relative; overflow: hidden;
+  }
+  .event-header::before {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(ellipse 60% 80% at 80% 0%, rgba(196,90,58,.3), transparent 60%);
+  }
+  .event-header-inner { max-width: 1200px; margin: 0 auto; position: relative; }
+  .event-header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 56px; }
+  .event-header .brand { color: var(--paper); }
+  .event-header .nav { display: flex; gap: 24px; }
+  .event-header .nav a { color: rgba(251,245,236,.7); font-size: 14px; }
+  .event-header .nav a.active { color: var(--paper); }
+  .event-header .badge {
+    display: inline-flex; gap: 8px; align-items: center;
+    background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12);
+    border-radius: 999px; padding: 6px 14px;
+    font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
+    color: rgba(251,245,236,.85);
+    margin-bottom: 20px;
+  }
+  .event-header .badge .dot { width: 8px; height: 8px; border-radius: 50%; background: #2d7a4a; box-shadow: 0 0 0 4px rgba(45,122,74,.3); animation: pulse 1.5s ease infinite; }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 8px rgba(45,122,74,0); } }
+  .event-header h1 {
+    font-family: var(--display); font-weight: 400;
+    font-size: clamp(48px, 6vw, 88px);
+    line-height: 1; letter-spacing: -.025em;
+    margin-bottom: 12px;
+  }
+  .event-header h1 em { font-style: italic; color: var(--accent-soft); }
+  .event-header .meta { font-family: var(--mono); font-size: 12px; letter-spacing: .14em; color: rgba(251,245,236,.6); text-transform: uppercase; }
+
+  /* stats row */
+  .stats {
+    max-width: 1200px; margin: -48px auto 0;
+    padding: 0 28px;
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+    position: relative; z-index: 5;
+  }
+  .stat {
+    background: #fff; border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 24px 28px;
+    box-shadow: var(--shadow-soft);
+  }
+  .stat .lbl { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 8px; }
+  .stat .num { font-family: var(--display); font-size: 44px; font-weight: 400; line-height: 1; letter-spacing: -.02em; }
+  .stat .num em { font-style: italic; color: var(--accent); }
+  .stat .delta { font-family: var(--mono); font-size: 11px; color: #2d7a4a; margin-top: 6px; }
+
+  /* body */
+  .body {
+    max-width: 1200px; margin: 56px auto 0;
+    padding: 0 28px 96px;
+    display: grid; grid-template-columns: 1fr 320px; gap: 32px;
+  }
+
+  .panel {
+    background: #fff; border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+  }
+  .panel-head {
+    padding: 20px 24px; border-bottom: 1px solid var(--line);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .panel-head h2 { font-family: var(--display); font-size: 22px; font-weight: 500; letter-spacing: -.01em; }
+  .panel-head .actions-row { display: flex; gap: 8px; }
+  .panel-head .pill { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); padding: 6px 12px; border-radius: 999px; background: var(--paper-2); }
+
+  /* photo grid */
+  .photo-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 4px; padding: 4px;
+  }
+  .photo-grid > div {
+    aspect-ratio: 1; position: relative;
+    overflow: hidden;
+  }
+  .photo-grid > div .actions-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(0,0,0,0) 50%, rgba(0,0,0,.6) 100%);
+    opacity: 0; transition: opacity .2s ease;
+    display: flex; align-items: flex-end; justify-content: space-between;
+    padding: 8px;
+  }
+  .photo-grid > div:hover .actions-overlay { opacity: 1; }
+  .photo-grid > div .uploader {
+    color: #fff; font-family: var(--display); font-style: italic;
+    font-size: 12px;
+  }
+  .photo-grid > div .actions-btn {
+    background: rgba(255,255,255,.95);
+    border-radius: 999px; padding: 4px 8px;
+    font-family: var(--mono); font-size: 9px;
+    letter-spacing: .12em; text-transform: uppercase;
+  }
+
+  /* QR sidebar card */
+  .qr-card {
+    background: #fff; border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 28px;
+    text-align: center;
+  }
+  .qr-card .qr {
+    aspect-ratio: 1; margin-bottom: 16px;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    border-radius: 8px; padding: 8px;
+    border: 1px solid var(--line);
+  }
+  .qr-card .url { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; color: var(--ink-soft); margin-bottom: 16px; word-break: break-all; }
+  .qr-card .actions-stack { display: grid; gap: 8px; }
+
+  .info-card {
+    background: var(--paper-2); border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 24px;
+    margin-top: 16px;
+  }
+  .info-card h3 { font-family: var(--display); font-size: 18px; font-weight: 500; margin-bottom: 12px; }
+  .info-card .row { display: flex; justify-content: space-between; padding: 8px 0; border-top: 1px solid var(--line); font-size: 14px; }
+  .info-card .row:first-of-type { border-top: none; padding-top: 0; }
+  .info-card .row span:first-child { color: var(--ink-soft); }
+  .info-card .row span:last-child { font-weight: 500; }
+</style>
+</head>
+<body id="dashboard-root">
+
+<section class="event-header">
+  <div class="event-header-inner">
+    <div class="event-header-top">
+      <a class="brand" href="/">REELDAY<sup>★</sup></a>
+      <div class="nav" id="site-nav">
+        <a class="active" href="#">Dashboard</a>
+        <a id="nav-wall" href="#">Wall</a>
+        <a id="nav-upload" href="#">Upload page</a>
+      </div>
+    </div>
+    <div class="badge"><span class="dot"></span>Live event dashboard</div>
+    <h1 id="event-title">Loading...</h1>
+    <div class="meta" id="event-meta">---</div>
+  </div>
+</section>
+
+<div class="stats">
+  <div class="stat">
+    <div class="lbl">Total uploads</div>
+    <div class="num"><em id="stat-uploads">0</em></div>
+  </div>
+  <div class="stat">
+    <div class="lbl">Event Plan</div>
+    <div class="num"><em id="stat-plan" style="text-transform: capitalize;">---</em></div>
+  </div>
+  <div class="stat">
+    <div class="lbl">Status</div>
+    <div class="num"><em id="stat-status">Active</em></div>
+  </div>
+</div>
+
+<div class="body">
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Event Management</h2>
+    </div>
+    <div style="padding: 40px; text-align: center; color: var(--ink-soft);">
+      <p>Management features coming soon.</p>
+    </div>
+  </div>
+
+  <div>
+    <div class="qr-card">
+      <div class="eyebrow" style="margin-bottom:14px;">— Your event QR</div>
+      <div id="qr-container" class="qr"></div>
+      <div class="url" id="event-url">---</div>
+      <div class="actions-stack">
+        <a id="btn-open-upload" class="btn btn-accent" href="#">Open upload page →</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { requireAuth } from './js/auth.js';
+
+  if (requireAuth()) {
+    const params = new URLSearchParams(window.location.search);
+    const slug = params.get('slug');
+
+    if (!slug) {
+      window.location.href = '/my-events';
+    } else {
+      loadDashboard(slug);
+    }
+  }
+
+  async function loadDashboard(slug) {
+    try {
+      const res = await fetch(`/api/events/${slug}`);
+      const data = await res.json();
+      if (data.error) throw new Error(data.message);
+
+      const { event, upload_count } = data;
+      
+      document.body.setAttribute('data-theme', event.event_type || 'wedding');
+      document.getElementById('event-title').textContent = event.couple_names;
+      document.getElementById('event-meta').textContent = `${event.event_date || 'No date'} · ${event.event_type}`;
+      document.getElementById('stat-uploads').textContent = upload_count;
+      document.getElementById('stat-plan').textContent = event.plan;
+      
+      document.getElementById('nav-wall').href = `/wall/${slug}`;
+      document.getElementById('nav-upload').href = `/upload/${slug}`;
+      document.getElementById('btn-open-upload').href = `/upload/${slug}`;
+      document.getElementById('event-url').textContent = `${window.location.origin}/upload/${slug}`;
+
+      // Load QR
+      const qrRes = await fetch(`/api/events/${slug}/qr`);
+      const qrData = await qrRes.json();
+      if (qrData.qr_code) {
+        document.getElementById('qr-container').style.backgroundImage = `url(${qrData.qr_code})`;
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Failed to load event data');
+    }
+  }
+</script>
+
+</body>
+</html>

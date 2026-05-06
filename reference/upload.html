@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Reelday — Share your moments</title>
+<link rel="stylesheet" href="shared.css" />
+<style>
+  body { background: var(--paper); min-height: 100dvh; }
+
+  .upload-shell { max-width: 480px; margin: 0 auto; padding: 24px 20px 80px; }
+
+  .upload-hero {
+    text-align: center; padding: 32px 0 40px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 32px;
+  }
+  .upload-hero .brand { display: inline-flex; margin-bottom: 24px; font-size: 16px; }
+  .upload-hero h1 {
+    font-family: var(--display); font-weight: 400;
+    font-size: clamp(36px, 8vw, 56px);
+    line-height: 1; letter-spacing: -.02em; margin-bottom: 8px;
+  }
+  .upload-hero h1 em { font-style: italic; color: var(--accent); }
+  .upload-hero .meta { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); }
+  .upload-hero .welcome {
+    margin-top: 20px;
+    font-family: var(--display); font-style: italic;
+    font-size: 17px; color: var(--ink-soft);
+    max-width: 32ch; margin-left: auto; margin-right: auto;
+  }
+
+  /* lang toggle right-aligned */
+  .upload-top {
+    display: flex; justify-content: space-between; align-items: center;
+  }
+
+  /* drop zone */
+  .drop {
+    background: #fff; border: 2px dashed var(--line-2);
+    border-radius: var(--r-lg);
+    padding: 40px 24px;
+    text-align: center;
+    transition: border-color .2s ease, background .2s ease;
+  }
+  .drop:hover { border-color: var(--accent); background: var(--paper-2); }
+  .drop .icon {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: var(--accent); color: #fff;
+    margin: 0 auto 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--display); font-size: 32px; font-style: italic;
+  }
+  .drop h3 { font-family: var(--display); font-size: 22px; font-weight: 500; margin-bottom: 6px; }
+  .drop p { color: var(--ink-soft); font-size: 14px; margin-bottom: 16px; }
+
+  /* uploaded queue */
+  .queue { margin-top: 24px; display: grid; gap: 8px; }
+  .queue-item {
+    display: grid; grid-template-columns: 56px 1fr auto; gap: 12px;
+    align-items: center;
+    background: #fff; border: 1px solid var(--line);
+    border-radius: var(--r);
+    padding: 8px 12px 8px 8px;
+  }
+  .queue-item .thumb { aspect-ratio: 1; border-radius: 8px; }
+  .queue-item .meta-name { font-weight: 500; font-size: 14px; }
+  .queue-item .progress {
+    height: 4px; background: var(--paper-3); border-radius: 2px;
+    margin-top: 4px; overflow: hidden;
+  }
+  .queue-item .progress > span { display: block; height: 100%; background: var(--accent); }
+  .queue-item .status { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-soft); }
+  .queue-item.done .status { color: #2d7a4a; }
+
+  /* name field */
+  .name-field {
+    margin-top: 24px;
+    background: #fff; border: 1px solid var(--line);
+    border-radius: var(--r);
+    padding: 14px 16px;
+  }
+  .name-field label { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); display: block; margin-bottom: 4px; }
+  .name-field input { width: 100%; border: none; outline: none; font-size: 16px; background: transparent; }
+  .name-field input::placeholder { color: var(--ink-faint); }
+
+  .send-btn { width: 100%; padding: 16px; margin-top: 20px; font-size: 16px; }
+
+  /* recent shared - mini wall */
+  .recent {
+    margin-top: 56px;
+  }
+  .recent .head {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 12px;
+  }
+  .recent .head h3 { font-family: var(--display); font-size: 18px; font-weight: 500; }
+  .recent .head .count { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; color: var(--ink-soft); }
+  .recent-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .recent-grid > div { aspect-ratio: 1; border-radius: 8px; }
+
+  .footer-note {
+    text-align: center; margin-top: 56px;
+    font-family: var(--mono); font-size: 10px;
+    letter-spacing: .14em; text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+</style>
+</head>
+<body>
+
+<div class="upload-shell">
+  <div class="upload-top">
+    <a class="brand" href="landing-1-editorial.html">REELDAY<sup>★</sup></a>
+    <div class="lang-switch"><button class="active">EN</button><button>FIL</button></div>
+  </div>
+
+  <div class="upload-hero">
+    <h1>Andrea <em>&</em> JM</h1>
+    <div class="meta">14 June 2026 · Manila Hotel</div>
+    <div class="welcome">"Salamat sa pagdating! Scan, share, and become part of the story."</div>
+  </div>
+
+  <div class="drop">
+    <div class="icon">+</div>
+    <h3>Tap to share</h3>
+    <p>Photos and videos · up to 100MB each</p>
+    <a class="btn btn-accent" href="#">Choose from gallery</a>
+  </div>
+
+  <div class="name-field">
+    <label>Your name (optional)</label>
+    <input type="text" placeholder="e.g. Tita Marivic, JM's cousin" value="Tita Marivic" />
+  </div>
+
+  <div class="queue">
+    <div class="queue-item done">
+      <div class="thumb placeholder placeholder--coral"></div>
+      <div>
+        <div class="meta-name">first-dance.jpg</div>
+        <div class="progress"><span style="width:100%;"></span></div>
+      </div>
+      <div class="status">✓ Shared</div>
+    </div>
+    <div class="queue-item">
+      <div class="thumb placeholder placeholder--ochre"></div>
+      <div>
+        <div class="meta-name">garden-toast.mp4</div>
+        <div class="progress"><span style="width:62%;"></span></div>
+      </div>
+      <div class="status">62%</div>
+    </div>
+    <div class="queue-item">
+      <div class="thumb placeholder placeholder--sage"></div>
+      <div>
+        <div class="meta-name">lola-speech.jpg</div>
+        <div class="progress"><span style="width:24%;"></span></div>
+      </div>
+      <div class="status">24%</div>
+    </div>
+  </div>
+
+  <button class="btn btn-primary send-btn">Send 3 moments →</button>
+
+  <div class="recent">
+    <div class="head">
+      <h3>Recently shared</h3>
+      <span class="count">847 today</span>
+    </div>
+    <div class="recent-grid">
+      <div class="placeholder placeholder--clay"></div>
+      <div class="placeholder placeholder--ochre"></div>
+      <div class="placeholder placeholder--coral"></div>
+      <div class="placeholder placeholder--sage"></div>
+      <div class="placeholder placeholder--paper"></div>
+      <div class="placeholder placeholder--ink"></div>
+      <div class="placeholder placeholder--clay"></div>
+      <div class="placeholder placeholder--coral"></div>
+      <div class="placeholder placeholder--ochre"></div>
+    </div>
+  </div>
+
+  <div class="footer-note">★ Powered by Reelday · reelday.ph</div>
+</div>
+
+</body>
+</html>
