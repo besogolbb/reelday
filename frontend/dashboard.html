@@ -565,21 +565,14 @@
 
   // ── Read uploads from localStorage ───────────────────
   function readLocalUploads() {
-    const all = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (k && k.startsWith('reelday_uploads_')) {
-        try { all.push(...JSON.parse(localStorage.getItem(k) || '[]')); } catch { /* skip */ }
-      }
-    }
-    all.sort((a, b) => b.id - a.id);
     if (slug) {
+      /* Strict: only return uploads saved under this exact event slug */
       try {
-        const keyed = JSON.parse(localStorage.getItem(`reelday_uploads_${slug}`) || '[]');
-        return keyed.length ? keyed : all;
-      } catch { /* fall through */ }
+        return JSON.parse(localStorage.getItem(`reelday_uploads_${slug}`) || '[]');
+      } catch { return []; }
     }
-    return all;
+    /* No slug in URL: return nothing — avoids mixing events */
+    return [];
   }
 
   function renderLocalMode(uploads) {
@@ -602,9 +595,11 @@
 
   // ── Data loading ──────────────────────────────────────
   async function loadAll() {
-    /* No slug — skip API, go straight to localStorage */
+    /* No slug — can't identify which event to load */
     if (!slug) {
-      renderLocalMode(readLocalUploads());
+      pageLoading.style.display       = 'none';
+      $('page-error-msg').textContent = 'No event selected. Add ?slug=your-event to the URL.';
+      pageError.style.display         = 'block';
       return;
     }
 
