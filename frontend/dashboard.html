@@ -341,6 +341,7 @@
   const params  = new URLSearchParams(location.search);
   const slug    = params.get('slug');
   let allUploads = [];
+  let currentDashEvent = null;
   let currentTab = 'all';
 
   // ── DOM refs ──────────────────────────────────────────
@@ -404,6 +405,7 @@
 
   // ── Render header ─────────────────────────────────────
   function renderHeader(event) {
+    currentDashEvent = event;
     eventNames.textContent = event.couple_names;
     document.title         = `Reelday — ${event.couple_names}`;
 
@@ -417,7 +419,7 @@
     const wallLink   = $('wall-nav-link');
     const uploadLink = $('upload-nav-link');
     if (wallLink)   wallLink.href   = `/wall/${slug}`;
-    if (uploadLink) uploadLink.href = `/upload/${slug}`;
+    if (uploadLink) uploadLink.href = buildUploadUrl();
 
     // Info card
     const infoType    = $('info-type');
@@ -445,8 +447,22 @@
   }
 
   // ── Render QR ─────────────────────────────────────────
+  function buildUploadUrl() {
+    const base = `${location.protocol}//${location.host}/upload/${slug}`;
+    if (!currentDashEvent) return base;
+    const ev = currentDashEvent;
+    const q  = new URLSearchParams();
+    if (ev.couple_names) q.set('name',    ev.couple_names);
+    if (ev.event_date)   q.set('date',    ev.event_date);
+    if (ev.venue)        q.set('venue',   ev.venue);
+    if (ev.event_type)   q.set('theme',   ev.event_type);
+    if (ev.welcome)      q.set('welcome', ev.welcome);
+    const qs = q.toString();
+    return qs ? `${base}?${qs}` : base;
+  }
+
   function renderQR(dataUrl) {
-    const uploadUrl = `${location.protocol}//${location.host}/upload/${slug}`;
+    const uploadUrl = buildUploadUrl();
 
     if (qrImg && dataUrl) qrImg.src = dataUrl;
     qrUrl.textContent = uploadUrl;
@@ -580,10 +596,13 @@
       couple_names: p.get('name') || slug || 'Andrea & JM',
       event_type:   p.get('theme') || 'wedding',
       event_date:   p.get('date')  || '',
+      venue:        p.get('venue') || '',
+      welcome:      p.get('welcome') || '',
       plan:         'demo',
     };
     applyTheme(demoEvent.event_type);
     renderHeader(demoEvent);
+    renderQR(null);
     renderStats(uploads);
     renderGallery(uploads);
     pageLoading.style.display = 'none';
