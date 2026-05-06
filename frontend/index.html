@@ -179,41 +179,129 @@
   }
 
   /* ════════════════════════════════════════════════════════
-     HOW IT WORKS — with real CSS mockups
+     HOW IT WORKS — cinematic 4-step
   ════════════════════════════════════════════════════════ */
-  .how { padding: 120px 28px 100px; background: #fdfaf5; }
-  .how-head { max-width: 1100px; margin: 0 auto 72px; text-align: center; }
+  .how {
+    padding: 120px 28px 100px;
+    background: linear-gradient(160deg, #160b07 0%, #241209 50%, #160b07 100%);
+    position: relative; overflow: hidden;
+  }
+  .how::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background:
+      radial-gradient(ellipse 80% 40% at 50% -5%, rgba(216,160,90,.13), transparent 60%),
+      radial-gradient(ellipse 40% 50% at 0% 110%, rgba(196,90,58,.09), transparent 50%);
+  }
+  .how-head { max-width: 1200px; margin: 0 auto 72px; text-align: center; position: relative; }
+  .how-head .eyebrow { color: rgba(253,250,245,.45); }
   .how-head h2 {
     font-family: var(--display); font-weight: 400;
-    font-size: clamp(44px, 6vw, 86px);
-    line-height: 1.02; letter-spacing: -.03em;
-    color: var(--ink);
+    font-size: clamp(40px, 6vw, 80px);
+    line-height: 1.02; letter-spacing: -.03em; color: #fdfaf5;
   }
-  .how-head h2 em { font-style: italic; color: var(--accent); }
+  .how-head h2 em { font-style: italic; color: var(--accent-soft); }
   .how-grid {
-    max-width: 1100px; margin: 0 auto;
-    display: grid; grid-template-columns: repeat(3,1fr); gap: 28px;
+    max-width: 1200px; margin: 0 auto; position: relative;
+    display: grid; grid-template-columns: repeat(4,1fr); gap: 14px;
+    perspective: 1400px;
+  }
+  /* subtle connector line */
+  .how-grid::before {
+    content: ''; position: absolute;
+    top: 56px; left: 12%; right: 12%; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(216,160,90,.25) 20%, rgba(216,160,90,.25) 80%, transparent);
+    pointer-events: none; z-index: 0;
   }
   .how-card {
-    background: #fff; border-radius: var(--r-lg);
-    padding: 36px 28px 28px;
-    border: 1px solid var(--line);
-    box-shadow: 0 2px 8px rgba(42,26,20,.04);
-    display: flex; flex-direction: column;
+    background: rgba(253,250,245,.04);
+    border-radius: 20px; padding: 36px 22px 26px;
+    border: 1px solid rgba(253,250,245,.08);
+    box-shadow:
+      0 2px 8px rgba(0,0,0,.35),
+      0 20px 50px rgba(0,0,0,.35),
+      inset 0 1px 0 rgba(255,255,255,.06);
+    display: flex; flex-direction: column; position: relative; overflow: hidden;
+    transition: transform .45s cubic-bezier(.22,1,.36,1), box-shadow .45s ease, background .3s;
+    transform-style: preserve-3d; will-change: transform; z-index: 1;
+  }
+  .how-card::before {
+    content: ''; position: absolute; top: 0; left: 12%; right: 12%; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(216,160,90,.55), transparent);
+  }
+  .how-card:hover {
+    transform: translateY(-10px) rotateX(4deg) rotateY(-1.5deg);
+    background: rgba(253,250,245,.07);
+    box-shadow:
+      0 6px 20px rgba(0,0,0,.5),
+      0 40px 80px rgba(0,0,0,.45),
+      inset 0 1px 0 rgba(255,255,255,.10);
   }
   .how-card .big-num {
-    font-family: var(--display); font-size: 112px; font-weight: 400;
-    font-style: italic; line-height: 1;
-    color: var(--accent-soft); letter-spacing: -.04em;
-    opacity: .4; margin-bottom: 12px;
+    font-family: var(--display); font-size: 88px; font-weight: 400;
+    font-style: italic; line-height: 1; letter-spacing: -.04em; margin-bottom: 14px;
+    background: linear-gradient(135deg, rgba(216,160,90,.95) 0%, rgba(240,163,122,.45) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
   }
   .how-card h3 {
-    font-family: var(--display); font-weight: 500;
-    font-size: 24px; line-height: 1.2;
-    letter-spacing: -.01em; margin-bottom: 10px; color: var(--ink);
+    font-family: var(--display); font-weight: 500; font-size: 21px; line-height: 1.2;
+    letter-spacing: -.01em; margin-bottom: 10px; color: #fdfaf5;
   }
-  .how-card p { color: var(--ink-soft); font-size: 14px; line-height: 1.65; margin-bottom: 24px; flex: 1; }
-  .how-card .mockup { border-radius: var(--r); overflow: hidden; position: relative; }
+  .how-card p { color: rgba(253,250,245,.52); font-size: 13px; line-height: 1.65; margin-bottom: 20px; flex: 1; }
+  .how-card .mockup { border-radius: 12px; overflow: hidden; position: relative; }
+
+  /* ── Step 1: Create event form mockup ─────────────────── */
+  .how-create-mockup {
+    background: rgba(253,250,245,.05); border: 1px solid rgba(253,250,245,.09);
+    border-radius: 12px; padding: 14px;
+  }
+  .hcm-field { margin-bottom: 8px; }
+  .hcm-label {
+    font-family: var(--mono); font-size: 8px; letter-spacing: .14em;
+    text-transform: uppercase; color: rgba(253,250,245,.32); margin-bottom: 4px;
+  }
+  .hcm-value {
+    background: rgba(253,250,245,.07); border: 1px solid rgba(253,250,245,.10);
+    border-radius: 7px; padding: 7px 11px;
+    font-family: var(--display); font-size: 12px; font-style: italic;
+    color: rgba(253,250,245,.82);
+  }
+  .hcm-themes { display: flex; gap: 6px; margin-top: 4px; }
+  .hcm-swatch {
+    width: 22px; height: 22px; border-radius: 50%;
+    border: 2px solid rgba(253,250,245,.15);
+  }
+  .hcm-swatch.active { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(216,160,90,.3); }
+  .hcm-btn {
+    margin-top: 12px; background: var(--accent); color: #fff;
+    border-radius: 999px; padding: 8px 14px; text-align: center;
+    font-family: var(--mono); font-size: 9px; letter-spacing: .14em; text-transform: uppercase;
+  }
+
+  /* ── Step 2: QR icon visual (no poster wrapper) ───────── */
+  .how-qr-visual {
+    display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 18px 0;
+  }
+  .how-qr-icon {
+    width: 68px; height: 68px; border-radius: 10px; overflow: hidden;
+    border: 3px solid rgba(253,250,245,.14);
+    box-shadow: 0 4px 20px rgba(0,0,0,.5), 0 0 0 6px rgba(253,250,245,.04);
+  }
+  .how-qr-icon img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .how-qr-caption {
+    font-family: var(--mono); font-size: 8px; letter-spacing: .18em;
+    text-transform: uppercase; color: rgba(253,250,245,.3); text-align: center; line-height: 1.6;
+  }
+
+  /* ── Phone mockup on dark card ────────────────────────── */
+  .how-card .phone-mockup { background: rgba(253,250,245,.06); border-color: rgba(253,250,245,.10); }
+  .how-card .phone-mockup .pm-header { background: rgba(253,250,245,.06); border-color: rgba(253,250,245,.08); }
+  .how-card .phone-mockup .pm-brand { color: #fdfaf5; }
+  .how-card .phone-mockup .pm-event-name { color: #fdfaf5; }
+  .how-card .phone-mockup .pm-drop { background: rgba(253,250,245,.04); border-color: rgba(253,250,245,.14); }
+  .how-card .phone-mockup .pm-drop h4 { color: #fdfaf5; }
+  .how-card .phone-mockup .pm-drop p { color: rgba(253,250,245,.45); }
+  .how-card .phone-mockup .pm-item { background: rgba(253,250,245,.06); border-color: rgba(253,250,245,.08); }
+  .how-card .phone-mockup .pm-file { color: rgba(253,250,245,.8); }
 
   /* ── Mockup 1: QR Poster ─────────────────────────────── */
   .qr-poster-mockup {
@@ -602,7 +690,7 @@
     /* isolate so internal z-indexes don't bleed over hero-text */
     .polaroid-stage { max-width: 480px; margin: 0 auto; isolation: isolate; }
     .hero-strip { grid-template-columns: repeat(2,1fr); padding: 24px 28px; }
-    .how-grid { grid-template-columns: 1fr; }
+    .how-grid { grid-template-columns: repeat(2,1fr); }
     .features-grid { grid-template-columns: 1fr; }
     .feat-wide, .feat-narrow { grid-column: 1; }
     .events-grid { grid-template-columns: repeat(2,1fr); }
@@ -657,8 +745,10 @@
     .hstat .lbl { font-size: 10px; }
 
     /* how it works */
+    .how-grid { grid-template-columns: 1fr 1fr; }
+    .how-grid::before { display: none; }
     .how-card { padding: 24px 18px 20px; }
-    .how-card .big-num { font-size: 72px; }
+    .how-card .big-num { font-size: 64px; }
 
     /* events */
     .event-tile-name { font-size: 18px; }
@@ -789,9 +879,9 @@
         </div>
       </div>
       <div class="feat feat-narrow">
-        <span class="feat-pill">EN · FIL</span>
-        <h3><em>Bilingual</em> upload</h3>
-        <p>Guests pick their language. Titas get Filipino, kids get English — captions follow.</p>
+        <span class="feat-pill">Instant</span>
+        <h3>Photo &amp; <em>video messages</em></h3>
+        <p>Upload a photo with a caption or send a video message — it streams to the live wall automatically, in real time.</p>
       </div>
       <div class="feat feat-narrow">
         <span class="feat-pill">1-tap</span>
@@ -814,26 +904,53 @@
 <section class="how" id="how">
   <div class="how-head">
     <div class="eyebrow" style="justify-content:center;margin-bottom:16px;" data-i18n="how-eyebrow">— How it works</div>
-    <h2 data-i18n="how-h2">Three steps.<br/>Done before <em>cocktail hour.</em></h2>
+    <h2 data-i18n="how-h2">Four steps.<br/>Live before the <em>first dance.</em></h2>
   </div>
   <div class="how-grid">
 
+    <!-- Step 1 -->
     <div class="how-card">
       <div class="big-num">1</div>
-      <h3 data-i18n="how-1-h3">Print your QR</h3>
-      <p data-i18n="how-1-p">Set names, date, theme. Download a print-ready poster. Place it at the welcome table.</p>
-      <div class="mockup qr-poster-mockup">
-        <div class="pin-badge">QR Poster</div>
-        <div class="poster-title">Andrea &amp; JM Cabrera<br/>June 7, 2026</div>
-        <div class="qr-block"><img src="/images/gcash-qr.jpeg" alt="Event QR code" /></div>
-        <div class="poster-meta">reelday.ph/e/andrea-jm<br/>scan to share your moments</div>
+      <h3>Create event</h3>
+      <p>Set your event name, date, and theme. Your live wall is ready in under a minute.</p>
+      <div class="how-create-mockup">
+        <div class="hcm-field">
+          <div class="hcm-label">Event name</div>
+          <div class="hcm-value">Andrea &amp; JM Cabrera</div>
+        </div>
+        <div class="hcm-field">
+          <div class="hcm-label">Date</div>
+          <div class="hcm-value">June 7, 2026</div>
+        </div>
+        <div class="hcm-field">
+          <div class="hcm-label">Theme</div>
+          <div class="hcm-themes">
+            <div class="hcm-swatch active" style="background:linear-gradient(135deg,#c45a3a,#7a3b2e)"></div>
+            <div class="hcm-swatch" style="background:linear-gradient(135deg,#b6457a,#6b1f49)"></div>
+            <div class="hcm-swatch" style="background:linear-gradient(135deg,#2d6a4a,#134e3a)"></div>
+            <div class="hcm-swatch" style="background:linear-gradient(135deg,#2a3548,#16202e)"></div>
+          </div>
+        </div>
+        <div class="hcm-btn">Create event →</div>
       </div>
     </div>
 
+    <!-- Step 2 -->
     <div class="how-card">
       <div class="big-num">2</div>
-      <h3 data-i18n="how-2-h3">Guests scan &amp; share</h3>
-      <p data-i18n="how-2-p">One tap opens the upload page. Pick photos, add a caption, send. No app, no login.</p>
+      <h3>Generate event QR</h3>
+      <p>Download a print-ready QR poster. Place it at the welcome table — guests do the rest.</p>
+      <div class="how-qr-visual">
+        <div class="how-qr-icon"><img src="/images/gcash-qr.jpeg" alt="Event QR code" /></div>
+        <div class="how-qr-caption">reelday.ph/e/andrea-jm<br/>scan to share your moments</div>
+      </div>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="how-card">
+      <div class="big-num">3</div>
+      <h3>Guests scan &amp; share</h3>
+      <p>One tap opens the upload page. Pick photos, add a caption, send. No app, no login.</p>
       <div class="mockup phone-mockup">
         <div class="pm-header">
           <div class="pm-brand">REELDAY<sup style="font-family:var(--mono);font-size:7px;color:var(--accent);">★</sup></div>
@@ -868,17 +985,15 @@
       </div>
     </div>
 
+    <!-- Step 4 -->
     <div class="how-card">
-      <div class="big-num">3</div>
-      <h3 data-i18n="how-3-h3">Wall goes live</h3>
-      <p data-i18n="how-3-p">Photos appear on screen within seconds. Ken Burns pans, music, captions, the works.</p>
+      <div class="big-num">4</div>
+      <h3>Wall goes live</h3>
+      <p>Photos stream to the screen within seconds. Ken Burns pans, ambient music, cinematic captions.</p>
       <div class="mockup wall-mini-mockup" id="miniWall">
         <div class="wm-bg" id="miniWallBg" style="background-image:url(/images/First%20dance%20after%2038%20years.png);background-size:cover;background-position:center"></div>
         <div class="wm-vignette"></div>
-        <div class="wm-ticker">
-          <span class="wm-dot"></span>
-          Live
-        </div>
+        <div class="wm-ticker"><span class="wm-dot"></span>Live</div>
         <div class="wm-pin">Wall · Live</div>
         <div class="wm-caption">
           <div class="wm-who" id="miniWho">— Tita Marivic</div>
