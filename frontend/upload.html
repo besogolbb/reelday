@@ -518,27 +518,39 @@ body { background: var(--paper); min-height: 100dvh; }
     let event = null;
 
     if (slug) {
-      /* TODO: uncomment when API is live
       try {
         const res = await fetch(`/api/events/${slug}`);
-        if (res.ok) event = await res.json();
+        if (res.ok) {
+          const data = await res.json();
+          const ev   = data.event || data;
+          event = {
+            slug,
+            name:    ev.couple_names || ev.name || slug,
+            date:    ev.event_date   || ev.date  || '',
+            venue:   ev.venue        || '',
+            theme:   ev.event_type   || ev.theme  || 'wedding',
+            welcome: ev.welcome      || 'Salamat sa pagdating! Scan, share, and become part of the story.',
+            cover:   ev.cover        || '',
+            count:   ev.count        || 0,
+          };
+        }
       } catch (e) {}
-      */
     }
 
     if (!event) {
-      const name = p.get('name') || 'Andrea & JM';
+      /* Fallback: use query params (dashboard passes these) or demo defaults */
+      const name = p.get('name') || (slug ? slug.replace(/-/g, ' ') : 'Your Event');
       const derivedSlug = slug
         || name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
       event = {
         slug:    derivedSlug,
         name,
-        date:    p.get('date')    || '14 June 2026',
-        venue:   p.get('venue')   || 'Manila Hotel',
+        date:    p.get('date')    || '',
+        venue:   p.get('venue')   || '',
         theme:   p.get('theme')   || 'wedding',
         welcome: p.get('welcome') || 'Salamat sa pagdating! Scan, share, and become part of the story.',
-        cover:   p.get('cover')   || 'images/newlyweds.png',
-        count:   parseInt(p.get('count') || '847', 10),
+        cover:   p.get('cover')   || '',
+        count:   0,
       };
     }
 
@@ -553,8 +565,10 @@ body { background: var(--paper); min-height: 100dvh; }
     document.getElementById('heroName').innerHTML = nameHtml;
     document.title = `Reelday — ${ev.name}`;
 
-    document.getElementById('heroMeta').textContent =
-      [ev.date, ev.venue].filter(Boolean).join(' · ').toUpperCase();
+    const metaText = [ev.date, ev.venue].filter(Boolean).join(' · ').toUpperCase();
+    const heroMeta = document.getElementById('heroMeta');
+    heroMeta.textContent  = metaText;
+    heroMeta.style.display = metaText ? '' : 'none';
 
     document.getElementById('heroWelcome').textContent = `"${ev.welcome}"`;
 
