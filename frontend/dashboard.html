@@ -597,28 +597,55 @@
       dashMain.style.display    = 'grid';
     } catch (err) {
       /* API not available — fall back to localStorage (local demo mode) */
-      const localUploads = (() => {
-        try { return JSON.parse(localStorage.getItem(`reelday_uploads_${slug}`) || '[]'); }
-        catch { return []; }
-      })();
+      try {
+        const p = new URLSearchParams(location.search);
 
-      const p = new URLSearchParams(location.search);
-      const demoEvent = {
-        couple_names: p.get('name') || slug,
-        event_type:   p.get('theme') || 'wedding',
-        event_date:   p.get('date')  || '',
-        plan:         'demo',
-      };
+        /* Try the slug directly, then a name-derived key, then scan all reelday_uploads_* keys */
+        const nameDerived = (p.get('name') || slug || '')
+          .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        const candidates = [...new Set([slug, nameDerived].filter(Boolean))];
 
-      applyTheme(demoEvent.event_type);
-      renderHeader(demoEvent);
-      renderStats(localUploads);
-      renderGallery(localUploads);
+        let localUploads = [];
+        for (const key of candidates) {
+          try {
+            const stored = JSON.parse(localStorage.getItem(`reelday_uploads_${key}`) || '[]');
+            if (stored.length) { localUploads = stored; break; }
+          } catch { /* continue */ }
+        }
+        /* Last resort: scan all keys */
+        if (!localUploads.length) {
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && k.startsWith('reelday_uploads_')) {
+              try {
+                const stored = JSON.parse(localStorage.getItem(k) || '[]');
+                localUploads = [...localUploads, ...stored];
+              } catch { /* skip */ }
+            }
+          }
+        }
 
-      pageLoading.style.display = 'none';
-      dashHeader.style.display  = 'block';
-      document.getElementById('stats-row').style.display = 'grid';
-      dashMain.style.display    = 'grid';
+        const demoEvent = {
+          couple_names: p.get('name') || slug || 'Your Event',
+          event_type:   p.get('theme') || 'wedding',
+          event_date:   p.get('date')  || '',
+          plan:         'demo',
+        };
+
+        applyTheme(demoEvent.event_type);
+        renderHeader(demoEvent);
+        renderStats(localUploads);
+        renderGallery(localUploads);
+
+        pageLoading.style.display = 'none';
+        dashHeader.style.display  = 'block';
+        document.getElementById('stats-row').style.display = 'grid';
+        dashMain.style.display    = 'grid';
+      } catch (innerErr) {
+        pageLoading.style.display       = 'none';
+        $('page-error-msg').textContent = 'Failed to load event data.';
+        pageError.style.display         = 'block';
+      }
     }
   }
 

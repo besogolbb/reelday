@@ -314,6 +314,15 @@ body { background: var(--paper); min-height: 100dvh; }
   font-family: var(--display); font-style: italic; font-size: 13px;
   color: rgba(253,250,245,.6); line-height: 1.4;
 }
+.ty-close {
+  position: absolute; top: 20px; right: 20px; z-index: 3;
+  width: 36px; height: 36px; border-radius: 50%;
+  background: rgba(253,250,245,.12); border: 1px solid rgba(253,250,245,.2);
+  color: rgba(253,250,245,.7); font-size: 14px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .2s, color .2s;
+}
+.ty-close:hover { background: rgba(253,250,245,.25); color: #fdfaf5; }
 .ty-btn {
   background: rgba(253,250,245,.12); color: #fdfaf5;
   border: 1px solid rgba(253,250,245,.2); border-radius: 999px;
@@ -329,6 +338,7 @@ body { background: var(--paper); min-height: 100dvh; }
 <div class="ty-screen" id="tyScreen">
   <div class="ty-bg" id="tyBg"></div>
   <div class="ty-vignette"></div>
+  <button class="ty-close" onclick="uploadMore()" title="Close">✕</button>
   <div class="ty-body">
     <div class="ty-star">★</div>
     <div class="ty-heading">Salamat!</div>
@@ -514,9 +524,12 @@ body { background: var(--paper); min-height: 100dvh; }
     }
 
     if (!event) {
+      const name = p.get('name') || 'Andrea & JM';
+      const derivedSlug = slug
+        || name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
       event = {
-        slug,
-        name:    p.get('name')    || 'Andrea & JM',
+        slug:    derivedSlug,
+        name,
         date:    p.get('date')    || '14 June 2026',
         venue:   p.get('venue')   || 'Manila Hotel',
         theme:   p.get('theme')   || 'wedding',
@@ -808,8 +821,7 @@ body { background: var(--paper); min-height: 100dvh; }
     const thumbUrl = Object.values(itemDataUrls)[0] || null;
 
     /* Save to localStorage so dashboard can read it */
-    const slug = currentEvent && currentEvent.slug ? currentEvent.slug : 'demo';
-    const localKey = `reelday_uploads_${slug}`;
+    const localKey = `reelday_uploads_${currentEvent.slug}`;
     try {
       const existing = JSON.parse(localStorage.getItem(localKey) || '[]');
       existing.unshift({
