@@ -139,8 +139,8 @@
       background: #fff; border: 1px solid var(--line);
       border-radius: var(--r-lg); padding: 28px; text-align: center;
     }
-    .qr-eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; color: var(--ink-faint); text-transform: uppercase; margin-bottom: 14px; }
-    .qr-placeholder {
+    .qr-card .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; color: var(--ink-faint); text-transform: uppercase; margin-bottom: 14px; }
+    .qr-card .qr {
       aspect-ratio: 1; margin-bottom: 16px;
       background:
         linear-gradient(45deg, var(--ink) 25%, transparent 25%),
@@ -152,13 +152,8 @@
       border-radius: 8px; padding: 8px;
       border: 12px solid #fff;
       box-shadow: 0 0 0 1px var(--line);
-      display: flex; align-items: center; justify-content: center;
     }
-    .qr-inner {
-      width: 80%; height: 80%;
-      background-size: contain; background-repeat: no-repeat; background-position: center;
-    }
-    .qr-url { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; color: var(--ink-soft); margin-bottom: 16px; word-break: break-all; }
+    .qr-card .url { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; color: var(--ink-soft); margin-bottom: 16px; word-break: break-all; }
     .actions-stack { display: grid; gap: 8px; }
 
     /* ── Info card ────────────────────────────────────────── */
@@ -270,11 +265,9 @@
   <!-- ── Sidebar (right) ────────────────────────────────── -->
   <div>
     <div class="qr-card">
-      <div class="qr-eyebrow">— Your event QR</div>
-      <div class="qr-placeholder" id="qr-wrap">
-        <div class="qr-inner" id="qr-inner"></div>
-      </div>
-      <div class="qr-url" id="qr-url">reelday.ph/e/andrea-jm</div>
+      <div class="eyebrow" style="margin-bottom:14px;">— Your event QR</div>
+      <div class="qr" id="qr-wrap"></div>
+      <div class="url" id="qr-url">reelday.ph/e/andrea-jm</div>
       <div class="actions-stack">
         <a class="btn btn-accent" id="btn-open-upload" href="#" target="_blank" rel="noopener">Open upload page →</a>
         <a class="btn btn-ghost" href="#">Download poster .pdf</a>
@@ -341,7 +334,6 @@
   const eventDate      = $('event-date');
   const photoGrid      = $('photo-grid');
   const qrWrap         = $('qr-wrap');
-  const qrInner        = $('qr-inner');
   const qrUrl          = $('qr-url');
   const toast          = $('toast');
 
@@ -410,7 +402,7 @@
   function renderQR(dataUrl) {
     const uploadUrl = `${location.protocol}//${location.host}/upload/${slug}`;
 
-    if (qrInner) qrInner.style.backgroundImage = `url(${dataUrl})`;
+    if (qrWrap) qrWrap.style.backgroundImage = `url(${dataUrl})`;
 
     qrUrl.textContent = uploadUrl;
 
