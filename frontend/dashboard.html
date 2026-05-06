@@ -417,7 +417,12 @@
     const wallLink   = $('wall-nav-link');
     const uploadLink = $('upload-nav-link');
     if (wallLink)   wallLink.href   = `/wall/${slug}`;
-    if (uploadLink) uploadLink.href = `/upload/${slug}`;
+    if (uploadLink) {
+      const uploadBase = location.href.split('?')[0]
+        .replace(/dashboard\.html$/, 'upload.html')
+        .replace(/\/dashboard$/, '/upload');
+      uploadLink.href = `${uploadBase}?slug=${slug}`;
+    }
 
     // Info card
     const infoType    = $('info-type');
@@ -446,10 +451,14 @@
 
   // ── Render QR ─────────────────────────────────────────
   function renderQR(dataUrl) {
-    const uploadUrl = `${location.protocol}//${location.host}/upload/${slug}`;
+    /* Generate upload URL with ?slug= query param so upload.html can read it reliably */
+    const uploadBase = location.href
+      .split('?')[0]
+      .replace(/dashboard\.html$/, 'upload.html')
+      .replace(/\/dashboard$/, '/upload');
+    const uploadUrl = `${uploadBase}?slug=${slug}`;
 
     if (qrImg && dataUrl) qrImg.src = dataUrl;
-
     qrUrl.textContent = uploadUrl;
 
     const openBtn = $('btn-open-upload');

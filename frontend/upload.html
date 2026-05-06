@@ -510,7 +510,11 @@ body { background: var(--paper); min-height: 100dvh; }
 
   async function loadEvent() {
     const p = new URLSearchParams(location.search);
-    const slug = p.get('slug') || p.get('event');
+
+    /* Read slug from ?slug= query param, or from URL path (e.g. /upload/andrea-jm) */
+    const pathSlug = location.pathname
+      .split('/').filter(s => s && !s.endsWith('.html')).pop() || null;
+    const slug = p.get('slug') || p.get('event') || pathSlug;
 
     let event = null;
 
