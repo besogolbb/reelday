@@ -1153,12 +1153,12 @@ function setLang(lang, btn) {
 (function() {
   const DURATION = 6500;
   const slides = [
-    { bg: 'linear-gradient(135deg,#7a3b2e 0%,#c45a3a 60%,#d8a05a 100%)', uploader: '— Tita Marivic · 8:42 pm', quote: '"First dance after 38 years — still got it."' },
-    { bg: 'linear-gradient(135deg,#1e3a5f 0%,#3b6ea8 60%,#a4c2e3 100%)', uploader: '— Kuya Mike · 9:01 pm',    quote: '"The whole family finally in one frame."' },
-    { bg: 'linear-gradient(135deg,#134e3a 0%,#2d6a4a 60%,#8fc4a4 100%)', uploader: '— Ate Karen · 9:18 pm',    quote: '"Garden hour. No filter needed."' },
-    { bg: 'linear-gradient(135deg,#4c1d95 0%,#7d3aa8 60%,#c8a2e3 100%)', uploader: '— Kuya Vince · 9:35 pm',   quote: '"Best night of the year, hands down."' },
-    { bg: 'linear-gradient(135deg,#7c2d12 0%,#d97706 60%,#fbbf6f 100%)', uploader: '— JM · 9:52 pm',           quote: '"The moment everyone was waiting for."' },
-    { bg: 'linear-gradient(135deg,#2a1a14 0%,#5a443a 60%,#8a7468 100%)', uploader: '— Andrea · 10:08 pm',      quote: '"Dancing with Tatay. I will never forget this."' },
+    { img: 'url(/images/First%20dance%20after%2038%20years.png)',                      uploader: '— Tita Marivic · 8:42 pm', quote: '"First dance after 38 years — still got it."' },
+    { img: 'url(/images/The%20whole%20family%20finally%20in%20one%20frame.png)',        uploader: '— Kuya Mike · 9:01 pm',    quote: '"The whole family finally in one frame."' },
+    { img: 'url(/images/Garden%20hour.png)',                                            uploader: '— Ate Karen · 9:18 pm',    quote: '"Garden hour. No filter needed."' },
+    { img: 'url(/images/Best%20night%20of%20the%20year%2C%20hands%20down.png)',         uploader: '— Kuya Vince · 9:35 pm',   quote: '"Best night of the year, hands down."' },
+    { img: 'url(/images/First%20kiss.png)',                                             uploader: '— JM · 9:52 pm',           quote: '"The moment everyone was waiting for."' },
+    { img: 'url(/images/Dancing%20with%20Tatay.%20I%20will%20never%20forget%20this.png)', uploader: '— Andrea · 10:08 pm',   quote: '"Dancing with Tatay. I will never forget this."' },
   ];
 
   let idx = 0, active = 'A', timer;
@@ -1175,7 +1175,9 @@ function setLang(lang, btn) {
   slides.forEach((s, i) => {
     const d = document.createElement('div');
     d.className = 'wall-thumb' + (i === 0 ? ' wt-active' : '');
-    d.style.background = s.bg;
+    d.style.backgroundImage = s.img;
+    d.style.backgroundSize = 'cover';
+    d.style.backgroundPosition = 'center';
     d.addEventListener('click', () => jumpTo(i));
     thumbs.appendChild(d);
   });
@@ -1191,7 +1193,7 @@ function setLang(lang, btn) {
     const inL = active === 'A' ? lB : lA;
     const outL= active === 'A' ? lA : lB;
     const inP = active === 'A' ? pB : pA;
-    inP.style.background = s.bg;
+    inP.style.backgroundImage = s.img;
     inP.style.animation = 'none'; void inP.offsetWidth; inP.style.animation = '';
     inL.classList.remove('wl-out'); outL.classList.add('wl-out');
     active = active === 'A' ? 'B' : 'A';
