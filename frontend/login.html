@@ -63,6 +63,20 @@
     }
     .forgot:hover { color: var(--accent); }
 
+    .pw-wrap { position: relative; }
+    .pw-wrap input { padding-right: 2.75rem; }
+    .pw-toggle {
+      position: absolute; top: 50%; right: .55rem;
+      transform: translateY(-50%);
+      width: 36px; height: 36px; border: 0; background: transparent;
+      display: inline-flex; align-items: center; justify-content: center;
+      color: var(--ink-faint); cursor: pointer; border-radius: 8px;
+      transition: color .15s, background .15s;
+    }
+    .pw-toggle:hover { color: var(--ink); background: rgba(0,0,0,.04); }
+    .pw-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+    .pw-toggle svg { width: 20px; height: 20px; }
+
     .btn-submit {
       width: 100%; margin-top: .5rem;
       display: flex; align-items: center; justify-content: center; gap: .5rem;
@@ -124,7 +138,15 @@
       </div>
       <div class="field">
         <label for="password">Password</label>
-        <input type="password" id="password" name="password" placeholder="••••••••" autocomplete="current-password" required />
+        <div class="pw-wrap">
+          <input type="password" id="password" name="password" placeholder="••••••••" autocomplete="current-password" required />
+          <button type="button" class="pw-toggle" id="pw-toggle" aria-label="Show password" aria-pressed="false">
+            <svg id="pw-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+        </div>
         <a class="forgot" href="/forgot-password">Forgot password?</a>
       </div>
       <button class="btn btn-accent btn-submit" id="btn-submit" type="submit">
@@ -151,6 +173,20 @@
   const spinner = document.getElementById('spinner');
   const btnText = document.getElementById('btn-text');
   const errMsg  = document.getElementById('error-msg');
+
+  // Show / hide password toggle
+  const pwInput  = document.getElementById('password');
+  const pwToggle = document.getElementById('pw-toggle');
+  const pwIcon   = document.getElementById('pw-icon');
+  const ICON_EYE     = '<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/>';
+  const ICON_EYE_OFF = '<path d="M17.94 17.94A10.5 10.5 0 0 1 12 19c-7 0-11-7-11-7a18.4 18.4 0 0 1 5.06-5.94M9.9 4.24A10.5 10.5 0 0 1 12 4c7 0 11 7 11 7a18.5 18.5 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
+  pwToggle.addEventListener('click', () => {
+    const showing = pwInput.type === 'text';
+    pwInput.type = showing ? 'password' : 'text';
+    pwToggle.setAttribute('aria-pressed', String(!showing));
+    pwToggle.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+    pwIcon.innerHTML = showing ? ICON_EYE : ICON_EYE_OFF;
+  });
 
   form.addEventListener('submit', async e => {
     e.preventDefault();
