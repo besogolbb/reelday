@@ -33,29 +33,39 @@
     }
     .layer.out { opacity: 0; }
 
-    .layer .pic {
-      position: absolute; inset: -3%;
+    /* Blurred backdrop — fills letterbox area with a soft, scaled copy */
+    .layer .backdrop {
+      position: absolute; inset: 0;
       background-size: cover; background-position: center;
+      filter: blur(40px) brightness(.55) saturate(1.2);
+      transform: scale(1.15);
+    }
+
+    /* Foreground photo — full image visible, no cropping */
+    .layer .pic {
+      position: absolute; inset: 0;
+      background-size: contain; background-position: center;
+      background-repeat: no-repeat;
       will-change: transform;
       image-rendering: -webkit-optimize-contrast;
     }
 
-    /* Ken Burns variants — gentle zoom & pan, no aggressive scaling */
+    /* Ken Burns — very gentle, mostly pan; the image stays fully visible */
     @keyframes kb1 {
       from { transform: scale(1)    translate(0, 0); }
-      to   { transform: scale(1.05) translate(-1%, -0.8%); }
+      to   { transform: scale(1.02) translate(-0.5%, -0.4%); }
     }
     @keyframes kb2 {
-      from { transform: scale(1)    translate(-0.8%, 0); }
-      to   { transform: scale(1.04) translate(0.8%, 1%); }
+      from { transform: scale(1)    translate(-0.4%, 0); }
+      to   { transform: scale(1.02) translate(0.4%, 0.5%); }
     }
     @keyframes kb3 {
-      from { transform: scale(1.03) translate(1%, 1%); }
-      to   { transform: scale(1.06) translate(-1%, -1%); }
+      from { transform: scale(1.01) translate(0.5%, 0.5%); }
+      to   { transform: scale(1.03) translate(-0.5%, -0.5%); }
     }
     @keyframes kb4 {
-      from { transform: scale(1)    translate(0.8%, -0.8%); }
-      to   { transform: scale(1.05) translate(-1%, 1%); }
+      from { transform: scale(1)    translate(0.4%, -0.4%); }
+      to   { transform: scale(1.02) translate(-0.5%, 0.5%); }
     }
 
     .layer .vignette {
@@ -199,6 +209,25 @@
       height: 100%; background: rgba(240,163,122,.8); width: 0;
     }
 
+    /* ── Fullscreen toggle button ───────────────────────────── */
+    .fs-btn {
+      position: fixed; top: 18px; left: 18px; z-index: 12;
+      width: 40px; height: 40px; border-radius: 50%;
+      background: rgba(0,0,0,.45); color: #fff;
+      border: 1px solid rgba(255,255,255,.15);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; opacity: 0; transition: opacity .3s, background .2s, transform .2s;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+
+    .fs-btn:hover { background: rgba(0,0,0,.7); transform: scale(1.06); }
+
+    body:hover .fs-btn,
+    .fs-btn:focus-visible { opacity: 1; }
+
+    .fs-btn svg { width: 18px; height: 18px; }
+
     /* ── Pause overlay ──────────────────────────────────────── */
     .pause-btn {
       position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -315,10 +344,12 @@
 
 <!-- ════ PHOTO LAYERS ══════════════════════════════════════ -->
 <div class="layer" id="layer-a">
+  <div class="backdrop" id="backdrop-a"></div>
   <div class="pic" id="pic-a"></div>
   <div class="vignette"></div>
 </div>
 <div class="layer out" id="layer-b">
+  <div class="backdrop" id="backdrop-b"></div>
   <div class="pic" id="pic-b"></div>
   <div class="vignette"></div>
 </div>
@@ -359,6 +390,13 @@
 <!-- ════ PROGRESS + PAUSE ═════════════════════════════════ -->
 <div class="slide-progress"><div class="fill" id="progress-fill"></div></div>
 <div class="pause-btn" id="pause-btn" onclick="togglePause()">⏸ Paused — tap to resume</div>
+
+<!-- ════ FULLSCREEN TOGGLE ════════════════════════════════ -->
+<button class="fs-btn" id="fs-btn" type="button" aria-label="Toggle fullscreen" title="Fullscreen (F)">
+  <svg id="fs-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>
+  </svg>
+</button>
 
 <!-- ════ EXTRAS ═══════════════════════════════════════════ -->
 <div id="emoji-container"></div>
@@ -452,6 +490,8 @@
   const layerB      = document.getElementById('layer-b');
   const picA        = document.getElementById('pic-a');
   const picB        = document.getElementById('pic-b');
+  const backdropA   = document.getElementById('backdrop-a');
+  const backdropB   = document.getElementById('backdrop-b');
   const frame       = document.getElementById('frame');
   const caption     = document.getElementById('caption');
   const capUploader = document.getElementById('caption-uploader');
@@ -497,12 +537,15 @@
     const kbAnim = KB_ANIMS[idx % KB_ANIMS.length];
 
     // Determine in/out layers
-    const inLayer  = activeLayer === 'A' ? layerB : layerA;
-    const outLayer = activeLayer === 'A' ? layerA : layerB;
-    const inPic    = activeLayer === 'A' ? picB   : picA;
+    const inLayer    = activeLayer === 'A' ? layerB : layerA;
+    const outLayer   = activeLayer === 'A' ? layerA : layerB;
+    const inPic      = activeLayer === 'A' ? picB   : picA;
+    const inBackdrop = activeLayer === 'A' ? backdropB : backdropA;
 
-    // Load photo via background-image (no CORS restrictions, no flicker)
-    inPic.style.backgroundImage = `url('${item.file_url}')`;
+    // Load photo into both layers — pic shows whole image, backdrop fills letterbox
+    const url = `url('${item.file_url}')`;
+    inPic.style.backgroundImage      = url;
+    inBackdrop.style.backgroundImage = url;
 
     // Restart Ken Burns animation cleanly
     inPic.style.animation = 'none';
@@ -806,8 +849,33 @@
     if (e.key === `reelday_uploads_${slug}`) refreshUploads();
   });
 
+  /* ══════════════════════════════════════════════════════════
+     FULLSCREEN
+  ══════════════════════════════════════════════════════════ */
+  const fsBtn  = document.getElementById('fs-btn');
+  const fsIcon = document.getElementById('fs-icon');
+  const ICON_ENTER = '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>';
+  const ICON_EXIT  = '<path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/>';
+
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen();
+    }
+  }
+
+  if (fsBtn) fsBtn.addEventListener('click', toggleFullscreen);
+
+  document.addEventListener('fullscreenchange', () => {
+    fsIcon.innerHTML = document.fullscreenElement ? ICON_EXIT : ICON_ENTER;
+  });
+
   document.body.addEventListener('click', e => {
-    if (e.target.closest('.qr-badge') || e.target.closest('.upcoming') || e.target.closest('.pause-btn')) return;
+    if (e.target.closest('.qr-badge') ||
+        e.target.closest('.upcoming') ||
+        e.target.closest('.pause-btn') ||
+        e.target.closest('.fs-btn')) return;
     if (isRunning) goTo(currentIdx + 1);
   });
 
