@@ -695,7 +695,11 @@
     box-shadow: 0 12px 40px rgba(42,26,20,.22);
   }
   .price-card.featured:hover { transform: translateY(-13px); }
-  .price-card .tier { font-family: var(--mono); font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 14px; }
+  .price-card .tier {
+    font-family: var(--display); font-style: italic; font-weight: 500;
+    font-size: 26px; letter-spacing: -.01em; text-transform: none;
+    color: var(--accent); margin-bottom: 14px; line-height: 1;
+  }
   .price-card.featured .tier { color: var(--accent-soft); }
   .price-card .price { font-family: var(--display); font-size: 44px; font-weight: 400; line-height: 1; letter-spacing: -.03em; margin-bottom: 4px; }
   .price-card .price sub { font-family: var(--sans); font-size: 12px; color: var(--ink-faint); font-weight: 400; }
