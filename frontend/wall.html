@@ -794,24 +794,29 @@
     allUploads = merged;
 
     const slideable = merged.filter(u => !u.is_video_message);
+    const prevCount = items.length;
+    items = slideable;
     const newOnes   = slideable.filter(u => !knownIds.has(u.id));
 
     if (newOnes.length > 0) {
       newOnes.forEach(u => knownIds.add(u.id));
       if (isRunning) {
-        items = slideable;
         const name = newOnes[0].uploader_name || 'Panauhin';
         showToast(`✨ ${name} just shared a moment!`);
         spawnEmoji(3 + Math.floor(Math.random() * 2));
+        goTo(0);
       }
     }
 
     if (!isRunning && slideable.length > 0) {
-      items = slideable;
       slideable.forEach(u => knownIds.add(u.id));
       emptyState.classList.remove('visible');
       startSlideshow();
       scheduleRandomEmoji();
+    } else if (isRunning && prevCount === 0 && slideable.length > 0) {
+      slideable.forEach(u => knownIds.add(u.id));
+      emptyState.classList.remove('visible');
+      startSlideshow();
     }
 
     updateTicker(merged);

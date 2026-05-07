@@ -126,11 +126,12 @@ export default async function uploadRoutes(fastify) {
     }
     const filename       = `${randomUUID()}${fileExt}`;
     const fileUrl        = await fastify.uploadFile(fileBuffer, filename, fileMime);
+    const isApproved     = event.auto_approve !== false;
 
     const { rows } = await fastify.db.query(
       `INSERT INTO uploads
-         (event_id, file_url, file_type, uploader_name, message, is_video_message)
-       VALUES ($1, $2, $3, $4, $5, $6)
+         (event_id, file_url, file_type, uploader_name, message, is_video_message, is_approved)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
       [
         event.id,
@@ -139,6 +140,7 @@ export default async function uploadRoutes(fastify) {
         fields.uploader_name || null,
         fields.message       || null,
         isVideoMessage,
+        isApproved,
       ],
     );
 
