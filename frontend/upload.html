@@ -122,6 +122,32 @@ body { background: var(--paper); min-height: 100dvh; }
 
 /* ── Share mode tabs ─────────────────────────────────── */
 .share-tabs { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; margin-bottom: 16px; }
+
+/* Closed-state card — replaces the upload UI when the event's window ends */
+.closed-card {
+  background: rgba(255,255,255,.85);
+  border: 1px solid rgba(0,0,0,.06);
+  border-radius: 20px; padding: 36px 28px 28px;
+  text-align: center;
+  margin-bottom: 24px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.06);
+}
+.closed-icon { font-size: 44px; margin-bottom: 8px; line-height: 1; }
+.closed-h {
+  font-family: var(--display, 'Fraunces', serif); font-style: italic; font-weight: 500;
+  font-size: clamp(22px, 4.5vw, 28px); margin-bottom: 10px;
+}
+.closed-msg {
+  font-size: 14px; color: rgba(0,0,0,.6); line-height: 1.5;
+  max-width: 36ch; margin: 0 auto 18px;
+}
+.closed-link {
+  display: inline-block; padding: 10px 22px; border-radius: 999px;
+  background: var(--accent, #c45a3a); color: #fff;
+  font-size: 13px; letter-spacing: .04em; font-weight: 600;
+  text-decoration: none; transition: background .2s;
+}
+.closed-link:hover { background: var(--ink, #2a1a14); }
 .share-tab {
   background: #fff; border: 1.5px solid var(--line);
   border-radius: var(--r); padding: 14px 8px 12px;
@@ -372,6 +398,14 @@ body { background: var(--paper); min-height: 100dvh; }
     <div class="welcome" id="heroWelcome">&nbsp;</div>
   </div>
 
+  <!-- ── Closed state (shown when upload window has ended) ── -->
+  <div class="closed-card" id="closedCard" style="display:none;">
+    <div class="closed-icon">🌸</div>
+    <h2 class="closed-h">Salamat sa lahat ng nag-share!</h2>
+    <p class="closed-msg" id="closedMsg">The upload window for this event has ended. Maraming salamat sa pakikiisa!</p>
+    <a class="closed-link" id="closedWallLink" href="#">View the live wall →</a>
+  </div>
+
   <!-- ── Share mode tabs ────────────────────────────────── -->
   <div class="share-tabs">
     <div class="share-tab active" onclick="switchTab('gallery',this)">
@@ -532,6 +566,8 @@ body { background: var(--paper); min-height: 100dvh; }
             welcome: ev.welcome      || 'Salamat sa pagdating! Scan, share, and become part of the story.',
             cover:   ev.cover        || '',
             count:   ev.count        || 0,
+            locks:   data.locks  || null,
+            plan:    data.plan_info || null,
           };
         }
       } catch (e) {}
@@ -582,6 +618,28 @@ body { background: var(--paper); min-height: 100dvh; }
     document.getElementById('recentCount').textContent = `${ev.count} today`;
 
     document.getElementById('uploadHero').classList.remove('hero-loading');
+
+    // Phase 4: if the upload window has closed, hide the share UI and
+    // show a friendly "thanks for sharing" panel pointing to the wall.
+    const closed = ev.locks?.uploads_closed || ev.locks?.gallery_locked;
+    const closedCard = document.getElementById('closedCard');
+    const shareTabs  = document.querySelector('.share-tabs');
+    const galleryPanel = document.getElementById('panel-gallery');
+    const recordPanel  = document.getElementById('panel-record');
+    if (closed && closedCard) {
+      closedCard.style.display = 'block';
+      if (shareTabs)     shareTabs.style.display = 'none';
+      if (galleryPanel)  galleryPanel.style.display = 'none';
+      if (recordPanel)   recordPanel.style.display  = 'none';
+      const msg = document.getElementById('closedMsg');
+      if (ev.locks?.gallery_locked) {
+        msg.textContent = 'This event has been archived. Salamat sa pagsali!';
+      } else {
+        msg.textContent = 'The upload window for this event has ended. Maraming salamat sa pakikiisa!';
+      }
+      const wallLink = document.getElementById('closedWallLink');
+      if (wallLink && ev.slug) wallLink.href = `/wall/${ev.slug}`;
+    }
   }
 
   /* ── Name field ────────────────────────────────────── */

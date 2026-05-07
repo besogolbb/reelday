@@ -512,7 +512,19 @@
         : '';
       infoPlan.innerHTML = `<span style="font-family:var(--display);font-style:italic;color:var(--accent);">${star}${plan.name}</span>${upgrade}`;
     }
-    if (infoExpires && event.wall_expires_at) infoExpires.textContent = formatDate(event.wall_expires_at);
+    // Wall/gallery expiry — prefer the new gallery_expires_at, fall back to legacy wall_expires_at
+    const expiryDate = event.gallery_expires_at || event.wall_expires_at;
+    if (infoExpires && expiryDate) {
+      const ms   = new Date(expiryDate) - Date.now();
+      const days = Math.ceil(ms / 86400000);
+      if (ms <= 0) {
+        infoExpires.innerHTML = `<span style="color:#c44a3a;">Archived</span>`;
+      } else if (days <= 7) {
+        infoExpires.innerHTML = `${formatDate(expiryDate)} <span style="color:#c44a3a;font-weight:600;">· ${days}d left</span>`;
+      } else {
+        infoExpires.textContent = formatDate(expiryDate);
+      }
+    }
 
     // Approve status
     const approveStatus = $('approve-status');
@@ -575,7 +587,13 @@
   }
 
   function maybeShowWindowLock(event, plan, banner) {
-    if (event.upload_window_ends_at && new Date(event.upload_window_ends_at) < new Date()) {
+    const now = new Date();
+    if (event.gallery_expires_at && new Date(event.gallery_expires_at) < now) {
+      banner.classList.remove('hidden');
+      $('lb-title').textContent = 'Gallery archived';
+      $('lb-msg').textContent   =
+        `The ${plan.name} plan's gallery retention for this event ended on ${formatDate(event.gallery_expires_at)}. Photos remain visible — upgrade to keep accepting new ones and extend retention.`;
+    } else if (event.upload_window_ends_at && new Date(event.upload_window_ends_at) < now) {
       banner.classList.remove('hidden');
       $('lb-title').textContent = 'Upload window closed';
       $('lb-msg').textContent   =

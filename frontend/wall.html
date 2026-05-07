@@ -901,12 +901,17 @@
     // Try the API for event metadata + uploads
     let apiEvent = null;
     let apiUploads = [];
+    let apiLocks = null;
     try {
       const [eventRes, uploadsRes] = await Promise.all([
         fetch(`/api/events/${slug}`),
         fetch(`/api/uploads/${slug}`),
       ]);
-      if (eventRes.ok)   apiEvent   = (await eventRes.json()).event;
+      if (eventRes.ok) {
+        const ej = await eventRes.json();
+        apiEvent = ej.event;
+        apiLocks = ej.locks || null;
+      }
       if (uploadsRes.ok) apiUploads = (await uploadsRes.json()).uploads || [];
     } catch { /* offline / demo mode — fall back to localStorage */ }
 
@@ -919,6 +924,21 @@
       event_date:   qs.get('date')  || '',
       venue:        qs.get('venue') || '',
     };
+
+    // Phase 4: archived badge if the gallery expiry has passed
+    if (apiLocks?.gallery_locked) {
+      const badge = document.createElement('div');
+      badge.style.cssText =
+        'position:fixed;top:18px;right:18px;z-index:11;' +
+        'padding:6px 14px;border-radius:999px;' +
+        'background:rgba(0,0,0,.55);backdrop-filter:blur(8px);' +
+        '-webkit-backdrop-filter:blur(8px);' +
+        'font-family:var(--mono);font-size:11px;letter-spacing:.2em;' +
+        'text-transform:uppercase;color:rgba(255,255,255,.85);' +
+        'border:1px solid rgba(255,255,255,.18);';
+      badge.textContent = '◆ Archived';
+      document.body.appendChild(badge);
+    }
 
     // Apply event theme
     const themeKey = Object.keys(THEME_META).includes(eventData.event_type) ? eventData.event_type : 'wedding';
