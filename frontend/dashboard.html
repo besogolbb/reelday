@@ -124,6 +124,14 @@
       padding: 8px;
     }
     .photo-grid > div:hover .actions-overlay { opacity: 1; }
+    .photo-grid > div img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
     .photo-grid > div .uploader {
       color: #fff; font-family: var(--display); font-style: italic;
       font-size: 12px;
@@ -492,6 +500,31 @@
     setTimeout(() => toast.classList.remove('show'), 3000);
   }
 
+  function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, ch => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    }[ch]));
+  }
+
+  function escapeAttr(value) {
+    return escapeHtml(value).replace(/`/g, '&#96;');
+  }
+
+  function uploadMediaUrl(upload, isVideo) {
+    if (!upload) return null;
+
+    if (!isVideo && upload.thumb) return upload.thumb;
+    if (upload.id && upload.file_url && !String(upload.file_url).startsWith('data:')) {
+      return `/api/uploads/file/${encodeURIComponent(upload.id)}`;
+    }
+
+    return upload.thumbnail_url || upload.file_url || null;
+  }
+
   function applyTheme(eventType) {
     const meta = THEME_MAP[eventType] || THEME_MAP.wedding;
     document.body.setAttribute('data-theme', meta.theme);
@@ -729,28 +762,30 @@
     photoGrid.innerHTML = filteredUploads.map((u, i) => {
       const cls    = placeholderClasses[i % placeholderClasses.length];
       const label  = u.uploader_name || 'Guest';
+      const safeLabel = escapeHtml(label);
       const actionBtn = getActionButton(u);
 
-      // Prefer the small thumb (data URL saved during upload) → R2 thumbnail_url
-      // → full file_url. Videos: render the file as a <video>.
+      // Prefer local thumbnails, otherwise stream server files through the app.
+      // This avoids blank tiles when R2 is private or R2_PUBLIC_URL is not public.
       const isVideo = u.file_type === 'video';
-      const imgSrc  = u.thumb || u.thumbnail_url || (!isVideo ? u.file_url : null);
+      const mediaSrc = uploadMediaUrl(u, isVideo);
 
       const styleParts = ['position:relative', 'overflow:hidden'];
       let videoEl = '';
-      if (isVideo && u.file_url) {
-        videoEl = `<video src="${u.file_url}" muted playsinline preload="metadata"
+      let imageEl = '';
+      if (isVideo && mediaSrc) {
+        videoEl = `<video src="${escapeAttr(mediaSrc)}" muted playsinline preload="metadata"
                   style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></video>`;
-      } else if (imgSrc) {
-        styleParts.push(`background-image:url('${imgSrc}')`, 'background-size:cover', 'background-position:center');
+      } else if (mediaSrc) {
+        imageEl = `<img src="${escapeAttr(mediaSrc)}" alt="${escapeAttr(label)}" loading="lazy" onerror="this.remove()">`;
       }
 
       const msgPreview = u.message
-        ? `<div style="font-family:var(--display);font-style:italic;font-size:12px;color:var(--ink-soft);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px;">"${u.message}"</div>`
+        ? `<div style="font-family:var(--display);font-style:italic;font-size:12px;color:var(--ink-soft);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px;">"${escapeHtml(u.message)}"</div>`
         : '';
 
-      const showLabelFallback = !imgSrc && !isVideo;
-      return `<div class="placeholder ${cls}" style="${styleParts.join(';')};">${videoEl}${showLabelFallback ? label : ''}<div class="actions-overlay"><span class="uploader">${label}</span>${msgPreview}${actionBtn}</div></div>`;
+      const showLabelFallback = !mediaSrc && !isVideo;
+      return `<div class="placeholder ${cls}" style="${styleParts.join(';')};">${videoEl}${imageEl}${showLabelFallback ? safeLabel : ''}<div class="actions-overlay"><span class="uploader">${safeLabel}</span>${msgPreview}${actionBtn}</div></div>`;
     }).join('');
   }
 

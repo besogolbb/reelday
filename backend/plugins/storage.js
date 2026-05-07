@@ -1,5 +1,5 @@
 import fp from 'fastify-plugin';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 
 async function storagePlugin(fastify) {
   const s3 = new S3Client({
@@ -24,8 +24,16 @@ async function storagePlugin(fastify) {
     return `${process.env.R2_PUBLIC_URL}/${key}`;
   }
 
+  async function getFile(key) {
+    return s3.send(new GetObjectCommand({
+      Bucket: process.env.R2_BUCKET_NAME,
+      Key:    key,
+    }));
+  }
+
   fastify.decorate('storage', s3);
   fastify.decorate('uploadFile', uploadFile);
+  fastify.decorate('getFile', getFile);
 }
 
 export default fp(storagePlugin, { name: 'storage' });

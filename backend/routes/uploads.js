@@ -3,6 +3,18 @@ import { randomUUID } from 'crypto';
 import { resolvePlan } from '../lib/plans.js';
 
 export default async function uploadRoutes(fastify) {
+  function extractStorageKey(fileUrl) {
+    if (!fileUrl) return null;
+
+    try {
+      const parsed = new URL(fileUrl);
+      return decodeURIComponent(parsed.pathname.replace(/^\/+/, ''));
+    } catch {
+      const match = String(fileUrl).match(/(?:^|\/)(uploads\/.+)$/);
+      return match ? decodeURIComponent(match[1]) : null;
+    }
+  }
+
   // POST /api/uploads/:slug — upload a photo or video
   fastify.post('/uploads/:slug', async (request, reply) => {
     const { slug } = request.params;
@@ -134,6 +146,40 @@ export default async function uploadRoutes(fastify) {
       upload:  rows[0],
       message: 'Salamat! Na-share mo na ang iyong momento.',
     });
+  });
+
+  // GET /api/uploads/file/:id — stream an uploaded file through this app.
+  // This keeps rendering working even when the R2 bucket is private or the
+  // configured R2 public URL is not browser-readable.
+  fastify.get('/uploads/file/:id', async (request, reply) => {
+    const { id } = request.params;
+
+    const { rows } = await fastify.db.query(
+      'SELECT file_url, file_type FROM uploads WHERE id = $1',
+      [id],
+    );
+
+    if (!rows.length) {
+      return reply.status(404).send({ error: true, message: 'Upload not found' });
+    }
+
+    const key = extractStorageKey(rows[0].file_url);
+    if (!key) {
+      return reply.status(404).send({ error: true, message: 'Upload file key not found' });
+    }
+
+    try {
+      const object = await fastify.getFile(key);
+
+      reply
+        .header('Content-Type', object.ContentType || (rows[0].file_type === 'video' ? 'video/mp4' : 'image/jpeg'))
+        .header('Cache-Control', 'public, max-age=31536000, immutable');
+
+      return reply.send(object.Body);
+    } catch (err) {
+      request.log.warn({ err, upload_id: id, key }, 'failed to stream uploaded file');
+      return reply.status(404).send({ error: true, message: 'Upload file not found' });
+    }
   });
 
   // GET /api/uploads/:slug — list all uploads for an event
