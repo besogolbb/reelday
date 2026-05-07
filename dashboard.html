@@ -128,7 +128,7 @@
   .modal-backdrop.open { display: flex; }
   .modal { background: var(--paper); border-radius: var(--r-xl); padding: 36px; max-width: 480px; width: 90%; box-shadow: var(--shadow-lift); }
   .modal h3 { font-family: var(--display); font-size: 24px; font-weight: 500; margin-bottom: 8px; }
-  .modal .modal-photo { width: 100%; aspect-ratio: 1; border-radius: var(--r); margin: 16px 0; }
+  .modal .modal-photo { width: 100%; aspect-ratio: 1; border-radius: var(--r); margin: 16px 0; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; }
   .modal .modal-meta { font-family: var(--mono); font-size: 11px; color: var(--ink-soft); letter-spacing: .14em; text-transform: uppercase; margin-bottom: 24px; }
   .modal .modal-actions { display: flex; gap: 10px; }
   .modal .btn-approve { background: #2d7a4a; color: #fff; flex: 1; }
@@ -205,9 +205,9 @@
       <div class="tab-row">
         <span class="tab active" data-tab="all"       onclick="switchTab(this)">All · 847</span>
         <span class="tab"        data-tab="pending"   onclick="switchTab(this)">Pending · 3</span>
-        <span class="tab"        data-tab="photos"    onclick="switchTab(this)">Photos · 844</span>
-        <span class="tab"        data-tab="videos"    onclick="switchTab(this)">Videos · 42</span>
-        <span class="tab"        data-tab="messages"  onclick="switchTab(this)">Video Messages · 15</span>
+        <span class="tab"        data-tab="photos"    onclick="switchTab(this)">PHOTO stream · 844</span>
+        <span class="tab"        data-tab="videos"    onclick="switchTab(this)">Video upload · 42</span>
+        <span class="tab"        data-tab="messages"  onclick="switchTab(this)">Video message · 15</span>
         <span class="tab"        data-tab="featured"  onclick="switchTab(this)">Featured · 12</span>
         <span class="tab"        data-tab="hidden"    onclick="switchTab(this)">Hidden · 0</span>
       </div>
@@ -327,6 +327,41 @@
     currentPhotoType = type;
     document.getElementById('modalTitle').textContent = title;
     document.getElementById('modalMeta').textContent  = 'Uploaded by ' + uploader;
+
+    const container = document.getElementById('modalPhoto');
+    container.innerHTML = ''; // Clear previous content
+    container.className = 'modal-photo'; // Reset classes
+
+    // For demo placeholders (starts with uuid-), show colored box.
+    // For real IDs, load the media via the streaming API.
+    const isPlaceholder = id.startsWith('uuid-');
+
+    if (type === 'video') {
+      if (isPlaceholder) {
+        container.classList.add('placeholder', 'placeholder--clay');
+        container.innerHTML = '<span style="color:#fff; font-family:var(--mono); font-size:11px; opacity:0.6;">VIDEO PREVIEW</span>';
+      } else {
+        const video = document.createElement('video');
+        video.src = `/api/uploads/file/${id}`;
+        video.controls = true;
+        video.autoplay = true;
+        video.style.maxWidth = '100%';
+        video.style.maxHeight = '100%';
+        container.appendChild(video);
+      }
+    } else {
+      if (isPlaceholder) {
+        container.classList.add('placeholder', 'placeholder--coral');
+      } else {
+        const img = document.createElement('img');
+        img.src = `/api/uploads/file/${id}`;
+        img.style.maxWidth = '100%';
+        img.style.maxHeight = '100%';
+        img.style.objectFit = 'contain';
+        container.appendChild(img);
+      }
+    }
+
     document.getElementById('modalBackdrop').classList.add('open');
 
     // Only show "Flag as Video Message" for videos
