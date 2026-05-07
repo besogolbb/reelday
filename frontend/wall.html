@@ -885,7 +885,9 @@
     const merged = mergeUploads(apiUploads);
     allUploads = merged;
 
-    const slideable = merged.filter(u => !u.is_video_message);
+    // Include every approved upload — photos, picked videos, and recorded
+    // video messages. The slide engine knows how to play videos.
+    const slideable = merged;
     const prevCount = items.length;
     items = slideable;
     const newOnes   = slideable.filter(u => !knownIds.has(u.id));
@@ -1064,7 +1066,9 @@
     updateTicker(merged);
     await initQrBadge(slug);
 
-    const slideable = merged.filter(u => !u.is_video_message);
+    // Include every approved upload — photos, picked videos, and recorded
+    // video messages. The slide engine knows how to play videos.
+    const slideable = merged;
     slideable.forEach(u => knownIds.add(u.id));
     items = slideable;
 
