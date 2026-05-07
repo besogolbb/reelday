@@ -205,6 +205,9 @@
       <div class="tab-row">
         <span class="tab active" data-tab="all"       onclick="switchTab(this)">All · 847</span>
         <span class="tab"        data-tab="pending"   onclick="switchTab(this)">Pending · 3</span>
+        <span class="tab"        data-tab="photos"    onclick="switchTab(this)">Photos · 844</span>
+        <span class="tab"        data-tab="videos"    onclick="switchTab(this)">Videos · 42</span>
+        <span class="tab"        data-tab="messages"  onclick="switchTab(this)">Video Messages · 15</span>
         <span class="tab"        data-tab="featured"  onclick="switchTab(this)">Featured · 12</span>
         <span class="tab"        data-tab="hidden"    onclick="switchTab(this)">Hidden · 0</span>
       </div>
@@ -373,6 +376,18 @@
   async function toggleVideoMessage() {
     console.log('toggleVideoMessage called for ID:', currentPhotoId, 'Type:', currentPhotoType);
     try {
+      const item = document.querySelector(`.photo-item[data-id="${CSS.escape(currentPhotoId)}"]`);
+      const isPending = item && item.classList.contains('pending');
+
+      // If the video is currently pending, moving it to messages should also approve it
+      if (isPending) {
+        await fetch(`/api/uploads/${currentPhotoId}/approve`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ is_approved: true })
+        });
+      }
+
       // Using POST to match your observed network logs
       const response = await fetch(`/api/uploads/${currentPhotoId}/flag`, {
         method: 'POST',
@@ -383,12 +398,11 @@
       console.log('API response status:', response.status, 'ok:', response.ok, 'data:', responseData);
 
       if (response.ok) {
-        const item = document.querySelector(`.photo-item[data-id="${CSS.escape(currentPhotoId)}"]`);
         if (item) {
           console.log('Item found in DOM, removing:', item);
           
           // Update pending counter if the video was still in the 'pending' state
-          if (item.classList.contains('pending')) {
+          if (isPending) {
             const pendingEl = document.getElementById('statPending');
             if (pendingEl) {
               const count = parseInt(pendingEl.textContent, 10);
