@@ -134,6 +134,7 @@
   .modal .btn-approve { background: #2d7a4a; color: #fff; flex: 1; }
   .modal .btn-hide    { background: var(--paper-3); color: var(--ink); flex: 1; }
   .modal .btn-feature { background: var(--accent); color: #fff; flex: 1; }
+  .modal .btn-flag    { background: var(--paper-2); color: var(--ink); flex: 1; border: 1px solid var(--line); }
 
   @media (max-width: 900px) {
     .stats-row   { grid-template-columns: repeat(2,1fr); }
@@ -212,22 +213,22 @@
            GET /api/events/:id/photos?tab=all&page=1
            Render each as <img src="..."> replacing placeholders -->
       <div class="photo-grid" id="photoGrid">
-        <div class="photo-item placeholder placeholder--clay"   onclick="openPhoto('First dance','Tita Marivic')"><div class="overlay"><span class="uploader">Tita Marivic</span><button class="action-btn">Feature</button></div></div>
-        <div class="photo-item placeholder placeholder--ochre"  onclick="openPhoto('Garden','Kuya Mike')"><div class="overlay"><span class="uploader">Kuya Mike</span><button class="action-btn">Feature</button></div></div>
-        <div class="photo-item placeholder placeholder--coral"  onclick="openPhoto('Reception','Ate Karen')"><div class="overlay"><span class="uploader">Ate Karen</span><button class="action-btn">Feature</button></div></div>
-        <div class="photo-item placeholder placeholder--sage"   onclick="openPhoto('Lola','Kuya Vince')"><div class="overlay"><span class="uploader">Kuya Vince</span><button class="action-btn">Feature</button></div></div>
-        <div class="photo-item placeholder placeholder--paper"  style="color:var(--ink)" onclick="openPhoto('Bouquet','Tita Liza')"><div class="overlay"><span class="uploader">Tita Liza</span><button class="action-btn">Feature</button></div></div>
-        <div class="photo-item placeholder placeholder--clay"   onclick="openPhoto('Speech','JM')"><div class="overlay"><span class="uploader">JM</span><button class="action-btn">Feature</button></div></div>
-        <div class="photo-item placeholder placeholder--coral"  onclick="openPhoto('Ceremony','Andrea')"><div class="overlay"><span class="uploader">Andrea</span><button class="action-btn">Feature</button></div></div>
-        <div class="photo-item placeholder placeholder--ochre"  onclick="openPhoto('Toast','Tito Jun')"><div class="overlay"><span class="uploader">Tito Jun</span><button class="action-btn">Feature</button></div></div>
-        <div class="photo-item placeholder placeholder--sage"   onclick="openPhoto('Cousins','Tin')"><div class="overlay"><span class="uploader">Tin</span><button class="action-btn">Feature</button></div></div>
-        <div class="photo-item placeholder placeholder--ink"    onclick="openPhoto('Dance floor','Mark')"><div class="overlay"><span class="uploader">Mark</span><button class="action-btn">Feature</button></div></div>
-        <div class="photo-item placeholder placeholder--paper"  style="color:var(--ink)" onclick="openPhoto('Family','Pao')"><div class="overlay"><span class="uploader">Pao</span><button class="action-btn">Feature</button></div></div>
-        <div class="photo-item placeholder placeholder--clay pending" onclick="openPhoto('Cake','Tita Bing')"><div class="overlay"><span class="uploader">Tita Bing</span><button class="action-btn">Approve</button></div></div>
-        <div class="photo-item placeholder placeholder--coral"  onclick="openPhoto('Ring','Ate Len')"><div class="overlay"><span class="uploader">Ate Len</span><button class="action-btn">Feature</button></div></div>
-        <div class="photo-item placeholder placeholder--ochre"  onclick="openPhoto('Table','Kuya Rex')"><div class="overlay"><span class="uploader">Kuya Rex</span><button class="action-btn">Feature</button></div></div>
-        <div class="photo-item placeholder placeholder--sage"   onclick="openPhoto('Flowers','Dianne')"><div class="overlay"><span class="uploader">Dianne</span><button class="action-btn">Feature</button></div></div>
-        <div class="photo-item placeholder placeholder--clay"   onclick="openPhoto('Couple','Anon')"><div class="overlay"><span class="uploader">Anon</span><button class="action-btn">Feature</button></div></div>
+        <div class="photo-item placeholder placeholder--clay"   onclick="openPhoto('First dance','Tita Marivic', 'uuid-1', 'photo')"><div class="overlay"><span class="uploader">Tita Marivic</span><button class="action-btn">Feature</button></div></div>
+        <div class="photo-item placeholder placeholder--ochre"  onclick="openPhoto('Garden','Kuya Mike', 'uuid-2', 'photo')"><div class="overlay"><span class="uploader">Kuya Mike</span><button class="action-btn">Feature</button></div></div>
+        <div class="photo-item placeholder placeholder--coral"  onclick="openPhoto('Reception','Ate Karen', 'uuid-3', 'photo')"><div class="overlay"><span class="uploader">Ate Karen</span><button class="action-btn">Feature</button></div></div>
+        <div class="photo-item placeholder placeholder--sage"   onclick="openPhoto('Lola','Kuya Vince', 'uuid-4', 'photo')"><div class="overlay"><span class="uploader">Kuya Vince</span><button class="action-btn">Feature</button></div></div>
+        <div class="photo-item placeholder placeholder--paper"  style="color:var(--ink)" onclick="openPhoto('Bouquet','Tita Liza', 'uuid-5', 'photo')"><div class="overlay"><span class="uploader">Tita Liza</span><button class="action-btn">Feature</button></div></div>
+        <div class="photo-item placeholder placeholder--clay"   onclick="openPhoto('Speech','JM', 'uuid-6', 'video')"><div class="overlay"><span class="uploader">JM</span><button class="action-btn">Feature</button></div></div>
+        <div class="photo-item placeholder placeholder--coral"  onclick="openPhoto('Ceremony','Andrea', 'uuid-7', 'photo')"><div class="overlay"><span class="uploader">Andrea</span><button class="action-btn">Feature</button></div></div>
+        <div class="photo-item placeholder placeholder--ochre"  onclick="openPhoto('Toast','Tito Jun', 'uuid-8', 'photo')"><div class="overlay"><span class="uploader">Tito Jun</span><button class="action-btn">Feature</button></div></div>
+        <div class="photo-item placeholder placeholder--sage"   onclick="openPhoto('Cousins','Tin', 'uuid-9', 'photo')"><div class="overlay"><span class="uploader">Tin</span><button class="action-btn">Feature</button></div></div>
+        <div class="photo-item placeholder placeholder--ink"    onclick="openPhoto('Dance floor','Mark', 'uuid-10', 'photo')"><div class="overlay"><span class="uploader">Mark</span><button class="action-btn">Feature</button></div></div>
+        <div class="photo-item placeholder placeholder--paper"  style="color:var(--ink)" onclick="openPhoto('Family','Pao', 'uuid-11', 'photo')"><div class="overlay"><span class="uploader">Pao</span><button class="action-btn">Feature</button></div></div>
+        <div class="photo-item placeholder placeholder--clay pending" onclick="openPhoto('Cake','Tita Bing', 'uuid-12', 'video')"><div class="overlay"><span class="uploader">Tita Bing</span><button class="action-btn">Approve</button></div></div>
+        <div class="photo-item placeholder placeholder--coral"  onclick="openPhoto('Ring','Ate Len', 'uuid-13', 'photo')"><div class="overlay"><span class="uploader">Ate Len</span><button class="action-btn">Feature</button></div></div>
+        <div class="photo-item placeholder placeholder--ochre"  onclick="openPhoto('Table','Kuya Rex', 'uuid-14', 'photo')"><div class="overlay"><span class="uploader">Kuya Rex</span><button class="action-btn">Feature</button></div></div>
+        <div class="photo-item placeholder placeholder--sage"   onclick="openPhoto('Flowers','Dianne', 'uuid-15', 'photo')"><div class="overlay"><span class="uploader">Dianne</span><button class="action-btn">Feature</button></div></div>
+        <div class="photo-item placeholder placeholder--clay"   onclick="openPhoto('Couple','Anon', 'uuid-16', 'photo')"><div class="overlay"><span class="uploader">Anon</span><button class="action-btn">Feature</button></div></div>
       </div>
       <div class="load-more">
         <!-- TODO: load next page from API -->
@@ -279,9 +280,10 @@
     <!-- TODO: Replace with actual <img src="..."> from API -->
     <div class="modal-photo placeholder placeholder--coral" id="modalPhoto"></div>
     <div class="modal-actions">
-      <button class="btn btn-approve" onclick="alert('TODO: approve photo via API'); closeModal()">✓ Approve</button>
-      <button class="btn btn-feature" onclick="alert('TODO: feature photo via API'); closeModal()">★ Feature</button>
-      <button class="btn btn-hide"    onclick="alert('TODO: hide photo via API'); closeModal()">Hide</button>
+      <button class="btn btn-approve" onclick="moderationAction('approved')">✓ Approve</button>
+      <button class="btn btn-feature" onclick="moderationAction('featured')">★ Feature</button>
+      <button class="btn btn-hide"    onclick="moderationAction('hidden')">Hide</button>
+      <button class="btn btn-flag"    id="modalFlagBtn" style="display:none;" onclick="toggleVideoMessage()">Move to Video Message</button>
     </div>
   </div>
 </div>
@@ -295,6 +297,8 @@
        - Photo stream:  GET /api/events/:id/photos?tab=&page=
        - Real-time count: WebSocket /ws/events/:id
   ════════════════════════════════════════════════════════ */
+  let currentPhotoId = null;
+  let currentPhotoType = null;
   let autoApprove = true;
 
   /* ── Tab switching ──────────────────────────────────────── */
@@ -315,11 +319,31 @@
   }
 
   /* ── Photo modal ────────────────────────────────────────── */
-  function openPhoto(title, uploader) {
+  function openPhoto(title, uploader, id, type) {
+    currentPhotoId = id;
+    currentPhotoType = type;
     document.getElementById('modalTitle').textContent = title;
     document.getElementById('modalMeta').textContent  = 'Uploaded by ' + uploader;
     document.getElementById('modalBackdrop').classList.add('open');
+
+    // Only show "Flag as Video Message" for videos
+    const flagBtn = document.getElementById('modalFlagBtn');
+    flagBtn.style.display = (type === 'video') ? 'block' : 'none';
   }
+
+  function moderationAction(status) {
+    // TODO: PATCH /api/uploads/:id/approve { is_approved: status === 'approved' }
+    alert(`TODO: Moderation action '${status}' for ${currentPhotoId} via API`);
+    closeModal();
+  }
+
+  function toggleVideoMessage() {
+    // PATCH /api/uploads/:id/flag { is_video_message: true }
+    alert(`TODO: Flagging ${currentPhotoId} as Video Message via API`);
+    closeModal();
+    // After a real API call, you would likely refresh the grid to show the item "moving"
+  }
+
   function closeModal(e) {
     if (!e || e.target === document.getElementById('modalBackdrop')) {
       document.getElementById('modalBackdrop').classList.remove('open');
