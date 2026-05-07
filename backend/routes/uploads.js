@@ -223,9 +223,13 @@ export default async function uploadRoutes(fastify) {
     }
   });
 
-  // GET /api/uploads/:slug — list all uploads for an event
+  // GET /api/uploads/:slug — list all uploads for an event.
+  // Pass ?include_pending=1 to also return rows where is_approved=false
+  // (used by the dashboard so the host can review pending videos).
   fastify.get('/uploads/:slug', async (request, reply) => {
     const { slug } = request.params;
+    const includePending = request.query?.include_pending === '1' ||
+                           request.query?.include_pending === 'true';
 
     const { rows: eventRows } = await fastify.db.query(
       'SELECT * FROM events WHERE slug = $1 AND is_active = true',
@@ -240,8 +244,9 @@ export default async function uploadRoutes(fastify) {
 
     const { rows: uploads } = await fastify.db.query(
       `SELECT * FROM uploads
-       WHERE event_id = $1 AND is_approved = true
-       ORDER BY created_at DESC`,
+        WHERE event_id = $1
+          ${includePending ? '' : 'AND is_approved = true'}
+        ORDER BY created_at DESC`,
       [event.id],
     );
 

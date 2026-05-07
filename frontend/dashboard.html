@@ -1543,10 +1543,11 @@
       showToast(`Photo ${action}d successfully!`);
 
       // Refresh uploads after action
-      const uploadsRes = await fetch(`/api/uploads/${slug}`);
+      const uploadsRes = await fetch(`/api/uploads/${slug}?include_pending=1`);
       const { uploads } = await uploadsRes.json();
-      renderStats(uploads);
-      renderGallery(uploads);
+      const normalized = normalizeUploads(uploads);
+      renderStats(normalized);
+      renderGallery(normalized);
     } catch (err) {
       showToast('Failed to perform action. Please try again.');
     }
@@ -1736,12 +1737,32 @@
     }
   }
 
+  // Mutate the matching localStorage entry too (the host may have uploaded
+  // this video themselves, in which case it lives in localStorage and
+  // would otherwise overwrite our in-memory patch on the next merge).
+  function patchLocalStorageUpload(uploadId, patch) {
+    if (!slug) return;
+    const key = `reelday_uploads_${slug}`;
+    try {
+      const stored = JSON.parse(localStorage.getItem(key) || '[]');
+      let touched = false;
+      stored.forEach(u => {
+        if (String(u.id) === String(uploadId)) { Object.assign(u, patch); touched = true; }
+      });
+      if (touched) localStorage.setItem(key, JSON.stringify(stored));
+    } catch { /* corrupt localStorage — ignore */ }
+  }
+
   function applyLocalApproval(uploadId, isApproved) {
     const updated = (allUploads || []).map(u =>
       String(u.id) === String(uploadId)
         ? { ...u, is_approved: isApproved, status: isApproved ? 'approved' : 'pending' }
         : u,
     );
+    patchLocalStorageUpload(uploadId, {
+      is_approved: isApproved,
+      status:      isApproved ? 'approved' : 'pending',
+    });
     renderStats(updated);
     renderGallery(updated);
   }
@@ -1800,14 +1821,15 @@
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Move failed');
 
-      // Patch the in-memory upload so the grid moves the tile right away,
-      // even if the next GET /api/uploads/:slug is served from a stale
-      // edge cache.
+      // Patch both the in-memory list and any localStorage entry so the
+      // grid moves the tile right away, even when the upload only lives
+      // in localStorage (host self-upload, pre-include_pending API).
       const updated = (allUploads || []).map(u =>
         String(u.id) === String(movedId)
           ? { ...u, is_video_message: targetFlag }
           : u,
       );
+      patchLocalStorageUpload(movedId, { is_video_message: targetFlag });
       renderStats(updated);
       renderGallery(updated);
 
@@ -1872,7 +1894,7 @@
     try {
       const [eventRes, uploadsRes, qrRes] = await Promise.all([
         fetch(`/api/events/${slug}`),
-        fetch(`/api/uploads/${slug}`),
+        fetch(`/api/uploads/${slug}?include_pending=1`),
         fetch(`/api/events/${slug}/qr`),
       ]);
 
@@ -1937,8 +1959,10 @@
       // Bypass any HTTP/edge caching so flag toggles (approve / move) show
       // up the moment the host triggers a refresh. cache:'no-store' covers
       // the browser; appending a timestamp defeats CDN/edge caches that
-      // ignore that header.
-      const res = await fetch(`/api/uploads/${slug}?t=${Date.now()}`, { cache: 'no-store' });
+      // ignore that header. include_pending pulls unapproved uploads too
+      // so the dashboard can see the Pending tab without relying on the
+      // host's localStorage copy.
+      const res = await fetch(`/api/uploads/${slug}?include_pending=1&t=${Date.now()}`, { cache: 'no-store' });
       if (!res.ok) throw new Error('api down');
       const { uploads } = await res.json();
       const localUploads = readLocalUploads();
