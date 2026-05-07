@@ -67,7 +67,7 @@
     .stats {
       max-width: 1200px; margin: -48px auto 0;
       padding: 0 28px;
-      display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
       position: relative; z-index: 5;
     }
     .stat {
@@ -167,16 +167,60 @@
     .qr-card .url { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; color: var(--ink-soft); margin-bottom: 16px; word-break: break-all; }
     .actions-stack { display: grid; gap: 8px; }
 
-    /* ── Info card ────────────────────────────────────────── */
-    .info-card {
-      background: var(--paper-2); border: 1px solid var(--line);
-      border-radius: var(--r-lg); padding: 24px; margin-top: 16px;
+    /* ── Info hero (promoted from sidebar to a horizontal strip) ─── */
+    .info-hero {
+      max-width: 1200px;
+      margin: 32px auto 0;
+      padding: 0 28px;
     }
-    .info-card h3 { font-family: var(--display); font-size: 18px; font-weight: 500; margin-bottom: 12px; color: var(--ink); }
-    .info-card .row { display: flex; justify-content: space-between; padding: 8px 0; border-top: 1px solid var(--line); font-size: 14px; }
-    .info-card .row:first-of-type { border-top: none; padding-top: 0; }
-    .info-card .row span:first-child { color: var(--ink-soft); }
-    .info-card .row span:last-child { font-weight: 500; color: var(--ink); }
+    .info-card {
+      background: linear-gradient(135deg, #fff 0%, var(--paper-2) 100%);
+      border: 1px solid var(--line);
+      border-radius: var(--r-lg);
+      padding: 24px 28px;
+      box-shadow: var(--shadow-soft);
+      display: flex; flex-wrap: wrap; align-items: center;
+      gap: 28px;
+    }
+    .info-card h3 {
+      flex: 0 0 auto;
+      font-family: var(--display); font-style: italic;
+      font-size: 22px; font-weight: 500; color: var(--ink);
+      letter-spacing: -.01em; margin: 0;
+      padding-right: 24px; border-right: 1px solid var(--line);
+    }
+    .info-card .row {
+      flex: 1 1 120px; min-width: 0;
+      display: flex; flex-direction: column; gap: 4px;
+      padding: 0; border: none; font-size: 14px;
+    }
+    .info-card .row span:first-child {
+      font-family: var(--mono); font-size: 10px;
+      letter-spacing: .16em; text-transform: uppercase;
+      color: var(--ink-soft);
+    }
+    .info-card .row span:last-child { font-weight: 600; color: var(--ink); font-size: 15px; }
+
+    /* Quota meter slot — only visible on plans that have a cap */
+    .info-card .quota {
+      flex: 1 1 220px; margin-top: 0; padding-top: 0;
+      border-top: none; padding-left: 24px;
+      border-left: 1px solid var(--line);
+    }
+
+    @media (max-width: 720px) {
+      .info-card { gap: 16px; }
+      .info-card h3 {
+        flex: 1 1 100%;
+        padding-right: 0; padding-bottom: 12px;
+        border-right: none; border-bottom: 1px solid var(--line);
+      }
+      .info-card .quota {
+        flex: 1 1 100%;
+        padding-left: 0; padding-top: 16px;
+        border-left: none; border-top: 1px solid var(--line);
+      }
+    }
 
     /* ── Quota meter ──────────────────────────────────────── */
     .quota {
@@ -299,10 +343,25 @@
     <div class="num"><em id="stat-pending">0</em></div>
     <div class="delta">Awaiting approval</div>
   </div>
-  <div class="stat">
-    <div class="lbl">Storage used</div>
-    <div class="num"><em id="stat-storage">0</em>GB</div>
-    <div class="delta" style="color:var(--ink-soft);">of unlimited</div>
+</div>
+
+<!-- ── Event info (promoted hero strip) ───────────────────── -->
+<div class="info-hero" id="info-hero" style="display:none">
+  <div class="info-card">
+    <h3>Event info</h3>
+    <div class="row"><span>Type</span><span id="info-type">—</span></div>
+    <div class="row"><span>Plan</span><span id="info-plan">—</span></div>
+    <div class="row"><span>Wall expires</span><span id="info-expires">—</span></div>
+
+    <!-- upload quota meter (hidden on plans without a cap) -->
+    <div class="quota" id="quota-block" style="display:none;">
+      <div class="quota-row">
+        <span>Uploads used</span>
+        <span class="quota-num"><em id="quota-used">0</em> / <span id="quota-limit">50</span></span>
+      </div>
+      <div class="quota-bar"><div class="fill" id="quota-fill" style="width:0%"></div></div>
+      <div class="quota-hint" id="quota-hint"></div>
+    </div>
   </div>
 </div>
 
@@ -358,23 +417,6 @@
       </div>
     </div>
 
-    <div class="info-card">
-      <h3>Event info</h3>
-      <div class="row"><span>Type</span><span id="info-type">—</span></div>
-      <div class="row"><span>Plan</span><span id="info-plan">—</span></div>
-      <div class="row"><span>Wall expires</span><span id="info-expires">—</span></div>
-      <div class="row"><span>Archive</span><span>30 days</span></div>
-
-      <!-- Phase 2: upload quota meter (hidden when plan is unlimited) -->
-      <div class="quota" id="quota-block" style="display:none;">
-        <div class="quota-row">
-          <span>Uploads used</span>
-          <span class="quota-num"><em id="quota-used">0</em> / <span id="quota-limit">50</span></span>
-        </div>
-        <div class="quota-bar"><div class="fill" id="quota-fill" style="width:0%"></div></div>
-        <div class="quota-hint" id="quota-hint"></div>
-      </div>
-    </div>
   </div>
 
 </div>
@@ -768,6 +810,7 @@
     pageLoading.style.display = 'none';
     dashHeader.style.display  = 'block';
     document.getElementById('stats-row').style.display = 'grid';
+    document.getElementById('info-hero').style.display  = 'block';
     dashMain.style.display    = 'grid';
   }
 
