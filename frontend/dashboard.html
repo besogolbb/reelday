@@ -602,6 +602,13 @@
       color: var(--dash-green);
     }
     .vmsg-status.error { color: var(--accent-deep); }
+
+    /* Burst controls in the panel-head */
+    .message-burst-controls { display: inline-flex; gap: 8px; align-items: center; }
+    .message-burst-controls .btn {
+      font-size: 12px; padding: 8px 14px;
+      white-space: nowrap;
+    }
     .mini-actions { display: grid; gap: 10px; margin-top: 14px; }
     .mini-note { font-size: 13px; color: var(--dash-muted); line-height: 1.5; margin-top: 10px; }
 
@@ -866,7 +873,10 @@
               Photo stream
             </button>
             <button type="button" class="stream-tab" data-stream="video" role="tab" aria-selected="false">
-              Video stream
+              Video upload
+            </button>
+            <button type="button" class="stream-tab" data-stream="message" role="tab" aria-selected="false">
+              Video messages
             </button>
           </div>
           <p id="stream-sub">Recent guest uploads appear here for quick review and featuring.</p>
@@ -878,6 +888,14 @@
           <span class="approve-toggle-track"><span class="approve-toggle-thumb"></span></span>
           <span class="approve-toggle-text">Auto-approve · OFF</span>
         </button>
+        <div class="message-burst-controls" id="message-burst-controls" style="display:none">
+          <button type="button" class="btn btn-accent vmsg-play" id="btn-vmsg-play-all-tab">
+            ▶ Play all on wall
+          </button>
+          <button type="button" class="btn btn-ghost vmsg-stop" id="btn-vmsg-stop-tab">
+            Stop
+          </button>
+        </div>
       </div>
       <div class="tab-row" id="tab-row">
         <span class="tab active" data-tab="all">All · <span id="tab-all-count">0</span></span>
@@ -927,23 +945,6 @@
       </div>
     </div>
 
-    <div class="mini-card vmsg-card">
-      <h3>Video messages</h3>
-      <p class="vmsg-sub">Pause photos and play recorded messages on the live wall.</p>
-      <div class="vmsg-list" id="vmsg-list">
-        <div class="vmsg-empty">No video messages yet.</div>
-      </div>
-      <div class="vmsg-actions">
-        <button type="button" class="btn btn-accent vmsg-play" id="btn-vmsg-play-all">
-          ▶ Play all on wall
-        </button>
-        <button type="button" class="btn btn-ghost vmsg-stop" id="btn-vmsg-stop">
-          Stop
-        </button>
-      </div>
-      <div class="vmsg-status" id="vmsg-status"></div>
-    </div>
-
     <div class="mini-card">
       <h3>Quick view</h3>
       <div class="mini-list">
@@ -980,6 +981,7 @@
     </div>
     <div class="preview-modal-actions">
       <button type="button" class="btn-approve" id="preview-modal-approve">Approve · publish to wall</button>
+      <button type="button" id="preview-modal-move">Move to Video messages</button>
       <button type="button" class="btn-hide"    id="preview-modal-hide">Hide</button>
       <button type="button" id="preview-modal-close">Close</button>
     </div>
@@ -1034,7 +1036,7 @@
   let allUploads = [];
   let currentDashEvent = null;
   let currentTab    = 'all';
-  let currentStream = 'photo';   // 'photo' | 'video'
+  let currentStream = 'photo';   // 'photo' | 'video' | 'message'
 
   // API uploads carry is_approved (boolean); the UI uses u.status. Map server
   // truth to the local model so the existing tab pipeline works for both.
@@ -1052,7 +1054,13 @@
     return false;
   }
   function filterByStream(uploads) {
-    return uploads.filter(u => currentStream === 'video' ? isVideoUpload(u) : !isVideoUpload(u));
+    return uploads.filter(u => {
+      const v = isVideoUpload(u);
+      if (currentStream === 'photo')   return !v;
+      if (currentStream === 'video')   return  v && u.is_video_message !== true;
+      if (currentStream === 'message') return  v && u.is_video_message === true;
+      return true;
+    });
   }
 
   // ── DOM refs ──────────────────────────────────────────
@@ -1220,63 +1228,20 @@
     }
   }
 
-  // ── Video messages card (push burst to the wall) ─────
-  function isVideoMessage(u) {
-    return u?.is_video_message === true ||
-           (isVideoUpload(u) && u?.is_video_message !== false && (u?.message || '').length > 0);
-  }
-  // Default to ONLY recorded video messages (is_video_message=true).
-  // Falls back to any video if the host has nothing strictly tagged.
+  // ── Video messages burst (now controlled from the Video messages tab) ─
+  // Returns the ordered list of video-message uploads (most recent first).
   function listVideoMessages() {
-    const strict = (allUploads || [])
-      .filter(u => u.is_video_message === true && (u.is_approved !== false))
-      .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
-    if (strict.length) return strict;
     return (allUploads || [])
-      .filter(u => isVideoUpload(u) && (u.is_approved !== false))
+      .filter(u => u.is_video_message === true && u.is_approved !== false)
       .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
-  }
-
-  function renderVideoMessages() {
-    const list = document.getElementById('vmsg-list');
-    const playBtn = document.getElementById('btn-vmsg-play-all');
-    if (!list) return;
-    const items = listVideoMessages();
-
-    if (!items.length) {
-      list.innerHTML = '<div class="vmsg-empty">No video messages yet.</div>';
-      if (playBtn) playBtn.disabled = true;
-      return;
-    }
-
-    if (playBtn) playBtn.disabled = false;
-    list.innerHTML = items.map(u => {
-      const who  = escapeHtml(u.uploader_name || 'Anonymous guest');
-      const when = u.created_at
-        ? new Date(u.created_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
-        : '';
-      return `
-        <div class="vmsg-row" data-id="${escapeAttr(u.id)}">
-          <div class="vmsg-thumb">▶</div>
-          <div class="meta">
-            <div class="who">${who}</div>
-            <div class="when">${escapeHtml(when)}</div>
-          </div>
-          <button type="button" class="play-one" title="Play this on wall" data-id="${escapeAttr(u.id)}">▶</button>
-        </div>
-      `;
-    }).join('');
   }
 
   async function pushBurst(ids, statusText) {
-    const statusEl = document.getElementById('vmsg-status');
-    const playBtn  = document.getElementById('btn-vmsg-play-all');
-    const stopBtn  = document.getElementById('btn-vmsg-stop');
-    const token    = localStorage.getItem('reelday_token');
-    statusEl.classList.remove('error');
-    statusEl.textContent = '';
-    playBtn.disabled = true;
-    stopBtn.disabled = true;
+    const playBtn = document.getElementById('btn-vmsg-play-all-tab');
+    const stopBtn = document.getElementById('btn-vmsg-stop-tab');
+    const token   = localStorage.getItem('reelday_token');
+    if (playBtn) playBtn.disabled = true;
+    if (stopBtn) stopBtn.disabled = true;
     try {
       const res = await fetch(`/api/events/${slug}/play-videos`, {
         method:  'POST',
@@ -1288,32 +1253,26 @@
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Could not start playback.');
-      statusEl.textContent = statusText;
+      showToast(statusText);
     } catch (err) {
-      statusEl.classList.add('error');
-      statusEl.textContent = err.message;
+      showToast(err.message);
     } finally {
-      playBtn.disabled = false;
-      stopBtn.disabled = false;
+      if (playBtn) playBtn.disabled = false;
+      if (stopBtn) stopBtn.disabled = false;
     }
   }
 
-  document.getElementById('btn-vmsg-play-all')?.addEventListener('click', () => {
+  document.getElementById('btn-vmsg-play-all-tab')?.addEventListener('click', () => {
     const ids = listVideoMessages().map(u => u.id);
-    if (!ids.length) return;
+    if (!ids.length) {
+      showToast('No video messages yet.');
+      return;
+    }
     pushBurst(ids, `Playing ${ids.length} video message${ids.length > 1 ? 's' : ''} on the wall.`);
   });
 
-  document.getElementById('btn-vmsg-stop')?.addEventListener('click', () => {
+  document.getElementById('btn-vmsg-stop-tab')?.addEventListener('click', () => {
     pushBurst([], 'Stopped — wall is back on photos.');
-  });
-
-  // Per-row "play this one"
-  document.getElementById('vmsg-list')?.addEventListener('click', e => {
-    const btn = e.target.closest('.play-one');
-    if (!btn) return;
-    const id = btn.dataset.id;
-    if (id) pushBurst([id], 'Playing this video message on the wall.');
   });
 
   // ── Save event details ───────────────────────────────
@@ -1524,12 +1483,8 @@
           <div style="font-size:3rem;margin-bottom:12px;">${emoji}</div>
           <p>No ${noun}${currentTab !== 'all' ? ' in this category' : ''}. ${currentTab === 'all' ? 'Share the QR code with your guests!' : 'Try a different filter.'}</p>
         </div>`;
-      renderVideoMessages();
       return;
     }
-
-    // Refresh sidebar video-message list off the same allUploads cache
-    renderVideoMessages();
 
     photoGrid.innerHTML = filteredUploads.map((u, i) => {
       const cls    = placeholderClasses[i % placeholderClasses.length];
@@ -1597,12 +1552,14 @@
     renderGallery(allUploads);
   }
 
-  // ── Stream switcher (Photo / Video) ──────────────────
+  // ── Stream switcher (Photo / Video upload / Video messages) ──
   function reflectStreamHeader() {
-    const photoPill   = document.getElementById('approve-status');
-    const videoToggle = document.getElementById('video-approve-toggle');
-    if (photoPill)   photoPill.style.display   = currentStream === 'video' ? 'none' : '';
-    if (videoToggle) videoToggle.style.display = currentStream === 'video' ? 'inline-flex' : 'none';
+    const photoPill    = document.getElementById('approve-status');
+    const videoToggle  = document.getElementById('video-approve-toggle');
+    const burstCtl     = document.getElementById('message-burst-controls');
+    if (photoPill)   photoPill.style.display   = currentStream === 'photo'   ? '' : 'none';
+    if (videoToggle) videoToggle.style.display = currentStream === 'video'   ? 'inline-flex' : 'none';
+    if (burstCtl)    burstCtl.style.display    = currentStream === 'message' ? 'inline-flex' : 'none';
   }
   reflectStreamHeader();
 
@@ -1620,9 +1577,12 @@
 
     const sub = document.getElementById('stream-sub');
     if (sub) {
-      sub.textContent = currentStream === 'video'
-        ? 'Review guest videos here. Approve to publish them to the live wall.'
-        : 'Recent guest uploads appear here for quick review and featuring.';
+      sub.textContent =
+        currentStream === 'video'
+          ? 'Review guest video uploads here. Approve to publish to the live wall, or move a recorded message to the Video messages tab.'
+        : currentStream === 'message'
+          ? 'Recorded video messages. Tap Play all to take over the live wall, then resume photos.'
+        :   'Recent guest uploads appear here for quick review and featuring.';
     }
 
     reflectStreamHeader();
@@ -1672,9 +1632,11 @@
   const previewWhen      = document.getElementById('preview-modal-when');
   const previewMsg       = document.getElementById('preview-modal-msg');
   const previewApprove   = document.getElementById('preview-modal-approve');
+  const previewMove      = document.getElementById('preview-modal-move');
   const previewHide      = document.getElementById('preview-modal-hide');
   const previewClose     = document.getElementById('preview-modal-close');
   let previewingId = null;
+  let previewingIsMessage = false;
 
   function openPreview(upload) {
     previewingId = upload.id;
@@ -1697,6 +1659,17 @@
     const isPending = upload.status === 'pending';
     previewApprove.style.display = isPending ? '' : 'none';
     previewHide.textContent = (upload.status === 'hidden') ? 'Unhide' : 'Hide';
+
+    // "Move to Video messages" — show on the Video upload stream so the
+    // host can re-classify a regular video as a message after watching it.
+    // Or, when already viewing a message, offer the reverse.
+    previewingIsMessage = upload.is_video_message === true;
+    const canMove = isVideoUpload(upload);
+    previewMove.style.display = canMove ? '' : 'none';
+    previewMove.textContent = previewingIsMessage
+      ? 'Move back to Video upload'
+      : 'Move to Video messages';
+
     previewModal.classList.add('open');
   }
 
@@ -1760,6 +1733,34 @@
       showToast(err.message);
     } finally {
       previewHide.disabled = false;
+    }
+  });
+
+  previewMove?.addEventListener('click', async () => {
+    if (!previewingId) return;
+    previewMove.disabled = true;
+    const targetFlag = !previewingIsMessage;   // toggle
+    try {
+      const token = localStorage.getItem('reelday_token');
+      const res = await fetch(`/api/uploads/${previewingId}/flag`, {
+        method:  'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ is_video_message: targetFlag }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Move failed');
+      showToast(targetFlag
+        ? 'Moved to Video messages'
+        : 'Moved back to Video upload');
+      closePreview();
+      await refreshUploads();
+    } catch (err) {
+      showToast(err.message);
+    } finally {
+      previewMove.disabled = false;
     }
   });
 
@@ -1898,9 +1899,9 @@
         return;
       }
 
-      // On the video stream, clicking a tile opens the review modal so the
-      // host can watch the video before approving.
-      if (currentStream !== 'video') return;
+      // On either video stream, clicking a tile opens the review modal so
+      // the host can watch the video before approving / moving / hiding.
+      if (currentStream === 'photo') return;
       const tile = e.target.closest('.photo-grid > div');
       if (!tile) return;
       const grid = Array.from(photoGrid.children);

@@ -320,4 +320,31 @@ export default async function uploadRoutes(fastify) {
 
     return { upload: rows[0] };
   });
+
+  // PATCH /api/uploads/:id/flag — host re-classifies an upload as a
+  // video message (or back to a regular video). Only is_video_message
+  // is mutable here so this can't accidentally be used to bypass the
+  // approval flow.
+  fastify.patch('/uploads/:id/flag', async (request, reply) => {
+    const { id } = request.params;
+    const flag = request.body?.is_video_message;
+
+    if (typeof flag !== 'boolean') {
+      return reply.status(400).send({
+        error: true,
+        message: 'is_video_message (boolean) is required',
+      });
+    }
+
+    const { rows } = await fastify.db.query(
+      'UPDATE uploads SET is_video_message = $2 WHERE id = $1 RETURNING *',
+      [id, flag],
+    );
+
+    if (!rows.length) {
+      return reply.status(404).send({ error: true, message: 'Upload not found' });
+    }
+
+    return { upload: rows[0] };
+  });
 }
