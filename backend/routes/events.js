@@ -119,15 +119,17 @@ export default async function eventRoutes(fastify) {
 
     const event   = rows[0];
 
-    // Generate the QR code encoding the full absolute URL. Prefer the
-    // host the request actually came in on so the QR works on whichever
-    // deploy domain the dashboard is being served from.
-    const protocol = request.headers['x-forwarded-proto'] || 'https';
+    // Same logic as the regen endpoint: pin to APP_PUBLIC_HOST in
+    // production so the QR reaches the canonical domain regardless of
+    // which host the backend is currently serving from.
+    const protocol = process.env.NODE_ENV === 'development'
+      ? (request.headers['x-forwarded-proto'] || 'http')
+      : 'https';
     const host =
-      request.headers['x-forwarded-host'] ||
-      request.headers.host ||
       process.env.APP_PUBLIC_HOST ||
-      'reelday.ph';
+      (process.env.NODE_ENV === 'development'
+        ? (request.headers.host || 'localhost:3000')
+        : 'reelday.ph');
     const qr_code = await generateQR(`${protocol}://${host}/upload/${slug}`);
 
     return reply.status(201).send({ event, qr_code });
@@ -251,17 +253,18 @@ export default async function eventRoutes(fastify) {
       return reply.status(404).send({ error: true, message: 'Event not found' });
     }
 
-    // Encode the full upload URL so a phone scan opens the right page.
-    // Prefer the host the dashboard is actually being served from
-    // (easypanel/staging/etc) so the QR works wherever the deploy lives;
-    // fall back to APP_PUBLIC_HOST or reelday.ph if the request didn't
-    // forward a host header.
-    const protocol = request.headers['x-forwarded-proto'] || 'https';
+    // Encode the full upload URL. APP_PUBLIC_HOST wins so the QR can be
+    // pinned to a canonical domain (e.g. reelday.ph) even when the
+    // backend itself is served from a staging/easypanel host. In dev we
+    // fall through to the request's host so localhost works.
+    const protocol = process.env.NODE_ENV === 'development'
+      ? (request.headers['x-forwarded-proto'] || 'http')
+      : 'https';
     const host =
-      request.headers['x-forwarded-host'] ||
-      request.headers.host ||
       process.env.APP_PUBLIC_HOST ||
-      'reelday.ph';
+      (process.env.NODE_ENV === 'development'
+        ? (request.headers.host || 'localhost:3000')
+        : 'reelday.ph');
     const qr_code = await generateQR(`${protocol}://${host}/upload/${slug}`);
     return { qr_code };
   });

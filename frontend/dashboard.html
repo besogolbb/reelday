@@ -275,38 +275,41 @@
     .panel-head > .approve-toggle,
     .panel-head > .message-burst-controls { grid-area: actions; justify-self: end; }
 
-    /* ── Stream switcher (3D Three.js puck under buttons, full row) ─── */
+    /* ── Stream switcher (floating 3D capsule, frosted track) ─── */
     .stream-tabs-3d {
       grid-area: tabs;
       position: relative;
       width: 100%;
-      perspective: 1200px;
+      padding: 6px 0 12px;   /* room for the canvas glow to bleed below */
+      perspective: 1400px;
     }
     .stream-tabs-3d-canvas {
       position: absolute;
-      inset: 0;
+      left: 0; right: 0;
+      top: -10px; bottom: -10px;   /* extend canvas past the track for glow bleed */
       width: 100%;
-      height: 100%;
+      height: calc(100% + 20px);
       pointer-events: none;
       z-index: 0;
-      border-radius: 999px;
     }
     .stream-tabs {
       position: relative;
       z-index: 1;
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 6px;
+      gap: 4px;
       padding: 6px;
-      background: linear-gradient(180deg, rgba(255,255,255,.75) 0%, rgba(246,234,220,.55) 100%);
-      border: 1px solid rgba(83,48,33,.10);
+      background:
+        linear-gradient(135deg, rgba(255,255,255,.55) 0%, rgba(255,255,255,.25) 100%);
+      border: 1px solid rgba(255,255,255,.55);
       border-radius: 999px;
       width: 100%;
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
+      backdrop-filter: blur(18px) saturate(140%);
+      -webkit-backdrop-filter: blur(18px) saturate(140%);
       box-shadow:
         0 1px 0 rgba(255,255,255,.9) inset,
-        0 8px 24px rgba(42,26,20,.06);
+        0 -1px 0 rgba(83,48,33,.04) inset,
+        0 12px 32px rgba(42,26,20,.07);
     }
     .stream-tab {
       position: relative;
@@ -325,18 +328,20 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      transition: color .25s, transform .25s, text-shadow .25s;
+      transition: color .3s, transform .3s, letter-spacing .3s;
       transform-style: preserve-3d;
     }
     .stream-tab:hover:not(.active) {
       color: var(--ink);
-      transform: translateZ(2px);
+      transform: translateY(-1px);
     }
     .stream-tab.active {
-      color: var(--paper);
+      color: #fff;
       font-weight: 600;
       letter-spacing: -.01em;
-      text-shadow: 0 1px 2px rgba(0,0,0,.2);
+      text-shadow:
+        0 1px 1px rgba(0,0,0,.25),
+        0 0 14px rgba(255,210,170,.55);
     }
 
     @media (max-width: 720px) {
@@ -1695,7 +1700,6 @@
     try {
       THREE = await import('https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js');
     } catch {
-      // Fallback: paint a flat dark pill via CSS so the active tab is still legible.
       const fallback = document.createElement('style');
       fallback.textContent = '.stream-tab.active { background: var(--ink); box-shadow: 0 4px 12px rgba(42,26,20,.20); }';
       document.head.appendChild(fallback);
@@ -1703,9 +1707,7 @@
     }
 
     const renderer = new THREE.WebGLRenderer({
-      canvas: tabsCanvasEl,
-      alpha: true,
-      antialias: true,
+      canvas: tabsCanvasEl, alpha: true, antialias: true, premultipliedAlpha: false,
     });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 
@@ -1714,48 +1716,85 @@
     camera.position.set(0, 0, 10);
     camera.lookAt(0, 0, 0);
 
-    // Soft three-point lighting for that glossy, light feel
-    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-    const key  = new THREE.DirectionalLight(0xffe4cc, 1.2);
-    key.position.set(2, 3, 4);
+    // Lighting — moody key + warm rim so the capsule feels lit, not flat
+    scene.add(new THREE.AmbientLight(0xffffff, 0.45));
+    const key = new THREE.DirectionalLight(0xfff1da, 1.4);
+    key.position.set(1.5, 2.5, 4);
     scene.add(key);
-    const rim  = new THREE.DirectionalLight(0xc45a3a, 0.6);
-    rim.position.set(-3, -1, 2);
+    const rim = new THREE.DirectionalLight(0xff8a4a, 0.9);
+    rim.position.set(-3, -1.5, 1.5);
     scene.add(rim);
 
-    // The puck — a rounded extruded shape
-    const puckShape = new THREE.Shape();
-    const pw = 0.9, ph = 0.36, pr = 0.18;
-    puckShape.moveTo(-pw + pr, -ph);
-    puckShape.lineTo( pw - pr, -ph);
-    puckShape.quadraticCurveTo( pw, -ph,  pw, -ph + pr);
-    puckShape.lineTo( pw,  ph - pr);
-    puckShape.quadraticCurveTo( pw,  ph,  pw - pr,  ph);
-    puckShape.lineTo(-pw + pr,  ph);
-    puckShape.quadraticCurveTo(-pw,  ph, -pw,  ph - pr);
-    puckShape.lineTo(-pw, -ph + pr);
-    puckShape.quadraticCurveTo(-pw, -ph, -pw + pr, -ph);
+    // ── Capsule (the active-tab pill) ────────────────────
+    const buildCapsule = () => {
+      const shape = new THREE.Shape();
+      const pw = 0.9, ph = 0.36, pr = ph;     // fully rounded ends
+      shape.moveTo(-pw + pr, -ph);
+      shape.lineTo( pw - pr, -ph);
+      shape.absarc( pw - pr, 0, pr, -Math.PI / 2, Math.PI / 2, false);
+      shape.lineTo(-pw + pr,  ph);
+      shape.absarc(-pw + pr, 0, pr,  Math.PI / 2, -Math.PI / 2, false);
+      const geo = new THREE.ExtrudeGeometry(shape, {
+        depth: 0.22, bevelEnabled: true, bevelSize: 0.05,
+        bevelThickness: 0.06, bevelSegments: 6, curveSegments: 40,
+      });
+      geo.center();
+      return geo;
+    };
+    const capsuleGeo = buildCapsule();
 
-    const puckGeo = new THREE.ExtrudeGeometry(puckShape, {
-      depth: 0.18, bevelEnabled: true, bevelSize: 0.03,
-      bevelThickness: 0.05, bevelSegments: 4, curveSegments: 32,
-    });
-    puckGeo.center();
-
-    const puckMat = new THREE.MeshPhysicalMaterial({
-      color: 0x2a1a14,
-      metalness: 0.15,
-      roughness: 0.35,
+    // Inner glassy capsule — a vivid clay gradient feel
+    const capsuleMat = new THREE.MeshPhysicalMaterial({
+      color: 0xc45a3a,
+      emissive: 0x7a3b2e,
+      emissiveIntensity: 0.55,
+      metalness: 0.25,
+      roughness: 0.28,
       clearcoat: 1.0,
-      clearcoatRoughness: 0.18,
-      reflectivity: 0.5,
+      clearcoatRoughness: 0.12,
+      reflectivity: 0.6,
+      sheen: 1.0,
+      sheenColor: new THREE.Color(0xffd2a8),
+      sheenRoughness: 0.6,
     });
-    const puck = new THREE.Mesh(puckGeo, puckMat);
-    scene.add(puck);
+    const capsule = new THREE.Mesh(capsuleGeo, capsuleMat);
+    scene.add(capsule);
 
-    // Tracking geometry for the active tab's pixel position
-    let puckTargetX = 0;     // in world units (-1..1)
-    let puckTargetW = 1;     // half-width in world units
+    // Outer halo — a larger, additive, softly blurred capsule for the glow
+    const haloMat = new THREE.MeshBasicMaterial({
+      color: 0xffae72,
+      transparent: true,
+      opacity: 0.45,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    const halo = new THREE.Mesh(capsuleGeo, haloMat);
+    halo.scale.set(1.18, 1.55, 0.6);
+    halo.position.z = -0.25;
+    scene.add(halo);
+
+    // ── Drifting glow particles around the capsule ───────
+    const particles = new THREE.Group();
+    const pCount = 14;
+    const pGeo = new THREE.SphereGeometry(0.025, 12, 12);
+    for (let i = 0; i < pCount; i++) {
+      const mat = new THREE.MeshBasicMaterial({
+        color: i % 2 ? 0xffd2a8 : 0xff8a4a,
+        transparent: true, opacity: 0.55,
+        blending: THREE.AdditiveBlending, depthWrite: false,
+      });
+      const dot = new THREE.Mesh(pGeo, mat);
+      dot.userData.seed   = Math.random() * Math.PI * 2;
+      dot.userData.speed  = 0.4 + Math.random() * 0.6;
+      dot.userData.radius = 0.55 + Math.random() * 0.18;
+      dot.userData.depth  = 0.18 + Math.random() * 0.35;
+      particles.add(dot);
+    }
+    scene.add(particles);
+
+    // Track active tab geometry
+    let puckTargetX = 0;
+    let puckTargetW = 1;
     let lastSize = { w: 0, h: 0 };
 
     function recomputeLayout() {
@@ -1775,35 +1814,51 @@
       const activeTab = tabs3DRoot.querySelector('.stream-tab.active');
       if (!activeTab) return;
       const tabRect = activeTab.getBoundingClientRect();
-      // Map screen X → world X (camera spans -aspect..aspect across [0..w])
       const aspect = w / h;
-      const cx = tabRect.left + tabRect.width  / 2 - rect.left;
+      const cx = tabRect.left + tabRect.width / 2 - rect.left;
       puckTargetX = (cx / w) * 2 * aspect - aspect;
       puckTargetW = (tabRect.width / w) * aspect;
     }
 
-    let frame = 0;
     function tick(t) {
-      frame++;
       recomputeLayout();
-      // Smoothly chase the active tab's center & width
-      puck.position.x += (puckTargetX - puck.position.x) * 0.18;
-      const wantScaleX = Math.max(0.4, puckTargetW / 0.9);   // 0.9 = puckShape half-width
-      puck.scale.x += (wantScaleX - puck.scale.x) * 0.18;
-      // Gentle 3D float
-      puck.rotation.x = Math.sin(t * 0.0009) * 0.05;
-      puck.rotation.y = Math.sin(t * 0.0011) * 0.06;
-      puck.position.y = Math.sin(t * 0.0014) * 0.02;
+      // Ease toward the active tab
+      capsule.position.x += (puckTargetX - capsule.position.x) * 0.20;
+      halo.position.x = capsule.position.x;
+      const wantScaleX = Math.max(0.4, puckTargetW / 0.9);
+      capsule.scale.x += (wantScaleX - capsule.scale.x) * 0.20;
+      halo.scale.x    = capsule.scale.x * 1.18;
+
+      // Float + tilt
+      const tt = t * 0.001;
+      capsule.position.y = Math.sin(tt * 1.3) * 0.025;
+      capsule.rotation.x = Math.sin(tt * 0.9) * 0.07;
+      capsule.rotation.y = Math.sin(tt * 1.1) * 0.10;
+      halo.position.y = capsule.position.y * 0.5;
+      // Halo pulses subtly
+      haloMat.opacity = 0.30 + Math.sin(tt * 1.6) * 0.10;
+
+      // Drift particles around the capsule
+      particles.children.forEach(dot => {
+        const u = dot.userData;
+        const phase = u.seed + tt * u.speed;
+        dot.position.x = capsule.position.x + Math.cos(phase) * u.radius * capsule.scale.x;
+        dot.position.y = Math.sin(phase * 1.4) * 0.18 + capsule.position.y;
+        dot.position.z = u.depth + Math.cos(phase * 0.7) * 0.05;
+        dot.material.opacity = 0.35 + Math.sin(phase * 2) * 0.25;
+      });
+
       renderer.render(scene, camera);
       requestAnimationFrame(tick);
     }
 
-    // Initial size + first frame
+    // First frame — snap so it doesn't slide in from origin
     requestAnimationFrame(t => {
       recomputeLayout();
-      // Snap on first frame so it doesn't slide in from origin
-      puck.position.x = puckTargetX;
-      puck.scale.x    = Math.max(0.4, puckTargetW / 0.9);
+      capsule.position.x = puckTargetX;
+      capsule.scale.x    = Math.max(0.4, puckTargetW / 0.9);
+      halo.position.x    = capsule.position.x;
+      halo.scale.x       = capsule.scale.x * 1.18;
       tick(t);
     });
 
