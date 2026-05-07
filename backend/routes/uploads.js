@@ -1,5 +1,6 @@
 import { extname } from 'path';
 import { randomUUID } from 'crypto';
+import { resolvePlan } from '../lib/plans.js';
 
 export default async function uploadRoutes(fastify) {
   // POST /api/uploads/:slug — upload a photo or video
@@ -16,10 +17,42 @@ export default async function uploadRoutes(fastify) {
     }
 
     const event = eventRows[0];
+    const plan  = resolvePlan(event.plan);
 
     // ── Feature gating ────────────────────────────────────
-    if (!event.is_paid && event.plan !== 'libre') {
+    // Only block when the event is on a *paid* tier without payment.
+    // Free tiers (tala, libre legacy) accept uploads without payment.
+    if (!event.is_paid && plan.price > 0) {
       return reply.status(403).send({ error: true, message: 'Payment pending verification' });
+    }
+
+    // ── Plan enforcement: upload window ──────────────────
+    if (event.upload_window_ends_at && new Date(event.upload_window_ends_at) < new Date()) {
+      return reply.status(403).send({
+        error: true,
+        code: 'upload_window_closed',
+        message: 'The upload window for this event has ended.',
+        upload_window_ends_at: event.upload_window_ends_at,
+      });
+    }
+
+    // ── Plan enforcement: upload count ───────────────────
+    if (plan.uploadLimit) {
+      const { rows: countRows } = await fastify.db.query(
+        'SELECT COUNT(*)::int AS count FROM uploads WHERE event_id = $1',
+        [event.id],
+      );
+      const used = countRows[0].count;
+      if (used >= plan.uploadLimit) {
+        return reply.status(403).send({
+          error: true,
+          code: 'plan_limit_uploads',
+          message: `This event has reached the ${plan.name} plan's ${plan.uploadLimit}-upload limit. Upgrade to keep sharing.`,
+          plan:         plan.id,
+          upload_limit: plan.uploadLimit,
+          used,
+        });
+      }
     }
 
     const fields = {};

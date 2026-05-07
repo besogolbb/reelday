@@ -71,6 +71,23 @@ CREATE TABLE IF NOT EXISTS payments (
 -- Add user_id to events (migration for existing databases)
 ALTER TABLE events ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES users(id);
 
+-- ── Subscription columns on users (Phase 2 plan enforcement) ──
+-- subscription_tier: 'tala' | 'sinag' | 'dalisay' | 'hiraya'
+-- subscription_expires_at: NULL for free / per-event purchases; set for Hiraya yearly
+-- events_remaining: NULL = unlimited per the tier; set for Dalisay package (3) and Hiraya (10)
+ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_tier       VARCHAR(20)   DEFAULT 'tala';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_expires_at TIMESTAMPTZ;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS events_remaining        INTEGER;
+
+-- ── Per-event expiry stamps (computed from plan at creation time) ──
+-- gallery_expires_at: when the wall + downloads soft-lock
+-- upload_window_ends_at: when guests can no longer upload
+ALTER TABLE events ADD COLUMN IF NOT EXISTS gallery_expires_at     TIMESTAMPTZ;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS upload_window_ends_at  TIMESTAMPTZ;
+
+-- Useful indexes
+CREATE INDEX IF NOT EXISTS idx_events_user_id ON events(user_id);
+
 -- Indexes for common queries
 CREATE INDEX IF NOT EXISTS idx_uploads_event_id    ON uploads(event_id);
 CREATE INDEX IF NOT EXISTS idx_uploads_created_at  ON uploads(created_at DESC);

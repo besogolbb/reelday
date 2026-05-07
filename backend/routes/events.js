@@ -1,4 +1,6 @@
 import { generateQR } from '../utils/qr.js';
+import { resolvePlan, galleryExpiryFor, uploadWindowEndFor } from '../lib/plans.js';
+import { verifyToken } from '../plugins/auth.js';
 
 function makeSlug(coupleNames) {
   const base = coupleNames
@@ -6,26 +8,97 @@ function makeSlug(coupleNames) {
     .replace(/[^a-z0-9]+/g, '-')   // non-alphanum → dash
     .replace(/^-+|-+$/g, '')        // trim leading/trailing dashes
     .slice(0, 40);
-  const suffix = Math.random().toString(36).slice(2, 6); // 4 random chars e.g. "x4k2"
+  const suffix = Math.random().toString(36).slice(2, 6); // 4 random chars
   return `${base}-${suffix}`;
+}
+
+/* Best-effort: pull a user from the Authorization header without
+   forcing auth. Anonymous event creation is still allowed (legacy). */
+function tryGetUser(request) {
+  const header = request.headers.authorization;
+  if (!header?.startsWith('Bearer ')) return null;
+  try { return verifyToken(header.slice(7)); }
+  catch { return null; }
+}
+
+async function loadUserWithPlan(db, userId) {
+  if (!userId) return null;
+  const { rows } = await db.query(
+    `SELECT id, subscription_tier, subscription_expires_at, events_remaining
+       FROM users WHERE id = $1`,
+    [userId],
+  );
+  return rows[0] || null;
+}
+
+async function countUserActiveEvents(db, userId) {
+  const { rows } = await db.query(
+    `SELECT COUNT(*)::int AS count FROM events
+       WHERE user_id = $1 AND is_active = true`,
+    [userId],
+  );
+  return rows[0].count;
 }
 
 export default async function eventRoutes(fastify) {
   // POST /api/events — create a new event
   fastify.post('/events', async (request, reply) => {
-    const { couple_names, event_type, event_date, plan, user_id } = request.body ?? {};
+    const { couple_names, event_type, event_date, plan: requestedPlan, user_id: bodyUserId } = request.body ?? {};
 
     if (!couple_names) {
       return reply.status(400).send({ error: true, message: 'couple_names is required' });
     }
 
+    // Resolve the acting user (token preferred over body for trust)
+    const tokenUser  = tryGetUser(request);
+    const actingUserId = tokenUser?.id || bodyUserId || null;
+    const user = await loadUserWithPlan(fastify.db, actingUserId);
+
+    // Resolve the plan to assign to this event
+    // 1. Authenticated user with a paid subscription → use their tier
+    // 2. Otherwise honor the body's `plan` (legacy/anonymous) or default to tala
+    const accountTier = user?.subscription_tier;
+    const planForEvent = resolvePlan(accountTier || requestedPlan);
+
+    // ── Enforce eventLimit for authenticated users ──
+    if (user) {
+      const existing = await countUserActiveEvents(fastify.db, user.id);
+      if (existing >= planForEvent.eventLimit) {
+        return reply.status(403).send({
+          error: true,
+          code: 'plan_limit_events',
+          message: `Your ${planForEvent.name} plan allows ${planForEvent.eventLimit} active event${planForEvent.eventLimit === 1 ? '' : 's'}. Upgrade to add more.`,
+          plan: planForEvent.id,
+          event_limit: planForEvent.eventLimit,
+          active_events: existing,
+        });
+      }
+    }
+
+    // Compute expiry timestamps from plan + event_date (or now)
+    const stampDate            = event_date || new Date();
+    const galleryExpiresAt     = galleryExpiryFor(planForEvent.id, stampDate);
+    const uploadWindowEndsAt   = uploadWindowEndFor(planForEvent.id, stampDate);
+
     const slug = makeSlug(couple_names);
 
     const { rows } = await fastify.db.query(
-      `INSERT INTO events (slug, couple_names, event_type, event_date, plan, user_id)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO events (
+         slug, couple_names, event_type, event_date, plan, user_id,
+         gallery_expires_at, upload_window_ends_at
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING *`,
-      [slug, couple_names, event_type ?? 'wedding', event_date ?? null, plan ?? 'libre', user_id ?? null],
+      [
+        slug,
+        couple_names,
+        event_type ?? 'wedding',
+        event_date ?? null,
+        planForEvent.id,
+        actingUserId,
+        galleryExpiresAt,
+        uploadWindowEndsAt,
+      ],
     );
 
     const event = rows[0];
@@ -34,7 +107,7 @@ export default async function eventRoutes(fastify) {
     return reply.status(201).send({ event, qr_code });
   });
 
-  // GET /api/events/:slug — fetch event + upload count
+  // GET /api/events/:slug — fetch event + upload count + plan info
   fastify.get('/events/:slug', async (request, reply) => {
     const { slug } = request.params;
 
@@ -54,7 +127,32 @@ export default async function eventRoutes(fastify) {
       [event.id],
     );
 
-    return { event, upload_count: countRows[0].count };
+    const planInfo = resolvePlan(event.plan);
+
+    // Soft-lock state derived from stored expiry stamps
+    const now = new Date();
+    const galleryLocked = event.gallery_expires_at
+      ? new Date(event.gallery_expires_at) < now
+      : false;
+    const uploadsClosed = event.upload_window_ends_at
+      ? new Date(event.upload_window_ends_at) < now
+      : false;
+
+    return {
+      event,
+      upload_count: countRows[0].count,
+      plan_info: {
+        id:           planInfo.id,
+        name:         planInfo.name,
+        upload_limit: planInfo.uploadLimit,
+        event_limit:  planInfo.eventLimit,
+        features:     planInfo.features,
+      },
+      locks: {
+        gallery_locked:  galleryLocked,
+        uploads_closed:  uploadsClosed,
+      },
+    };
   });
 
   // GET /api/events/:slug/qr — regenerate QR code

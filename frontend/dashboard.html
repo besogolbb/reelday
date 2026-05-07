@@ -178,6 +178,62 @@
     .info-card .row span:first-child { color: var(--ink-soft); }
     .info-card .row span:last-child { font-weight: 500; color: var(--ink); }
 
+    /* ── Quota meter ──────────────────────────────────────── */
+    .quota {
+      margin-top: 16px; padding-top: 16px;
+      border-top: 1px solid var(--line);
+    }
+    .quota-row {
+      display: flex; justify-content: space-between; align-items: baseline;
+      font-size: 13px; margin-bottom: 6px;
+    }
+    .quota-row span:first-child { color: var(--ink-soft); }
+    .quota-row .quota-num { font-family: var(--display); font-size: 18px; font-weight: 500; color: var(--ink); }
+    .quota-row .quota-num em { color: var(--accent); font-style: normal; }
+    .quota-bar {
+      height: 6px; background: var(--line); border-radius: 999px; overflow: hidden;
+    }
+    .quota-bar .fill {
+      height: 100%; background: var(--accent); border-radius: 999px;
+      transition: width .3s ease, background .3s ease;
+    }
+    .quota-bar .fill.warn { background: #d29a3a; }
+    .quota-bar .fill.full { background: #c44a3a; }
+    .quota-hint {
+      font-size: 11px; color: var(--ink-faint); margin-top: 6px;
+    }
+    .quota-hint a { color: var(--accent); text-decoration: none; font-weight: 600; }
+
+    /* ── Soft-lock banner above photo grid ───────────────── */
+    .lock-banner {
+      background: linear-gradient(135deg, #fff4ec 0%, #ffe4d2 100%);
+      border: 1px solid rgba(196,90,58,.25);
+      border-radius: var(--r-lg); padding: 16px 20px;
+      margin-bottom: 16px;
+      gap: 14px; align-items: center;
+      display: flex;
+    }
+    .lock-banner.hidden { display: none; }
+    .lock-banner .lb-icon {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: rgba(196,90,58,.15); color: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; flex-shrink: 0;
+    }
+    .lock-banner .lb-body { flex: 1; }
+    .lock-banner .lb-title {
+      font-family: var(--display); font-weight: 500; font-size: 16px;
+      color: var(--ink); margin-bottom: 2px;
+    }
+    .lock-banner .lb-msg { font-size: 13px; color: var(--ink-soft); line-height: 1.4; }
+    .lock-banner .lb-cta {
+      flex-shrink: 0; padding: 8px 16px; font-size: 13px;
+      background: var(--accent); color: #fff; border-radius: 999px;
+      text-decoration: none; font-weight: 600; white-space: nowrap;
+      transition: background .2s;
+    }
+    .lock-banner .lb-cta:hover { background: var(--ink); }
+
     /* ── Loading + error states ───────────────────────────── */
     .page-loading { display: flex; align-items: center; justify-content: center; min-height: 60vh; }
     .page-error { display: none; text-align: center; padding: 6rem 2rem; color: var(--ink-soft); }
@@ -266,6 +322,15 @@
 
   <!-- ── Photo stream panel (left) ─────────────────────── -->
   <div>
+    <div class="lock-banner hidden" id="lock-banner">
+      <div class="lb-icon">⚠</div>
+      <div class="lb-body">
+        <div class="lb-title" id="lb-title">Upload limit reached</div>
+        <div class="lb-msg" id="lb-msg">You've used all 50 uploads on the Tala plan. Existing photos remain visible — upgrade to keep accepting new ones.</div>
+      </div>
+      <a class="lb-cta" id="lb-cta" href="/#pricing">Upgrade →</a>
+    </div>
+
     <div class="panel">
       <div class="panel-head">
         <h2>Photo stream</h2>
@@ -299,6 +364,16 @@
       <div class="row"><span>Plan</span><span id="info-plan">—</span></div>
       <div class="row"><span>Wall expires</span><span id="info-expires">—</span></div>
       <div class="row"><span>Archive</span><span>30 days</span></div>
+
+      <!-- Phase 2: upload quota meter (hidden when plan is unlimited) -->
+      <div class="quota" id="quota-block" style="display:none;">
+        <div class="quota-row">
+          <span>Uploads used</span>
+          <span class="quota-num"><em id="quota-used">0</em> / <span id="quota-limit">50</span></span>
+        </div>
+        <div class="quota-bar"><div class="fill" id="quota-fill" style="width:0%"></div></div>
+        <div class="quota-hint" id="quota-hint"></div>
+      </div>
     </div>
   </div>
 
@@ -447,6 +522,69 @@
     }
   }
 
+  // ── Render quota meter + soft-lock banner ─────────────
+  function renderQuota(event, uploadCount) {
+    const plan       = resolvePlan(event.plan);
+    const block      = $('quota-block');
+    const banner     = $('lock-banner');
+    if (!block || !banner) return;
+
+    // Hide everything if the plan has no upload cap
+    if (!plan.uploadLimit) {
+      block.style.display = 'none';
+      banner.classList.add('hidden');
+      // Still surface the upload-window soft-lock if it has closed
+      maybeShowWindowLock(event, plan, banner);
+      return;
+    }
+
+    // Plan with a hard cap — show meter
+    block.style.display = 'block';
+    const used    = Math.min(uploadCount, plan.uploadLimit);
+    const limit   = plan.uploadLimit;
+    const pct     = Math.min(100, Math.round((used / limit) * 100));
+    $('quota-used').textContent  = used;
+    $('quota-limit').textContent = limit;
+
+    const fill = $('quota-fill');
+    fill.style.width = pct + '%';
+    fill.classList.remove('warn', 'full');
+    if (pct >= 100)      fill.classList.add('full');
+    else if (pct >= 80)  fill.classList.add('warn');
+
+    const hint = $('quota-hint');
+    const next = nextTier(plan.id);
+    if (pct >= 100) {
+      hint.innerHTML = `Limit reached — <a href="/#pricing">upgrade to ${next?.name || 'continue'}</a> for unlimited.`;
+    } else if (pct >= 80) {
+      hint.innerHTML = `Approaching the limit. <a href="/#pricing">Upgrade for unlimited →</a>`;
+    } else {
+      hint.textContent = `${plan.name} plan · resets per event`;
+    }
+
+    // Soft-lock banner above the photo stream
+    if (pct >= 100) {
+      banner.classList.remove('hidden');
+      $('lb-title').textContent = 'Upload limit reached';
+      $('lb-msg').textContent   =
+        `You've used all ${limit} uploads on the ${plan.name} plan. Existing photos remain visible — upgrade to keep accepting new ones.`;
+    } else {
+      // No cap-related lock; let the window check decide
+      maybeShowWindowLock(event, plan, banner);
+    }
+  }
+
+  function maybeShowWindowLock(event, plan, banner) {
+    if (event.upload_window_ends_at && new Date(event.upload_window_ends_at) < new Date()) {
+      banner.classList.remove('hidden');
+      $('lb-title').textContent = 'Upload window closed';
+      $('lb-msg').textContent   =
+        `The ${plan.name} plan's upload window for this event ended on ${formatDate(event.upload_window_ends_at)}. Upgrade to extend it.`;
+    } else {
+      banner.classList.add('hidden');
+    }
+  }
+
   // ── Render QR ─────────────────────────────────────────
   function buildUploadUrl() {
     const base = `${location.protocol}//${location.host}/upload/${slug}`;
@@ -497,6 +635,9 @@
 
     // Update tab counts
     updateTabCounts(uploads);
+
+    // Phase 2: refresh quota meter + soft-lock banner
+    if (currentDashEvent) renderQuota(currentDashEvent, uploads.length);
   }
 
   // ── Get action button based on upload status ──────────
