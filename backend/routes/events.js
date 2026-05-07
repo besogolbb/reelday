@@ -207,17 +207,35 @@ export default async function eventRoutes(fastify) {
   // PATCH /api/events/:slug — update event settings
   fastify.patch('/events/:slug', async (request, reply) => {
     const { slug } = request.params;
-    const { couple_names, event_date, cover_photo_url, is_active } = request.body ?? {};
+    const {
+      couple_names, event_date, cover_photo_url, is_active,
+      venue, event_time, welcome_message,
+    } = request.body ?? {};
+
+    // Treat empty string as "clear this field"; treat undefined as "leave alone"
+    const orNull = v => (v === undefined ? null : v);
 
     const { rows } = await fastify.db.query(
       `UPDATE events
        SET couple_names    = COALESCE($2, couple_names),
            event_date      = COALESCE($3, event_date),
            cover_photo_url = COALESCE($4, cover_photo_url),
-           is_active       = COALESCE($5, is_active)
+           is_active       = COALESCE($5, is_active),
+           venue           = COALESCE($6, venue),
+           event_time      = COALESCE($7, event_time),
+           welcome_message = COALESCE($8, welcome_message)
        WHERE slug = $1
        RETURNING *`,
-      [slug, couple_names ?? null, event_date ?? null, cover_photo_url ?? null, is_active ?? null],
+      [
+        slug,
+        couple_names    ?? null,
+        event_date      ?? null,
+        cover_photo_url ?? null,
+        is_active       ?? null,
+        orNull(venue),
+        orNull(event_time),
+        orNull(welcome_message),
+      ],
     );
 
     if (!rows.length) {

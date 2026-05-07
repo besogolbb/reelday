@@ -369,6 +369,50 @@
     .mini-row:last-child { padding-bottom: 0; border-bottom: none; }
     .mini-row span:first-child { color: var(--dash-muted); }
     .mini-row strong { color: var(--ink); font-weight: 600; text-align: right; }
+
+    /* ── Editable event details card ──────────────────────── */
+    .details-card .details-sub {
+      font-size: 12px; color: var(--dash-muted); line-height: 1.5;
+      margin: -8px 0 14px;
+    }
+    .details-form { display: grid; gap: 12px; }
+    .details-field { display: grid; gap: 5px; }
+    .details-field label {
+      font-family: var(--mono); font-size: 10px; letter-spacing: .14em;
+      text-transform: uppercase; color: var(--ink-soft);
+    }
+    .details-field label .opt {
+      letter-spacing: .04em; text-transform: none; color: var(--ink-faint);
+      font-weight: 400;
+    }
+    .details-field input,
+    .details-field textarea {
+      width: 100%; background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-family: var(--sans); font-size: 13px;
+      color: var(--ink);
+      outline: none; resize: vertical;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .details-field input:focus,
+    .details-field textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(196,90,58,.10);
+    }
+    .details-save {
+      align-self: stretch;
+      margin-top: 4px;
+      font-size: 13px;
+      padding: 10px 16px;
+    }
+    .details-save:disabled { opacity: .55; cursor: not-allowed; }
+    .details-status {
+      font-size: 12px; min-height: 16px;
+      color: var(--dash-green);
+    }
+    .details-status.error { color: var(--accent-deep); }
     .mini-actions { display: grid; gap: 10px; margin-top: 14px; }
     .mini-note { font-size: 13px; color: var(--dash-muted); line-height: 1.5; margin-top: 10px; }
 
@@ -655,6 +699,32 @@
       </div>
     </div>
 
+    <div class="mini-card details-card">
+      <h3>Event details</h3>
+      <p class="details-sub">Optional — shown to guests under your event name on the upload page.</p>
+      <div class="details-form">
+        <div class="details-field">
+          <label for="details-message">Welcome message</label>
+          <textarea id="details-message" rows="2"
+                    placeholder="e.g. Salamat sa pagdating! Scan, share, and become part of the story."></textarea>
+        </div>
+        <div class="details-field">
+          <label for="details-venue">Event location</label>
+          <input id="details-venue" type="text" maxlength="200"
+                 placeholder="e.g. Manila Hotel, Roxas Blvd." />
+        </div>
+        <div class="details-field">
+          <label for="details-time">Time <span class="opt">(optional)</span></label>
+          <input id="details-time" type="text" maxlength="60"
+                 placeholder="e.g. 5:00 PM" />
+        </div>
+        <button type="button" class="btn btn-accent details-save" id="btn-save-details">
+          Save details
+        </button>
+        <div class="details-status" id="details-status"></div>
+      </div>
+    </div>
+
     <div class="mini-card">
       <h3>Quick view</h3>
       <div class="mini-list">
@@ -868,7 +938,60 @@
       const autoApprove = event.auto_approve !== false;
       approveStatus.textContent = autoApprove ? 'Auto-approve · ON' : 'Auto-approve · OFF';
     }
+
+    // Editable details inputs — only seed once per page load
+    const detailsForm = document.querySelector('.details-form');
+    if (detailsForm && !detailsForm.dataset.seeded) {
+      detailsForm.dataset.seeded = '1';
+      const msgInput   = $('details-message');
+      const venueInput = $('details-venue');
+      const timeInput  = $('details-time');
+      if (msgInput)   msgInput.value   = event.welcome_message ?? '';
+      if (venueInput) venueInput.value = event.venue           ?? '';
+      if (timeInput)  timeInput.value  = event.event_time      ?? '';
+    }
   }
+
+  // ── Save event details ───────────────────────────────
+  document.getElementById('btn-save-details')?.addEventListener('click', async () => {
+    const btn      = document.getElementById('btn-save-details');
+    const statusEl = document.getElementById('details-status');
+    const token    = localStorage.getItem('reelday_token');
+
+    statusEl.classList.remove('error');
+    statusEl.textContent = '';
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+
+    try {
+      const res = await fetch(`/api/events/${slug}`, {
+        method:  'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          welcome_message: document.getElementById('details-message').value,
+          venue:           document.getElementById('details-venue').value,
+          event_time:      document.getElementById('details-time').value,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Could not save.');
+
+      currentDashEvent = data.event;
+      statusEl.textContent = 'Saved · upload page is updated.';
+
+      // Refresh the QR target so the URL reflects the new details
+      renderQR();
+    } catch (err) {
+      statusEl.classList.add('error');
+      statusEl.textContent = err.message;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Save details';
+    }
+  });
 
   // ── Render quota meter + soft-lock banner ─────────────
   function renderSidebarState(event) {
@@ -958,11 +1081,13 @@
     if (!currentDashEvent) return base;
     const ev = currentDashEvent;
     const q  = new URLSearchParams();
-    if (ev.couple_names) q.set('name',    ev.couple_names);
-    if (ev.event_date)   q.set('date',    ev.event_date);
-    if (ev.venue)        q.set('venue',   ev.venue);
-    if (ev.event_type)   q.set('theme',   ev.event_type);
-    if (ev.welcome)      q.set('welcome', ev.welcome);
+    if (ev.couple_names)    q.set('name',    ev.couple_names);
+    if (ev.event_date)      q.set('date',    ev.event_date);
+    if (ev.venue)           q.set('venue',   ev.venue);
+    if (ev.event_time)      q.set('time',    ev.event_time);
+    if (ev.event_type)      q.set('theme',   ev.event_type);
+    const welcome = ev.welcome_message ?? ev.welcome;
+    if (welcome)            q.set('welcome', welcome);
     const qs = q.toString();
     return qs ? `${base}?${qs}` : base;
   }
@@ -971,7 +1096,8 @@
     const uploadUrl = buildUploadUrl();
 
     if (qrImg && dataUrl) qrImg.src = dataUrl;
-    qrUrl.textContent = uploadUrl;
+    // Display only the host + slug, not the full URL with query string.
+    qrUrl.textContent = `${location.host}/upload/${slug}`;
 
     const openBtn = $('btn-open-upload');
     if (openBtn) openBtn.href = uploadUrl;

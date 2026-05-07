@@ -562,8 +562,9 @@ body { background: var(--paper); min-height: 100dvh; }
             name:    ev.couple_names || ev.name || slug,
             date:    ev.event_date   || ev.date  || '',
             venue:   ev.venue        || '',
+            time:    ev.event_time   || ev.time  || '',
             theme:   ev.event_type   || ev.theme  || 'wedding',
-            welcome: ev.welcome      || 'Salamat sa pagdating! Scan, share, and become part of the story.',
+            welcome: ev.welcome_message || ev.welcome || 'Salamat sa pagdating! Scan, share, and become part of the story.',
             cover:   ev.cover        || '',
             count:   ev.count        || 0,
             locks:   data.locks  || null,
@@ -583,6 +584,7 @@ body { background: var(--paper); min-height: 100dvh; }
         name,
         date:    p.get('date')    || '',
         venue:   p.get('venue')   || '',
+        time:    p.get('time')    || '',
         theme:   p.get('theme')   || 'wedding',
         welcome: p.get('welcome') || 'Salamat sa pagdating! Scan, share, and become part of the story.',
         cover:   p.get('cover')   || '',
@@ -601,7 +603,15 @@ body { background: var(--paper); min-height: 100dvh; }
     document.getElementById('heroName').innerHTML = nameHtml;
     document.title = `Reelday — ${ev.name}`;
 
-    const metaText = [ev.date, ev.venue].filter(Boolean).join(' · ').toUpperCase();
+    // Format the event date if it parses as one; otherwise pass through.
+    let formattedDate = '';
+    if (ev.date) {
+      const d = new Date(ev.date);
+      formattedDate = isNaN(d) ? String(ev.date) : d.toLocaleDateString(undefined, {
+        year: 'numeric', month: 'long', day: 'numeric',
+      });
+    }
+    const metaText = [formattedDate, ev.time, ev.venue].filter(Boolean).join(' · ').toUpperCase();
     const heroMeta = document.getElementById('heroMeta');
     heroMeta.textContent  = metaText;
     heroMeta.style.display = metaText ? '' : 'none';

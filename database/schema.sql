@@ -85,6 +85,14 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS events_remaining        INTEGER;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS gallery_expires_at     TIMESTAMPTZ;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS upload_window_ends_at  TIMESTAMPTZ;
 
+-- ── Optional event details surfaced on the upload page ──
+-- venue:           free text, e.g. "Manila Hotel"
+-- event_time:      free text, e.g. "5:00 PM"
+-- welcome_message: greeting shown above the upload form
+ALTER TABLE events ADD COLUMN IF NOT EXISTS venue           VARCHAR(200);
+ALTER TABLE events ADD COLUMN IF NOT EXISTS event_time      VARCHAR(60);
+ALTER TABLE events ADD COLUMN IF NOT EXISTS welcome_message TEXT;
+
 -- Useful indexes
 CREATE INDEX IF NOT EXISTS idx_events_user_id ON events(user_id);
 
