@@ -144,14 +144,19 @@ export default async function eventRoutes(fastify) {
     );
 
     // Effective plan follows the owner's current account tier.
+    // Tolerate the column not existing yet on un-migrated DBs.
     let effectiveTier = event.plan;
     if (event.user_id) {
-      const { rows: ownerRows } = await fastify.db.query(
-        `SELECT subscription_tier FROM users WHERE id = $1`,
-        [event.user_id],
-      );
-      if (ownerRows.length && ownerRows[0].subscription_tier) {
-        effectiveTier = ownerRows[0].subscription_tier;
+      try {
+        const { rows: ownerRows } = await fastify.db.query(
+          `SELECT subscription_tier FROM users WHERE id = $1`,
+          [event.user_id],
+        );
+        if (ownerRows.length && ownerRows[0].subscription_tier) {
+          effectiveTier = ownerRows[0].subscription_tier;
+        }
+      } catch (e) {
+        fastify.log.warn({ err: e.message }, 'subscription_tier lookup failed — schema may not be migrated');
       }
     }
     const planInfo = resolvePlan(effectiveTier);

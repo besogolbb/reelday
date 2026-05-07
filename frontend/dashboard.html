@@ -835,11 +835,14 @@
 
       const eventJson   = await eventRes.json();
       const event       = eventJson.event;
+      if (!event) throw new Error('Event payload missing');
       // Backend resolves owner's current subscription tier into plan_info.id;
       // override event.plan locally so all downstream rendering follows it.
       if (eventJson.plan_info?.id) event.plan = eventJson.plan_info.id;
-      const { uploads } = await uploadsRes.json();
-      const { qr_code } = await qrRes.json();
+      const uploadsJson = uploadsRes.ok ? await uploadsRes.json() : { uploads: [] };
+      const qrJson      = qrRes.ok      ? await qrRes.json()      : { qr_code: null };
+      const uploads = uploadsJson.uploads || [];
+      const qr_code = qrJson.qr_code     || null;
 
       /* Merge API uploads with any locally-saved uploads (upload page saves here) */
       const localUploads = readLocalUploads();
@@ -855,8 +858,10 @@
       pageLoading.style.display = 'none';
       dashHeader.style.display  = 'block';
       document.getElementById('stats-row').style.display = 'grid';
+      document.getElementById('info-hero').style.display  = 'block';
       dashMain.style.display    = 'grid';
-    } catch {
+    } catch (err) {
+      console.warn('[dashboard] API path failed, falling back to local mode:', err);
       /* API unavailable — fall back to localStorage */
       try {
         renderLocalMode(readLocalUploads());

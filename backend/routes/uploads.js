@@ -20,14 +20,19 @@ export default async function uploadRoutes(fastify) {
 
     // Effective plan = owner's current subscription tier (per-account model).
     // Falls back to event.plan if event has no owner (legacy / anonymous).
+    // Tolerate un-migrated DBs that don't have subscription_tier yet.
     let effectiveTier = event.plan;
     if (event.user_id) {
-      const { rows: ownerRows } = await fastify.db.query(
-        `SELECT subscription_tier FROM users WHERE id = $1`,
-        [event.user_id],
-      );
-      if (ownerRows.length && ownerRows[0].subscription_tier) {
-        effectiveTier = ownerRows[0].subscription_tier;
+      try {
+        const { rows: ownerRows } = await fastify.db.query(
+          `SELECT subscription_tier FROM users WHERE id = $1`,
+          [event.user_id],
+        );
+        if (ownerRows.length && ownerRows[0].subscription_tier) {
+          effectiveTier = ownerRows[0].subscription_tier;
+        }
+      } catch (e) {
+        fastify.log.warn({ err: e.message }, 'subscription_tier lookup failed — schema may not be migrated');
       }
     }
     const plan = resolvePlan(effectiveTier);
