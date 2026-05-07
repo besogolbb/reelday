@@ -410,20 +410,26 @@
 
   async function toggleVideoMessage() {
     console.log('toggleVideoMessage called for ID:', currentPhotoId, 'Type:', currentPhotoType);
-    try {
-      const item = document.querySelector(`.photo-item[data-id="${CSS.escape(currentPhotoId)}"]`);
-      const isPending = item && item.classList.contains('pending');
+    const item = document.querySelector(`.photo-item[data-id="${CSS.escape(currentPhotoId)}"]`);
+    if (!item) {
+      console.error('Item not found in DOM');
+      return;
+    }
 
-      // If the video is currently pending, moving it to messages should also approve it
+    const isPending = item.classList.contains('pending');
+
+    try {
+      // 1. If the video is currently pending, approve it first so it moves out of review
       if (isPending) {
-        await fetch(`/api/uploads/${currentPhotoId}/approve`, {
+        const approveRes = await fetch(`/api/uploads/${currentPhotoId}/approve`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ is_approved: true })
         });
+        if (!approveRes.ok) console.warn('Pre-approval failed, continuing to flag...');
       }
 
-      // Using POST to match your observed network logs
+      // 2. Flag as video message (using POST as observed in your logs)
       const response = await fetch(`/api/uploads/${currentPhotoId}/flag`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -433,22 +439,18 @@
       console.log('API response status:', response.status, 'ok:', response.ok, 'data:', responseData);
 
       if (response.ok) {
-        if (item) {
-          console.log('Item found in DOM, removing:', item);
-          
-          // Update pending counter if the video was still in the 'pending' state
-          if (isPending) {
-            const pendingEl = document.getElementById('statPending');
-            if (pendingEl) {
-              const count = parseInt(pendingEl.textContent, 10);
-              pendingEl.textContent = Math.max(0, count - 1);
-            }
+        console.log('Item found in DOM, removing:', item);
+        
+        // Update pending counter if the video was still in the 'pending' state
+        if (isPending) {
+          const pendingEl = document.getElementById('statPending');
+          if (pendingEl) {
+            const count = parseInt(pendingEl.textContent, 10);
+            pendingEl.textContent = Math.max(0, count - 1).toLocaleString();
           }
-          
-          item.remove();
-        } else {
-          console.warn('Item not found in DOM for ID:', currentPhotoId, 'after successful API call. UI might be out of sync.');
         }
+        
+        item.remove();
         closeModal();
       } else {
         alert('Failed to move video to messages: ' + (responseData.message || 'Unknown error'));
@@ -465,6 +467,48 @@
     }
   }
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+  /* ── Dashboard Initialization ─────────────────────────── */
+  async function initDashboard() {
+    const params = new URLSearchParams(location.search);
+    const slug = params.get('slug') || 'andrea-jm';
+
+    try {
+      // Fetch event metadata to update title, meta, and QR link targets
+      const eventRes = await fetch(`/api/events/${slug}`);
+      const eventData = await eventRes.json();
+      
+      if (eventRes.ok) {
+        const event = eventData.event;
+        document.getElementById('eventTitle').innerHTML = event.couple_names.replace(' & ', ' <em>&amp;</em> ');
+        
+        const dateObj = new Date(event.event_date);
+        const dateStr = dateObj.toLocaleDateString('en-PH', { day: 'numeric', month: 'long', year: 'numeric' });
+        document.getElementById('eventMeta').textContent = `${dateStr} · ${event.venue || 'Venue'} · ${event.event_type.charAt(0).toUpperCase() + event.event_type.slice(1)}`;
+
+        // Update Link targets and displayed URL for reelday.ph
+        const qrUrlDisplay = document.querySelector('.qr-card .url');
+        if (qrUrlDisplay) qrUrlDisplay.textContent = `reelday.ph/e/${slug}`;
+
+        document.querySelector('.qr-card a[href="upload.html"]').href = `/upload/${slug}`;
+        document.querySelector('.qr-card a[href="wall.html"]').href = `/wall/${slug}`;
+
+        // Fetch and display the real QR Code from the API
+        const qrRes = await fetch(`/api/events/${slug}/qr`);
+        const qrData = await qrRes.json();
+        if (qrRes.ok) {
+          const qrDiv = document.querySelector('.qr-card .qr');
+          qrDiv.style.background = `url(${qrData.qr_code}) center/contain no-repeat`;
+          qrDiv.style.backgroundColor = '#fff';
+          qrDiv.style.border = 'none';
+        }
+      }
+    } catch (err) {
+      console.warn('Dashboard initialization skipped or failed:', err);
+    }
+  }
+
+  initDashboard();
 
   /* ── Simulate live counter (replace with WebSocket) ─────── */
   setInterval(() => {
