@@ -340,9 +340,17 @@
       });
 
       if (response.ok) {
-        // Successfully updated moderation: remove or update the item in the UI
-        const item = document.querySelector(`.photo-item[data-id="${currentPhotoId}"]`);
+        const item = document.querySelector(`.photo-item[data-id="${CSS.escape(currentPhotoId)}"]`);
         if (item) {
+          // Update pending counter if we just approved/hid a pending item
+          if (item.classList.contains('pending')) {
+            const pendingEl = document.getElementById('statPending');
+            if (pendingEl) {
+              const count = parseInt(pendingEl.textContent, 10);
+              pendingEl.textContent = Math.max(0, count - 1);
+            }
+          }
+
           if (status === 'hidden') {
             item.remove();
           } else {
@@ -365,23 +373,32 @@
   async function toggleVideoMessage() {
     console.log('toggleVideoMessage called for ID:', currentPhotoId, 'Type:', currentPhotoType);
     try {
+      // Using POST to match your observed network logs
       const response = await fetch(`/api/uploads/${currentPhotoId}/flag`, {
-        method: 'PATCH',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_video_message: true })
       });
-      const responseData = await response.json(); // Always parse response to get details
+      const responseData = await response.json().catch(() => ({}));
       console.log('API response status:', response.status, 'ok:', response.ok, 'data:', responseData);
 
       if (response.ok) {
-        // Successfully moved: remove from the current grid view
-        const item = document.querySelector(`.photo-item[data-id="${currentPhotoId}"]`);
+        const item = document.querySelector(`.photo-item[data-id="${CSS.escape(currentPhotoId)}"]`);
         if (item) {
           console.log('Item found in DOM, removing:', item);
+          
+          // Update pending counter if the video was still in the 'pending' state
+          if (item.classList.contains('pending')) {
+            const pendingEl = document.getElementById('statPending');
+            if (pendingEl) {
+              const count = parseInt(pendingEl.textContent, 10);
+              pendingEl.textContent = Math.max(0, count - 1);
+            }
+          }
+          
           item.remove();
         } else {
           console.warn('Item not found in DOM for ID:', currentPhotoId, 'after successful API call. UI might be out of sync.');
-          // In a real application, you might re-fetch the grid data here to ensure UI consistency.
         }
         closeModal();
       } else {
