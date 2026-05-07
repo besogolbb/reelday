@@ -50,6 +50,17 @@
       image-rendering: -webkit-optimize-contrast;
     }
 
+    /* Foreground video — same fitting as the photo layer */
+    .layer .vid {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: contain;
+      background: #000;
+      display: none;
+    }
+    .layer.has-video .pic { display: none; }
+    .layer.has-video .vid { display: block; }
+
     /* Ken Burns — very gentle, mostly pan; the image stays fully visible */
     @keyframes kb1 {
       from { transform: scale(1)    translate(0, 0); }
@@ -355,11 +366,13 @@
 <div class="layer" id="layer-a">
   <div class="backdrop" id="backdrop-a"></div>
   <div class="pic" id="pic-a"></div>
+  <video class="vid" id="vid-a" muted playsinline preload="auto"></video>
   <div class="vignette"></div>
 </div>
 <div class="layer out" id="layer-b">
   <div class="backdrop" id="backdrop-b"></div>
   <div class="pic" id="pic-b"></div>
+  <video class="vid" id="vid-b" muted playsinline preload="auto"></video>
   <div class="vignette"></div>
 </div>
 
@@ -511,6 +524,14 @@
   const picB        = document.getElementById('pic-b');
   const backdropA   = document.getElementById('backdrop-a');
   const backdropB   = document.getElementById('backdrop-b');
+  const vidA        = document.getElementById('vid-a');
+  const vidB        = document.getElementById('vid-b');
+
+  function isVideoItem(u) {
+    if (u?.file_type === 'video') return true;
+    if (typeof u?.file_url === 'string' && /\.(mp4|webm|mov|m4v|ogg)$/i.test(u.file_url)) return true;
+    return false;
+  }
   const frame       = document.getElementById('frame');
   const caption     = document.getElementById('caption');
   const capUploader = document.getElementById('caption-uploader');
@@ -537,7 +558,8 @@
     progressFill.style.transition = 'none';
     progressFill.style.width = '0%';
     void progressFill.offsetWidth;
-    progressFill.style.transition = `width ${SLIDE_DURATION}ms linear`;
+    // Match the bar's fill time to whatever the current slide's duration is.
+    progressFill.style.transition = `width ${currentSlideDuration()}ms linear`;
     progressFill.style.width = '100%';
   }
 
@@ -560,17 +582,45 @@
     const outLayer   = activeLayer === 'A' ? layerA : layerB;
     const inPic      = activeLayer === 'A' ? picB   : picA;
     const inBackdrop = activeLayer === 'A' ? backdropB : backdropA;
+    const inVid      = activeLayer === 'A' ? vidB    : vidA;
+    const outVid     = activeLayer === 'A' ? vidA    : vidB;
 
-    // Load photo into both layers — pic shows whole image, backdrop fills letterbox
+    // Stop the outgoing video (if any) so it doesn't keep playing in the background
+    if (outVid && !outVid.paused) {
+      try { outVid.pause(); outVid.currentTime = 0; } catch {}
+    }
+
     const mediaUrl = wallMediaUrl(item);
-    const url = mediaUrl ? `url('${mediaUrl}')` : 'none';
-    inPic.style.backgroundImage      = url;
-    inBackdrop.style.backgroundImage = url;
+    const itemIsVideo = isVideoItem(item) && !!mediaUrl;
 
-    // Restart Ken Burns animation cleanly
-    inPic.style.animation = 'none';
-    void inPic.offsetWidth; // force reflow
-    inPic.style.animation = `${kbAnim} ${KB_DURATION}s ease-out forwards`;
+    if (itemIsVideo) {
+      // Backdrop falls back to a flat dark wash for videos
+      inBackdrop.style.backgroundImage = 'none';
+      inPic.style.backgroundImage      = 'none';
+      inPic.style.animation            = 'none';
+
+      inLayer.classList.add('has-video');
+      if (inVid.src !== mediaUrl) inVid.src = mediaUrl;
+      inVid.currentTime = 0;
+      const playPromise = inVid.play();
+      if (playPromise && typeof playPromise.catch === 'function') {
+        playPromise.catch(() => { /* autoplay may fail before user gesture; that's fine */ });
+      }
+    } else {
+      inLayer.classList.remove('has-video');
+      // Load photo into both layers — pic shows whole image, backdrop fills letterbox
+      const url = mediaUrl ? `url('${mediaUrl}')` : 'none';
+      inPic.style.backgroundImage      = url;
+      inBackdrop.style.backgroundImage = url;
+
+      // Restart Ken Burns animation cleanly
+      inPic.style.animation = 'none';
+      void inPic.offsetWidth; // force reflow
+      inPic.style.animation = `${kbAnim} ${KB_DURATION}s ease-out forwards`;
+    }
+
+    // Stash so advance()/goTo() know whether this slide is a video.
+    items.__currentIsVideo = itemIsVideo;
 
     // Crossfade layers
     inLayer.classList.remove('out');
@@ -591,6 +641,19 @@
     frame.style.display = 'flex';
   }
 
+  // Pick the duration for the *currently shown* slide.
+  // Videos: their playback time, capped at MAX_VIDEO_DURATION.
+  // Photos: standard SLIDE_DURATION.
+  const MAX_VIDEO_DURATION = 30000;
+  function currentSlideDuration() {
+    if (!items.__currentIsVideo) return SLIDE_DURATION;
+    // Whichever layer is now active holds the playing video.
+    const activeVid = activeLayer === 'A' ? vidA : vidB;
+    const secs = Number.isFinite(activeVid?.duration) ? activeVid.duration : 0;
+    if (secs > 0) return Math.min(secs * 1000 + 400, MAX_VIDEO_DURATION);
+    return Math.min(SLIDE_DURATION, MAX_VIDEO_DURATION);
+  }
+
   function advance() {
     if (isPaused || items.length === 0) return;
 
@@ -599,7 +662,7 @@
     showSlide(currentIdx);
     startProgress();
 
-    slideTimer = setTimeout(advance, SLIDE_DURATION);
+    slideTimer = setTimeout(advance, currentSlideDuration());
   }
 
   function startSlideshow() {
@@ -612,7 +675,7 @@
     emptyState.classList.remove('visible');
 
     if (items.length > 1) {
-      slideTimer = setTimeout(advance, SLIDE_DURATION);
+      slideTimer = setTimeout(advance, currentSlideDuration());
     }
   }
 
@@ -622,9 +685,21 @@
     showSlide(currentIdx);
     startProgress();
     if (!isPaused && items.length > 1) {
-      slideTimer = setTimeout(advance, SLIDE_DURATION);
+      slideTimer = setTimeout(advance, currentSlideDuration());
     }
   }
+
+  // When a video finishes naturally before its timer fires, jump ahead.
+  [vidA, vidB].forEach(v => {
+    v?.addEventListener('ended', () => {
+      if (!isRunning || isPaused) return;
+      // Only advance if the *active* layer's video ended (the other layer is from the previous slide).
+      const activeVid = activeLayer === 'A' ? vidA : vidB;
+      if (v !== activeVid) return;
+      clearTimeout(slideTimer);
+      advance();
+    });
+  });
 
   /* ══════════════════════════════════════════════════════════
      PAUSE / RESUME
@@ -632,12 +707,17 @@
   function togglePause() {
     isPaused = !isPaused;
     pauseBtn.classList.toggle('visible', isPaused);
+    const activeVid = activeLayer === 'A' ? vidA : vidB;
     if (isPaused) {
       clearTimeout(slideTimer);
       stopProgress();
+      if (items.__currentIsVideo && activeVid) try { activeVid.pause(); } catch {}
     } else {
       startProgress();
-      if (items.length > 1) slideTimer = setTimeout(advance, SLIDE_DURATION);
+      if (items.__currentIsVideo && activeVid) {
+        const p = activeVid.play(); if (p?.catch) p.catch(() => {});
+      }
+      if (items.length > 1) slideTimer = setTimeout(advance, currentSlideDuration());
     }
   }
 
