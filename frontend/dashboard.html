@@ -1731,19 +1731,31 @@
       let videoEl = '';
       let imageEl = '';
       if (isVideo && mediaSrc) {
-        // preload="none" + a semi-transparent play badge so we don't fetch
-        // every video's metadata on grid render. The user clicks to preview.
-        videoEl = `<video src="${escapeAttr(mediaSrc)}#t=0.1" muted playsinline preload="none"
-                  style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#1a1a1a;"></video>
+        // Don't load metadata until the tile is visible (set via observer
+        // below). Once in view, the browser fetches just enough to draw
+        // the first frame as a poster.
+        videoEl = `<video data-lazy-src="${escapeAttr(mediaSrc)}#t=0.1"
+                          muted playsinline preload="none"
+                          style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#1a1a1a;"></video>
                   <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
                               width:36px;height:36px;border-radius:50%;
                               background:rgba(0,0,0,.55);color:#fff;
                               display:flex;align-items:center;justify-content:center;
                               font-size:14px;pointer-events:none;">▶</div>`;
       } else if (mediaSrc) {
+        // Fall back to the streaming proxy if the direct R2 URL fails
+        // (CORS/private bucket/etc) so tiles never end up as flat colour.
+        const proxyFallback = u.id
+          ? `/api/uploads/file/${encodeURIComponent(u.id)}`
+          : '';
         imageEl = `<img src="${escapeAttr(mediaSrc)}" alt="${escapeAttr(label)}"
                        loading="lazy" decoding="async" fetchpriority="low"
-                       onerror="this.remove()">`;
+                       data-fallback="${escapeAttr(proxyFallback)}"
+                       onerror="(function(el){
+                         var f = el.getAttribute('data-fallback');
+                         if (f && el.src !== f) { el.removeAttribute('data-fallback'); el.src = f; }
+                         else { el.remove(); }
+                       })(this)">`;
       }
 
       const msgPreview = u.message
@@ -1753,6 +1765,43 @@
       const showLabelFallback = !mediaSrc && !isVideo;
       return `<div class="placeholder ${cls}" style="${styleParts.join(';')};">${videoEl}${imageEl}${showLabelFallback ? safeLabel : ''}<div class="actions-overlay"><span class="uploader">${safeLabel}</span>${msgPreview}${actionBtn}</div></div>`;
     }).join('');
+
+    hydrateLazyVideos();
+  }
+
+  // Lazily attach video sources once a tile scrolls into view, then load
+  // metadata so the browser paints the first frame as a poster.
+  let lazyVideoObserver = null;
+  function hydrateLazyVideos() {
+    const targets = photoGrid.querySelectorAll('video[data-lazy-src]');
+    if (!targets.length) return;
+    if (!('IntersectionObserver' in window)) {
+      // Old browser — just load all of them.
+      targets.forEach(activateVideo);
+      return;
+    }
+    if (!lazyVideoObserver) {
+      lazyVideoObserver = new IntersectionObserver((entries, obs) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            activateVideo(entry.target);
+            obs.unobserve(entry.target);
+          }
+        });
+      }, { rootMargin: '200px 0px' });
+    }
+    targets.forEach(v => lazyVideoObserver.observe(v));
+  }
+  function activateVideo(video) {
+    const src = video.getAttribute('data-lazy-src');
+    if (!src) return;
+    video.removeAttribute('data-lazy-src');
+    video.preload = 'metadata';
+    video.src = src;
+    // Some browsers need a tiny seek to render the first frame as poster.
+    video.addEventListener('loadedmetadata', () => {
+      try { video.currentTime = Math.min(0.1, (video.duration || 0.1) - 0.01); } catch {}
+    }, { once: true });
   }
 
   // ── Handle action button clicks (Feature/Hide/Approve) ─
