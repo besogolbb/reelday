@@ -59,6 +59,17 @@ export default async function uploadRoutes(fastify) {
       return reply.status(403).send({ error: true, message: 'Payment pending verification' });
     }
 
+    // ── Plan enforcement: gallery soft-lock ──────────────
+    // Once the gallery is archived, the event no longer accepts new uploads.
+    if (event.gallery_expires_at && new Date(event.gallery_expires_at) < new Date()) {
+      return reply.status(403).send({
+        error: true,
+        code: 'gallery_locked',
+        message: 'This event gallery has been archived. Uploads are closed.',
+        gallery_expires_at: event.gallery_expires_at,
+      });
+    }
+
     // ── Plan enforcement: upload window ──────────────────
     if (event.upload_window_ends_at && new Date(event.upload_window_ends_at) < new Date()) {
       return reply.status(403).send({
@@ -206,7 +217,13 @@ export default async function uploadRoutes(fastify) {
       [event.id],
     );
 
-    return { uploads, event };
+    const now = new Date();
+    const locks = {
+      gallery_locked: !!(event.gallery_expires_at && new Date(event.gallery_expires_at) < now),
+      uploads_closed: !!(event.upload_window_ends_at && new Date(event.upload_window_ends_at) < now),
+    };
+
+    return { uploads, event, locks };
   });
 
   // GET /api/uploads/:slug/download — list all file URLs for bulk download
@@ -214,7 +231,7 @@ export default async function uploadRoutes(fastify) {
     const { slug } = request.params;
 
     const { rows: eventRows } = await fastify.db.query(
-      'SELECT id FROM events WHERE slug = $1 AND is_active = true',
+      'SELECT id, gallery_expires_at FROM events WHERE slug = $1 AND is_active = true',
       [slug],
     );
 
@@ -222,12 +239,23 @@ export default async function uploadRoutes(fastify) {
       return reply.status(404).send({ error: true, message: 'Event not found' });
     }
 
+    const event = eventRows[0];
+
+    if (event.gallery_expires_at && new Date(event.gallery_expires_at) < new Date()) {
+      return reply.status(403).send({
+        error: true,
+        code: 'gallery_locked',
+        message: 'This event gallery has been archived. Downloads are no longer available — upgrade to extend retention.',
+        gallery_expires_at: event.gallery_expires_at,
+      });
+    }
+
     const { rows: uploads } = await fastify.db.query(
       `SELECT file_url, uploader_name, file_type
        FROM uploads
        WHERE event_id = $1 AND is_approved = true
        ORDER BY created_at DESC`,
-      [eventRows[0].id],
+      [event.id],
     );
 
     return {
