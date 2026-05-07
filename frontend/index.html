@@ -1243,7 +1243,7 @@
           <li>7-day gallery</li>
           <li>QR code</li>
         </ul>
-        <a class="btn btn-ghost" href="/create?plan=tala" data-tier-cta="tala">Get started</a>
+        <a class="btn btn-ghost" href="/start?plan=tala" data-tier-cta="tala">Get started</a>
       </div>
       <div class="price-card">
         <div class="tier">Sinag</div>
@@ -1256,7 +1256,7 @@
           <li>Easy 3-step video message</li>
           <li>Event-day uploads only</li>
         </ul>
-        <a class="btn btn-ghost" href="/create?plan=sinag" data-tier-cta="sinag">Choose Sinag</a>
+        <a class="btn btn-ghost" href="/start?plan=sinag" data-tier-cta="sinag">Choose Sinag</a>
       </div>
       <div class="price-card featured">
         <div class="tier">★ Dalisay</div>
@@ -1271,7 +1271,7 @@
           <li>3 active events</li>
           <li>3-month retention</li>
         </ul>
-        <a class="btn btn-accent" href="/create?plan=dalisay" data-tier-cta="dalisay">Choose Dalisay →</a>
+        <a class="btn btn-accent" href="/start?plan=dalisay" data-tier-cta="dalisay">Choose Dalisay →</a>
       </div>
       <div class="price-card">
         <div class="tier">Hiraya</div>
@@ -1284,7 +1284,7 @@
           <li>1-year retention</li>
           <li>Custom domains</li>
         </ul>
-        <a class="btn btn-ghost" href="/create?plan=hiraya" data-tier-cta="hiraya">Choose Hiraya</a>
+        <a class="btn btn-ghost" href="/start?plan=hiraya" data-tier-cta="hiraya">Choose Hiraya</a>
       </div>
     </div>
   </div>
@@ -1585,50 +1585,9 @@ function setLang(lang, btn) {
   if (demoEl) obs.observe(demoEl);
 })();
 
-/* ── Pricing CTA handler ─────────────────────────────────
-   Tala: just go to /create.
-   Paid tiers: if logged in, kick off /api/payments/create directly
-   so existing users can upgrade their account without making a new
-   event first. If not logged in, send them to /login?next=/#pricing.
-─────────────────────────────────────────────────────── */
-(function () {
-  document.querySelectorAll('[data-tier-cta]').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      const tier = btn.dataset.tierCta;
-      if (tier === 'tala') return; // free path; default href is fine
-
-      e.preventDefault();
-      const token = localStorage.getItem('reelday_token');
-
-      // Not logged in → send through login then come back to pricing
-      if (!token) {
-        location.href = `/login?next=${encodeURIComponent('/#pricing')}`;
-        return;
-      }
-
-      // Logged in → ask the backend for a checkout session and redirect
-      try {
-        const res = await fetch('/api/payments/create', {
-          method: 'POST',
-          headers: {
-            'Content-Type':  'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify({ tier }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message || 'Could not start checkout.');
-        if (data.checkout_url) {
-          location.href = data.checkout_url;
-        } else {
-          alert('No checkout URL returned. Please try again.');
-        }
-      } catch (err) {
-        alert(err.message || 'Something went wrong. Please try again.');
-      }
-    });
-  });
-})();
+/* Pricing CTAs route to the /start wizard with ?plan=<tier>.
+   The wizard handles auth, event creation, and PayMongo checkout
+   for paid tiers. No JS interception needed. */
 </script>
 
 <!-- Auth-aware header / hero CTA ------------------------------------------ -->

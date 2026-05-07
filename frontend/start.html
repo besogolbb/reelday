@@ -16,6 +16,20 @@
     background: rgba(253,250,245,.85); backdrop-filter: blur(8px);
   }
   .wizard-header .brand { font-size: 18px; }
+  .plan-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(196,90,58,.10);
+    color: var(--accent-deep);
+    border: 1px solid rgba(196,90,58,.25);
+    border-radius: 999px;
+    padding: 5px 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
   .wizard-progress {
     flex: 1; max-width: 360px; margin: 0 24px;
     display: flex; gap: 6px;
@@ -264,6 +278,7 @@
 
 <header class="wizard-header">
   <a class="brand" href="/">REELDAY<sup>★</sup></a>
+  <span class="plan-pill" id="plan-pill" style="display:none"></span>
   <div class="wizard-progress" id="progress">
     <div class="pip active"></div>
     <div class="pip"></div>
@@ -384,11 +399,30 @@
 
   // ── State ──────────────────────────────────────
   const params = new URLSearchParams(location.search);
+
+  const PLAN_LABELS = {
+    tala:    { label: 'Tala — Free',         paid: false },
+    sinag:   { label: 'Sinag — ₱999',        paid: true  },
+    dalisay: { label: 'Dalisay — ₱2,499',    paid: true  },
+    hiraya:  { label: 'Hiraya — ₱4,990/yr',  paid: true  },
+  };
+
+  const requestedPlan = params.get('plan');
+  const plan = PLAN_LABELS[requestedPlan] ? requestedPlan : 'tala';
+
   const state = {
     type:  params.get('type') || 'wedding',
     name:  '',
     date:  '',
+    plan,
   };
+
+  // Show the chosen plan as a header pill
+  if (PLAN_LABELS[plan]) {
+    const pill = document.getElementById('plan-pill');
+    pill.textContent = PLAN_LABELS[plan].label;
+    pill.style.display = '';
+  }
 
   const isLoggedIn = !!getToken();
   const totalSlides = isLoggedIn ? 3 : 4;   // skip auth if already signed in
@@ -535,12 +569,32 @@
     return data;
   }
 
+  async function startCheckout(slug) {
+    const token = getToken();
+    const res = await fetch('/api/payments/create', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ slug, tier: state.plan }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Could not start checkout.');
+    if (!data.checkout_url) throw new Error('No checkout URL returned.');
+    location.href = data.checkout_url;
+  }
+
   async function createEventAndGo(button) {
     button.disabled = true;
     button.classList.add('loading');
     try {
       const { event } = await createEvent();
-      location.href = `/dashboard?slug=${event.slug}`;
+      if (PLAN_LABELS[state.plan]?.paid) {
+        await startCheckout(event.slug);
+      } else {
+        location.href = `/dashboard?slug=${event.slug}`;
+      }
     } catch (err) {
       showToast(err.message, 'error');
       button.disabled = false;
@@ -592,7 +646,11 @@
 
       saveAuth(data.token, data.user);
       const { event } = await createEvent();
-      location.href = `/dashboard?slug=${event.slug}`;
+      if (PLAN_LABELS[state.plan]?.paid) {
+        await startCheckout(event.slug);
+      } else {
+        location.href = `/dashboard?slug=${event.slug}`;
+      }
     } catch (err) {
       errEl.textContent = err.message;
       errEl.classList.add('show');
@@ -615,7 +673,11 @@
       if (!res.ok) throw new Error(data.message || 'Google sign-in failed');
       saveAuth(data.token, data.user);
       const { event } = await createEvent();
-      location.href = `/dashboard?slug=${event.slug}`;
+      if (PLAN_LABELS[state.plan]?.paid) {
+        await startCheckout(event.slug);
+      } else {
+        location.href = `/dashboard?slug=${event.slug}`;
+      }
     } catch (err) {
       errEl.textContent = err.message;
       errEl.classList.add('show');
