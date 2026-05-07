@@ -440,22 +440,13 @@ body { background: var(--paper); min-height: 100dvh; }
         oninput="onNameInput(this)" />
     </div>
 
-    <!-- Message + wall preview -->
+    <!-- Message -->
     <div class="gallery-msg">
       <div class="mp-textarea-wrap" style="margin-top:14px;">
         <label>Add a message (optional)</label>
         <textarea class="mp-textarea" id="msgText" maxlength="160" placeholder="Write something for the wall… &quot;Lolo would have loved this.&quot;" oninput="updateMsgPreview()"></textarea>
       </div>
       <div class="mp-char-count" id="charCount">0 / 160</div>
-      <div class="mp-wall-preview" style="margin-top:10px;">
-        <div class="mp-wall-bg" id="wallPreviewBg"></div>
-        <div class="mp-wall-vignette"></div>
-        <div class="mp-wall-label">Preview · how it looks on wall</div>
-        <div class="mp-wall-msg">
-          <div class="mp-wall-msg-from" id="msgFrom">— Your name</div>
-          <div id="msgPreview" style="opacity:.4;font-style:italic;">Your message appears here…</div>
-        </div>
-      </div>
     </div>
 
     <button class="btn btn-primary send-btn" onclick="handleSend('gallery')">Share moments →</button>
@@ -510,15 +501,6 @@ body { background: var(--paper); min-height: 100dvh; }
       <div class="s-icon">★</div>
       <div><b>Your video is live!</b><span>It'll appear on the wall in a few seconds.</span></div>
     </div>
-  </div>
-
-  <!-- Recently shared -->
-  <div class="recent">
-    <div class="recent-head">
-      <h3>Recently shared</h3>
-      <span class="count" id="recentCount">0 today</span>
-    </div>
-    <div class="recent-grid" id="recentGrid"></div>
   </div>
 
   <div class="footer-note">★ Powered by Reelday · reelday.ph</div>
@@ -618,15 +600,6 @@ body { background: var(--paper); min-height: 100dvh; }
 
     document.getElementById('heroWelcome').textContent = `"${ev.welcome}"`;
 
-    if (ev.cover) {
-      document.getElementById('wallPreviewBg').style.backgroundImage = `url(${ev.cover})`;
-    }
-
-    const photos = ev.photos || DEMO_PHOTOS;
-    document.getElementById('recentGrid').innerHTML =
-      photos.slice(0,9).map(src => `<div style="background-image:url(${src})"></div>`).join('');
-    document.getElementById('recentCount').textContent = `${ev.count} today`;
-
     document.getElementById('uploadHero').classList.remove('hero-loading');
 
     // Phase 4: if the upload window has closed, hide the share UI and
@@ -654,7 +627,6 @@ body { background: var(--paper); min-height: 100dvh; }
 
   /* ── Name field ────────────────────────────────────── */
   function onNameInput(input) {
-    document.getElementById('msgFrom').textContent = '— ' + (input.value || 'Your name');
     document.getElementById('nameField').classList.remove('error');
   }
 
@@ -731,16 +703,9 @@ body { background: var(--paper); min-height: 100dvh; }
     updateSendBtn();
   }
 
-  function updateWallPreview() {
-    const ids = Object.keys(itemDataUrls);
-    const bg = document.getElementById('wallPreviewBg');
-    if (ids.length > 0) {
-      bg.style.backgroundImage = `url(${itemDataUrls[ids[0]]})`;
-    } else {
-      bg.style.backgroundImage = currentEvent && currentEvent.cover
-        ? `url(${currentEvent.cover})` : '';
-    }
-  }
+  // The wall preview was removed from the upload page; this is now a no-op
+  // so existing call sites don't need to change.
+  function updateWallPreview() { /* removed: live wall preview */ }
 
   function updateSendBtn() {
     const total = document.querySelectorAll('#galleryQueue .queue-item').length;
@@ -875,14 +840,10 @@ body { background: var(--paper); min-height: 100dvh; }
     return String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0');
   }
 
-  /* ── Live message ──────────────────────────────────── */
+  /* ── Live message char counter ─────────────────────── */
   function updateMsgPreview() {
     const txt = document.getElementById('msgText').value;
-    const preview = document.getElementById('msgPreview');
     const counter = document.getElementById('charCount');
-    preview.textContent = txt || 'Your message appears here…';
-    preview.style.opacity = txt ? '1' : '0.4';
-    preview.style.fontStyle = txt ? 'normal' : 'italic';
     counter.textContent = txt.length + ' / 160';
     counter.classList.toggle('warn', txt.length > 140);
   }
@@ -1078,8 +1039,6 @@ body { background: var(--paper); min-height: 100dvh; }
     document.querySelector('#panel-gallery .send-btn').textContent = 'Share moments →';
     Object.keys(itemDataUrls).forEach(k => delete itemDataUrls[k]);
     Object.keys(itemFiles).forEach(k => delete itemFiles[k]);
-    if (currentEvent && currentEvent.cover)
-      document.getElementById('wallPreviewBg').style.backgroundImage = `url(${currentEvent.cover})`;
     updateMsgPreview();
   }
 
