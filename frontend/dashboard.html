@@ -277,6 +277,117 @@
       background: var(--accent);
     }
     .stream-tab:hover:not(.active) { color: var(--ink); }
+
+    /* ── Auto-approve toggle (video stream) ───────────────── */
+    .approve-toggle {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: none; border: none; padding: 0;
+      cursor: pointer;
+      font-family: var(--mono); font-size: 11px;
+      letter-spacing: .14em; text-transform: uppercase;
+      color: var(--ink-soft);
+    }
+    .approve-toggle-track {
+      position: relative;
+      width: 38px; height: 22px;
+      border-radius: 999px;
+      background: var(--paper-3, #e8dfd4);
+      transition: background .2s;
+    }
+    .approve-toggle-thumb {
+      position: absolute; top: 3px; left: 3px;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 1px 3px rgba(0,0,0,.2);
+      transition: left .2s;
+    }
+    .approve-toggle[aria-checked="true"] .approve-toggle-track {
+      background: var(--accent);
+    }
+    .approve-toggle[aria-checked="true"] .approve-toggle-thumb {
+      left: 19px;
+    }
+    .approve-toggle[aria-checked="true"] .approve-toggle-text {
+      color: var(--accent-deep);
+    }
+    .approve-toggle:disabled { opacity: .55; cursor: not-allowed; }
+
+    /* ── Video preview modal ──────────────────────────────── */
+    .preview-modal {
+      position: fixed; inset: 0; z-index: 1000;
+      display: none;
+      align-items: center; justify-content: center;
+      padding: 24px;
+      background: rgba(20,12,8,.72);
+      backdrop-filter: blur(10px);
+    }
+    .preview-modal.open { display: flex; animation: pmFade .25s ease both; }
+    @keyframes pmFade { from { opacity: 0 } to { opacity: 1 } }
+    .preview-modal-card {
+      background: #1a1a1a;
+      border-radius: 24px;
+      box-shadow: 0 30px 80px rgba(0,0,0,.5);
+      width: min(720px, 100%);
+      max-height: 90vh;
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    .preview-modal-card video {
+      width: 100%; max-height: 60vh;
+      background: #000;
+      display: block;
+    }
+    .preview-modal-meta {
+      padding: 18px 22px 6px;
+      color: #fff;
+    }
+    .preview-modal-meta .uploader {
+      font-family: var(--display);
+      font-style: italic;
+      font-size: 22px;
+      margin-bottom: 4px;
+    }
+    .preview-modal-meta .when {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.55);
+    }
+    .preview-modal-meta .msg {
+      margin-top: 12px;
+      font-size: 14px; line-height: 1.5;
+      color: rgba(255,255,255,.85);
+      font-style: italic;
+    }
+    .preview-modal-actions {
+      display: flex; gap: 10px;
+      padding: 16px 22px 22px;
+      flex-wrap: wrap;
+    }
+    .preview-modal-actions button {
+      flex: 1 1 auto;
+      padding: 12px 20px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.18);
+      background: rgba(255,255,255,.08);
+      color: #fff;
+      font-family: var(--sans); font-size: 14px; font-weight: 600;
+      cursor: pointer;
+      transition: background .15s, transform .15s;
+    }
+    .preview-modal-actions button:hover { background: rgba(255,255,255,.16); }
+    .preview-modal-actions .btn-approve {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .preview-modal-actions .btn-approve:hover { background: var(--accent-deep); border-color: var(--accent-deep); }
+    .preview-modal-actions .btn-hide {
+      background: rgba(196,90,58,.15);
+      border-color: rgba(196,90,58,.35);
+    }
+    .preview-modal-actions button:disabled { opacity: .5; cursor: not-allowed; transform: none; }
     .pill { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); padding: 8px 12px; border-radius: 999px; background: #f6eadc; border: 1px solid rgba(196,90,58,.12); white-space: nowrap; }
 
     /* ── Tabs (from reference design) ─────────────────────── */
@@ -703,6 +814,12 @@
           <p id="stream-sub">Recent guest uploads appear here for quick review and featuring.</p>
         </div>
         <span class="pill" id="approve-status">Auto-approve · ON</span>
+        <button type="button" class="approve-toggle" id="video-approve-toggle"
+                role="switch" aria-checked="false" aria-label="Auto-approve videos"
+                style="display:none">
+          <span class="approve-toggle-track"><span class="approve-toggle-thumb"></span></span>
+          <span class="approve-toggle-text">Auto-approve · OFF</span>
+        </button>
       </div>
       <div class="tab-row" id="tab-row">
         <span class="tab active" data-tab="all">All · <span id="tab-all-count">0</span></span>
@@ -777,6 +894,23 @@
 <!-- ── Toast ─────────────────────────────────────────────── -->
 <div class="toast" id="toast"></div>
 
+<!-- ── Video preview modal (review before approve) ───────── -->
+<div class="preview-modal" id="preview-modal" role="dialog" aria-modal="true" aria-label="Review video">
+  <div class="preview-modal-card">
+    <video id="preview-modal-video" controls preload="metadata"></video>
+    <div class="preview-modal-meta">
+      <div class="uploader" id="preview-modal-uploader">Guest</div>
+      <div class="when"     id="preview-modal-when">—</div>
+      <div class="msg"      id="preview-modal-msg" style="display:none"></div>
+    </div>
+    <div class="preview-modal-actions">
+      <button type="button" class="btn-approve" id="preview-modal-approve">Approve · publish to wall</button>
+      <button type="button" class="btn-hide"    id="preview-modal-hide">Hide</button>
+      <button type="button" id="preview-modal-close">Close</button>
+    </div>
+  </div>
+</div>
+
 <script type="module">
   import { resolvePlan, nextTier } from '/js/plans.js';
 
@@ -826,6 +960,16 @@
   let currentDashEvent = null;
   let currentTab    = 'all';
   let currentStream = 'photo';   // 'photo' | 'video'
+
+  // API uploads carry is_approved (boolean); the UI uses u.status. Map server
+  // truth to the local model so the existing tab pipeline works for both.
+  function normalizeUpload(u) {
+    if (!u) return u;
+    if (u.status) return u;            // already normalized (localStorage)
+    if (u.is_approved === false) return { ...u, status: 'pending' };
+    return { ...u, status: 'approved' };
+  }
+  function normalizeUploads(arr) { return Array.isArray(arr) ? arr.map(normalizeUpload) : []; }
 
   function isVideoUpload(u) {
     if (u?.file_type === 'video') return true;
@@ -972,11 +1116,20 @@
       }
     }
 
-    // Approve status
+    // Approve status (photo stream — legacy pill)
     const approveStatus = $('approve-status');
     if (approveStatus) {
       const autoApprove = event.auto_approve !== false;
       approveStatus.textContent = autoApprove ? 'Auto-approve · ON' : 'Auto-approve · OFF';
+    }
+
+    // Video stream auto-approve toggle — reflect current value from the API
+    const vToggle = document.getElementById('video-approve-toggle');
+    if (vToggle) {
+      const on = event.video_auto_approve === true;
+      vToggle.setAttribute('aria-checked', String(on));
+      vToggle.querySelector('.approve-toggle-text').textContent =
+        on ? 'Auto-approve · ON' : 'Auto-approve · OFF';
     }
 
     // Editable details inputs — only seed once per page load
@@ -1270,6 +1423,14 @@
   }
 
   // ── Stream switcher (Photo / Video) ──────────────────
+  function reflectStreamHeader() {
+    const photoPill   = document.getElementById('approve-status');
+    const videoToggle = document.getElementById('video-approve-toggle');
+    if (photoPill)   photoPill.style.display   = currentStream === 'video' ? 'none' : '';
+    if (videoToggle) videoToggle.style.display = currentStream === 'video' ? 'inline-flex' : 'none';
+  }
+  reflectStreamHeader();
+
   document.getElementById('stream-tabs')?.addEventListener('click', e => {
     const btn = e.target.closest('.stream-tab');
     if (!btn || btn.classList.contains('active')) return;
@@ -1285,12 +1446,146 @@
     const sub = document.getElementById('stream-sub');
     if (sub) {
       sub.textContent = currentStream === 'video'
-        ? 'Recent guest video uploads — review, feature, or hide.'
+        ? 'Review guest videos here. Approve to publish them to the live wall.'
         : 'Recent guest uploads appear here for quick review and featuring.';
     }
 
+    reflectStreamHeader();
     updateTabCounts(allUploads);
     renderGallery(allUploads);
+  });
+
+  // ── Video auto-approve toggle ────────────────────────
+  document.getElementById('video-approve-toggle')?.addEventListener('click', async () => {
+    const btn   = document.getElementById('video-approve-toggle');
+    const label = btn.querySelector('.approve-toggle-text');
+    const next  = btn.getAttribute('aria-checked') !== 'true';
+    const token = localStorage.getItem('reelday_token');
+
+    btn.disabled = true;
+    btn.setAttribute('aria-checked', String(next));
+    label.textContent = next ? 'Auto-approve · ON' : 'Auto-approve · OFF';
+
+    try {
+      const res = await fetch(`/api/events/${slug}`, {
+        method:  'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ video_auto_approve: next }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Could not save.');
+      currentDashEvent = data.event;
+      showToast(next ? 'New videos will auto-publish' : 'New videos require review');
+    } catch (err) {
+      // Revert on failure
+      const prev = !next;
+      btn.setAttribute('aria-checked', String(prev));
+      label.textContent = prev ? 'Auto-approve · ON' : 'Auto-approve · OFF';
+      showToast(err.message || 'Failed to update setting');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // ── Video preview modal ──────────────────────────────
+  const previewModal     = document.getElementById('preview-modal');
+  const previewVideo     = document.getElementById('preview-modal-video');
+  const previewUploader  = document.getElementById('preview-modal-uploader');
+  const previewWhen      = document.getElementById('preview-modal-when');
+  const previewMsg       = document.getElementById('preview-modal-msg');
+  const previewApprove   = document.getElementById('preview-modal-approve');
+  const previewHide      = document.getElementById('preview-modal-hide');
+  const previewClose     = document.getElementById('preview-modal-close');
+  let previewingId = null;
+
+  function openPreview(upload) {
+    previewingId = upload.id;
+    previewVideo.src = uploadMediaUrl(upload, true) || '';
+    previewVideo.currentTime = 0;
+    previewUploader.textContent = upload.uploader_name || 'Anonymous guest';
+    if (upload.created_at) {
+      const d = new Date(upload.created_at);
+      previewWhen.textContent = isNaN(d) ? '' : d.toLocaleString();
+    } else {
+      previewWhen.textContent = '';
+    }
+    if (upload.message) {
+      previewMsg.style.display = 'block';
+      previewMsg.textContent = `"${upload.message}"`;
+    } else {
+      previewMsg.style.display = 'none';
+    }
+    // Approve only if it's pending; otherwise repurpose to "Open on wall"
+    const isPending = upload.status === 'pending';
+    previewApprove.style.display = isPending ? '' : 'none';
+    previewHide.textContent = (upload.status === 'hidden') ? 'Unhide' : 'Hide';
+    previewModal.classList.add('open');
+  }
+
+  function closePreview() {
+    previewModal.classList.remove('open');
+    try { previewVideo.pause(); } catch {}
+    previewVideo.removeAttribute('src');
+    previewVideo.load();
+    previewingId = null;
+  }
+
+  previewClose?.addEventListener('click', closePreview);
+  previewModal?.addEventListener('click', e => {
+    if (e.target === previewModal) closePreview();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && previewModal.classList.contains('open')) closePreview();
+  });
+
+  async function patchApproval(uploadId, isApproved) {
+    const token = localStorage.getItem('reelday_token');
+    const res = await fetch(`/api/uploads/${uploadId}/approve`, {
+      method:  'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ is_approved: isApproved }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.message || 'Update failed');
+    }
+  }
+
+  previewApprove?.addEventListener('click', async () => {
+    if (!previewingId) return;
+    previewApprove.disabled = true;
+    try {
+      await patchApproval(previewingId, true);
+      showToast('Video approved · now playing on the wall');
+      closePreview();
+      await refreshUploads();
+    } catch (err) {
+      showToast(err.message);
+    } finally {
+      previewApprove.disabled = false;
+    }
+  });
+
+  previewHide?.addEventListener('click', async () => {
+    if (!previewingId) return;
+    previewHide.disabled = true;
+    try {
+      // Use the existing approve endpoint with is_approved=false to "hide"
+      await patchApproval(previewingId, false);
+      showToast('Video hidden from the wall');
+      closePreview();
+      await refreshUploads();
+    } catch (err) {
+      showToast(err.message);
+    } finally {
+      previewHide.disabled = false;
+    }
   });
 
   // ── Read uploads from localStorage ───────────────────
@@ -1361,7 +1656,9 @@
       /* Merge API uploads with any locally-saved uploads (upload page saves here) */
       const localUploads = readLocalUploads();
       const apiIds = new Set(uploads.map(u => String(u.id)));
-      const merged = [...uploads, ...localUploads.filter(u => !apiIds.has(String(u.id)))];
+      const merged = normalizeUploads(
+        [...uploads, ...localUploads.filter(u => !apiIds.has(String(u.id)))],
+      );
 
       applyTheme(event.event_type);
       renderHeader(event);
@@ -1396,7 +1693,9 @@
       const { uploads } = await res.json();
       const localUploads = readLocalUploads();
       const apiIds = new Set(uploads.map(u => String(u.id)));
-      const merged = [...uploads, ...localUploads.filter(u => !apiIds.has(String(u.id)))];
+      const merged = normalizeUploads(
+        [...uploads, ...localUploads.filter(u => !apiIds.has(String(u.id)))],
+      );
       const currentIds = new Set(allUploads.map(u => String(u.id)));
       const hasChanges = merged.length !== allUploads.length ||
                          merged.some(u => !currentIds.has(String(u.id)));
@@ -1417,14 +1716,23 @@
   if (photoGrid) {
     photoGrid.addEventListener('click', (e) => {
       const actionBtn = e.target.closest('.actions-btn');
-      if (!actionBtn) return;
-
-      const action = actionBtn.dataset.action;
-      const id = actionBtn.dataset.id;
-
-      if (action && id) {
-        handleAction(action, id);
+      if (actionBtn) {
+        const action = actionBtn.dataset.action;
+        const id = actionBtn.dataset.id;
+        if (action && id) handleAction(action, id);
+        return;
       }
+
+      // On the video stream, clicking a tile opens the review modal so the
+      // host can watch the video before approving.
+      if (currentStream !== 'video') return;
+      const tile = e.target.closest('.photo-grid > div');
+      if (!tile) return;
+      const grid = Array.from(photoGrid.children);
+      const idx  = grid.indexOf(tile);
+      const filtered = filterUploads(filterByStream(allUploads), currentTab);
+      const upload   = filtered[idx];
+      if (upload) openPreview(upload);
     });
   }
 

@@ -29,6 +29,10 @@ const MIGRATIONS = `
   ALTER TABLE events ADD COLUMN IF NOT EXISTS venue           VARCHAR(200);
   ALTER TABLE events ADD COLUMN IF NOT EXISTS event_time      VARCHAR(60);
   ALTER TABLE events ADD COLUMN IF NOT EXISTS welcome_message TEXT;
+
+  -- Per-event moderation: photos default to auto-approve (legacy behaviour),
+  -- videos default to manual review so the host can screen messages.
+  ALTER TABLE events ADD COLUMN IF NOT EXISTS video_auto_approve BOOLEAN DEFAULT false;
 `;
 
 async function dbPlugin(fastify) {
