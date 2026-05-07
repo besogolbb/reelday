@@ -308,6 +308,8 @@
 <div class="toast" id="toast"></div>
 
 <script type="module">
+  import { resolvePlan, nextTier } from '/js/plans.js';
+
   // ── Nav ───────────────────────────────────────────────
   {
     let user = null;
@@ -427,14 +429,13 @@
     const infoExpires = $('info-expires');
     if (infoType)    infoType.textContent = meta.label;
     if (infoPlan) {
-      const plan = event.plan || 'libre';
-      if (plan === 'selebrasyon' && event.is_paid) {
-        infoPlan.textContent = '★ Celebration';
-      } else if (plan === 'pro' && event.is_paid) {
-        infoPlan.textContent = 'PRO';
-      } else {
-        infoPlan.textContent = plan.charAt(0).toUpperCase() + plan.slice(1);
-      }
+      const plan = resolvePlan(event.plan);
+      const next = nextTier(plan.id);
+      const star = plan.id === 'dalisay' ? '★ ' : '';
+      const upgrade = next
+        ? ` <a href="/#pricing" style="font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);text-decoration:none;margin-left:6px;">Upgrade</a>`
+        : '';
+      infoPlan.innerHTML = `<span style="font-family:var(--display);font-style:italic;color:var(--accent);">${star}${plan.name}</span>${upgrade}`;
     }
     if (infoExpires && event.wall_expires_at) infoExpires.textContent = formatDate(event.wall_expires_at);
 
