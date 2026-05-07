@@ -1736,14 +1736,26 @@
     }
   }
 
+  function applyLocalApproval(uploadId, isApproved) {
+    const updated = (allUploads || []).map(u =>
+      String(u.id) === String(uploadId)
+        ? { ...u, is_approved: isApproved, status: isApproved ? 'approved' : 'pending' }
+        : u,
+    );
+    renderStats(updated);
+    renderGallery(updated);
+  }
+
   previewApprove?.addEventListener('click', async () => {
     if (!previewingId) return;
     previewApprove.disabled = true;
+    const movedId = previewingId;
     try {
-      await patchApproval(previewingId, true);
+      await patchApproval(movedId, true);
+      applyLocalApproval(movedId, true);
       showToast('Video approved · now playing on the wall');
       closePreview();
-      await refreshUploads();
+      refreshUploads();
     } catch (err) {
       showToast(err.message);
     } finally {
@@ -1754,12 +1766,14 @@
   previewHide?.addEventListener('click', async () => {
     if (!previewingId) return;
     previewHide.disabled = true;
+    const movedId = previewingId;
     try {
       // Use the existing approve endpoint with is_approved=false to "hide"
-      await patchApproval(previewingId, false);
+      await patchApproval(movedId, false);
+      applyLocalApproval(movedId, false);
       showToast('Video hidden from the wall');
       closePreview();
-      await refreshUploads();
+      refreshUploads();
     } catch (err) {
       showToast(err.message);
     } finally {
@@ -1771,6 +1785,7 @@
     if (!previewingId) return;
     previewMove.disabled = true;
     const targetFlag = !previewingIsMessage;   // toggle
+    const movedId    = previewingId;
     try {
       const token = localStorage.getItem('reelday_token');
       const res = await fetch(`/api/uploads/${previewingId}/flag`, {
@@ -1784,11 +1799,24 @@
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Move failed');
+
+      // Patch the in-memory upload so the grid moves the tile right away,
+      // even if the next GET /api/uploads/:slug is served from a stale
+      // edge cache.
+      const updated = (allUploads || []).map(u =>
+        String(u.id) === String(movedId)
+          ? { ...u, is_video_message: targetFlag }
+          : u,
+      );
+      renderStats(updated);
+      renderGallery(updated);
+
       showToast(targetFlag
         ? 'Moved to Video messages'
         : 'Moved back to Video upload');
       closePreview();
-      await refreshUploads();
+      // Background refresh in case the server has other diffs queued.
+      refreshUploads();
     } catch (err) {
       showToast(err.message);
     } finally {
@@ -1907,8 +1935,10 @@
     try {
       if (!slug) throw new Error('no slug');
       // Bypass any HTTP/edge caching so flag toggles (approve / move) show
-      // up the moment the host triggers a refresh.
-      const res = await fetch(`/api/uploads/${slug}`, { cache: 'no-store' });
+      // up the moment the host triggers a refresh. cache:'no-store' covers
+      // the browser; appending a timestamp defeats CDN/edge caches that
+      // ignore that header.
+      const res = await fetch(`/api/uploads/${slug}?t=${Date.now()}`, { cache: 'no-store' });
       if (!res.ok) throw new Error('api down');
       const { uploads } = await res.json();
       const localUploads = readLocalUploads();
