@@ -1096,8 +1096,9 @@
     const uploadUrl = buildUploadUrl();
 
     if (qrImg && dataUrl) qrImg.src = dataUrl;
-    // Display only the host + slug, not the full URL with query string.
-    qrUrl.textContent = `${location.host}/upload/${slug}`;
+    // Always show the canonical reelday.ph host, regardless of where
+    // the dashboard is hosted (easypanel, localhost, staging…).
+    qrUrl.textContent = `reelday.ph/upload/${slug}`;
 
     const openBtn = $('btn-open-upload');
     if (openBtn) openBtn.href = uploadUrl;

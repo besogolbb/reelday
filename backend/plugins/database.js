@@ -24,6 +24,11 @@ const MIGRATIONS = `
   ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR(100);
   ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;
   CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id) WHERE google_id IS NOT NULL;
+
+  -- Optional event details surfaced on the upload page
+  ALTER TABLE events ADD COLUMN IF NOT EXISTS venue           VARCHAR(200);
+  ALTER TABLE events ADD COLUMN IF NOT EXISTS event_time      VARCHAR(60);
+  ALTER TABLE events ADD COLUMN IF NOT EXISTS welcome_message TEXT;
 `;
 
 async function dbPlugin(fastify) {
