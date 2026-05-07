@@ -672,7 +672,7 @@
      PRICING
   ════════════════════════════════════════════════════════ */
   .pricing { padding: 100px 28px; background: var(--paper-2); }
-  .pricing .container { max-width: 1000px; margin: 0 auto; text-align: center; }
+  .pricing .container { max-width: 1240px; margin: 0 auto; text-align: center; }
   .pricing h2 {
     font-family: var(--display); font-weight: 400;
     font-size: clamp(36px, 4.5vw, 60px);
@@ -680,7 +680,7 @@
   }
   .pricing h2 em { font-style: italic; color: var(--accent); }
   .pricing .sub { font-size: 16px; color: var(--ink-soft); margin-bottom: 52px; }
-  .pricing-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; text-align: left; }
+  .pricing-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; text-align: left; }
   .price-card {
     background: #fff; border: 1px solid var(--line);
     border-radius: var(--r-lg); padding: 32px;
@@ -697,7 +697,7 @@
   .price-card.featured:hover { transform: translateY(-13px); }
   .price-card .tier { font-family: var(--mono); font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 14px; }
   .price-card.featured .tier { color: var(--accent-soft); }
-  .price-card .price { font-family: var(--display); font-size: 52px; font-weight: 400; line-height: 1; letter-spacing: -.03em; margin-bottom: 4px; }
+  .price-card .price { font-family: var(--display); font-size: 44px; font-weight: 400; line-height: 1; letter-spacing: -.03em; margin-bottom: 4px; }
   .price-card .price sub { font-family: var(--sans); font-size: 12px; color: var(--ink-faint); font-weight: 400; }
   .price-card.featured .price sub { color: rgba(251,245,236,.45); }
   .price-card .desc { font-size: 13px; color: var(--ink-soft); margin-bottom: 20px; padding-bottom: 18px; border-bottom: 1px solid var(--line); line-height: 1.6; }
@@ -765,7 +765,7 @@
     .feat-wide, .feat-narrow { grid-column: 1; }
     .events-grid { grid-template-columns: repeat(2,1fr); }
     .testi-grid { grid-template-columns: 1fr; gap: 16px; }
-    .pricing-grid { grid-template-columns: 1fr; }
+    .pricing-grid { grid-template-columns: repeat(2,1fr); }
     .price-card.featured { transform: none; }
     .site-nav { display: none; }
     .wl-frame-inner { padding: 0 20px 20px; }
@@ -774,6 +774,7 @@
     .hero { padding: 72px 20px 40px; }
     .how, .wall-section, .testimonials, .features, .events, .pricing, .faq, .final-cta { padding-left: 20px; padding-right: 20px; }
     .events-grid { grid-template-columns: repeat(2,1fr); }
+    .pricing-grid { grid-template-columns: 1fr; }
 
     /* hide polaroid stack — absolutely-positioned pile breaks on narrow screens */
     .polaroid-stage { display: none; }
@@ -1230,41 +1231,56 @@
     <p class="sub" data-i18n="pricing-sub">No subscription. No surprise charges. Pick the tier that matches your guest list.</p>
     <div class="pricing-grid">
       <div class="price-card">
-        <div class="tier">Intimate</div>
-        <div class="price">₱990<sub> / event</sub></div>
-        <p class="desc">Up to 50 guests. Despedidas, baby showers, salu-salo.</p>
+        <div class="tier">Tala</div>
+        <div class="price">Free</div>
+        <p class="desc">Try Reelday at your next small gathering — no card needed.</p>
         <ul>
-          <li>200 uploads</li>
-          <li>Live wall, 24h</li>
-          <li>Standard themes</li>
-          <li>Watermarked .zip</li>
+          <li>Up to 50 uploads</li>
+          <li>7-day gallery</li>
+          <li>QR code</li>
         </ul>
-        <a class="btn btn-ghost" href="/create?plan=intimate">Get started</a>
-      </div>
-      <div class="price-card featured">
-        <div class="tier">★ Celebration</div>
-        <div class="price">₱2,490<sub> / event</sub></div>
-        <p class="desc">Up to 250 guests. Weddings, debuts, big birthdays.</p>
-        <ul>
-          <li>Unlimited uploads</li>
-          <li>Live wall, 7 days</li>
-          <li>All 7 themes</li>
-          <li>HD .zip + custom poster</li>
-          <li>Custom QR poster</li>
-        </ul>
-        <a class="btn btn-accent" href="/create?plan=celebration">Choose Celebration →</a>
+        <a class="btn btn-ghost" href="/create?plan=tala">Get started</a>
       </div>
       <div class="price-card">
-        <div class="tier">Forever</div>
-        <div class="price">₱4,990<sub> / event</sub></div>
-        <p class="desc">500+ guests. White-glove setup, lifetime archive.</p>
+        <div class="tier">Sinag</div>
+        <div class="price">₱999<sub> / event</sub></div>
+        <p class="desc">For one-day celebrations — debuts, birthdays, intimate weddings.</p>
         <ul>
-          <li>Everything in Celebration</li>
-          <li>Lifetime archive</li>
-          <li>Coordinator dashboard</li>
-          <li>Priority support</li>
+          <li>Unlimited photo &amp; video uploads</li>
+          <li>30-day gallery</li>
+          <li>Ken Burns transition live wall</li>
+          <li>Easy 3-step video message</li>
+          <li>Event-day uploads only</li>
         </ul>
-        <a class="btn btn-ghost" href="/create?plan=forever">Get started</a>
+        <a class="btn btn-ghost" href="/create?plan=sinag">Choose Sinag</a>
+      </div>
+      <div class="price-card featured">
+        <div class="tier">★ Dalisay</div>
+        <div class="price">₱2,499<sub> / package</sub></div>
+        <p class="desc">For multi-day celebrations with their own event website.</p>
+        <ul>
+          <li>Unlimited uploads</li>
+          <li>7-day upload window</li>
+          <li>Ken Burns transition live wall</li>
+          <li>Live Wall reactions</li>
+          <li>Event website (free subdomain &amp; design)</li>
+          <li>3 active events</li>
+          <li>3-month retention</li>
+        </ul>
+        <a class="btn btn-accent" href="/create?plan=dalisay">Choose Dalisay →</a>
+      </div>
+      <div class="price-card">
+        <div class="tier">Hiraya</div>
+        <div class="price">₱4,990<sub> / year</sub></div>
+        <p class="desc">For organizers and venues running multiple events.</p>
+        <ul>
+          <li>Everything in Dalisay</li>
+          <li>10 active events</li>
+          <li>6-month upload window</li>
+          <li>1-year retention</li>
+          <li>Custom domains</li>
+        </ul>
+        <a class="btn btn-ghost" href="/create?plan=hiraya">Choose Hiraya</a>
       </div>
     </div>
   </div>
@@ -1289,7 +1305,7 @@
     </details>
     <details class="faq-item">
       <summary data-i18n="faq-4-q">Do we keep the photos forever?</summary>
-      <p data-i18n="faq-4-a">Yes. Download a full-resolution .zip any time. Forever-tier events stay archived on Reelday for life.</p>
+      <p data-i18n="faq-4-a">Yes. Download a full-resolution .zip any time. Hiraya-tier events stay archived on Reelday for the year, and you can always re-export.</p>
     </details>
     <details class="faq-item">
       <summary data-i18n="faq-5-q">Pwede ba namin gamitin sa Filipino?</summary>
@@ -1387,7 +1403,7 @@ const i18n = {
     'faq-3-q':          'Can we screen photos before they go live?',
     'faq-3-a':          'Yes. One-tap moderation from your phone. Approve, hide, or feature. Defaults to auto-approve so you can stay present.',
     'faq-4-q':          'Do we keep the photos forever?',
-    'faq-4-a':          'Yes. Download a full-resolution .zip any time. Forever-tier events stay archived on Reelday for life.',
+    'faq-4-a':          'Yes. Download a full-resolution .zip any time. Hiraya-tier events stay archived on Reelday for the year, and you can always re-export.',
     'faq-5-q':          'Pwede ba namin gamitin sa Filipino?',
     'faq-5-a':          'Oo naman. Guest upload page is fully bilingual — guests pick EN or FIL. Wall captions follow.',
     'final-h2':         'Your day. Every <em>angle.</em>',
@@ -1433,7 +1449,7 @@ const i18n = {
     'faq-3-q':          'Pwede ba naming suriin ang mga larawan bago mag-live?',
     'faq-3-a':          'Oo. Isang tap na moderation mula sa inyong telepono. I-approve, itago, o i-feature. Default ay auto-approve para manatiling present kayo.',
     'faq-4-q':          'Mananatili ba sa amin ang mga larawan habang buhay?',
-    'faq-4-a':          'Oo. I-download ang buong resolusyon na .zip anumang oras. Ang mga event sa Forever tier ay naka-archive sa Reelday habang buhay.',
+    'faq-4-a':          'Oo. I-download ang buong resolusyon na .zip anumang oras. Ang mga event sa Hiraya tier ay naka-archive sa Reelday sa loob ng isang taon, at puwedeng i-export ulit anumang oras.',
     'faq-5-q':          'Pwede ba namin gamitin sa Filipino?',
     'faq-5-a':          'Oo naman. Ang guest upload page ay ganap na bilingual — pipiliin ng mga bisita ang EN o FIL. Susunod ang mga wall caption.',
     'final-h2':         'Ang inyong araw. Bawat <em>anggulo.</em>',
