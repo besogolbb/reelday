@@ -41,28 +41,37 @@ async function countUserActiveEvents(db, userId) {
 }
 
 export default async function eventRoutes(fastify) {
-  // POST /api/events — create a new event
-  fastify.post('/events', async (request, reply) => {
-    const { couple_names, event_type, event_date, plan: requestedPlan, user_id: bodyUserId } = request.body ?? {};
+  // POST /api/events — create a new event (auth required)
+  fastify.post('/events', { preHandler: fastify.authenticate }, async (request, reply) => {
+    const { couple_names, event_type, event_date } = request.body ?? {};
 
     if (!couple_names) {
       return reply.status(400).send({ error: true, message: 'couple_names is required' });
     }
 
-    // Resolve the acting user (token preferred over body for trust)
-    const tokenUser  = tryGetUser(request);
-    const actingUserId = tokenUser?.id || bodyUserId || null;
-    const user = await loadUserWithPlan(fastify.db, actingUserId);
+    const userId = request.user.id;
+    const user   = await loadUserWithPlan(fastify.db, userId);
+    if (!user) {
+      return reply.status(404).send({ error: true, message: 'User not found' });
+    }
 
-    // Resolve the plan to assign to this event
-    // 1. Authenticated user with a paid subscription → use their tier
-    // 2. Otherwise honor the body's `plan` (legacy/anonymous) or default to tala
-    const accountTier = user?.subscription_tier;
-    const planForEvent = resolvePlan(accountTier || requestedPlan);
+    const planForEvent = resolvePlan(user.subscription_tier);
 
-    // ── Enforce eventLimit for authenticated users ──
-    if (user) {
-      const existing = await countUserActiveEvents(fastify.db, user.id);
+    // ── Enforce events_remaining first (paid tiers), eventLimit second (Tala) ──
+    if (user.events_remaining !== null && user.events_remaining !== undefined) {
+      // User has a finite credit balance from a paid tier
+      if (user.events_remaining <= 0) {
+        return reply.status(403).send({
+          error: true,
+          code: 'plan_limit_events',
+          message: `Your ${planForEvent.name} plan has no event credits left. Upgrade to add more.`,
+          plan: planForEvent.id,
+          events_remaining: 0,
+        });
+      }
+    } else {
+      // No credit balance — fall back to counting active events vs eventLimit
+      const existing = await countUserActiveEvents(fastify.db, userId);
       if (existing >= planForEvent.eventLimit) {
         return reply.status(403).send({
           error: true,
@@ -75,10 +84,9 @@ export default async function eventRoutes(fastify) {
       }
     }
 
-    // Compute expiry timestamps from plan + event_date (or now)
-    const stampDate            = event_date || new Date();
-    const galleryExpiresAt     = galleryExpiryFor(planForEvent.id, stampDate);
-    const uploadWindowEndsAt   = uploadWindowEndFor(planForEvent.id, stampDate);
+    const stampDate          = event_date || new Date();
+    const galleryExpiresAt   = galleryExpiryFor(planForEvent.id, stampDate);
+    const uploadWindowEndsAt = uploadWindowEndFor(planForEvent.id, stampDate);
 
     const slug = makeSlug(couple_names);
 
@@ -95,13 +103,21 @@ export default async function eventRoutes(fastify) {
         event_type ?? 'wedding',
         event_date ?? null,
         planForEvent.id,
-        actingUserId,
+        userId,
         galleryExpiresAt,
         uploadWindowEndsAt,
       ],
     );
 
-    const event = rows[0];
+    // Decrement events_remaining if it's set (paid-tier credit pool)
+    if (user.events_remaining !== null && user.events_remaining !== undefined) {
+      await fastify.db.query(
+        `UPDATE users SET events_remaining = GREATEST(events_remaining - 1, 0) WHERE id = $1`,
+        [userId],
+      );
+    }
+
+    const event   = rows[0];
     const qr_code = await generateQR(slug);
 
     return reply.status(201).send({ event, qr_code });

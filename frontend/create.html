@@ -1321,15 +1321,17 @@
     const eventName = (eventNamesInput?.value || namesInput.value).trim();
     const eventDate = (eventDateInput?.value || dateInput.value) || null;
 
+    const token = localStorage.getItem('reelday_token');
     const res = await fetch('/api/events', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      },
       body: JSON.stringify({
         couple_names: eventName,
         event_type:   selectedType,
         event_date:   eventDate,
-        plan,
-        user_id:      userId,
       }),
     });
 
@@ -1359,14 +1361,17 @@
       const { event } = await createEvent(selectedPlan);
       const slug = event.slug;
 
+      const token = localStorage.getItem('reelday_token');
+      const authHdr = token ? { 'Authorization': `Bearer ${token}` } : {};
+
       if (isGcash) {
-        // GCash manual: record payment with reference, mark paid
+        // GCash manual: record payment with reference, optimistically mark paid
         const manualRes = await fetch('/api/payments/manual', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHdr },
           body: JSON.stringify({
             slug,
-            plan:      selectedPlan,
+            tier:      selectedPlan,
             reference: gcashRefInput.value.trim(),
           }),
         });
@@ -1377,8 +1382,8 @@
         // Maya / Card: PayMongo checkout session
         const payRes = await fetch('/api/payments/create', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ slug, plan: selectedPlan }),
+          headers: { 'Content-Type': 'application/json', ...authHdr },
+          body: JSON.stringify({ slug, tier: selectedPlan }),
         });
         const payData = await payRes.json();
 

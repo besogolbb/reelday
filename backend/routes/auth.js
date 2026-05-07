@@ -215,6 +215,7 @@ export default async function authRoutes(fastify) {
   fastify.get('/auth/me', { preHandler: fastify.authenticate }, async (request) => {
     const { rows } = await fastify.db.query(
       `SELECT u.id, u.email, u.full_name, u.phone, u.is_verified, u.created_at,
+              u.subscription_tier, u.subscription_expires_at, u.events_remaining,
               json_agg(json_build_object(
                 'slug',        e.slug,
                 'couple_names',e.couple_names,

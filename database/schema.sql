@@ -88,6 +88,11 @@ ALTER TABLE events ADD COLUMN IF NOT EXISTS upload_window_ends_at  TIMESTAMPTZ;
 -- Useful indexes
 CREATE INDEX IF NOT EXISTS idx_events_user_id ON events(user_id);
 
+-- ── Phase 3: tie payments to the buyer (not just the event) ──
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES users(id);
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS tier    VARCHAR(20);
+CREATE INDEX IF NOT EXISTS idx_payments_user_id ON payments(user_id);
+
 -- Indexes for common queries
 CREATE INDEX IF NOT EXISTS idx_uploads_event_id    ON uploads(event_id);
 CREATE INDEX IF NOT EXISTS idx_uploads_created_at  ON uploads(created_at DESC);
