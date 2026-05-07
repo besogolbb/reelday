@@ -480,6 +480,16 @@
     return [...extras, ...apiUploads];
   }
 
+  function wallMediaUrl(upload) {
+    if (!upload) return null;
+
+    if (upload.id && upload.file_url && !String(upload.file_url).startsWith('data:')) {
+      return `/api/uploads/file/${encodeURIComponent(upload.id)}`;
+    }
+
+    return upload.file_url || upload.thumb || null;
+  }
+
   let items      = [];
   let allUploads = [];
   let knownIds   = new Set();
@@ -552,7 +562,8 @@
     const inBackdrop = activeLayer === 'A' ? backdropB : backdropA;
 
     // Load photo into both layers — pic shows whole image, backdrop fills letterbox
-    const url = `url('${item.file_url}')`;
+    const mediaUrl = wallMediaUrl(item);
+    const url = mediaUrl ? `url('${mediaUrl}')` : 'none';
     inPic.style.backgroundImage      = url;
     inBackdrop.style.backgroundImage = url;
 
@@ -697,7 +708,8 @@
       const item = items[(idx + 1 + i) % items.length];
       const div  = document.createElement('div');
       div.className = 'upcoming-thumb' + (i === 0 ? ' next' : '');
-      div.style.backgroundImage = `url('${item.file_url}')`;
+      const mediaUrl = wallMediaUrl(item);
+      div.style.backgroundImage = mediaUrl ? `url('${mediaUrl}')` : 'none';
       const target = idx + 1 + i;
       div.onclick = () => goTo(target);
       upcomingCol.appendChild(div);
