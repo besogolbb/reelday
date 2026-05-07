@@ -459,8 +459,10 @@
       display: flex; flex-direction: column;
       overflow: hidden;
     }
-    .preview-modal-card video {
+    .preview-modal-card video,
+    .preview-modal-card img {
       width: 100%; max-height: 60vh;
+      object-fit: contain;
       background: #000;
       display: block;
     }
@@ -1052,7 +1054,11 @@
         <div class="panel-head-copy">
           <p id="stream-sub">Photos from your guests, newest first. Switch sub-tabs to triage pending, featured, and hidden tiles.</p>
         </div>
-        <span class="pill" id="approve-status">Auto-approve · ON</span>
+        <button type="button" class="approve-toggle" id="photo-approve-toggle"
+                role="switch" aria-checked="true" aria-label="Auto-approve photos">
+          <span class="approve-toggle-track"><span class="approve-toggle-thumb"></span></span>
+          <span class="approve-toggle-text">Auto-approve · ON</span>
+        </button>
         <button type="button" class="approve-toggle" id="video-approve-toggle"
                 role="switch" aria-checked="false" aria-label="Auto-approve videos"
                 style="display:none">
@@ -1148,9 +1154,10 @@
 <div class="toast" id="toast"></div>
 
 <!-- ── Video preview modal (review before approve) ───────── -->
-<div class="preview-modal" id="preview-modal" role="dialog" aria-modal="true" aria-label="Review video">
+<div class="preview-modal" id="preview-modal" role="dialog" aria-modal="true" aria-label="Review upload">
   <div class="preview-modal-card">
-    <video id="preview-modal-video" controls preload="metadata"></video>
+    <img   id="preview-modal-image" alt="" style="display:none" />
+    <video id="preview-modal-video" controls preload="metadata" style="display:none"></video>
     <div class="preview-modal-meta">
       <div class="uploader" id="preview-modal-uploader">Guest</div>
       <div class="when"     id="preview-modal-when">—</div>
@@ -1286,12 +1293,24 @@
   function uploadMediaUrl(upload, isVideo) {
     if (!upload) return null;
 
+    // Local-only uploads carry their own data-URL thumb — use it.
     if (!isVideo && upload.thumb) return upload.thumb;
-    if (upload.id && upload.file_url && !String(upload.file_url).startsWith('data:')) {
+
+    // Photos: hit R2 directly (CDN-cached, no backend round trip) for
+    // dramatically faster grid loads. Quality is unchanged because R2
+    // serves the original bytes.
+    const fileUrl = upload?.file_url;
+    if (!isVideo && fileUrl && !String(fileUrl).startsWith('data:')) {
+      return fileUrl;
+    }
+
+    // Videos still go through the backend proxy because R2 buckets often
+    // aren't configured for CORS/Range from the dashboard origin.
+    if (upload.id && fileUrl && !String(fileUrl).startsWith('data:')) {
       return `/api/uploads/file/${encodeURIComponent(upload.id)}`;
     }
 
-    return upload.thumbnail_url || upload.file_url || null;
+    return upload.thumbnail_url || fileUrl || null;
   }
 
   function applyTheme(eventType) {
@@ -1381,11 +1400,13 @@
       }
     }
 
-    // Approve status (photo stream — legacy pill)
-    const approveStatus = $('approve-status');
-    if (approveStatus) {
-      const autoApprove = event.auto_approve !== false;
-      approveStatus.textContent = autoApprove ? 'Auto-approve · ON' : 'Auto-approve · OFF';
+    // Approve status (photo stream toggle)
+    const pToggle = document.getElementById('photo-approve-toggle');
+    if (pToggle) {
+      const on = event.auto_approve !== false;
+      pToggle.setAttribute('aria-checked', String(on));
+      pToggle.querySelector('.approve-toggle-text').textContent =
+        on ? 'Auto-approve · ON' : 'Auto-approve · OFF';
     }
 
     // Video stream auto-approve toggle — reflect current value from the API
@@ -1657,6 +1678,23 @@
     }
   }
 
+  // Preconnect to whichever CDN/R2 host serves the first upload's media,
+  // so subsequent grid images skip the TLS+DNS handshake. Runs once.
+  let preconnectAdded = false;
+  function ensurePreconnect(sampleUrl) {
+    if (preconnectAdded) return;
+    try {
+      const u = new URL(sampleUrl, location.href);
+      if (u.origin === location.origin) return;
+      const link = document.createElement('link');
+      link.rel = 'preconnect';
+      link.href = u.origin;
+      link.crossOrigin = '';
+      document.head.appendChild(link);
+      preconnectAdded = true;
+    } catch { /* not a usable URL — try next call */ }
+  }
+
   // ── Render gallery grid ───────────────────────────────
   function renderGallery(uploads) {
     allUploads = uploads;
@@ -1687,15 +1725,25 @@
       // This avoids blank tiles when R2 is private or R2_PUBLIC_URL is not public.
       const isVideo = isVideoUpload(u);
       const mediaSrc = uploadMediaUrl(u, isVideo);
+      if (mediaSrc) ensurePreconnect(mediaSrc);
 
       const styleParts = ['position:relative', 'overflow:hidden'];
       let videoEl = '';
       let imageEl = '';
       if (isVideo && mediaSrc) {
-        videoEl = `<video src="${escapeAttr(mediaSrc)}" muted playsinline preload="metadata"
-                  style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></video>`;
+        // preload="none" + a semi-transparent play badge so we don't fetch
+        // every video's metadata on grid render. The user clicks to preview.
+        videoEl = `<video src="${escapeAttr(mediaSrc)}#t=0.1" muted playsinline preload="none"
+                  style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#1a1a1a;"></video>
+                  <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+                              width:36px;height:36px;border-radius:50%;
+                              background:rgba(0,0,0,.55);color:#fff;
+                              display:flex;align-items:center;justify-content:center;
+                              font-size:14px;pointer-events:none;">▶</div>`;
       } else if (mediaSrc) {
-        imageEl = `<img src="${escapeAttr(mediaSrc)}" alt="${escapeAttr(label)}" loading="lazy" onerror="this.remove()">`;
+        imageEl = `<img src="${escapeAttr(mediaSrc)}" alt="${escapeAttr(label)}"
+                       loading="lazy" decoding="async" fetchpriority="low"
+                       onerror="this.remove()">`;
       }
 
       const msgPreview = u.message
@@ -1934,10 +1982,10 @@
 
   // ── Stream switcher (Photo / Video upload / Video messages) ──
   function reflectStreamHeader() {
-    const photoPill    = document.getElementById('approve-status');
+    const photoToggle  = document.getElementById('photo-approve-toggle');
     const videoToggle  = document.getElementById('video-approve-toggle');
     const burstCtl     = document.getElementById('message-burst-controls');
-    if (photoPill)   photoPill.style.display   = currentStream === 'photo'   ? '' : 'none';
+    if (photoToggle) photoToggle.style.display = currentStream === 'photo'   ? 'inline-flex' : 'none';
     if (videoToggle) videoToggle.style.display = currentStream === 'video'   ? 'inline-flex' : 'none';
     if (burstCtl)    burstCtl.style.display    = currentStream === 'message' ? 'inline-flex' : 'none';
   }
@@ -2007,6 +2055,10 @@
     });
   }
   bindApproveToggle(
+    'photo-approve-toggle', 'auto_approve',
+    'New photos will auto-publish', 'New photos require review',
+  );
+  bindApproveToggle(
     'video-approve-toggle', 'video_auto_approve',
     'New videos will auto-publish', 'New videos require review',
   );
@@ -2015,9 +2067,10 @@
     'New video messages will auto-publish', 'New video messages require review',
   );
 
-  // ── Video preview modal ──────────────────────────────
+  // ── Preview modal (photos and videos) ────────────────
   const previewModal     = document.getElementById('preview-modal');
   const previewVideo     = document.getElementById('preview-modal-video');
+  const previewImage     = document.getElementById('preview-modal-image');
   const previewUploader  = document.getElementById('preview-modal-uploader');
   const previewWhen      = document.getElementById('preview-modal-when');
   const previewMsg       = document.getElementById('preview-modal-msg');
@@ -2036,8 +2089,23 @@
 
   function openPreview(upload) {
     previewingId = upload.id;
-    previewVideo.src = uploadMediaUrl(upload, true) || '';
-    previewVideo.currentTime = 0;
+    const isVideo = isVideoUpload(upload);
+    if (isVideo) {
+      previewImage.style.display = 'none';
+      previewImage.removeAttribute('src');
+      previewVideo.style.display = 'block';
+      previewVideo.src = uploadMediaUrl(upload, true) || '';
+      try { previewVideo.currentTime = 0; } catch {}
+    } else {
+      previewVideo.style.display = 'none';
+      try { previewVideo.pause(); } catch {}
+      previewVideo.removeAttribute('src');
+      previewVideo.load();
+      previewImage.style.display = 'block';
+      // Use the largest source available for the modal — that's the
+      // R2 URL when synced, the data URL when local-only.
+      previewImage.src = upload.file_url || upload.thumb || upload.thumbnail_url || '';
+    }
     previewUploader.textContent = upload.uploader_name || 'Anonymous guest';
     if (upload.created_at) {
       const d = new Date(upload.created_at);
@@ -2056,12 +2124,9 @@
     previewApprove.style.display = isPending ? '' : 'none';
     previewHide.textContent = (upload.status === 'hidden') ? 'Unhide' : 'Hide';
 
-    // "Move to Video messages" — show on the Video upload stream so the
-    // host can re-classify a regular video as a message after watching it.
-    // Or, when already viewing a message, offer the reverse. Only valid for
-    // uploads that exist server-side (have a UUID).
+    // "Move to Video messages" — only meaningful for videos
     previewingIsMessage = upload.is_video_message === true;
-    const canMove = isVideoUpload(upload) && isApiUpload(upload);
+    const canMove = isVideo && isApiUpload(upload);
     previewMove.style.display = canMove ? '' : 'none';
     previewMove.textContent = previewingIsMessage
       ? 'Move back to Video upload'
@@ -2075,6 +2140,8 @@
     try { previewVideo.pause(); } catch {}
     previewVideo.removeAttribute('src');
     previewVideo.load();
+    previewImage.removeAttribute('src');
+    previewImage.style.display = 'none';
     previewingId = null;
   }
 
@@ -2362,9 +2429,8 @@
         return;
       }
 
-      // On either video stream, clicking a tile opens the review modal so
-      // the host can watch the video before approving / moving / hiding.
-      if (currentStream === 'photo') return;
+      // Clicking any tile (photo or video) opens the preview modal so
+      // the host can review and approve / hide / move from the same place.
       const tile = e.target.closest('.photo-grid > div');
       if (!tile) return;
       const grid = Array.from(photoGrid.children);

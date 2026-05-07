@@ -275,6 +275,7 @@ export default async function eventRoutes(fastify) {
     const {
       couple_names, event_date, cover_photo_url, is_active,
       venue, event_time, welcome_message,
+      auto_approve,
       video_auto_approve,
       video_message_auto_approve,
     } = request.body ?? {};
@@ -291,8 +292,9 @@ export default async function eventRoutes(fastify) {
            venue                      = COALESCE($6, venue),
            event_time                 = COALESCE($7, event_time),
            welcome_message            = COALESCE($8, welcome_message),
-           video_auto_approve         = COALESCE($9,  video_auto_approve),
-           video_message_auto_approve = COALESCE($10, video_message_auto_approve)
+           auto_approve               = COALESCE($9,  auto_approve),
+           video_auto_approve         = COALESCE($10, video_auto_approve),
+           video_message_auto_approve = COALESCE($11, video_message_auto_approve)
        WHERE slug = $1
        RETURNING *`,
       [
@@ -304,6 +306,7 @@ export default async function eventRoutes(fastify) {
         orNull(venue),
         orNull(event_time),
         orNull(welcome_message),
+        typeof auto_approve               === 'boolean' ? auto_approve               : null,
         typeof video_auto_approve         === 'boolean' ? video_auto_approve         : null,
         typeof video_message_auto_approve === 'boolean' ? video_message_auto_approve : null,
       ],
