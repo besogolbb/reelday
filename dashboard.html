@@ -363,20 +363,29 @@
   }
 
   async function toggleVideoMessage() {
+    console.log('toggleVideoMessage called for ID:', currentPhotoId, 'Type:', currentPhotoType);
     try {
       const response = await fetch(`/api/uploads/${currentPhotoId}/flag`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_video_message: true })
       });
+      const responseData = await response.json(); // Always parse response to get details
+      console.log('API response status:', response.status, 'ok:', response.ok, 'data:', responseData);
 
       if (response.ok) {
         // Successfully moved: remove from the current grid view
         const item = document.querySelector(`.photo-item[data-id="${currentPhotoId}"]`);
-        if (item) item.remove();
+        if (item) {
+          console.log('Item found in DOM, removing:', item);
+          item.remove();
+        } else {
+          console.warn('Item not found in DOM for ID:', currentPhotoId, 'after successful API call. UI might be out of sync.');
+          // In a real application, you might re-fetch the grid data here to ensure UI consistency.
+        }
         closeModal();
       } else {
-        alert('Failed to move video to messages');
+        alert('Failed to move video to messages: ' + (responseData.message || 'Unknown error'));
       }
     } catch (e) {
       console.error(e);
