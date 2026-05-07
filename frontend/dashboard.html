@@ -255,32 +255,32 @@
     /* ── Panel ────────────────────────────────────────────── */
     .panel { background: var(--dash-surface); border: 1px solid var(--dash-border); border-radius: 24px; overflow: hidden; box-shadow: var(--dash-shadow); }
     .panel-head {
-      padding: 20px 24px 16px;
+      padding: 18px 18px 14px;
       border-bottom: 1px solid rgba(83,48,33,.08);
       display: grid;
       grid-template-columns: 1fr auto;
       grid-template-rows: auto auto;
       grid-template-areas:
-        "tabs    actions"
+        "tabs    tabs"
         "sub     actions";
       column-gap: 16px;
-      row-gap: 6px;
+      row-gap: 12px;
       align-items: center;
     }
     .panel-head h2 { font-family: var(--display); font-size: 22px; font-weight: 500; letter-spacing: -.01em; color: var(--ink); }
-    .panel-head-copy { grid-area: tabs; min-width: 0; }
-    .panel-head-copy p { grid-area: sub; margin: 0; font-size: 12.5px; color: var(--dash-muted); line-height: 1.5; }
-    #stream-sub { grid-area: sub; margin: 0; font-size: 12.5px; color: var(--dash-muted); line-height: 1.5; }
+    .panel-head-copy { grid-area: sub; min-width: 0; }
+    .panel-head-copy p { margin: 0; font-size: 13px; color: var(--dash-muted); line-height: 1.55; }
+    #stream-sub { margin: 0; font-size: 13px; color: var(--dash-muted); line-height: 1.55; }
     .panel-head > .pill,
     .panel-head > .approve-toggle,
     .panel-head > .message-burst-controls { grid-area: actions; justify-self: end; }
 
-    /* ── Stream switcher (3D Three.js puck under buttons) ─── */
+    /* ── Stream switcher (3D Three.js puck under buttons, full row) ─── */
     .stream-tabs-3d {
+      grid-area: tabs;
       position: relative;
-      display: inline-block;
-      max-width: 100%;
-      perspective: 900px;
+      width: 100%;
+      perspective: 1200px;
     }
     .stream-tabs-3d-canvas {
       position: absolute;
@@ -294,36 +294,38 @@
     .stream-tabs {
       position: relative;
       z-index: 1;
-      display: inline-flex;
-      gap: 4px;
-      padding: 5px;
-      background: linear-gradient(180deg, rgba(255,255,255,.7) 0%, rgba(246,234,220,.55) 100%);
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      padding: 6px;
+      background: linear-gradient(180deg, rgba(255,255,255,.75) 0%, rgba(246,234,220,.55) 100%);
       border: 1px solid rgba(83,48,33,.10);
       border-radius: 999px;
-      align-items: center;
-      max-width: 100%;
-      overflow-x: auto;
-      scrollbar-width: none;
+      width: 100%;
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
       box-shadow:
         0 1px 0 rgba(255,255,255,.9) inset,
         0 8px 24px rgba(42,26,20,.06);
     }
-    .stream-tabs::-webkit-scrollbar { display: none; }
     .stream-tab {
       position: relative;
       z-index: 2;
       background: transparent;
       border: none;
-      padding: 9px 18px;
-      font-family: var(--sans); font-size: 13px; font-weight: 600;
-      letter-spacing: .01em;
+      padding: 14px 18px;
+      font-family: var(--display);
+      font-size: 17px;
+      font-weight: 500;
+      letter-spacing: -.005em;
       color: var(--ink-soft);
       cursor: pointer;
       border-radius: 999px;
+      text-align: center;
       white-space: nowrap;
-      transition: color .25s, transform .25s;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      transition: color .25s, transform .25s, text-shadow .25s;
       transform-style: preserve-3d;
     }
     .stream-tab:hover:not(.active) {
@@ -332,7 +334,9 @@
     }
     .stream-tab.active {
       color: var(--paper);
-      /* The 3D puck behind it does the visual work — no flat fill here. */
+      font-weight: 600;
+      letter-spacing: -.01em;
+      text-shadow: 0 1px 2px rgba(0,0,0,.2);
     }
 
     @media (max-width: 720px) {
@@ -342,11 +346,12 @@
           "tabs"
           "sub"
           "actions";
-        row-gap: 10px;
+        row-gap: 12px;
       }
       .panel-head > .pill,
       .panel-head > .approve-toggle,
       .panel-head > .message-burst-controls { justify-self: start; }
+      .stream-tab { padding: 11px 8px; font-size: 14px; }
     }
 
     /* ── Auto-approve toggle (video stream) ───────────────── */
@@ -967,21 +972,21 @@
 
     <div class="panel">
       <div class="panel-head">
-        <div class="panel-head-copy">
-          <div class="stream-tabs-3d" id="stream-tabs-3d">
-            <canvas class="stream-tabs-3d-canvas" id="stream-tabs-canvas"></canvas>
-            <div class="stream-tabs" id="stream-tabs" role="tablist">
-              <button type="button" class="stream-tab active" data-stream="photo" role="tab" aria-selected="true">
-                Photo stream
-              </button>
-              <button type="button" class="stream-tab" data-stream="video" role="tab" aria-selected="false">
-                Video upload
-              </button>
-              <button type="button" class="stream-tab" data-stream="message" role="tab" aria-selected="false">
-                Video messages
-              </button>
-            </div>
+        <div class="stream-tabs-3d" id="stream-tabs-3d">
+          <canvas class="stream-tabs-3d-canvas" id="stream-tabs-canvas"></canvas>
+          <div class="stream-tabs" id="stream-tabs" role="tablist">
+            <button type="button" class="stream-tab active" data-stream="photo" role="tab" aria-selected="true">
+              Photo stream
+            </button>
+            <button type="button" class="stream-tab" data-stream="video" role="tab" aria-selected="false">
+              Video upload
+            </button>
+            <button type="button" class="stream-tab" data-stream="message" role="tab" aria-selected="false">
+              Video messages
+            </button>
           </div>
+        </div>
+        <div class="panel-head-copy">
           <p id="stream-sub">Photos from your guests, newest first. Switch sub-tabs to triage pending, featured, and hidden tiles.</p>
         </div>
         <span class="pill" id="approve-status">Auto-approve · ON</span>

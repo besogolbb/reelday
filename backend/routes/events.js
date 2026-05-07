@@ -119,9 +119,15 @@ export default async function eventRoutes(fastify) {
 
     const event   = rows[0];
 
-    // Generate the QR code encoding the full absolute URL based on the current request host
+    // Generate the QR code encoding the full absolute URL. Prefer the
+    // host the request actually came in on so the QR works on whichever
+    // deploy domain the dashboard is being served from.
     const protocol = request.headers['x-forwarded-proto'] || 'https';
-    const host = process.env.NODE_ENV === 'development' ? (request.headers.host || 'localhost:3000') : 'reelday.ph';
+    const host =
+      request.headers['x-forwarded-host'] ||
+      request.headers.host ||
+      process.env.APP_PUBLIC_HOST ||
+      'reelday.ph';
     const qr_code = await generateQR(`${protocol}://${host}/upload/${slug}`);
 
     return reply.status(201).send({ event, qr_code });
@@ -245,12 +251,17 @@ export default async function eventRoutes(fastify) {
       return reply.status(404).send({ error: true, message: 'Event not found' });
     }
 
-    // Encode the full upload URL so a phone scan opens the right page,
-    // matching how POST /events generates the initial QR.
+    // Encode the full upload URL so a phone scan opens the right page.
+    // Prefer the host the dashboard is actually being served from
+    // (easypanel/staging/etc) so the QR works wherever the deploy lives;
+    // fall back to APP_PUBLIC_HOST or reelday.ph if the request didn't
+    // forward a host header.
     const protocol = request.headers['x-forwarded-proto'] || 'https';
-    const host = process.env.NODE_ENV === 'development'
-      ? (request.headers.host || 'localhost:3000')
-      : 'reelday.ph';
+    const host =
+      request.headers['x-forwarded-host'] ||
+      request.headers.host ||
+      process.env.APP_PUBLIC_HOST ||
+      'reelday.ph';
     const qr_code = await generateQR(`${protocol}://${host}/upload/${slug}`);
     return { qr_code };
   });
