@@ -138,11 +138,18 @@ export default async function uploadRoutes(fastify) {
     const filename       = `${randomUUID()}${fileExt}`;
     const fileUrl        = await fastify.uploadFile(fileBuffer, filename, fileMime);
 
-    // Photos auto-approve by default (legacy). Videos default to manual
-    // review unless the host has flipped video_auto_approve on for this event.
-    const isApproved = isVideo
-      ? event.video_auto_approve === true
-      : event.auto_approve !== false;
+    // Approval defaults by upload kind:
+    //  - photo:         auto-approve unless the host turned it off (legacy)
+    //  - video upload:  manual review unless video_auto_approve is on
+    //  - video message: manual review unless video_message_auto_approve is on
+    let isApproved;
+    if (!isVideo) {
+      isApproved = event.auto_approve !== false;
+    } else if (isVideoMessage) {
+      isApproved = event.video_message_auto_approve === true;
+    } else {
+      isApproved = event.video_auto_approve === true;
+    }
 
     const { rows } = await fastify.db.query(
       `INSERT INTO uploads

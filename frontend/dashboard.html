@@ -889,6 +889,11 @@
           <span class="approve-toggle-text">Auto-approve · OFF</span>
         </button>
         <div class="message-burst-controls" id="message-burst-controls" style="display:none">
+          <button type="button" class="approve-toggle" id="msg-approve-toggle"
+                  role="switch" aria-checked="false" aria-label="Auto-approve video messages">
+            <span class="approve-toggle-track"><span class="approve-toggle-thumb"></span></span>
+            <span class="approve-toggle-text">Auto-approve · OFF</span>
+          </button>
           <button type="button" class="btn btn-accent vmsg-play" id="btn-vmsg-play-all-tab">
             ▶ Play all on wall
           </button>
@@ -1212,6 +1217,15 @@
       const on = event.video_auto_approve === true;
       vToggle.setAttribute('aria-checked', String(on));
       vToggle.querySelector('.approve-toggle-text').textContent =
+        on ? 'Auto-approve · ON' : 'Auto-approve · OFF';
+    }
+
+    // Video messages auto-approve toggle
+    const mToggle = document.getElementById('msg-approve-toggle');
+    if (mToggle) {
+      const on = event.video_message_auto_approve === true;
+      mToggle.setAttribute('aria-checked', String(on));
+      mToggle.querySelector('.approve-toggle-text').textContent =
         on ? 'Auto-approve · ON' : 'Auto-approve · OFF';
     }
 
@@ -1590,40 +1604,50 @@
     renderGallery(allUploads);
   });
 
-  // ── Video auto-approve toggle ────────────────────────
-  document.getElementById('video-approve-toggle')?.addEventListener('click', async () => {
-    const btn   = document.getElementById('video-approve-toggle');
-    const label = btn.querySelector('.approve-toggle-text');
-    const next  = btn.getAttribute('aria-checked') !== 'true';
-    const token = localStorage.getItem('reelday_token');
+  // ── Auto-approve toggles (Video upload + Video messages) ──
+  async function bindApproveToggle(btnId, fieldName, copyOn, copyOff) {
+    const btn = document.getElementById(btnId);
+    if (!btn) return;
+    btn.addEventListener('click', async () => {
+      const label = btn.querySelector('.approve-toggle-text');
+      const next  = btn.getAttribute('aria-checked') !== 'true';
+      const token = localStorage.getItem('reelday_token');
 
-    btn.disabled = true;
-    btn.setAttribute('aria-checked', String(next));
-    label.textContent = next ? 'Auto-approve · ON' : 'Auto-approve · OFF';
+      btn.disabled = true;
+      btn.setAttribute('aria-checked', String(next));
+      label.textContent = next ? 'Auto-approve · ON' : 'Auto-approve · OFF';
 
-    try {
-      const res = await fetch(`/api/events/${slug}`, {
-        method:  'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ video_auto_approve: next }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Could not save.');
-      currentDashEvent = data.event;
-      showToast(next ? 'New videos will auto-publish' : 'New videos require review');
-    } catch (err) {
-      // Revert on failure
-      const prev = !next;
-      btn.setAttribute('aria-checked', String(prev));
-      label.textContent = prev ? 'Auto-approve · ON' : 'Auto-approve · OFF';
-      showToast(err.message || 'Failed to update setting');
-    } finally {
-      btn.disabled = false;
-    }
-  });
+      try {
+        const res = await fetch(`/api/events/${slug}`, {
+          method:  'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ [fieldName]: next }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'Could not save.');
+        currentDashEvent = data.event;
+        showToast(next ? copyOn : copyOff);
+      } catch (err) {
+        const prev = !next;
+        btn.setAttribute('aria-checked', String(prev));
+        label.textContent = prev ? 'Auto-approve · ON' : 'Auto-approve · OFF';
+        showToast(err.message || 'Failed to update setting');
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  }
+  bindApproveToggle(
+    'video-approve-toggle', 'video_auto_approve',
+    'New videos will auto-publish', 'New videos require review',
+  );
+  bindApproveToggle(
+    'msg-approve-toggle', 'video_message_auto_approve',
+    'New video messages will auto-publish', 'New video messages require review',
+  );
 
   // ── Video preview modal ──────────────────────────────
   const previewModal     = document.getElementById('preview-modal');
@@ -1861,6 +1885,16 @@
     }
   }
 
+  // Compare two upload sets on the fields that affect the dashboard so flag
+  // toggles (is_approved / is_video_message) trigger a re-render even when
+  // no new ids appear.
+  function uploadsChanged(prev, next) {
+    if (prev.length !== next.length) return true;
+    const sig = u => `${u.id}|${u.is_approved !== false}|${u.is_video_message === true}`;
+    const prevSig = new Set(prev.map(sig));
+    return next.some(u => !prevSig.has(sig(u)));
+  }
+
   async function refreshUploads() {
     try {
       if (!slug) throw new Error('no slug');
@@ -1872,10 +1906,10 @@
       const merged = normalizeUploads(
         [...uploads, ...localUploads.filter(u => !apiIds.has(String(u.id)))],
       );
-      const currentIds = new Set(allUploads.map(u => String(u.id)));
-      const hasChanges = merged.length !== allUploads.length ||
-                         merged.some(u => !currentIds.has(String(u.id)));
-      if (hasChanges) { renderStats(merged); renderGallery(merged); }
+      if (uploadsChanged(allUploads, merged)) {
+        renderStats(merged);
+        renderGallery(merged);
+      }
     } catch {
       const local = readLocalUploads();
       if (local.length !== allUploads.length) {

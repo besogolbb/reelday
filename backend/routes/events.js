@@ -252,6 +252,7 @@ export default async function eventRoutes(fastify) {
       couple_names, event_date, cover_photo_url, is_active,
       venue, event_time, welcome_message,
       video_auto_approve,
+      video_message_auto_approve,
     } = request.body ?? {};
 
     // Treat empty string as "clear this field"; treat undefined as "leave alone"
@@ -259,14 +260,15 @@ export default async function eventRoutes(fastify) {
 
     const { rows } = await fastify.db.query(
       `UPDATE events
-       SET couple_names       = COALESCE($2, couple_names),
-           event_date         = COALESCE($3, event_date),
-           cover_photo_url    = COALESCE($4, cover_photo_url),
-           is_active          = COALESCE($5, is_active),
-           venue              = COALESCE($6, venue),
-           event_time         = COALESCE($7, event_time),
-           welcome_message    = COALESCE($8, welcome_message),
-           video_auto_approve = COALESCE($9, video_auto_approve)
+       SET couple_names               = COALESCE($2, couple_names),
+           event_date                 = COALESCE($3, event_date),
+           cover_photo_url            = COALESCE($4, cover_photo_url),
+           is_active                  = COALESCE($5, is_active),
+           venue                      = COALESCE($6, venue),
+           event_time                 = COALESCE($7, event_time),
+           welcome_message            = COALESCE($8, welcome_message),
+           video_auto_approve         = COALESCE($9,  video_auto_approve),
+           video_message_auto_approve = COALESCE($10, video_message_auto_approve)
        WHERE slug = $1
        RETURNING *`,
       [
@@ -278,7 +280,8 @@ export default async function eventRoutes(fastify) {
         orNull(venue),
         orNull(event_time),
         orNull(welcome_message),
-        typeof video_auto_approve === 'boolean' ? video_auto_approve : null,
+        typeof video_auto_approve         === 'boolean' ? video_auto_approve         : null,
+        typeof video_message_auto_approve === 'boolean' ? video_message_auto_approve : null,
       ],
     );
 
