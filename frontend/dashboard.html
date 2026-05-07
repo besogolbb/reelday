@@ -275,39 +275,64 @@
     .panel-head > .approve-toggle,
     .panel-head > .message-burst-controls { grid-area: actions; justify-self: end; }
 
-    /* ── Stream switcher (Photo / Video upload / Video messages) ── */
+    /* ── Stream switcher (3D Three.js puck under buttons) ─── */
+    .stream-tabs-3d {
+      position: relative;
+      display: inline-block;
+      max-width: 100%;
+      perspective: 900px;
+    }
+    .stream-tabs-3d-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+      border-radius: 999px;
+    }
     .stream-tabs {
+      position: relative;
+      z-index: 1;
       display: inline-flex;
       gap: 4px;
-      padding: 4px;
-      background: var(--paper-2, #f6eadc);
-      border: 1px solid var(--line);
+      padding: 5px;
+      background: linear-gradient(180deg, rgba(255,255,255,.7) 0%, rgba(246,234,220,.55) 100%);
+      border: 1px solid rgba(83,48,33,.10);
       border-radius: 999px;
       align-items: center;
       max-width: 100%;
       overflow-x: auto;
       scrollbar-width: none;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      box-shadow:
+        0 1px 0 rgba(255,255,255,.9) inset,
+        0 8px 24px rgba(42,26,20,.06);
     }
     .stream-tabs::-webkit-scrollbar { display: none; }
     .stream-tab {
-      background: none; border: none;
-      padding: 8px 16px;
+      position: relative;
+      z-index: 2;
+      background: transparent;
+      border: none;
+      padding: 9px 18px;
       font-family: var(--sans); font-size: 13px; font-weight: 600;
       letter-spacing: .01em;
       color: var(--ink-soft);
       cursor: pointer;
       border-radius: 999px;
       white-space: nowrap;
-      transition: color .15s, background .15s, box-shadow .15s;
+      transition: color .25s, transform .25s;
+      transform-style: preserve-3d;
     }
     .stream-tab:hover:not(.active) {
       color: var(--ink);
-      background: rgba(255,255,255,.6);
+      transform: translateZ(2px);
     }
     .stream-tab.active {
       color: var(--paper);
-      background: var(--ink);
-      box-shadow: 0 4px 12px rgba(42,26,20,.20);
+      /* The 3D puck behind it does the visual work — no flat fill here. */
     }
 
     @media (max-width: 720px) {
@@ -943,16 +968,19 @@
     <div class="panel">
       <div class="panel-head">
         <div class="panel-head-copy">
-          <div class="stream-tabs" id="stream-tabs" role="tablist">
-            <button type="button" class="stream-tab active" data-stream="photo" role="tab" aria-selected="true">
-              Photo stream
-            </button>
-            <button type="button" class="stream-tab" data-stream="video" role="tab" aria-selected="false">
-              Video upload
-            </button>
-            <button type="button" class="stream-tab" data-stream="message" role="tab" aria-selected="false">
-              Video messages
-            </button>
+          <div class="stream-tabs-3d" id="stream-tabs-3d">
+            <canvas class="stream-tabs-3d-canvas" id="stream-tabs-canvas"></canvas>
+            <div class="stream-tabs" id="stream-tabs" role="tablist">
+              <button type="button" class="stream-tab active" data-stream="photo" role="tab" aria-selected="true">
+                Photo stream
+              </button>
+              <button type="button" class="stream-tab" data-stream="video" role="tab" aria-selected="false">
+                Video upload
+              </button>
+              <button type="button" class="stream-tab" data-stream="message" role="tab" aria-selected="false">
+                Video messages
+              </button>
+            </div>
           </div>
           <p id="stream-sub">Photos from your guests, newest first. Switch sub-tabs to triage pending, featured, and hidden tiles.</p>
         </div>
@@ -1647,6 +1675,139 @@
     currentTab = tab.dataset.tab;
     renderGallery(allUploads);
   }
+
+  // ── Three.js 3D puck behind the stream tabs ───────────────
+  // Loads three.js from a CDN once, draws a soft 3D pill that slides
+  // under the active tab and gently floats. Falls back to a CSS
+  // background pill if WebGL or the CDN load fails.
+  const tabs3DRoot   = document.getElementById('stream-tabs-3d');
+  const tabsCanvasEl = document.getElementById('stream-tabs-canvas');
+  let tabs3D = null;
+
+  async function init3DTabs() {
+    if (tabs3D || !tabs3DRoot || !tabsCanvasEl) return;
+    let THREE;
+    try {
+      THREE = await import('https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js');
+    } catch {
+      // Fallback: paint a flat dark pill via CSS so the active tab is still legible.
+      const fallback = document.createElement('style');
+      fallback.textContent = '.stream-tab.active { background: var(--ink); box-shadow: 0 4px 12px rgba(42,26,20,.20); }';
+      document.head.appendChild(fallback);
+      return;
+    }
+
+    const renderer = new THREE.WebGLRenderer({
+      canvas: tabsCanvasEl,
+      alpha: true,
+      antialias: true,
+    });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+
+    const scene  = new THREE.Scene();
+    const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 50);
+    camera.position.set(0, 0, 10);
+    camera.lookAt(0, 0, 0);
+
+    // Soft three-point lighting for that glossy, light feel
+    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+    const key  = new THREE.DirectionalLight(0xffe4cc, 1.2);
+    key.position.set(2, 3, 4);
+    scene.add(key);
+    const rim  = new THREE.DirectionalLight(0xc45a3a, 0.6);
+    rim.position.set(-3, -1, 2);
+    scene.add(rim);
+
+    // The puck — a rounded extruded shape
+    const puckShape = new THREE.Shape();
+    const pw = 0.9, ph = 0.36, pr = 0.18;
+    puckShape.moveTo(-pw + pr, -ph);
+    puckShape.lineTo( pw - pr, -ph);
+    puckShape.quadraticCurveTo( pw, -ph,  pw, -ph + pr);
+    puckShape.lineTo( pw,  ph - pr);
+    puckShape.quadraticCurveTo( pw,  ph,  pw - pr,  ph);
+    puckShape.lineTo(-pw + pr,  ph);
+    puckShape.quadraticCurveTo(-pw,  ph, -pw,  ph - pr);
+    puckShape.lineTo(-pw, -ph + pr);
+    puckShape.quadraticCurveTo(-pw, -ph, -pw + pr, -ph);
+
+    const puckGeo = new THREE.ExtrudeGeometry(puckShape, {
+      depth: 0.18, bevelEnabled: true, bevelSize: 0.03,
+      bevelThickness: 0.05, bevelSegments: 4, curveSegments: 32,
+    });
+    puckGeo.center();
+
+    const puckMat = new THREE.MeshPhysicalMaterial({
+      color: 0x2a1a14,
+      metalness: 0.15,
+      roughness: 0.35,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.18,
+      reflectivity: 0.5,
+    });
+    const puck = new THREE.Mesh(puckGeo, puckMat);
+    scene.add(puck);
+
+    // Tracking geometry for the active tab's pixel position
+    let puckTargetX = 0;     // in world units (-1..1)
+    let puckTargetW = 1;     // half-width in world units
+    let lastSize = { w: 0, h: 0 };
+
+    function recomputeLayout() {
+      const rect = tabs3DRoot.getBoundingClientRect();
+      const w = Math.max(1, rect.width);
+      const h = Math.max(1, rect.height);
+      if (w !== lastSize.w || h !== lastSize.h) {
+        renderer.setSize(w, h, false);
+        const aspect = w / h;
+        camera.left   = -aspect;
+        camera.right  =  aspect;
+        camera.top    =  1;
+        camera.bottom = -1;
+        camera.updateProjectionMatrix();
+        lastSize = { w, h };
+      }
+      const activeTab = tabs3DRoot.querySelector('.stream-tab.active');
+      if (!activeTab) return;
+      const tabRect = activeTab.getBoundingClientRect();
+      // Map screen X → world X (camera spans -aspect..aspect across [0..w])
+      const aspect = w / h;
+      const cx = tabRect.left + tabRect.width  / 2 - rect.left;
+      puckTargetX = (cx / w) * 2 * aspect - aspect;
+      puckTargetW = (tabRect.width / w) * aspect;
+    }
+
+    let frame = 0;
+    function tick(t) {
+      frame++;
+      recomputeLayout();
+      // Smoothly chase the active tab's center & width
+      puck.position.x += (puckTargetX - puck.position.x) * 0.18;
+      const wantScaleX = Math.max(0.4, puckTargetW / 0.9);   // 0.9 = puckShape half-width
+      puck.scale.x += (wantScaleX - puck.scale.x) * 0.18;
+      // Gentle 3D float
+      puck.rotation.x = Math.sin(t * 0.0009) * 0.05;
+      puck.rotation.y = Math.sin(t * 0.0011) * 0.06;
+      puck.position.y = Math.sin(t * 0.0014) * 0.02;
+      renderer.render(scene, camera);
+      requestAnimationFrame(tick);
+    }
+
+    // Initial size + first frame
+    requestAnimationFrame(t => {
+      recomputeLayout();
+      // Snap on first frame so it doesn't slide in from origin
+      puck.position.x = puckTargetX;
+      puck.scale.x    = Math.max(0.4, puckTargetW / 0.9);
+      tick(t);
+    });
+
+    window.addEventListener('resize', recomputeLayout);
+    tabs3D = { recomputeLayout };
+  }
+
+  // Kick off lazy 3D init after the dashboard finishes its first paint.
+  requestAnimationFrame(() => init3DTabs());
 
   // ── Stream switcher (Photo / Video upload / Video messages) ──
   function reflectStreamHeader() {

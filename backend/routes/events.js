@@ -245,7 +245,13 @@ export default async function eventRoutes(fastify) {
       return reply.status(404).send({ error: true, message: 'Event not found' });
     }
 
-    const qr_code = await generateQR(slug);
+    // Encode the full upload URL so a phone scan opens the right page,
+    // matching how POST /events generates the initial QR.
+    const protocol = request.headers['x-forwarded-proto'] || 'https';
+    const host = process.env.NODE_ENV === 'development'
+      ? (request.headers.host || 'localhost:3000')
+      : 'reelday.ph';
+    const qr_code = await generateQR(`${protocol}://${host}/upload/${slug}`);
     return { qr_code };
   });
 
