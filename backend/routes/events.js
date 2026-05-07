@@ -143,7 +143,18 @@ export default async function eventRoutes(fastify) {
       [event.id],
     );
 
-    const planInfo = resolvePlan(event.plan);
+    // Effective plan follows the owner's current account tier.
+    let effectiveTier = event.plan;
+    if (event.user_id) {
+      const { rows: ownerRows } = await fastify.db.query(
+        `SELECT subscription_tier FROM users WHERE id = $1`,
+        [event.user_id],
+      );
+      if (ownerRows.length && ownerRows[0].subscription_tier) {
+        effectiveTier = ownerRows[0].subscription_tier;
+      }
+    }
+    const planInfo = resolvePlan(effectiveTier);
 
     // Soft-lock state derived from stored expiry stamps
     const now = new Date();

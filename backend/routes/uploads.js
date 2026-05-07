@@ -17,12 +17,28 @@ export default async function uploadRoutes(fastify) {
     }
 
     const event = eventRows[0];
-    const plan  = resolvePlan(event.plan);
+
+    // Effective plan = owner's current subscription tier (per-account model).
+    // Falls back to event.plan if event has no owner (legacy / anonymous).
+    let effectiveTier = event.plan;
+    if (event.user_id) {
+      const { rows: ownerRows } = await fastify.db.query(
+        `SELECT subscription_tier FROM users WHERE id = $1`,
+        [event.user_id],
+      );
+      if (ownerRows.length && ownerRows[0].subscription_tier) {
+        effectiveTier = ownerRows[0].subscription_tier;
+      }
+    }
+    const plan = resolvePlan(effectiveTier);
 
     // ── Feature gating ────────────────────────────────────
     // Only block when the event is on a *paid* tier without payment.
     // Free tiers (tala, libre legacy) accept uploads without payment.
-    if (!event.is_paid && plan.price > 0) {
+    if (!event.is_paid && plan.price > 0 && plan.id !== resolvePlan(event.plan).id) {
+      // Owner upgraded their account but the event itself isn't marked paid.
+      // That's fine — the account-tier covers it. Skip the legacy check.
+    } else if (!event.is_paid && plan.price > 0) {
       return reply.status(403).send({ error: true, message: 'Payment pending verification' });
     }
 

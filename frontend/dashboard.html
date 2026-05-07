@@ -772,7 +772,11 @@
 
       if (!eventRes.ok) throw new Error('Event not found');
 
-      const { event }   = await eventRes.json();
+      const eventJson   = await eventRes.json();
+      const event       = eventJson.event;
+      // Backend resolves owner's current subscription tier into plan_info.id;
+      // override event.plan locally so all downstream rendering follows it.
+      if (eventJson.plan_info?.id) event.plan = eventJson.plan_info.id;
       const { uploads } = await uploadsRes.json();
       const { qr_code } = await qrRes.json();
 
