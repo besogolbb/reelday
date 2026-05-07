@@ -260,6 +260,26 @@
 
     .pause-btn.visible { opacity: 1; pointer-events: auto; }
 
+    /* ── Unmute toggle (only shows while a video slide is on screen) ── */
+    .sound-btn {
+      position: fixed; top: 22px; right: 22px;
+      z-index: 16;
+      display: none;
+      align-items: center; gap: 8px;
+      font-family: var(--mono); font-size: 11px; letter-spacing: .22em;
+      text-transform: uppercase;
+      background: rgba(0,0,0,.55); color: #fff;
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: 999px;
+      padding: 10px 16px;
+      backdrop-filter: blur(8px);
+      cursor: pointer;
+      transition: background .15s, transform .15s;
+    }
+    .sound-btn:hover { background: rgba(0,0,0,.75); transform: translateY(-1px); }
+    .sound-btn.visible { display: inline-flex; }
+    .sound-btn .icon { font-size: 14px; }
+
     /* ── Floating emojis ────────────────────────────────────── */
     #emoji-container {
       position: fixed; inset: 0; z-index: 60;
@@ -413,6 +433,11 @@
 <div class="slide-progress"><div class="fill" id="progress-fill"></div></div>
 <div class="pause-btn" id="pause-btn" onclick="togglePause()">⏸ Paused — tap to resume</div>
 
+<button type="button" class="sound-btn" id="sound-btn" aria-label="Toggle sound">
+  <span class="icon" id="sound-icon">🔇</span>
+  <span class="label" id="sound-label">Tap for sound</span>
+</button>
+
 <!-- ════ FULLSCREEN TOGGLE ════════════════════════════════ -->
 <button class="fs-btn" id="fs-btn" type="button" aria-label="Toggle fullscreen" title="Fullscreen (F)">
   <svg id="fs-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -526,6 +551,30 @@
   const backdropB   = document.getElementById('backdrop-b');
   const vidA        = document.getElementById('vid-a');
   const vidB        = document.getElementById('vid-b');
+  const soundBtn    = document.getElementById('sound-btn');
+  const soundIcon   = document.getElementById('sound-icon');
+  const soundLabel  = document.getElementById('sound-label');
+
+  // Persist sound choice per browser so the host doesn't have to retap each refresh.
+  let wallSoundOn = localStorage.getItem('reelday_wall_sound') === 'on';
+
+  function applySoundState() {
+    soundIcon.textContent  = wallSoundOn ? '🔊' : '🔇';
+    soundLabel.textContent = wallSoundOn ? 'Sound on' : 'Tap for sound';
+    [vidA, vidB].forEach(v => { if (v) v.muted = !wallSoundOn; });
+  }
+  applySoundState();
+
+  soundBtn?.addEventListener('click', () => {
+    wallSoundOn = !wallSoundOn;
+    localStorage.setItem('reelday_wall_sound', wallSoundOn ? 'on' : 'off');
+    applySoundState();
+    // Nudge the active video so the audio actually starts/stops immediately.
+    const activeVid = activeLayer === 'A' ? vidA : vidB;
+    if (activeVid && items.__currentIsVideo) {
+      try { activeVid.play(); } catch {}
+    }
+  });
 
   function isVideoItem(u) {
     if (u?.file_type === 'video') return true;
@@ -604,7 +653,7 @@
       // Reset and (re)load the source. Always call load() so a fresh stream
       // gets requested — especially important for the proxied
       // /api/uploads/file/:id endpoint that supports Range.
-      inVid.muted    = true;
+      inVid.muted    = !wallSoundOn;
       inVid.playsInline = true;
       inVid.autoplay = true;
       try { inVid.pause(); } catch {}
@@ -616,7 +665,17 @@
       try { inVid.currentTime = 0; } catch {}
       const playPromise = inVid.play();
       if (playPromise && typeof playPromise.catch === 'function') {
-        playPromise.catch(err => console.warn('wall video play() failed', err));
+        playPromise.catch(err => {
+          // If unmuted autoplay was blocked (no user gesture yet), retry muted
+          // so the visuals at least play. The Tap-for-sound button stays visible.
+          if (!inVid.muted) {
+            console.warn('wall video unmuted autoplay blocked — falling back to muted', err);
+            inVid.muted = true;
+            inVid.play().catch(e => console.warn('wall video muted play() failed', e));
+          } else {
+            console.warn('wall video play() failed', err);
+          }
+        });
       }
     } else {
       inLayer.classList.remove('has-video');
@@ -633,6 +692,9 @@
 
     // Stash so advance()/goTo() know whether this slide is a video.
     items.__currentIsVideo = itemIsVideo;
+
+    // Show the unmute toggle only when there's a video on screen.
+    soundBtn?.classList.toggle('visible', itemIsVideo);
 
     // Crossfade layers
     inLayer.classList.remove('out');
@@ -995,6 +1057,7 @@
     if (e.target.closest('.qr-badge') ||
         e.target.closest('.upcoming') ||
         e.target.closest('.pause-btn') ||
+        e.target.closest('.sound-btn') ||
         e.target.closest('.fs-btn')) return;
     if (isRunning) goTo(currentIdx + 1);
   });
