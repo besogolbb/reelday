@@ -60,7 +60,43 @@
     }
     .event-header .nav a.active { color: var(--paper); background: rgba(255,255,255,.14); }
     .event-header .nav a:hover { color: var(--paper); }
-    .event-header-top-right { display: flex; align-items: center; gap: 10px; }
+    .event-header-top-right { display: flex; align-items: center; gap: 14px; }
+    .header-user-name {
+      color: rgba(251,245,236,.85);
+      font-size: 13px;
+      font-family: var(--sans);
+      max-width: 160px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .header-logout-btn {
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.14);
+      color: rgba(251,245,236,.85);
+      font-family: var(--sans);
+      font-size: 12px;
+      padding: 7px 14px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: background .15s, color .15s, border-color .15s;
+    }
+    .header-logout-btn:hover {
+      background: rgba(255,255,255,.12);
+      color: #fff;
+      border-color: rgba(255,255,255,.25);
+    }
+    .header-new-btn {
+      background: var(--accent);
+      color: #fff;
+      font-family: var(--sans);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 8px 16px;
+      border-radius: 999px;
+      text-decoration: none;
+      transition: background .15s;
+      white-space: nowrap;
+    }
+    .header-new-btn:hover { background: var(--accent-deep); }
     .hero-grid {
       display: grid;
       grid-template-columns: minmax(0, 1.45fr) minmax(280px, .85fr);
@@ -599,7 +635,17 @@
     const navLinks = document.getElementById('dash-nav-links');
     if (navLinks) {
       if (user) {
-        navLinks.innerHTML = '<a href="/start" class="header-nav-link">+ New event</a>';
+        const name = (user.full_name || user.email || '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+        navLinks.innerHTML = `
+          <span class="header-user-name" title="${name}">${name}</span>
+          <button type="button" class="header-logout-btn" id="header-logout">Logout</button>
+          <a href="/start" class="header-new-btn">+ New event</a>
+        `;
+        document.getElementById('header-logout')?.addEventListener('click', () => {
+          localStorage.removeItem('reelday_token');
+          localStorage.removeItem('reelday_user');
+          location.href = '/login';
+        });
       } else {
         navLinks.innerHTML = '<a href="/login" class="header-nav-link">Login</a>';
       }
