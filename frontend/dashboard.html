@@ -191,14 +191,58 @@
       position: relative; z-index: 5;
     }
     .stat {
-      background: var(--dash-surface); border: 1px solid var(--dash-border);
-      border-radius: 24px; padding: 22px 24px;
-      box-shadow: var(--dash-shadow);
+      position: relative;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.96) 0%, rgba(255,250,243,.98) 100%);
+      border: 1px solid rgba(196,90,58,.18);
+      border-radius: 24px;
+      padding: 24px 26px;
+      box-shadow:
+        0 1px 0 rgba(255,255,255,.9) inset,
+        0 22px 48px rgba(63,35,24,.14),
+        0 4px 12px rgba(196,90,58,.06);
+      transition: transform .25s ease, box-shadow .25s ease;
+      overflow: hidden;
     }
-    .stat .lbl { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--dash-muted); margin-bottom: 10px; }
-    .stat .num { font-family: var(--display); font-size: 46px; font-weight: 400; line-height: .95; letter-spacing: -.02em; margin-bottom: 10px; }
+    .stat::before {
+      content: '';
+      position: absolute; inset: 0;
+      pointer-events: none;
+      background: radial-gradient(circle at 100% 0%, rgba(216,160,90,.16), transparent 50%);
+    }
+    .stat::after {
+      content: '';
+      position: absolute; left: 0; top: 0; bottom: 0;
+      width: 4px;
+      background: linear-gradient(180deg, var(--accent), var(--accent-soft));
+      border-radius: 24px 0 0 24px;
+    }
+    .stat:hover {
+      transform: translateY(-3px);
+      box-shadow:
+        0 1px 0 rgba(255,255,255,.9) inset,
+        0 28px 56px rgba(63,35,24,.18),
+        0 8px 20px rgba(196,90,58,.10);
+    }
+    .stat .lbl {
+      position: relative; z-index: 1;
+      font-family: var(--mono); font-size: 11px; letter-spacing: .14em;
+      text-transform: uppercase; color: var(--dash-muted);
+      margin-bottom: 10px;
+    }
+    .stat .num {
+      position: relative; z-index: 1;
+      font-family: var(--display); font-size: 46px; font-weight: 400;
+      line-height: .95; letter-spacing: -.02em;
+      margin-bottom: 10px;
+      color: var(--ink);
+    }
     .stat .num em { font-style: italic; color: var(--accent); }
-    .stat .delta { font-family: var(--mono); font-size: 11px; color: var(--dash-green); margin-top: 0; }
+    .stat .delta {
+      position: relative; z-index: 1;
+      font-family: var(--mono); font-size: 11px;
+      color: var(--dash-green); margin-top: 0;
+    }
 
     /* ── Body grid ────────────────────────────────────────── */
     .body {
@@ -375,6 +419,17 @@
     }
     .info-card .row span:last-child { font-weight: 700; color: var(--ink); font-size: 16px; }
 
+    /* Highlighted rows — Plan + Wall expires */
+    .info-card .row.row-highlight {
+      background: linear-gradient(135deg, rgba(196,90,58,.10), rgba(216,160,90,.10));
+      border: 1px solid rgba(196,90,58,.25);
+      border-radius: 14px;
+      padding: 10px 14px;
+      box-shadow: 0 4px 14px rgba(196,90,58,.08);
+    }
+    .info-card .row.row-highlight span:first-child { color: var(--accent-deep); }
+    .info-card .row.row-highlight span:last-child { color: var(--accent-deep); }
+
     /* Quota meter slot — only visible on plans that have a cap */
     .info-card .quota {
       flex: 1 1 220px; margin-top: 0; padding-top: 0;
@@ -489,8 +544,8 @@
       <a class="brand" href="/">REELDAY<sup>★</sup></a>
       <div class="nav" id="site-nav">
         <a class="active" href="#">Dashboard</a>
-        <a id="wall-nav-link" href="#">Wall</a>
-        <a id="upload-nav-link" href="#">Upload page</a>
+        <a id="wall-nav-link" href="#" target="_blank" rel="noopener">Wall</a>
+        <a id="upload-nav-link" href="#" target="_blank" rel="noopener">Upload page</a>
         <a href="#">Settings</a>
       </div>
       <div class="event-header-top-right">
@@ -530,8 +585,8 @@
   <div class="info-card">
     <h3>Event info</h3>
     <div class="row"><span>Type</span><span id="info-type">—</span></div>
-    <div class="row"><span>Plan</span><span id="info-plan">—</span></div>
-    <div class="row"><span>Wall expires</span><span id="info-expires">—</span></div>
+    <div class="row row-highlight"><span>Plan</span><span id="info-plan">—</span></div>
+    <div class="row row-highlight"><span>Wall expires</span><span id="info-expires">—</span></div>
 
     <!-- upload quota meter (hidden on plans without a cap) -->
     <div class="quota" id="quota-block" style="display:none;">
@@ -613,7 +668,7 @@
     <div class="mini-card">
       <h3>Actions</h3>
       <div class="mini-actions">
-        <a class="btn btn-ghost" id="btn-open-wall" href="#">Open live wall</a>
+        <a class="btn btn-ghost" id="btn-open-wall" href="#" target="_blank" rel="noopener">Open live wall</a>
         <a class="btn btn-ghost" href="/my-events">Back to events</a>
       </div>
     </div>
