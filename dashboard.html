@@ -213,22 +213,22 @@
            GET /api/events/:id/photos?tab=all&page=1
            Render each as <img src="..."> replacing placeholders -->
       <div class="photo-grid" id="photoGrid">
-        <div class="photo-item placeholder placeholder--clay"   onclick="openPhoto('First dance','Tita Marivic', 'uuid-1', 'photo')"><div class="overlay"><span class="uploader">Tita Marivic</span><button class="action-btn">Feature</button></div></div>
-        <div class="photo-item placeholder placeholder--ochre"  onclick="openPhoto('Garden','Kuya Mike', 'uuid-2', 'photo')"><div class="overlay"><span class="uploader">Kuya Mike</span><button class="action-btn">Feature</button></div></div>
-        <div class="photo-item placeholder placeholder--coral"  onclick="openPhoto('Reception','Ate Karen', 'uuid-3', 'photo')"><div class="overlay"><span class="uploader">Ate Karen</span><button class="action-btn">Feature</button></div></div>
-        <div class="photo-item placeholder placeholder--sage"   onclick="openPhoto('Lola','Kuya Vince', 'uuid-4', 'photo')"><div class="overlay"><span class="uploader">Kuya Vince</span><button class="action-btn">Feature</button></div></div>
-        <div class="photo-item placeholder placeholder--paper"  style="color:var(--ink)" onclick="openPhoto('Bouquet','Tita Liza', 'uuid-5', 'photo')"><div class="overlay"><span class="uploader">Tita Liza</span><button class="action-btn">Feature</button></div></div>
-        <div class="photo-item placeholder placeholder--clay"   onclick="openPhoto('Speech','JM', 'uuid-6', 'video')"><div class="overlay"><span class="uploader">JM</span><button class="action-btn">Feature</button></div></div>
-        <div class="photo-item placeholder placeholder--coral"  onclick="openPhoto('Ceremony','Andrea', 'uuid-7', 'photo')"><div class="overlay"><span class="uploader">Andrea</span><button class="action-btn">Feature</button></div></div>
-        <div class="photo-item placeholder placeholder--ochre"  onclick="openPhoto('Toast','Tito Jun', 'uuid-8', 'photo')"><div class="overlay"><span class="uploader">Tito Jun</span><button class="action-btn">Feature</button></div></div>
-        <div class="photo-item placeholder placeholder--sage"   onclick="openPhoto('Cousins','Tin', 'uuid-9', 'photo')"><div class="overlay"><span class="uploader">Tin</span><button class="action-btn">Feature</button></div></div>
-        <div class="photo-item placeholder placeholder--ink"    onclick="openPhoto('Dance floor','Mark', 'uuid-10', 'photo')"><div class="overlay"><span class="uploader">Mark</span><button class="action-btn">Feature</button></div></div>
-        <div class="photo-item placeholder placeholder--paper"  style="color:var(--ink)" onclick="openPhoto('Family','Pao', 'uuid-11', 'photo')"><div class="overlay"><span class="uploader">Pao</span><button class="action-btn">Feature</button></div></div>
-        <div class="photo-item placeholder placeholder--clay pending" onclick="openPhoto('Cake','Tita Bing', 'uuid-12', 'video')"><div class="overlay"><span class="uploader">Tita Bing</span><button class="action-btn">Approve</button></div></div>
-        <div class="photo-item placeholder placeholder--coral"  onclick="openPhoto('Ring','Ate Len', 'uuid-13', 'photo')"><div class="overlay"><span class="uploader">Ate Len</span><button class="action-btn">Feature</button></div></div>
-        <div class="photo-item placeholder placeholder--ochre"  onclick="openPhoto('Table','Kuya Rex', 'uuid-14', 'photo')"><div class="overlay"><span class="uploader">Kuya Rex</span><button class="action-btn">Feature</button></div></div>
-        <div class="photo-item placeholder placeholder--sage"   onclick="openPhoto('Flowers','Dianne', 'uuid-15', 'photo')"><div class="overlay"><span class="uploader">Dianne</span><button class="action-btn">Feature</button></div></div>
-        <div class="photo-item placeholder placeholder--clay"   onclick="openPhoto('Couple','Anon', 'uuid-16', 'photo')"><div class="overlay"><span class="uploader">Anon</span><button class="action-btn">Feature</button></div></div>
+        <div class="photo-item placeholder placeholder--clay"   data-id="uuid-1" onclick="openPhoto('First dance','Tita Marivic', 'uuid-1', 'photo')"><div class="overlay"><span class="uploader">Tita Marivic</span><button class="action-btn">Feature</button></div></div>
+        <div class="photo-item placeholder placeholder--ochre"  data-id="uuid-2" onclick="openPhoto('Garden','Kuya Mike', 'uuid-2', 'photo')"><div class="overlay"><span class="uploader">Kuya Mike</span><button class="action-btn">Feature</button></div></div>
+        <div class="photo-item placeholder placeholder--coral"  data-id="uuid-3" onclick="openPhoto('Reception','Ate Karen', 'uuid-3', 'photo')"><div class="overlay"><span class="uploader">Ate Karen</span><button class="action-btn">Feature</button></div></div>
+        <div class="photo-item placeholder placeholder--sage"   data-id="uuid-4" onclick="openPhoto('Lola','Kuya Vince', 'uuid-4', 'photo')"><div class="overlay"><span class="uploader">Kuya Vince</span><button class="action-btn">Feature</button></div></div>
+        <div class="photo-item placeholder placeholder--paper"  data-id="uuid-5" style="color:var(--ink)" onclick="openPhoto('Bouquet','Tita Liza', 'uuid-5', 'photo')"><div class="overlay"><span class="uploader">Tita Liza</span><button class="action-btn">Feature</button></div></div>
+        <div class="photo-item placeholder placeholder--clay"   data-id="uuid-6" onclick="openPhoto('Speech','JM', 'uuid-6', 'video')"><div class="overlay"><span class="uploader">JM</span><button class="action-btn">Feature</button></div></div>
+        <div class="photo-item placeholder placeholder--coral"  data-id="uuid-7" onclick="openPhoto('Ceremony','Andrea', 'uuid-7', 'photo')"><div class="overlay"><span class="uploader">Andrea</span><button class="action-btn">Feature</button></div></div>
+        <div class="photo-item placeholder placeholder--ochre"  data-id="uuid-8" onclick="openPhoto('Toast','Tito Jun', 'uuid-8', 'photo')"><div class="overlay"><span class="uploader">Tito Jun</span><button class="action-btn">Feature</button></div></div>
+        <div class="photo-item placeholder placeholder--sage"   data-id="uuid-9" onclick="openPhoto('Cousins','Tin', 'uuid-9', 'photo')"><div class="overlay"><span class="uploader">Tin</span><button class="action-btn">Feature</button></div></div>
+        <div class="photo-item placeholder placeholder--ink"    data-id="uuid-10" onclick="openPhoto('Dance floor','Mark', 'uuid-10', 'photo')"><div class="overlay"><span class="uploader">Mark</span><button class="action-btn">Feature</button></div></div>
+        <div class="photo-item placeholder placeholder--paper"  data-id="uuid-11" style="color:var(--ink)" onclick="openPhoto('Family','Pao', 'uuid-11', 'photo')"><div class="overlay"><span class="uploader">Pao</span><button class="action-btn">Feature</button></div></div>
+        <div class="photo-item placeholder placeholder--clay pending" data-id="uuid-12" onclick="openPhoto('Cake','Tita Bing', 'uuid-12', 'video')"><div class="overlay"><span class="uploader">Tita Bing</span><button class="action-btn">Approve</button></div></div>
+        <div class="photo-item placeholder placeholder--coral"  data-id="uuid-13" onclick="openPhoto('Ring','Ate Len', 'uuid-13', 'photo')"><div class="overlay"><span class="uploader">Ate Len</span><button class="action-btn">Feature</button></div></div>
+        <div class="photo-item placeholder placeholder--ochre"  data-id="uuid-14" onclick="openPhoto('Table','Kuya Rex', 'uuid-14', 'photo')"><div class="overlay"><span class="uploader">Kuya Rex</span><button class="action-btn">Feature</button></div></div>
+        <div class="photo-item placeholder placeholder--sage"   data-id="uuid-15" onclick="openPhoto('Flowers','Dianne', 'uuid-15', 'photo')"><div class="overlay"><span class="uploader">Dianne</span><button class="action-btn">Feature</button></div></div>
+        <div class="photo-item placeholder placeholder--clay"   data-id="uuid-16" onclick="openPhoto('Couple','Anon', 'uuid-16', 'photo')"><div class="overlay"><span class="uploader">Anon</span><button class="action-btn">Feature</button></div></div>
       </div>
       <div class="load-more">
         <!-- TODO: load next page from API -->
@@ -331,17 +331,57 @@
     flagBtn.style.display = (type === 'video') ? 'block' : 'none';
   }
 
-  function moderationAction(status) {
-    // TODO: PATCH /api/uploads/:id/approve { is_approved: status === 'approved' }
-    alert(`TODO: Moderation action '${status}' for ${currentPhotoId} via API`);
-    closeModal();
+  async function moderationAction(status) {
+    try {
+      const response = await fetch(`/api/uploads/${currentPhotoId}/approve`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_approved: status !== 'hidden' })
+      });
+
+      if (response.ok) {
+        // Successfully updated moderation: remove or update the item in the UI
+        const item = document.querySelector(`.photo-item[data-id="${currentPhotoId}"]`);
+        if (item) {
+          if (status === 'hidden') {
+            item.remove();
+          } else {
+            item.classList.remove('pending');
+            // If we're strictly in the pending tab, remove it from view
+            const activeTab = document.querySelector('.tab.active').dataset.tab;
+            if (activeTab === 'pending') item.remove();
+          }
+        }
+        closeModal();
+      } else {
+        alert('Failed to update moderation status');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Network error while performing moderation');
+    }
   }
 
-  function toggleVideoMessage() {
-    // PATCH /api/uploads/:id/flag { is_video_message: true }
-    alert(`TODO: Flagging ${currentPhotoId} as Video Message via API`);
-    closeModal();
-    // After a real API call, you would likely refresh the grid to show the item "moving"
+  async function toggleVideoMessage() {
+    try {
+      const response = await fetch(`/api/uploads/${currentPhotoId}/flag`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_video_message: true })
+      });
+
+      if (response.ok) {
+        // Successfully moved: remove from the current grid view
+        const item = document.querySelector(`.photo-item[data-id="${currentPhotoId}"]`);
+        if (item) item.remove();
+        closeModal();
+      } else {
+        alert('Failed to move video to messages');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Network error while flagging video');
+    }
   }
 
   function closeModal(e) {
