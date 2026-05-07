@@ -328,11 +328,12 @@ export default async function uploadRoutes(fastify) {
     return { upload: rows[0] };
   });
 
-  // PATCH /api/uploads/:id/flag — host re-classifies an upload as a
+  // PATCH/POST /api/uploads/:id/flag — host re-classifies an upload as a
   // video message (or back to a regular video). Only is_video_message
   // is mutable here so this can't accidentally be used to bypass the
-  // approval flow.
-  fastify.patch('/uploads/:id/flag', async (request, reply) => {
+  // approval flow. Accepts both PATCH and POST so deploys behind proxies
+  // that strip PATCH (some Caddy/Traefik configs) still work.
+  async function flagHandler(request, reply) {
     const { id } = request.params;
     const flag = request.body?.is_video_message;
 
@@ -353,5 +354,7 @@ export default async function uploadRoutes(fastify) {
     }
 
     return { upload: rows[0] };
-  });
+  }
+  fastify.patch('/uploads/:id/flag', flagHandler);
+  fastify.post('/uploads/:id/flag',  flagHandler);
 }

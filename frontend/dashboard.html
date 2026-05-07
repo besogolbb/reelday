@@ -1774,7 +1774,8 @@
     try {
       const token = localStorage.getItem('reelday_token');
       const res = await fetch(`/api/uploads/${previewingId}/flag`, {
-        method:  'PATCH',
+        // POST works through any proxy; the backend accepts both PATCH and POST.
+        method:  'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
