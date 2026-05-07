@@ -257,6 +257,26 @@
     .panel-head { padding: 22px 24px 18px; border-bottom: 1px solid rgba(83,48,33,.08); display: flex; justify-content: space-between; align-items: center; gap: 12px; }
     .panel-head h2 { font-family: var(--display); font-size: 22px; font-weight: 500; letter-spacing: -.01em; color: var(--ink); }
     .panel-head-copy p { margin: 4px 0 0; font-size: 13px; color: var(--dash-muted); }
+
+    /* ── Stream switcher (Photo / Video) ──────────────────── */
+    .stream-tabs { display: inline-flex; gap: 18px; align-items: baseline; }
+    .stream-tab {
+      background: none; border: none; padding: 0;
+      font-family: var(--display); font-size: 22px; font-weight: 500;
+      letter-spacing: -.01em;
+      color: var(--ink-faint);
+      cursor: pointer;
+      transition: color .15s;
+      position: relative;
+    }
+    .stream-tab.active { color: var(--ink); }
+    .stream-tab.active::after {
+      content: '';
+      position: absolute; left: 0; right: 0; bottom: -6px;
+      height: 2px; border-radius: 2px;
+      background: var(--accent);
+    }
+    .stream-tab:hover:not(.active) { color: var(--ink); }
     .pill { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); padding: 8px 12px; border-radius: 999px; background: #f6eadc; border: 1px solid rgba(196,90,58,.12); white-space: nowrap; }
 
     /* ── Tabs (from reference design) ─────────────────────── */
@@ -672,8 +692,15 @@
     <div class="panel">
       <div class="panel-head">
         <div class="panel-head-copy">
-        <h2>Photo stream</h2>
-          <p>Recent guest uploads appear here for quick review and featuring.</p>
+          <div class="stream-tabs" id="stream-tabs" role="tablist">
+            <button type="button" class="stream-tab active" data-stream="photo" role="tab" aria-selected="true">
+              Photo stream
+            </button>
+            <button type="button" class="stream-tab" data-stream="video" role="tab" aria-selected="false">
+              Video stream
+            </button>
+          </div>
+          <p id="stream-sub">Recent guest uploads appear here for quick review and featuring.</p>
         </div>
         <span class="pill" id="approve-status">Auto-approve · ON</span>
       </div>
@@ -797,7 +824,17 @@
   const slug    = params.get('slug');
   let allUploads = [];
   let currentDashEvent = null;
-  let currentTab = 'all';
+  let currentTab    = 'all';
+  let currentStream = 'photo';   // 'photo' | 'video'
+
+  function isVideoUpload(u) {
+    if (u?.file_type === 'video') return true;
+    if (typeof u?.file_url === 'string' && /\.(mp4|webm|mov|m4v|ogg)$/i.test(u.file_url)) return true;
+    return false;
+  }
+  function filterByStream(uploads) {
+    return uploads.filter(u => currentStream === 'video' ? isVideoUpload(u) : !isVideoUpload(u));
+  }
 
   // ── DOM refs ──────────────────────────────────────────
   const $ = id => document.getElementById(id);
@@ -871,11 +908,14 @@
   }
 
   // ── Update tab counts ────────────────────────────────
+  // Counts reflect the currently-selected stream so the All/Pending/etc.
+  // numbers match what the user is browsing.
   function updateTabCounts(uploads) {
-    const allCount = uploads.length;
-    const pendingCount = uploads.filter(u => u.status === 'pending').length;
-    const featuredCount = uploads.filter(u => u.featured === true).length;
-    const hiddenCount = uploads.filter(u => u.status === 'hidden' || u.hidden === true).length;
+    const scoped = filterByStream(uploads);
+    const allCount = scoped.length;
+    const pendingCount = scoped.filter(u => u.status === 'pending').length;
+    const featuredCount = scoped.filter(u => u.featured === true).length;
+    const hiddenCount = scoped.filter(u => u.status === 'hidden' || u.hidden === true).length;
 
     $('tab-all-count').textContent = allCount;
     $('tab-pending-count').textContent = pendingCount;
@@ -1147,15 +1187,18 @@
   function renderGallery(uploads) {
     allUploads = uploads;
 
-    const filteredUploads = filterUploads(uploads, currentTab);
+    const streamScoped    = filterByStream(uploads);
+    const filteredUploads = filterUploads(streamScoped, currentTab);
 
     const placeholderClasses = ['placeholder--clay', 'placeholder--ochre', 'placeholder--coral', 'placeholder--sage', 'placeholder--ink', 'placeholder--paper'];
 
     if (!filteredUploads.length) {
+      const noun = currentStream === 'video' ? 'videos' : 'photos';
+      const emoji = currentStream === 'video' ? '🎬' : '📭';
       photoGrid.innerHTML = `
         <div style="grid-column:1/-1;text-align:center;padding:48px 16px;color:var(--ink-soft);">
-          <div style="font-size:3rem;margin-bottom:12px;">📭</div>
-          <p>No uploads${currentTab !== 'all' ? ' in this category' : ''}. ${currentTab === 'all' ? 'Share the QR code with your guests!' : 'Try a different filter.'}</p>
+          <div style="font-size:3rem;margin-bottom:12px;">${emoji}</div>
+          <p>No ${noun}${currentTab !== 'all' ? ' in this category' : ''}. ${currentTab === 'all' ? 'Share the QR code with your guests!' : 'Try a different filter.'}</p>
         </div>`;
       return;
     }
@@ -1168,7 +1211,7 @@
 
       // Prefer local thumbnails, otherwise stream server files through the app.
       // This avoids blank tiles when R2 is private or R2_PUBLIC_URL is not public.
-      const isVideo = u.file_type === 'video';
+      const isVideo = isVideoUpload(u);
       const mediaSrc = uploadMediaUrl(u, isVideo);
 
       const styleParts = ['position:relative', 'overflow:hidden'];
@@ -1225,6 +1268,30 @@
     currentTab = tab.dataset.tab;
     renderGallery(allUploads);
   }
+
+  // ── Stream switcher (Photo / Video) ──────────────────
+  document.getElementById('stream-tabs')?.addEventListener('click', e => {
+    const btn = e.target.closest('.stream-tab');
+    if (!btn || btn.classList.contains('active')) return;
+
+    document.querySelectorAll('.stream-tab').forEach(t => {
+      const isActive = t === btn;
+      t.classList.toggle('active', isActive);
+      t.setAttribute('aria-selected', String(isActive));
+    });
+
+    currentStream = btn.dataset.stream;
+
+    const sub = document.getElementById('stream-sub');
+    if (sub) {
+      sub.textContent = currentStream === 'video'
+        ? 'Recent guest video uploads — review, feature, or hide.'
+        : 'Recent guest uploads appear here for quick review and featuring.';
+    }
+
+    updateTabCounts(allUploads);
+    renderGallery(allUploads);
+  });
 
   // ── Read uploads from localStorage ───────────────────
   function readLocalUploads() {
