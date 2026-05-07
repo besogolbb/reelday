@@ -182,11 +182,27 @@ export default async function uploadRoutes(fastify) {
     }
 
     try {
-      const object = await fastify.getFile(key);
+      const range = request.headers.range;
+      const object = await fastify.getFile(key, range);
+
+      const contentType =
+        object.ContentType ||
+        (rows[0].file_type === 'video' ? 'video/mp4' : 'image/jpeg');
 
       reply
-        .header('Content-Type', object.ContentType || (rows[0].file_type === 'video' ? 'video/mp4' : 'image/jpeg'))
-        .header('Cache-Control', 'public, max-age=31536000, immutable');
+        .header('Content-Type', contentType)
+        .header('Cache-Control', 'public, max-age=31536000, immutable')
+        .header('Accept-Ranges', 'bytes');
+
+      // R2/S3 returns ContentRange + 206-style metadata when a Range was requested.
+      if (object.ContentRange) reply.header('Content-Range', object.ContentRange);
+      if (object.ContentLength != null) reply.header('Content-Length', object.ContentLength);
+
+      // If a Range header came in and the storage replied with a partial body,
+      // mirror that with a 206 so <video> seeks/streams correctly.
+      if (range && object.ContentRange) {
+        reply.code(206);
+      }
 
       return reply.send(object.Body);
     } catch (err) {

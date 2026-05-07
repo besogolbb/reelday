@@ -24,10 +24,11 @@ async function storagePlugin(fastify) {
     return `${process.env.R2_PUBLIC_URL}/${key}`;
   }
 
-  async function getFile(key) {
+  async function getFile(key, range) {
     return s3.send(new GetObjectCommand({
       Bucket: process.env.R2_BUCKET_NAME,
       Key:    key,
+      ...(range ? { Range: range } : {}),
     }));
   }
 

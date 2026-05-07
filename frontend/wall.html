@@ -600,11 +600,23 @@
       inPic.style.animation            = 'none';
 
       inLayer.classList.add('has-video');
-      if (inVid.src !== mediaUrl) inVid.src = mediaUrl;
-      inVid.currentTime = 0;
+
+      // Reset and (re)load the source. Always call load() so a fresh stream
+      // gets requested — especially important for the proxied
+      // /api/uploads/file/:id endpoint that supports Range.
+      inVid.muted    = true;
+      inVid.playsInline = true;
+      inVid.autoplay = true;
+      try { inVid.pause(); } catch {}
+      const absoluteUrl = new URL(mediaUrl, location.href).toString();
+      if (inVid.src !== absoluteUrl) {
+        inVid.src = mediaUrl;
+        inVid.load();
+      }
+      try { inVid.currentTime = 0; } catch {}
       const playPromise = inVid.play();
       if (playPromise && typeof playPromise.catch === 'function') {
-        playPromise.catch(() => { /* autoplay may fail before user gesture; that's fine */ });
+        playPromise.catch(err => console.warn('wall video play() failed', err));
       }
     } else {
       inLayer.classList.remove('has-video');
