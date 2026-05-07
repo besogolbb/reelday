@@ -922,13 +922,17 @@ body { background: var(--paper); min-height: 100dvh; }
           featured:      false,
         }))
       : [{
-          id:            now,
-          uploader_name: name,
-          message:       msg,
-          thumb:         null,
-          timestamp:     new Date().toISOString(),
-          status:        'pending',
-          featured:      false,
+          id:               now,
+          uploader_name:    name,
+          message:          msg,
+          thumb:            null,
+          timestamp:        new Date().toISOString(),
+          status:           'pending',
+          featured:         false,
+          // It's a recorded video message — tag it so the dashboard puts
+          // it on the right stream right away.
+          file_type:        'video',
+          is_video_message: true,
         }];
 
     entries.forEach(e => saveEntry(localKey, e));
@@ -1006,12 +1010,31 @@ body { background: var(--paper); min-height: 100dvh; }
 
     // If the user only sent a recorded video (no gallery files), upload that blob
     if (fileEntries.length === 0 && recordedBlob) {
+      const recordedEntryId = now;
       const fd = new FormData();
       fd.append('file', recordedBlob, 'message.webm');
       fd.append('uploader_name', name);
       if (msg) fd.append('message', msg);
       fd.append('is_video_message', 'true');
       fetch(`/api/uploads/${currentEvent.slug}`, { method: 'POST', body: fd })
+        .then(res => res.ok ? res.json() : Promise.reject(res))
+        .then(({ upload }) => {
+          // Patch the local entry with the server UUID + url so the dashboard
+          // dedups it against the API copy instead of showing two tiles.
+          try {
+            const stored = JSON.parse(localStorage.getItem(localKey) || '[]');
+            const found  = stored.find(u => u.id === recordedEntryId);
+            if (found && upload) {
+              found.id               = upload.id;
+              found.file_url         = upload.file_url;
+              found.file_type        = upload.file_type;
+              found.is_video_message = upload.is_video_message;
+              found.created_at       = upload.created_at;
+              found.synced           = true;
+              localStorage.setItem(localKey, JSON.stringify(stored));
+            }
+          } catch { /* localStorage hiccup — the API copy is canonical */ }
+        })
         .catch(() => { /* silent fail; localStorage holds the metadata */ });
     }
 

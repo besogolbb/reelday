@@ -1662,6 +1662,12 @@
   let previewingId = null;
   let previewingIsMessage = false;
 
+  // Tells API uploads (UUID) from localStorage-only entries (timestamp number).
+  function isApiUpload(upload) {
+    return typeof upload?.id === 'string' &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(upload.id);
+  }
+
   function openPreview(upload) {
     previewingId = upload.id;
     previewVideo.src = uploadMediaUrl(upload, true) || '';
@@ -1686,9 +1692,10 @@
 
     // "Move to Video messages" — show on the Video upload stream so the
     // host can re-classify a regular video as a message after watching it.
-    // Or, when already viewing a message, offer the reverse.
+    // Or, when already viewing a message, offer the reverse. Only valid for
+    // uploads that exist server-side (have a UUID).
     previewingIsMessage = upload.is_video_message === true;
-    const canMove = isVideoUpload(upload);
+    const canMove = isVideoUpload(upload) && isApiUpload(upload);
     previewMove.style.display = canMove ? '' : 'none';
     previewMove.textContent = previewingIsMessage
       ? 'Move back to Video upload'
@@ -1898,7 +1905,9 @@
   async function refreshUploads() {
     try {
       if (!slug) throw new Error('no slug');
-      const res = await fetch(`/api/uploads/${slug}`);
+      // Bypass any HTTP/edge caching so flag toggles (approve / move) show
+      // up the moment the host triggers a refresh.
+      const res = await fetch(`/api/uploads/${slug}`, { cache: 'no-store' });
       if (!res.ok) throw new Error('api down');
       const { uploads } = await res.json();
       const localUploads = readLocalUploads();
