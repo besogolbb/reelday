@@ -544,6 +544,64 @@
       color: var(--dash-green);
     }
     .details-status.error { color: var(--accent-deep); }
+
+    /* ── Video messages card ──────────────────────────────── */
+    .vmsg-card .vmsg-sub {
+      font-size: 12px; color: var(--dash-muted); line-height: 1.5;
+      margin: -8px 0 14px;
+    }
+    .vmsg-list {
+      display: flex; flex-direction: column; gap: 8px;
+      max-height: 200px; overflow-y: auto;
+      margin-bottom: 14px;
+    }
+    .vmsg-empty {
+      font-size: 12px; color: var(--ink-faint);
+      text-align: center; padding: 16px 8px;
+      font-style: italic;
+    }
+    .vmsg-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 10px;
+      background: var(--paper-2, #fbf3e6);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+    .vmsg-thumb {
+      width: 36px; height: 36px; border-radius: 8px;
+      background: #1a1a1a;
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      color: rgba(255,255,255,.6); font-size: 14px;
+    }
+    .vmsg-row .meta { flex: 1; min-width: 0; }
+    .vmsg-row .who {
+      font-size: 13px; color: var(--ink); font-weight: 600;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .vmsg-row .when {
+      font-family: var(--mono); font-size: 10px; letter-spacing: .12em;
+      color: var(--ink-soft); text-transform: uppercase;
+    }
+    .vmsg-row .play-one {
+      background: none; border: none; cursor: pointer;
+      color: var(--accent); font-size: 16px; padding: 4px 8px;
+      border-radius: 6px;
+      transition: background .15s;
+    }
+    .vmsg-row .play-one:hover { background: rgba(196,90,58,.1); }
+
+    .vmsg-actions { display: flex; gap: 8px; }
+    .vmsg-play, .vmsg-stop {
+      font-size: 13px; padding: 10px 14px;
+      flex: 1;
+    }
+    .vmsg-play:disabled, .vmsg-stop:disabled { opacity: .5; cursor: not-allowed; }
+    .vmsg-status {
+      font-size: 12px; min-height: 16px; margin-top: 8px;
+      color: var(--dash-green);
+    }
+    .vmsg-status.error { color: var(--accent-deep); }
     .mini-actions { display: grid; gap: 10px; margin-top: 14px; }
     .mini-note { font-size: 13px; color: var(--dash-muted); line-height: 1.5; margin-top: 10px; }
 
@@ -869,6 +927,23 @@
       </div>
     </div>
 
+    <div class="mini-card vmsg-card">
+      <h3>Video messages</h3>
+      <p class="vmsg-sub">Pause photos and play recorded messages on the live wall.</p>
+      <div class="vmsg-list" id="vmsg-list">
+        <div class="vmsg-empty">No video messages yet.</div>
+      </div>
+      <div class="vmsg-actions">
+        <button type="button" class="btn btn-accent vmsg-play" id="btn-vmsg-play-all">
+          ▶ Play all on wall
+        </button>
+        <button type="button" class="btn btn-ghost vmsg-stop" id="btn-vmsg-stop">
+          Stop
+        </button>
+      </div>
+      <div class="vmsg-status" id="vmsg-status"></div>
+    </div>
+
     <div class="mini-card">
       <h3>Quick view</h3>
       <div class="mini-list">
@@ -1145,6 +1220,102 @@
     }
   }
 
+  // ── Video messages card (push burst to the wall) ─────
+  function isVideoMessage(u) {
+    return u?.is_video_message === true ||
+           (isVideoUpload(u) && u?.is_video_message !== false && (u?.message || '').length > 0);
+  }
+  // Default to ONLY recorded video messages (is_video_message=true).
+  // Falls back to any video if the host has nothing strictly tagged.
+  function listVideoMessages() {
+    const strict = (allUploads || [])
+      .filter(u => u.is_video_message === true && (u.is_approved !== false))
+      .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    if (strict.length) return strict;
+    return (allUploads || [])
+      .filter(u => isVideoUpload(u) && (u.is_approved !== false))
+      .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+  }
+
+  function renderVideoMessages() {
+    const list = document.getElementById('vmsg-list');
+    const playBtn = document.getElementById('btn-vmsg-play-all');
+    if (!list) return;
+    const items = listVideoMessages();
+
+    if (!items.length) {
+      list.innerHTML = '<div class="vmsg-empty">No video messages yet.</div>';
+      if (playBtn) playBtn.disabled = true;
+      return;
+    }
+
+    if (playBtn) playBtn.disabled = false;
+    list.innerHTML = items.map(u => {
+      const who  = escapeHtml(u.uploader_name || 'Anonymous guest');
+      const when = u.created_at
+        ? new Date(u.created_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+        : '';
+      return `
+        <div class="vmsg-row" data-id="${escapeAttr(u.id)}">
+          <div class="vmsg-thumb">▶</div>
+          <div class="meta">
+            <div class="who">${who}</div>
+            <div class="when">${escapeHtml(when)}</div>
+          </div>
+          <button type="button" class="play-one" title="Play this on wall" data-id="${escapeAttr(u.id)}">▶</button>
+        </div>
+      `;
+    }).join('');
+  }
+
+  async function pushBurst(ids, statusText) {
+    const statusEl = document.getElementById('vmsg-status');
+    const playBtn  = document.getElementById('btn-vmsg-play-all');
+    const stopBtn  = document.getElementById('btn-vmsg-stop');
+    const token    = localStorage.getItem('reelday_token');
+    statusEl.classList.remove('error');
+    statusEl.textContent = '';
+    playBtn.disabled = true;
+    stopBtn.disabled = true;
+    try {
+      const res = await fetch(`/api/events/${slug}/play-videos`, {
+        method:  'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ ids }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Could not start playback.');
+      statusEl.textContent = statusText;
+    } catch (err) {
+      statusEl.classList.add('error');
+      statusEl.textContent = err.message;
+    } finally {
+      playBtn.disabled = false;
+      stopBtn.disabled = false;
+    }
+  }
+
+  document.getElementById('btn-vmsg-play-all')?.addEventListener('click', () => {
+    const ids = listVideoMessages().map(u => u.id);
+    if (!ids.length) return;
+    pushBurst(ids, `Playing ${ids.length} video message${ids.length > 1 ? 's' : ''} on the wall.`);
+  });
+
+  document.getElementById('btn-vmsg-stop')?.addEventListener('click', () => {
+    pushBurst([], 'Stopped — wall is back on photos.');
+  });
+
+  // Per-row "play this one"
+  document.getElementById('vmsg-list')?.addEventListener('click', e => {
+    const btn = e.target.closest('.play-one');
+    if (!btn) return;
+    const id = btn.dataset.id;
+    if (id) pushBurst([id], 'Playing this video message on the wall.');
+  });
+
   // ── Save event details ───────────────────────────────
   document.getElementById('btn-save-details')?.addEventListener('click', async () => {
     const btn      = document.getElementById('btn-save-details');
@@ -1353,8 +1524,12 @@
           <div style="font-size:3rem;margin-bottom:12px;">${emoji}</div>
           <p>No ${noun}${currentTab !== 'all' ? ' in this category' : ''}. ${currentTab === 'all' ? 'Share the QR code with your guests!' : 'Try a different filter.'}</p>
         </div>`;
+      renderVideoMessages();
       return;
     }
+
+    // Refresh sidebar video-message list off the same allUploads cache
+    renderVideoMessages();
 
     photoGrid.innerHTML = filteredUploads.map((u, i) => {
       const cls    = placeholderClasses[i % placeholderClasses.length];

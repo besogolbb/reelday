@@ -187,6 +187,47 @@ export default async function eventRoutes(fastify) {
     };
   });
 
+  // POST /api/events/:slug/play-videos — push a burst to the wall.
+  // Body: { ids: ['<upload-uuid>', ...] }. Pass an empty array to
+  // signal "stop the current burst and resume photos immediately".
+  fastify.post('/events/:slug/play-videos', async (request, reply) => {
+    const { slug } = request.params;
+    const ids = Array.isArray(request.body?.ids) ? request.body.ids : [];
+
+    // Ensure each id is actually an upload on this event so we don't
+    // queue arbitrary UUIDs from outside.
+    let validIds = [];
+    if (ids.length) {
+      const { rows: validRows } = await fastify.db.query(
+        `SELECT id FROM uploads
+          WHERE event_id = (SELECT id FROM events WHERE slug = $1)
+            AND id = ANY($2::uuid[])
+            AND is_approved = true`,
+        [slug, ids],
+      );
+      const ok = new Set(validRows.map(r => r.id));
+      validIds = ids.filter(id => ok.has(id));
+    }
+
+    const { rows } = await fastify.db.query(
+      `UPDATE events
+          SET playback_burst_id    = COALESCE(playback_burst_id, 0) + 1,
+              playback_burst_queue = $2::jsonb
+        WHERE slug = $1
+        RETURNING playback_burst_id, playback_burst_queue`,
+      [slug, JSON.stringify(validIds)],
+    );
+
+    if (!rows.length) {
+      return reply.status(404).send({ error: true, message: 'Event not found' });
+    }
+
+    return {
+      playback_burst_id:    rows[0].playback_burst_id,
+      playback_burst_queue: rows[0].playback_burst_queue,
+    };
+  });
+
   // GET /api/events/:slug/qr — regenerate QR code
   fastify.get('/events/:slug/qr', async (request, reply) => {
     const { slug } = request.params;

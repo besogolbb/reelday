@@ -33,6 +33,12 @@ const MIGRATIONS = `
   -- Per-event moderation: photos default to auto-approve (legacy behaviour),
   -- videos default to manual review so the host can screen messages.
   ALTER TABLE events ADD COLUMN IF NOT EXISTS video_auto_approve BOOLEAN DEFAULT false;
+
+  -- "Play video messages now" burst: dashboard increments burst_id and
+  -- stores an ordered list of upload IDs. The wall polls these fields,
+  -- detects a new burst, plays the queue, then resumes photos.
+  ALTER TABLE events ADD COLUMN IF NOT EXISTS playback_burst_id    INTEGER DEFAULT 0;
+  ALTER TABLE events ADD COLUMN IF NOT EXISTS playback_burst_queue JSONB   DEFAULT '[]'::jsonb;
 `;
 
 async function dbPlugin(fastify) {

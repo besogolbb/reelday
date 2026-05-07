@@ -280,6 +280,38 @@
     .sound-btn.visible { display: inline-flex; }
     .sound-btn .icon { font-size: 14px; }
 
+    /* ── Burst (now playing video message) banner ──────────── */
+    .burst-banner {
+      position: fixed; top: 76px; left: 50%; transform: translateX(-50%);
+      z-index: 14;
+      display: none; align-items: center; gap: 14px;
+      background: linear-gradient(90deg, rgba(0,0,0,.65), rgba(60,30,18,.65));
+      border: 1px solid rgba(255,255,255,.18);
+      backdrop-filter: blur(10px);
+      padding: 12px 22px;
+      border-radius: 999px;
+      color: #fff;
+      font-family: var(--mono); font-size: 11px; letter-spacing: .22em;
+      text-transform: uppercase;
+      animation: bbDrop .35s cubic-bezier(.2,.8,.2,1.05) both;
+    }
+    .burst-banner.visible { display: inline-flex; }
+    .burst-banner .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #ff5757; box-shadow: 0 0 0 4px rgba(255,87,87,.3);
+      animation: pulse 1.2s ease infinite;
+    }
+    .burst-banner .from {
+      font-family: var(--display); font-style: italic;
+      letter-spacing: -.01em; text-transform: none;
+      font-size: 16px;
+      color: rgba(255,255,255,.95);
+    }
+    @keyframes bbDrop {
+      from { opacity: 0; transform: translate(-50%, -16px); }
+      to   { opacity: 1; transform: translate(-50%, 0); }
+    }
+
     /* ── Floating emojis ────────────────────────────────────── */
     #emoji-container {
       position: fixed; inset: 0; z-index: 60;
@@ -437,6 +469,13 @@
   <span class="icon" id="sound-icon">🔇</span>
   <span class="label" id="sound-label">Tap for sound</span>
 </button>
+
+<div class="burst-banner" id="burst-banner">
+  <span class="dot"></span>
+  <span>Now playing</span>
+  <span class="from" id="burst-from">a video message</span>
+  <span id="burst-counter">1 / 1</span>
+</div>
 
 <!-- ════ FULLSCREEN TOGGLE ════════════════════════════════ -->
 <button class="fs-btn" id="fs-btn" type="button" aria-label="Toggle fullscreen" title="Fullscreen (F)">
@@ -764,9 +803,10 @@
   }
 
   // When a video finishes naturally before its timer fires, jump ahead.
+  // Skip during a burst — the burst engine has its own ended handler.
   [vidA, vidB].forEach(v => {
     v?.addEventListener('ended', () => {
-      if (!isRunning || isPaused) return;
+      if (!isRunning || isPaused || inBurst) return;
       // Only advance if the *active* layer's video ended (the other layer is from the previous slide).
       const activeVid = activeLayer === 'A' ? vidA : vidB;
       if (v !== activeVid) return;
@@ -932,6 +972,137 @@
     uploadToast.textContent = msg;
     uploadToast.classList.add('show');
     toastTimer = setTimeout(() => uploadToast.classList.remove('show'), 3500);
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     BURST MODE — host-triggered "play video messages" takeover
+  ══════════════════════════════════════════════════════════ */
+  const burstBanner  = document.getElementById('burst-banner');
+  const burstFrom    = document.getElementById('burst-from');
+  const burstCounter = document.getElementById('burst-counter');
+
+  let lastBurstId      = null;     // last burst_id seen from the API
+  let inBurst          = false;
+  let burstQueue       = [];       // upload objects to play, in order
+  let burstIdx         = 0;
+  let savedItems       = null;     // photo/video stream prior to burst
+  let savedIdx         = 0;
+
+  function enterBurstMode(uploadIds) {
+    if (!Array.isArray(uploadIds) || !uploadIds.length) return;
+    // Resolve ids → upload objects from the cache
+    const byId = new Map(allUploads.map(u => [String(u.id), u]));
+    const queue = uploadIds.map(id => byId.get(String(id))).filter(Boolean);
+    if (!queue.length) return;
+
+    // Save current state so we can resume photos afterwards
+    savedItems = items.slice();
+    savedIdx   = currentIdx;
+    inBurst    = true;
+    burstQueue = queue;
+    burstIdx   = 0;
+
+    items = queue;
+    currentIdx = 0;
+    clearTimeout(slideTimer);
+
+    burstBanner.classList.add('visible');
+    updateBurstBanner();
+
+    // The host clicked Play in the dashboard, which counts as a user gesture
+    // *for that tab*. The wall is on a different page so audio may still be
+    // gated — that's why the sound toggle is shown. If the host has already
+    // tapped it, audio plays.
+
+    if (!isRunning) {
+      isRunning = true;
+      emptyState.classList.remove('visible');
+    }
+    showSlide(0);
+    startProgress();
+    slideTimer = setTimeout(advanceBurstOrEnd, currentSlideDuration());
+  }
+
+  function updateBurstBanner() {
+    const item = burstQueue[burstIdx];
+    burstFrom.textContent = item?.uploader_name
+      ? `from ${item.uploader_name}`
+      : 'a video message';
+    burstCounter.textContent = `${burstIdx + 1} / ${burstQueue.length}`;
+  }
+
+  function advanceBurstOrEnd() {
+    if (!inBurst) return advance();
+    burstIdx += 1;
+    if (burstIdx >= burstQueue.length) {
+      exitBurstMode();
+      return;
+    }
+    currentIdx = burstIdx;
+    showSlide(currentIdx);
+    startProgress();
+    updateBurstBanner();
+    slideTimer = setTimeout(advanceBurstOrEnd, currentSlideDuration());
+  }
+
+  function exitBurstMode() {
+    inBurst = false;
+    burstQueue = [];
+    burstBanner.classList.remove('visible');
+
+    // Restore the photo/video stream and continue from where we left off + 1
+    if (savedItems && savedItems.length) {
+      items = savedItems;
+      const next = (savedIdx + 1) % items.length;
+      currentIdx = next;
+      showSlide(currentIdx);
+      startProgress();
+      slideTimer = setTimeout(advance, currentSlideDuration());
+    }
+    savedItems = null;
+  }
+
+  // When a video ends naturally during a burst, jump to the next item
+  // immediately rather than waiting for the timer.
+  [vidA, vidB].forEach(v => {
+    v?.addEventListener('ended', () => {
+      if (!inBurst) return;
+      // Only react to the active layer's video.
+      const activeVid = activeLayer === 'A' ? vidA : vidB;
+      if (v !== activeVid) return;
+      clearTimeout(slideTimer);
+      advanceBurstOrEnd();
+    });
+  });
+
+  async function pollBurst() {
+    try {
+      const res = await fetch(`/api/events/${slug}`);
+      if (!res.ok) return;
+      const data  = await res.json();
+      const event = data.event || {};
+      const id    = event.playback_burst_id ?? 0;
+      const queue = Array.isArray(event.playback_burst_queue) ? event.playback_burst_queue : [];
+
+      // First poll establishes the baseline so old bursts don't fire on refresh.
+      if (lastBurstId === null) {
+        lastBurstId = id;
+        return;
+      }
+      if (id === lastBurstId) return;
+      lastBurstId = id;
+
+      if (queue.length === 0) {
+        // Empty queue → host hit Stop. Cut the burst short if one is running.
+        if (inBurst) {
+          clearTimeout(slideTimer);
+          exitBurstMode();
+        }
+        return;
+      }
+
+      enterBurstMode(queue);
+    } catch { /* network blip — try again next tick */ }
   }
 
   /* ══════════════════════════════════════════════════════════
@@ -1143,6 +1314,11 @@
     }
 
     setInterval(refreshUploads, POLL_INTERVAL);
+
+    // Poll the event endpoint a bit more frequently so a host clicking
+    // "Play video messages" sees the wall react within a few seconds.
+    pollBurst();
+    setInterval(pollBurst, 3000);
   }
 
   init();
