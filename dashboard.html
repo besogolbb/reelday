@@ -69,8 +69,8 @@
   .panel-head .auto-pill.off { color: var(--ink-soft); background: var(--paper-2); border-color: var(--line); }
 
   /* Tabs */
-  .tab-row { display: flex; gap: 4px; padding: 12px 16px; border-bottom: 1px solid var(--line); background: var(--paper-2); }
-  .tab { padding: 10px 20px; border-radius: 999px; font-size: 14px; color: var(--ink-soft); cursor: pointer; transition: background .15s, color .15s; }
+  .tab-row { display: flex; gap: 4px; padding: 12px 16px; border-bottom: 1px solid var(--line); background: var(--paper-2); overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
+  .tab { flex-shrink: 0; padding: 10px 20px; border-radius: 999px; font-size: 14px; color: var(--ink-soft); cursor: pointer; transition: background .15s, color .15s; }
   .tab:hover { background: var(--paper-3); color: var(--ink); }
   .tab.active { background: var(--ink); color: var(--paper); }
 
@@ -141,6 +141,15 @@
     .body        { grid-template-columns: 1fr; }
     .photo-grid  { grid-template-columns: repeat(3,1fr); }
     .event-nav   { display: none; }
+  }
+
+  @media (max-width: 600px) {
+    .event-header { padding: 24px 20px 80px; }
+    .stats-row { grid-template-columns: 1fr; padding: 0 20px; margin-top: -40px; }
+    .stat-card { padding: 20px; }
+    .body { padding: 0 20px 80px; margin-top: 40px; }
+    .photo-grid { grid-template-columns: repeat(2,1fr); }
+    .tab-row { padding: 8px 12px; }
   }
 </style>
 </head>
