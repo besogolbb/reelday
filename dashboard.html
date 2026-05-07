@@ -488,7 +488,7 @@
 
         // Update Link targets and displayed URL for reelday.ph
         const qrUrlDisplay = document.querySelector('.qr-card .url');
-        if (qrUrlDisplay) qrUrlDisplay.textContent = `reelday.ph/e/${slug}`;
+        if (qrUrlDisplay) qrUrlDisplay.textContent = `reelday.ph/upload/${slug}`;
 
         document.querySelector('.qr-card a[href="upload.html"]').href = `/upload/${slug}`;
         document.querySelector('.qr-card a[href="wall.html"]').href = `/wall/${slug}`;

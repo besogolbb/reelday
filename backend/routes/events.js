@@ -118,7 +118,11 @@ export default async function eventRoutes(fastify) {
     }
 
     const event   = rows[0];
-    const qr_code = await generateQR(slug);
+
+    // Generate the QR code encoding the full absolute URL based on the current request host
+    const protocol = request.headers['x-forwarded-proto'] || 'https';
+    const host = request.headers.host || 'reelday.ph';
+    const qr_code = await generateQR(`${protocol}://${host}/upload/${slug}`);
 
     return reply.status(201).send({ event, qr_code });
   });
