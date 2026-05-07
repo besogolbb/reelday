@@ -65,6 +65,11 @@ fastify.get('/create', (_request, reply) => {
   reply.sendFile('create.html');
 });
 
+// Serve start.html — Jotform-style free-tier wizard
+fastify.get('/start', (_request, reply) => {
+  reply.sendFile('start.html');
+});
+
 // Serve upload.html for any /upload/:slug path
 fastify.get('/upload/:slug', (_request, reply) => {
   reply.sendFile('upload.html');

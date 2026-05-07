@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#fdfaf5" />
+<title>Reelday — Start free</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="stylesheet" href="/css/shared.css" />
+<style>
+  body { background: #fdfaf5; min-height: 100dvh; display: flex; flex-direction: column; }
+
+  .wizard-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 28px; border-bottom: 1px solid var(--line);
+    background: rgba(253,250,245,.85); backdrop-filter: blur(8px);
+  }
+  .wizard-header .brand { font-size: 18px; }
+  .wizard-progress {
+    flex: 1; max-width: 360px; margin: 0 24px;
+    display: flex; gap: 6px;
+  }
+  .wizard-progress .pip {
+    flex: 1; height: 4px; border-radius: 2px;
+    background: var(--paper-3, #e8dfd4);
+    transition: background .3s ease;
+  }
+  .wizard-progress .pip.done   { background: var(--accent-deep); }
+  .wizard-progress .pip.active { background: var(--accent); }
+  .wizard-back {
+    background: none; border: none; cursor: pointer;
+    color: var(--ink-soft); font-size: 14px; font-family: var(--sans);
+    padding: 6px 10px; border-radius: 8px;
+  }
+  .wizard-back:hover { color: var(--ink); background: rgba(0,0,0,.04); }
+  .wizard-back:disabled { opacity: 0; pointer-events: none; }
+
+  .wizard-stage {
+    flex: 1;
+    display: flex; align-items: center; justify-content: center;
+    padding: 32px 24px 80px;
+    overflow: hidden;
+  }
+
+  .wizard-track {
+    width: 100%;
+    max-width: 720px;
+    position: relative;
+  }
+
+  .slide {
+    opacity: 0;
+    transform: translateX(40px);
+    transition: opacity .35s ease, transform .35s cubic-bezier(.22,1,.36,1);
+    pointer-events: none;
+    position: absolute; inset: 0;
+  }
+  .slide.active {
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: auto;
+    position: relative;
+  }
+  .slide.exit-left {
+    opacity: 0;
+    transform: translateX(-40px);
+  }
+
+  .slide h1 {
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: clamp(36px, 5.5vw, 56px);
+    letter-spacing: -.025em;
+    line-height: 1.05;
+    margin-bottom: 12px;
+    color: var(--ink);
+  }
+  .slide h1 em { font-style: italic; color: var(--accent); }
+  .slide .sub {
+    color: var(--ink-soft);
+    font-size: 17px;
+    margin-bottom: 36px;
+    max-width: 56ch;
+  }
+
+  /* ── Event type grid ───────────────────────── */
+  .types-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  @media (min-width: 560px) {
+    .types-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+  .type-card {
+    background: #fff; border: 1.5px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 20px;
+    cursor: pointer;
+    aspect-ratio: 4/5;
+    display: flex; flex-direction: column; justify-content: space-between;
+    transition: all .2s ease;
+    color: var(--ink); font-family: var(--sans);
+    text-align: left;
+  }
+  .type-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-card);
+  }
+  .type-card.selected {
+    background: var(--ink); color: var(--paper);
+    border-color: var(--ink);
+    box-shadow: var(--shadow-card);
+  }
+  .type-card .pic {
+    aspect-ratio: 1; border-radius: 12px;
+    background-size: cover; background-position: center;
+    margin-bottom: 14px;
+  }
+  .type-card .name {
+    font-family: var(--display);
+    font-style: italic;
+    font-size: 22px;
+    line-height: 1.1;
+    margin-bottom: 2px;
+  }
+  .type-card .tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    opacity: .65;
+  }
+
+  /* ── Text input ─────────────────────────────── */
+  .big-input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid var(--line-2);
+    font-family: var(--display);
+    font-size: clamp(28px, 5vw, 44px);
+    font-style: italic;
+    color: var(--ink);
+    padding: 12px 4px;
+    outline: none;
+    transition: border-color .2s;
+  }
+  .big-input:focus { border-color: var(--accent); }
+  .big-input::placeholder { color: var(--ink-faint); opacity: .5; }
+
+  .big-date {
+    width: 100%;
+    background: #fff;
+    border: 1.5px solid var(--line-2);
+    border-radius: var(--r);
+    font-family: var(--sans);
+    font-size: 18px;
+    color: var(--ink);
+    padding: 18px 16px;
+    outline: none;
+    transition: border-color .2s;
+  }
+  .big-date:focus { border-color: var(--accent); }
+
+  .field-error {
+    font-size: 13px; color: var(--accent-deep);
+    margin-top: 10px; display: none;
+  }
+  .field-error.show { display: block; }
+
+  /* ── Auth slide ─────────────────────────────── */
+  .auth-form { display: flex; flex-direction: column; gap: 14px; max-width: 420px; }
+  .auth-form label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+    display: block;
+  }
+  .auth-form input {
+    width: 100%;
+    background: #fff;
+    border: 1.5px solid var(--line-2);
+    border-radius: var(--r);
+    padding: 14px 16px;
+    font-size: 16px;
+    font-family: var(--sans);
+    color: var(--ink);
+    outline: none;
+    transition: border-color .2s;
+  }
+  .auth-form input:focus { border-color: var(--accent); }
+
+  .auth-divider {
+    display: flex; align-items: center; gap: .75rem;
+    font-size: .78rem; color: var(--ink-soft); margin: 4px 0;
+  }
+  .auth-divider::before, .auth-divider::after {
+    content: ''; flex: 1; height: 1px; background: var(--line);
+  }
+
+  #google-btn { display: flex; justify-content: center; }
+
+  /* ── Slide actions ──────────────────────────── */
+  .slide-actions {
+    display: flex; justify-content: flex-end; gap: 12px;
+    margin-top: 36px;
+  }
+
+  .btn-next, .btn-finish {
+    background: var(--ink); color: #fff;
+    border: none; border-radius: 999px;
+    padding: 14px 28px;
+    font-family: var(--sans); font-size: 15px; font-weight: 600;
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 8px;
+    min-height: 50px;
+    transition: transform .15s, opacity .15s;
+  }
+  .btn-next:hover, .btn-finish:hover { transform: translateY(-1px); }
+  .btn-next:disabled, .btn-finish:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+  .btn-finish { background: var(--accent); }
+  .btn-finish:hover { background: var(--accent-deep); }
+
+  .btn-spinner {
+    width: 18px; height: 18px;
+    border: 2px solid rgba(255,255,255,.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin .6s linear infinite;
+    display: none;
+  }
+  .btn-next.loading .btn-spinner,
+  .btn-finish.loading .btn-spinner { display: block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--ink); color: #fff;
+    padding: 12px 20px; border-radius: 999px;
+    font-size: 14px;
+    opacity: 0; pointer-events: none;
+    transition: opacity .2s;
+    z-index: 100;
+  }
+  .toast.show { opacity: 1; }
+  .toast.error { background: var(--accent-deep); }
+
+  /* ── Mobile tweaks ─────────────────────────── */
+  @media (max-width: 560px) {
+    .wizard-header { padding: 14px 18px; }
+    .wizard-progress { margin: 0 12px; }
+    .wizard-stage { padding: 18px 18px 60px; }
+    .slide-actions { justify-content: stretch; }
+    .slide-actions .btn-next, .slide-actions .btn-finish { width: 100%; justify-content: center; }
+  }
+</style>
+</head>
+<body>
+
+<header class="wizard-header">
+  <a class="brand" href="/">REELDAY<sup>★</sup></a>
+  <div class="wizard-progress" id="progress">
+    <div class="pip active"></div>
+    <div class="pip"></div>
+    <div class="pip"></div>
+    <div class="pip"></div>
+  </div>
+  <button class="wizard-back" id="btn-back" disabled>← Back</button>
+</header>
+
+<main class="wizard-stage">
+  <div class="wizard-track" id="track">
+
+    <!-- Slide 1: Event type -->
+    <section class="slide active" data-slide="0">
+      <h1>What are you <em>celebrating?</em></h1>
+      <p class="sub">Pick your event type to get started.</p>
+
+      <div class="types-grid" id="types-grid">
+        <button type="button" class="type-card selected" data-type="wedding">
+          <div class="pic" style="background-image:url(/images/First%20kiss.png)"></div>
+          <div><div class="name">Wedding</div><div class="tag">Kasal</div></div>
+        </button>
+        <button type="button" class="type-card" data-type="birthday">
+          <div class="pic" style="background-image:url(/images/Birthday.png?v=2)"></div>
+          <div><div class="name">Birthday</div><div class="tag">Kaarawan</div></div>
+        </button>
+        <button type="button" class="type-card" data-type="baptism">
+          <div class="pic" style="background-image:url(/images/Baptism.png?v=2)"></div>
+          <div><div class="name">Baptism</div><div class="tag">Binyag</div></div>
+        </button>
+        <button type="button" class="type-card" data-type="reunion">
+          <div class="pic" style="background-image:url(/images/The%20whole%20family%20finally%20in%20one%20frame.png?v=2)"></div>
+          <div><div class="name">Reunion</div><div class="tag">Pagkikita</div></div>
+        </button>
+        <button type="button" class="type-card" data-type="corporate">
+          <div class="pic" style="background-image:url(/images/Corporate.png?v=2)"></div>
+          <div><div class="name">Corporate</div><div class="tag">Kompanya</div></div>
+        </button>
+        <button type="button" class="type-card" data-type="memorial">
+          <div class="pic" style="background-image:url(/images/Memorial.png?v=2)"></div>
+          <div><div class="name">Memorial</div><div class="tag">Alaala</div></div>
+        </button>
+      </div>
+
+      <div class="slide-actions">
+        <button class="btn-next" type="button" data-next>Continue →</button>
+      </div>
+    </section>
+
+    <!-- Slide 2: Celebrant / event name -->
+    <section class="slide" data-slide="1">
+      <h1>Who's <em>celebrating?</em></h1>
+      <p class="sub">Couple's names, the celebrant's name, or the event title.</p>
+
+      <input type="text" class="big-input" id="event-name"
+             placeholder="e.g. Andrea & JM"
+             maxlength="200" autocomplete="off" />
+      <div class="field-error" id="err-name">Please enter a name.</div>
+
+      <div class="slide-actions">
+        <button class="btn-next" type="button" data-next>Continue →</button>
+      </div>
+    </section>
+
+    <!-- Slide 3: Event date -->
+    <section class="slide" data-slide="2">
+      <h1>When's the <em>big day?</em></h1>
+      <p class="sub">We'll use this to set your gallery's open window.</p>
+
+      <input type="date" class="big-date" id="event-date" />
+      <div class="field-error" id="err-date">Please pick a date.</div>
+
+      <div class="slide-actions">
+        <button class="btn-next" type="button" data-next id="btn-after-date">Continue →</button>
+      </div>
+    </section>
+
+    <!-- Slide 4: Account -->
+    <section class="slide" data-slide="3">
+      <h1>Save your <em>Reelday.</em></h1>
+      <p class="sub">Create a free account so you can manage your event and download photos.</p>
+
+      <div id="google-btn"></div>
+
+      <div class="auth-divider">or sign up with email</div>
+
+      <div class="auth-form">
+        <div>
+          <label for="a-name">Full name</label>
+          <input type="text" id="a-name" placeholder="Juan dela Cruz" autocomplete="name" />
+        </div>
+        <div>
+          <label for="a-email">Email</label>
+          <input type="email" id="a-email" placeholder="you@email.com" autocomplete="email" />
+        </div>
+        <div>
+          <label for="a-pw">Password</label>
+          <input type="password" id="a-pw" placeholder="At least 8 characters" autocomplete="new-password" />
+        </div>
+        <div class="field-error" id="err-auth"></div>
+      </div>
+
+      <div class="slide-actions">
+        <button class="btn-finish" type="button" id="btn-finish">
+          <div class="btn-spinner"></div>
+          <span>Create my Reelday →</span>
+        </button>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+  import { getToken, getUser, saveAuth } from '/js/auth.js';
+
+  // ── State ──────────────────────────────────────
+  const params = new URLSearchParams(location.search);
+  const state = {
+    type:  params.get('type') || 'wedding',
+    name:  '',
+    date:  '',
+  };
+
+  const isLoggedIn = !!getToken();
+  const totalSlides = isLoggedIn ? 3 : 4;   // skip auth if already signed in
+
+  let currentSlide = 0;
+
+  // ── DOM ────────────────────────────────────────
+  const slides     = [...document.querySelectorAll('.slide')];
+  const progress   = [...document.querySelectorAll('.wizard-progress .pip')];
+  const btnBack    = document.getElementById('btn-back');
+  const finishBtn  = document.getElementById('btn-finish');
+  const toastEl    = document.getElementById('toast');
+
+  // Hide the auth pip + slide when already logged in
+  if (isLoggedIn) {
+    progress[3]?.remove();
+    slides[3]?.remove();
+    // Last slide's "Continue" becomes a finisher
+    const lastNext = slides[2].querySelector('[data-next]');
+    if (lastNext) {
+      lastNext.removeAttribute('data-next');
+      lastNext.id = 'btn-finish-direct';
+      lastNext.innerHTML = '<div class="btn-spinner"></div><span>Create my Reelday →</span>';
+      lastNext.classList.add('btn-finish');
+      lastNext.classList.remove('btn-next');
+      lastNext.addEventListener('click', () => {
+        if (!validateCurrent()) return;
+        createEventAndGo(lastNext);
+      });
+    }
+  }
+
+  // ── Slide navigation ───────────────────────────
+  function goTo(index) {
+    if (index < 0 || index >= totalSlides) return;
+
+    slides.forEach((el, i) => {
+      el.classList.toggle('active', i === index);
+      el.classList.toggle('exit-left', i < index);
+    });
+
+    progress.forEach((el, i) => {
+      el.classList.toggle('active', i === index);
+      el.classList.toggle('done',   i <  index);
+    });
+
+    btnBack.disabled = index === 0;
+    currentSlide = index;
+
+    // Auto-focus inputs on each step
+    setTimeout(() => {
+      if (index === 1) document.getElementById('event-name')?.focus();
+      if (index === 2) document.getElementById('event-date')?.focus();
+      if (index === 3) document.getElementById('a-name')?.focus();
+    }, 350);
+  }
+
+  btnBack.addEventListener('click', () => goTo(currentSlide - 1));
+
+  // Generic "Continue" handler
+  document.querySelectorAll('[data-next]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (!validateCurrent()) return;
+      goTo(currentSlide + 1);
+    });
+  });
+
+  // ── Validation ─────────────────────────────────
+  function validateCurrent() {
+    if (currentSlide === 0) return true;          // type always preselected
+
+    if (currentSlide === 1) {
+      const v = document.getElementById('event-name').value.trim();
+      if (!v) { showErr('err-name'); return false; }
+      hideErr('err-name');
+      state.name = v;
+      return true;
+    }
+
+    if (currentSlide === 2) {
+      const v = document.getElementById('event-date').value;
+      if (!v) { showErr('err-date'); return false; }
+      hideErr('err-date');
+      state.date = v;
+      return true;
+    }
+
+    return true;
+  }
+
+  function showErr(id) { document.getElementById(id).classList.add('show'); }
+  function hideErr(id) { document.getElementById(id).classList.remove('show'); }
+
+  document.getElementById('event-name')?.addEventListener('input', () => hideErr('err-name'));
+  document.getElementById('event-date')?.addEventListener('change', () => hideErr('err-date'));
+
+  // Enter-key advances slides 1 & 2
+  document.getElementById('event-name')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); slides[1].querySelector('[data-next]').click(); }
+  });
+
+  // ── Type selection ─────────────────────────────
+  const grid = document.getElementById('types-grid');
+  // Apply ?type= preselection
+  if (state.type !== 'wedding') {
+    grid.querySelectorAll('.type-card').forEach(c => {
+      c.classList.toggle('selected', c.dataset.type === state.type);
+    });
+  }
+  grid.addEventListener('click', e => {
+    const card = e.target.closest('.type-card');
+    if (!card) return;
+    grid.querySelectorAll('.type-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    state.type = card.dataset.type;
+  });
+
+  // ── Toast ──────────────────────────────────────
+  let toastTimer;
+  function showToast(msg, type = '') {
+    clearTimeout(toastTimer);
+    toastEl.textContent = msg;
+    toastEl.className = `toast show ${type}`;
+    toastTimer = setTimeout(() => toastEl.classList.remove('show'), 3500);
+  }
+
+  // ── Create event ───────────────────────────────
+  async function createEvent() {
+    const token = getToken();
+    const res = await fetch('/api/events', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({
+        couple_names: state.name,
+        event_type:   state.type,
+        event_date:   state.date || null,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Could not create event.');
+    return data;
+  }
+
+  async function createEventAndGo(button) {
+    button.disabled = true;
+    button.classList.add('loading');
+    try {
+      const { event } = await createEvent();
+      location.href = `/dashboard?slug=${event.slug}`;
+    } catch (err) {
+      showToast(err.message, 'error');
+      button.disabled = false;
+      button.classList.remove('loading');
+    }
+  }
+
+  // ── Finish: register then create event ─────────
+  finishBtn?.addEventListener('click', async () => {
+    const name  = document.getElementById('a-name').value.trim();
+    const email = document.getElementById('a-email').value.trim();
+    const pw    = document.getElementById('a-pw').value;
+    const errEl = document.getElementById('err-auth');
+
+    errEl.classList.remove('show');
+    errEl.textContent = '';
+
+    if (!name || !email || !pw) {
+      errEl.textContent = 'Please fill in all three fields.';
+      errEl.classList.add('show');
+      return;
+    }
+    if (pw.length < 8) {
+      errEl.textContent = 'Password must be at least 8 characters.';
+      errEl.classList.add('show');
+      return;
+    }
+
+    finishBtn.disabled = true;
+    finishBtn.classList.add('loading');
+
+    try {
+      const res  = await fetch('/api/auth/register', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ email, password: pw, full_name: name }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Registration failed');
+
+      if (!data.token) {
+        // Email-verification flow: account created but not signed in.
+        errEl.textContent = 'Account created — check your email to verify, then log in to finish.';
+        errEl.classList.add('show');
+        finishBtn.disabled = false;
+        finishBtn.classList.remove('loading');
+        return;
+      }
+
+      saveAuth(data.token, data.user);
+      const { event } = await createEvent();
+      location.href = `/dashboard?slug=${event.slug}`;
+    } catch (err) {
+      errEl.textContent = err.message;
+      errEl.classList.add('show');
+      finishBtn.disabled = false;
+      finishBtn.classList.remove('loading');
+    }
+  });
+
+  // ── Google Sign-In ─────────────────────────────
+  async function handleGoogleCredential(response) {
+    const errEl = document.getElementById('err-auth');
+    errEl.classList.remove('show');
+    try {
+      const res  = await fetch('/api/auth/google', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ credential: response.credential }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Google sign-in failed');
+      saveAuth(data.token, data.user);
+      const { event } = await createEvent();
+      location.href = `/dashboard?slug=${event.slug}`;
+    } catch (err) {
+      errEl.textContent = err.message;
+      errEl.classList.add('show');
+    }
+  }
+
+  if (!isLoggedIn) {
+    const cfg = await fetch('/api/auth/config').then(r => r.json()).catch(() => ({}));
+    if (cfg.google_client_id) {
+      const s = document.createElement('script');
+      s.src = 'https://accounts.google.com/gsi/client';
+      s.onload = () => {
+        google.accounts.id.initialize({
+          client_id: cfg.google_client_id,
+          callback:  handleGoogleCredential,
+        });
+        google.accounts.id.renderButton(document.getElementById('google-btn'), {
+          theme: 'outline', size: 'large', width: 360, text: 'signup_with', shape: 'rectangular',
+        });
+      };
+      document.head.appendChild(s);
+    } else {
+      // No Google configured — hide the divider & button
+      document.getElementById('google-btn').style.display = 'none';
+      document.querySelector('.auth-divider').style.display = 'none';
+    }
+  }
+</script>
+</body>
+</html>
