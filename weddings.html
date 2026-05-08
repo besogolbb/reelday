@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- SEO BLUEPRINT -->
+    <title>Premium Digital Wedding Guestbook & Live Wall PH | Reelday</title>
+    <meta name="description" content="Elevate your wedding with Reelday. The most elegant QR code photo sharing and live wall for weddings in Manila, Tagaytay, and Cebu. No app needed.">
+    <meta name="keywords" content="Digital Wedding Guestbook Philippines, QR Code Photo Sharing Wedding, Live Wedding Wall Manila, Wedding Reception Tech PH">
+
+    <!-- GOOGLE RICH SNIPPET SCHEMA -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Service",
+      "name": "Reelday Wedding Live Wall",
+      "provider": { "@type": "LocalBusiness", "name": "Reelday.ph", "address": "Manila, Philippines" },
+      "areaServed": ["Manila", "Tagaytay", "Cebu", "Boracay"],
+      "offers": { "@type": "Offer", "priceCurrency": "PHP", "price": "2499.00" }
+    }
+    </script>
+
+    <!-- FONTS & STYLES -->
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;1,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root { --cream: #FDFBF7; --accent: #BA704F; --dark: #2D1B10; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--cream); color: var(--dark); overflow-x: hidden; }
+        .serif { font-family: 'Cormorant Garamond', serif; }
+        .bg-accent { background-color: var(--accent); }
+        .text-accent { color: var(--accent); }
+        .bg-dark { background-color: var(--dark); }
+        
+        /* Polaroid Styling */
+        .polaroid {
+            background: white;
+            padding: 12px 12px 35px 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            border: 1px solid rgba(0,0,0,0.03);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .polaroid img { width: 100%; height: auto; display: block; filter: sepia(10%); }
+        
+        /* Heart Animation for React Wall */
+        @keyframes floatUp {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(-500px) scale(1.5); opacity: 0; }
+        }
+        .heart { position: absolute; pointer-events: none; animation: floatUp 3s forwards ease-in; color: #BA704F; font-size: 24px; z-index: 50; }
+    </style>
+</head>
+<body>
+
+    <!-- NAVIGATION -->
+    <nav class="flex justify-between items-center px-6 md:px-16 py-8">
+        <div class="text-3xl font-bold tracking-tight serif uppercase">REELDAY <span class="text-xs align-top">★</span></div>
+        <div class="hidden lg:flex space-x-10 text-xs font-bold uppercase tracking-widest opacity-60">
+            <a href="landing.html" class="hover:text-accent transition">How it works</a>
+            <a href="#" class="hover:text-accent transition">Live demo</a>
+            <a href="#" class="hover:text-accent transition">Pricing</a>
+            <a href="#" class="hover:text-accent transition">FAQ</a>
+        </div>
+        <div class="flex items-center space-x-6">
+            <a href="create.html" class="bg-accent text-white px-6 py-3 rounded-full text-sm font-bold shadow-xl hover:scale-105 transition">+ NEW EVENT</a>
+        </div>
+    </nav>
+
+    <!-- HERO SECTION -->
+    <section class="px-6 md:px-16 py-12 grid lg:grid-cols-2 gap-16 items-center">
+        <div class="z-10">
+            <div class="inline-flex items-center space-x-2 bg-stone-100 px-3 py-1 rounded-full mb-6">
+                <span class="w-2 h-2 bg-accent rounded-full animate-pulse"></span>
+                <span class="text-[10px] font-bold uppercase tracking-widest opacity-70">Built for Filipino Celebrations</span>
+            </div>
+            <h1 class="text-6xl md:text-[88px] serif leading-[0.9] mb-8">
+                Every <span class="italic text-accent">kilig.</span><br>
+                Every <span class="italic text-accent">guest.</span><br>
+                One QR.
+            </h1>
+            <p class="text-lg opacity-80 max-w-md leading-relaxed mb-10">
+                Turn your wedding reception into a cinematic experience. Your guests scan, snap, and see their love on the big screen — instantly.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-4">
+                <a href="create.html" class="bg-accent text-white px-10 py-5 rounded-full font-bold shadow-2xl hover:brightness-110 transition text-center">
+                    Start My Wedding Gallery →
+                </a>
+                <div class="flex items-center px-4">
+                    <div class="flex -space-x-2">
+                        <div class="w-8 h-8 rounded-full bg-stone-300 border-2 border-cream"></div>
+                        <div class="w-8 h-8 rounded-full bg-stone-400 border-2 border-cream"></div>
+                    </div>
+                    <span class="text-[10px] font-bold ml-3 uppercase opacity-50">Trusted by 2,100+ couples</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- VISUAL ASSETS (Polaroids) -->
+        <div class="relative h-[450px] md:h-[600px] flex items-center justify-center" id="react-zone">
+            <!-- Polaroid 1 -->
+            <div class="polaroid absolute top-0 right-4 w-56 md:w-72 -rotate-3 z-20">
+                <img src="https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?q=80&w=600&auto=format&fit=crop" alt="Filipino Wedding First Dance">
+                <p class="serif italic text-sm mt-4 opacity-70">First dance as Mr. & Mrs.</p>
+            </div>
+            <!-- Polaroid 2 -->
+            <div class="polaroid absolute bottom-4 left-4 w-56 md:w-72 rotate-6 z-10">
+                <img src="https://images.unsplash.com/photo-1519225421980-715cb0215aed?q=80&w=600&auto=format&fit=crop" alt="Wedding Toast">
+                <p class="serif italic text-sm mt-4 opacity-70">Lolo's heartfelt speech...</p>
+            </div>
+            <!-- React Wall Badge -->
+            <div class="absolute bottom-1/2 left-1/2 -translate-x-1/2 bg-white/80 backdrop-blur-md border border-accent/20 px-6 py-3 rounded-2xl shadow-2xl z-30 flex items-center space-x-3">
+                <span class="text-xl">❤️</span>
+                <span class="text-[10px] font-bold uppercase tracking-tighter">Live React Wall Active</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- STATS BAR -->
+    <section class="px-6 md:px-16 mb-24">
+        <div class="bg-dark rounded-[40px] py-12 px-8 md:px-16 grid grid-cols-2 lg:grid-cols-4 gap-8">
+            <div class="text-center lg:border-r lg:border-stone-800">
+                <div class="text-5xl serif text-accent">2,140</div>
+                <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-stone-500 mt-3">Events Hosted</div>
+            </div>
+            <div class="text-center lg:border-r lg:border-stone-800">
+                <div class="text-5xl serif text-accent">180k</div>
+                <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-stone-500 mt-3">Photos Uploaded</div>
+            </div>
+            <div class="text-center lg:border-r lg:border-stone-800">
+                <div class="text-5xl serif text-accent">52s</div>
+                <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-stone-500 mt-3">Setup Time Avg</div>
+            </div>
+            <div class="text-center">
+                <div class="text-5xl serif text-accent">4.9★</div>
+                <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-stone-500 mt-3">Event Rating</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FEATURES SECTION -->
+    <section class="py-24 bg-stone-100/50 px-6 md:px-16">
+        <div class="max-w-6xl mx-auto">
+            <h2 class="text-4xl md:text-6xl serif text-center mb-20">Why Reelday for your <span class="italic">Big Day?</span></h2>
+            <div class="grid md:grid-cols-3 gap-16">
+                <div>
+                    <div class="text-3xl mb-6">✨</div>
+                    <h3 class="serif text-2xl mb-4 text-accent italic">React Wall Interactions</h3>
+                    <p class="opacity-70 leading-relaxed">The only platform in the Philippines that allows guests to send real-time hearts and claps to photos on the LED wall.</p>
+                </div>
+                <div>
+                    <div class="text-3xl mb-6">📱</div>
+                    <h3 class="serif text-2xl mb-4 text-accent italic">No App, No Friction</h3>
+                    <p class="opacity-70 leading-relaxed">Perfect for Lolo and Lola. No sign-ups or downloads. Just a quick QR scan and they are part of the gallery.</p>
+                </div>
+                <div>
+                    <div class="text-3xl mb-6">🏝️</div>
+                    <h3 class="serif text-2xl mb-4 text-accent italic">Local Network Optimization</h3>
+                    <p class="opacity-70 leading-relaxed">Built to work with Globe, Smart, and hotel Wi-Fi. From BGC Ballrooms to Boracay sunsets.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="py-16 text-center">
+        <div class="text-2xl font-bold tracking-tight serif uppercase opacity-30 mb-4">REELDAY <span class="text-xs align-top">★</span></div>
+        <p class="text-[10px] font-bold uppercase tracking-widest opacity-30">The Future of Filipino Celebrations • Built in Manila</p>
+    </footer>
+
+    <!-- REACT WALL ANIMATION SCRIPT -->
+    <script>
+        function createHeart() {
+            const heart = document.createElement('div');
+            heart.classList.add('heart');
+            heart.innerHTML = ['❤️', '💖', '👏', '✨'][Math.floor(Math.random() * 4)];
+            heart.style.left = Math.random() * 80 + 10 + '%';
+            heart.style.bottom = '20%';
+            heart.style.animationDuration = (Math.random() * 2 + 2) + 's';
+            
+            document.getElementById('react-zone').appendChild(heart);
+            
+            setTimeout(() => { heart.remove(); }, 3000);
+        }
+        setInterval(createHeart, 800); // Create a heart every 800ms to show the "Live" feel
+    </script>
+</body>
+</html>
