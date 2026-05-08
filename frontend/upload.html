@@ -683,15 +683,8 @@ body { background: var(--paper); min-height: 100dvh; }
         updateWallPreview();
       };
       reader.readAsDataURL(f);
-      let prog = 0;
-      const t = setInterval(() => {
-        prog = Math.min(prog + Math.random()*18+5, 100);
-        const b = document.getElementById('b'+id);
-        const s = document.getElementById('s'+id);
-        if (b) b.style.width = prog+'%';
-        if (s) s.textContent = prog < 100 ? Math.round(prog)+'%' : '✓ Complete';
-        if (prog >= 100) { clearInterval(t); item.classList.add('done'); }
-      }, 200);
+      const s = document.getElementById('s' + id);
+      if (s) s.textContent = 'Ready to share';
     });
     updateSendBtn();
   }
@@ -852,8 +845,11 @@ body { background: var(--paper); min-height: 100dvh; }
 
 
   /* ── Send ──────────────────────────────────────────── */
-  function handleSend(mode) {
+  async function handleSend(mode) {
     if (mode === 'record' && !recordedBlob) return;
+    
+    const btn = event.currentTarget;
+    btn.disabled = true;
 
     const nameInput = mode === 'gallery'
       ? document.getElementById('galleryName')
@@ -942,64 +938,57 @@ body { background: var(--paper); min-height: 100dvh; }
       img.src = fullUrl;
     });
 
-    /* ── Step 3: POST each file to the API so it's saved on Cloudflare ── */
-    const fileEntries = Object.entries(itemFiles);   // [ [queueId, File], ... ]
-    fileEntries.forEach(([queueId, file], i) => {
+    /* ── Step 3: Direct R2 upload via presigned URL ── */
+    const fileEntries = Object.entries(itemFiles);
+    
+    const processUpload = async (file, queueId, i, isVidMsg = false) => {
       const entryId = now + i;
-      const fd = new FormData();
-      fd.append('file', file, file.name);
-      fd.append('uploader_name', name);
-      if (i === 0 && msg) fd.append('message', msg);
+      const isVideo = file.type.startsWith('video/');
+      const msgToSend = (i === 0 && msg) ? msg : '';
 
-      fetch(`/api/uploads/${currentEvent.slug}`, { method: 'POST', body: fd })
-        .then(res => res.ok ? res.json() : Promise.reject(res))
-        .then(({ upload }) => {
-          // Patch the localStorage entry with the real cloud id + url
-          try {
-            const stored = JSON.parse(localStorage.getItem(localKey) || '[]');
-            const found  = stored.find(u => u.id === entryId);
-            if (found && upload) {
-              found.id              = upload.id;       // server UUID
-              found.file_url        = upload.file_url; // Cloudflare R2 URL
-              found.file_type       = upload.file_type;
-              found.created_at      = upload.created_at;
-              found.synced          = true;
-              localStorage.setItem(localKey, JSON.stringify(stored));
-            }
-          } catch { /* localStorage may be full — server copy is canonical */ }
-        })
-        .catch(() => { /* offline / API down — localStorage entry remains the only copy */ });
-    });
+      try {
+        const preRes = await fetch('/api/uploads/presigned', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slug: currentEvent.slug, filename: file.name || 'blob', contentType: file.type })
+        });
+        const { uploadUrl, fileKey } = await preRes.json();
 
-    // If the user only sent a recorded video (no gallery files), upload that blob
-    if (fileEntries.length === 0 && recordedBlob) {
-      const recordedEntryId = now;
-      const fd = new FormData();
-      fd.append('file', recordedBlob, 'message.webm');
-      fd.append('uploader_name', name);
-      if (msg) fd.append('message', msg);
-      fd.append('is_video_message', 'true');
-      fetch(`/api/uploads/${currentEvent.slug}`, { method: 'POST', body: fd })
-        .then(res => res.ok ? res.json() : Promise.reject(res))
-        .then(({ upload }) => {
-          // Patch the local entry with the server UUID + url so the dashboard
-          // dedups it against the API copy instead of showing two tiles.
-          try {
-            const stored = JSON.parse(localStorage.getItem(localKey) || '[]');
-            const found  = stored.find(u => u.id === recordedEntryId);
-            if (found && upload) {
-              found.id               = upload.id;
-              found.file_url         = upload.file_url;
-              found.file_type        = upload.file_type;
-              found.is_video_message = upload.is_video_message;
-              found.created_at       = upload.created_at;
-              found.synced           = true;
-              localStorage.setItem(localKey, JSON.stringify(stored));
+        await new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open('PUT', uploadUrl);
+          xhr.setRequestHeader('Content-Type', file.type);
+          xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) {
+              const pct = Math.round((e.loaded / e.total) * 100);
+              const b = document.getElementById('b' + queueId), s = document.getElementById('s' + queueId);
+              if (b) b.style.width = pct + '%';
+              if (s) s.textContent = pct < 100 ? pct + '%' : '✓ Complete';
             }
-          } catch { /* localStorage hiccup — the API copy is canonical */ }
-        })
-        .catch(() => { /* silent fail; localStorage holds the metadata */ });
-    }
+          };
+          xhr.onload = () => xhr.status === 200 ? resolve() : reject();
+          xhr.onerror = reject;
+          xhr.send(file);
+        });
+
+        const compRes = await fetch('/api/uploads/complete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slug: currentEvent.slug, fileKey, uploader_name: name, message: msgToSend, file_type: isVideo ? 'video' : 'photo', is_video_message: isVidMsg })
+        });
+        const { upload } = await compRes.json();
+
+        const stored = JSON.parse(localStorage.getItem(localKey) || '[]');
+        const found = stored.find(u => u.id === entryId);
+        if (found) { found.id = upload.id; found.file_url = upload.file_url; found.synced = true; localStorage.setItem(localKey, JSON.stringify(stored)); }
+      } catch (err) {
+        const s = document.getElementById('s' + queueId);
+        if (s) s.textContent = 'Failed';
+      }
+    };
+
+    fileEntries.forEach(([qId, f], i) => processUpload(f, qId, i));
+    if (fileEntries.length === 0 && recordedBlob) processUpload(recordedBlob, 'record', 0, true);
 
     showThankYou(name, msg, allUrls[0] || null);
   }

@@ -1,5 +1,7 @@
 import { extname } from 'path';
 import { randomUUID } from 'crypto';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { resolvePlan } from '../lib/plans.js';
 
 export default async function uploadRoutes(fastify) {
@@ -15,10 +17,9 @@ export default async function uploadRoutes(fastify) {
     }
   }
 
-  // POST /api/uploads/:slug — upload a photo or video
-  fastify.post('/uploads/:slug', async (request, reply) => {
-    const { slug } = request.params;
-
+  // Helper to validate event status and plan limits before allowing uploads
+  // Reused by both legacy multipart and new presigned flows.
+  async function getValidatedEvent(slug) {
     const { rows: eventRows } = await fastify.db.query(
       'SELECT * FROM events WHERE slug = $1 AND is_active = true',
       [slug],
@@ -27,12 +28,7 @@ export default async function uploadRoutes(fastify) {
     if (!eventRows.length) {
       return reply.status(404).send({ error: true, message: 'Event not found' });
     }
-
     const event = eventRows[0];
-
-    // Effective plan = owner's current subscription tier (per-account model).
-    // Falls back to event.plan if event has no owner (legacy / anonymous).
-    // Tolerate un-migrated DBs that don't have subscription_tier yet.
     let effectiveTier = event.plan;
     if (event.user_id) {
       try {
@@ -49,38 +45,20 @@ export default async function uploadRoutes(fastify) {
     }
     const plan = resolvePlan(effectiveTier);
 
-    // ── Feature gating ────────────────────────────────────
-    // Only block when the event is on a *paid* tier without payment.
-    // Free tiers (tala, libre legacy) accept uploads without payment.
     if (!event.is_paid && plan.price > 0 && plan.id !== resolvePlan(event.plan).id) {
-      // Owner upgraded their account but the event itself isn't marked paid.
-      // That's fine — the account-tier covers it. Skip the legacy check.
+      // Account-tier upgrade covers it
     } else if (!event.is_paid && plan.price > 0) {
-      return reply.status(403).send({ error: true, message: 'Payment pending verification' });
+      throw { statusCode: 403, message: 'Payment pending verification' };
     }
 
-    // ── Plan enforcement: gallery soft-lock ──────────────
-    // Once the gallery is archived, the event no longer accepts new uploads.
     if (event.gallery_expires_at && new Date(event.gallery_expires_at) < new Date()) {
-      return reply.status(403).send({
-        error: true,
-        code: 'gallery_locked',
-        message: 'This event gallery has been archived. Uploads are closed.',
-        gallery_expires_at: event.gallery_expires_at,
-      });
+      throw { statusCode: 403, code: 'gallery_locked', message: 'Gallery archived. Uploads closed.' };
     }
 
-    // ── Plan enforcement: upload window ──────────────────
     if (event.upload_window_ends_at && new Date(event.upload_window_ends_at) < new Date()) {
-      return reply.status(403).send({
-        error: true,
-        code: 'upload_window_closed',
-        message: 'The upload window for this event has ended.',
-        upload_window_ends_at: event.upload_window_ends_at,
-      });
+      throw { statusCode: 403, code: 'upload_window_closed', message: 'Upload window has ended.' };
     }
 
-    // ── Plan enforcement: upload count ───────────────────
     if (plan.uploadLimit) {
       const { rows: countRows } = await fastify.db.query(
         'SELECT COUNT(*)::int AS count FROM uploads WHERE event_id = $1',
@@ -88,15 +66,20 @@ export default async function uploadRoutes(fastify) {
       );
       const used = countRows[0].count;
       if (used >= plan.uploadLimit) {
-        return reply.status(403).send({
-          error: true,
-          code: 'plan_limit_uploads',
-          message: `This event has reached the ${plan.name} plan's ${plan.uploadLimit}-upload limit. Upgrade to keep sharing.`,
-          plan:         plan.id,
-          upload_limit: plan.uploadLimit,
-          used,
-        });
+        throw { statusCode: 403, code: 'plan_limit_uploads', message: `Upload limit reached for ${plan.name} plan.` };
       }
+    }
+    return { event, plan };
+  }
+
+  // POST /api/uploads/:slug — legacy multipart upload (kept for compatibility)
+  fastify.post('/uploads/:slug', async (request, reply) => {
+    const { slug } = request.params;
+    let event, plan;
+    try {
+      ({ event, plan } = await getValidatedEvent(slug));
+    } catch (e) {
+      return reply.status(e.statusCode || 500).send({ error: true, ...e });
     }
 
     const fields = {};
@@ -171,6 +154,83 @@ export default async function uploadRoutes(fastify) {
       upload:  rows[0],
       message: 'Salamat! Na-share mo na ang iyong momento.',
     });
+  });
+
+  // POST /api/uploads/presigned — generate a PUT URL for direct R2 upload
+  fastify.post('/uploads/presigned', async (request, reply) => {
+    const { slug, filename, contentType } = request.body;
+    
+    try {
+      await getValidatedEvent(slug);
+    } catch (e) {
+      return reply.status(e.statusCode || 500).send({ error: true, ...e });
+    }
+
+    const fileKey = `uploads/${slug}/${Date.now()}-${filename}`;
+    const s3 = new S3Client({
+      region: 'auto',
+      endpoint: process.env.R2_ENDPOINT,
+      credentials: {
+        accessKeyId: process.env.R2_ACCESS_KEY_ID,
+        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+      },
+    });
+
+    const command = new PutObjectCommand({
+      Bucket: process.env.R2_BUCKET_NAME,
+      Key: fileKey,
+      ContentType: contentType,
+    });
+
+    const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 300 });
+    return { uploadUrl, fileKey };
+  });
+
+  // POST /api/uploads/complete — confirm R2 upload and save to DB
+  fastify.post('/uploads/complete', async (request, reply) => {
+    const { slug, fileKey, uploader_name, message, file_type, is_video_message } = request.body;
+
+    let event, plan;
+    try {
+      ({ event, plan } = await getValidatedEvent(slug));
+    } catch (e) {
+      return reply.status(e.statusCode || 500).send({ error: true, ...e });
+    }
+
+    const fileUrl = `https://media.reelday.ph/${fileKey}`;
+    const isVideo = file_type === 'video' || fileKey.match(/\.(mp4|webm|mov)$/i);
+    const isVidMsg = isVideo && is_video_message === true;
+
+    if (isVidMsg && event.plan === 'libre') {
+      return reply.status(403).send({ error: true, message: 'Upgrade to Selebrasyon for video messages' });
+    }
+
+    let isApproved;
+    if (!isVideo) {
+      isApproved = event.auto_approve !== false;
+    } else if (isVidMsg) {
+      isApproved = event.video_message_auto_approve === true;
+    } else {
+      isApproved = event.video_auto_approve === true;
+    }
+
+    const { rows } = await fastify.db.query(
+      `INSERT INTO uploads
+         (event_id, file_url, file_type, uploader_name, message, is_video_message, is_approved)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING *`,
+      [
+        event.id,
+        fileUrl,
+        isVideo ? 'video' : 'photo',
+        uploader_name || null,
+        message       || null,
+        isVidMsg,
+        isApproved,
+      ],
+    );
+
+    return reply.status(201).send({ upload: rows[0] });
   });
 
   // GET /api/uploads/file/:id — stream an uploaded file through this app.

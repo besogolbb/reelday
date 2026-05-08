@@ -560,11 +560,6 @@
 
   function wallMediaUrl(upload) {
     if (!upload) return null;
-
-    if (upload.id && upload.file_url && !String(upload.file_url).startsWith('data:')) {
-      return `/api/uploads/file/${encodeURIComponent(upload.id)}`;
-    }
-
     return upload.file_url || upload.thumb || null;
   }
 

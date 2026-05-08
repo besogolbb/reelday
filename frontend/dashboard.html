@@ -1297,21 +1297,7 @@
     // Local-only uploads carry their own data-URL thumb — use it.
     if (!isVideo && upload.thumb) return upload.thumb;
 
-    // Photos: hit R2 directly (CDN-cached, no backend round trip) for
-    // dramatically faster grid loads. Quality is unchanged because R2
-    // serves the original bytes.
-    const fileUrl = upload?.file_url;
-    if (!isVideo && fileUrl && !String(fileUrl).startsWith('data:')) {
-      return fileUrl;
-    }
-
-    // Videos still go through the backend proxy because R2 buckets often
-    // aren't configured for CORS/Range from the dashboard origin.
-    if (upload.id && fileUrl && !String(fileUrl).startsWith('data:')) {
-      return `/api/uploads/file/${encodeURIComponent(upload.id)}`;
-    }
-
-    return upload.thumbnail_url || fileUrl || null;
+    return upload.file_url || upload.thumbnail_url || null;
   }
 
   function applyTheme(eventType) {
