@@ -28,7 +28,10 @@ const fastify = Fastify({
   },
 });
 
-await fastify.register(cors, { origin: '*' });
+await fastify.register(cors, {
+  origin: ['https://reelday.ph', 'http://localhost:3000'], // Allow specific origins for production and local development
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'], // Allow necessary methods
+});
 
 await fastify.register(multipart, {
   limits: {

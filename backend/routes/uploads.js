@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { resolvePlan } from '../lib/plans.js';
+import { verifyToken } from '../plugins/auth.js';
 
 export default async function uploadRoutes(fastify) {
   function extractStorageKey(fileUrl) {
@@ -17,16 +18,24 @@ export default async function uploadRoutes(fastify) {
     }
   }
 
+  // Helper to optionally get user from token without forcing authentication
+  function tryGetUser(request) {
+    const header = request.headers.authorization;
+    if (!header?.startsWith('Bearer ')) return null;
+    try { return verifyToken(header.slice(7)); }
+    catch { return null; }
+  }
+
   // Helper to validate event status and plan limits before allowing uploads
   // Reused by both legacy multipart and new presigned flows.
   async function getValidatedEvent(slug) {
     const { rows: eventRows } = await fastify.db.query(
-      'SELECT * FROM events WHERE slug = $1 AND is_active = true',
+      'SELECT * FROM events WHERE slug = $1',
       [slug],
     );
 
-    if (!eventRows.length) {
-      return reply.status(404).send({ error: true, message: 'Event not found' });
+    if (!eventRows.length || eventRows[0].is_active === false) {
+      throw { statusCode: 404, message: 'Event not found' };
     }
     const event = eventRows[0];
     let effectiveTier = event.plan;
@@ -159,7 +168,11 @@ export default async function uploadRoutes(fastify) {
   // POST /api/uploads/presigned — generate a PUT URL for direct R2 upload
   fastify.post('/uploads/presigned', async (request, reply) => {
     const { slug, filename, contentType } = request.body;
-    
+    console.log('Presigned request for slug:', slug);
+
+    // Optionally authenticate the user if a token is present
+    request.user = tryGetUser(request);
+
     try {
       await getValidatedEvent(slug);
     } catch (e) {
@@ -189,6 +202,9 @@ export default async function uploadRoutes(fastify) {
   // POST /api/uploads/complete — confirm R2 upload and save to DB
   fastify.post('/uploads/complete', async (request, reply) => {
     const { slug, fileKey, uploader_name, message, file_type, is_video_message } = request.body;
+
+    // Optionally authenticate the user if a token is present
+    request.user = tryGetUser(request);
 
     let event, plan;
     try {
