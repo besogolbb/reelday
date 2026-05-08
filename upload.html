@@ -450,10 +450,13 @@
   }
 
   /* ── Gallery: file input ───────────────────────────── */
-  function handleFiles(e) {
+  async function handleFiles(e) {
     const files = Array.from(e.target.files);
     const queue = document.getElementById('galleryQueue');
-    files.forEach(f => {
+    const slug = window.location.pathname.split('/').pop();
+    const token = localStorage.getItem('rd_token');
+
+    for (const f of files) {
       const id = 'qi' + Date.now() + Math.random().toString(36).slice(2,6);
       const item = document.createElement('div');
       item.className = 'queue-item'; item.id = id;
@@ -462,17 +465,50 @@
         <div><div class="q-name">${f.name}</div><div class="q-prog"><span id="b${id}" style="width:0%"></span></div></div>
         <div class="q-status" id="s${id}">Queued</div>`;
       queue.appendChild(item);
-      // simulate progress — TODO replace with real XHR upload
-      let p = 0;
-      const t = setInterval(() => {
-        p = Math.min(p + Math.random() * 18 + 5, 100);
-        const b = document.getElementById('b' + id);
-        const s = document.getElementById('s' + id);
-        if (b) b.style.width = p + '%';
-        if (s) s.textContent = p < 100 ? Math.round(p) + '%' : '✓ Shared';
-        if (p >= 100) { clearInterval(t); item.classList.add('done'); }
-      }, 200);
-    });
+
+      try {
+        const res = await fetch('/api/uploads/presigned', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': 'Bearer ' + token } : {})
+          },
+          body: JSON.stringify({ slug, filename: f.name, contentType: f.type })
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          console.error('Server says:', err);
+          alert(err.message || 'Upload failed at initialization.');
+          item.remove();
+          continue;
+        }
+
+        const { uploadUrl, fileKey } = await res.json();
+
+        // Real upload to R2
+        const uploadRes = await fetch(uploadUrl, {
+          method: 'PUT',
+          headers: { 'Content-Type': f.type },
+          body: f
+        });
+
+        if (!uploadRes.ok) throw new Error('Cloud storage upload failed');
+
+        // Finalize entry in DB
+        await fetch('/api/uploads/complete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': 'Bearer ' + token } : {}) },
+          body: JSON.stringify({ slug, fileKey, uploader_name: document.getElementById('galleryName').value, file_type: f.type.startsWith('video') ? 'video' : 'photo' })
+        });
+
+        item.classList.add('done');
+        document.getElementById('s' + id).textContent = '✓ Shared';
+      } catch (err) {
+        console.error('Upload error:', err);
+        document.getElementById('s' + id).textContent = 'Failed';
+      }
+    }
     const total = document.querySelectorAll('#galleryQueue .queue-item').length;
     document.querySelector('#panel-gallery .send-btn').textContent = `Send ${total} moment${total > 1 ? 's' : ''} →`;
   }

@@ -28,7 +28,7 @@ export default async function uploadRoutes(fastify) {
 
   // Helper to validate event status and plan limits before allowing uploads
   // Reused by both legacy multipart and new presigned flows.
-  async function getValidatedEvent(slug) {
+  async function getValidatedEvent(slug, currentUser = null) {
     const { rows: eventRows } = await fastify.db.query(
       'SELECT * FROM events WHERE slug = $1',
       [slug],
@@ -38,6 +38,10 @@ export default async function uploadRoutes(fastify) {
       throw { statusCode: 404, message: 'Event not found' };
     }
     const event = eventRows[0];
+
+    // If a user is logged in (and is the owner), bypass window and payment restrictions
+    const isOwner = currentUser && currentUser.id === event.user_id;
+
     let effectiveTier = event.plan;
     if (event.user_id) {
       try {
@@ -54,17 +58,17 @@ export default async function uploadRoutes(fastify) {
     }
     const plan = resolvePlan(effectiveTier);
 
-    if (!event.is_paid && plan.price > 0 && plan.id !== resolvePlan(event.plan).id) {
+    if (isOwner) { /* bypass */ } else if (!event.is_paid && plan.price > 0 && plan.id !== resolvePlan(event.plan).id) {
       // Account-tier upgrade covers it
     } else if (!event.is_paid && plan.price > 0) {
       throw { statusCode: 403, message: 'Payment pending verification' };
     }
 
-    if (event.gallery_expires_at && new Date(event.gallery_expires_at) < new Date()) {
+    if (!isOwner && event.gallery_expires_at && new Date(event.gallery_expires_at) < new Date()) {
       throw { statusCode: 403, code: 'gallery_locked', message: 'Gallery archived. Uploads closed.' };
     }
 
-    if (event.upload_window_ends_at && new Date(event.upload_window_ends_at) < new Date()) {
+    if (!isOwner && event.upload_window_ends_at && new Date(event.upload_window_ends_at) < new Date()) {
       throw { statusCode: 403, code: 'upload_window_closed', message: 'Upload window has ended.' };
     }
 
@@ -86,7 +90,7 @@ export default async function uploadRoutes(fastify) {
     const { slug } = request.params;
     let event, plan;
     try {
-      ({ event, plan } = await getValidatedEvent(slug));
+      ({ event, plan } = await getValidatedEvent(slug, tryGetUser(request)));
     } catch (e) {
       return reply.status(e.statusCode || 500).send({ error: true, ...e });
     }
@@ -174,7 +178,7 @@ export default async function uploadRoutes(fastify) {
     request.user = tryGetUser(request);
 
     try {
-      await getValidatedEvent(slug);
+      await getValidatedEvent(slug, request.user);
     } catch (e) {
       return reply.status(e.statusCode || 500).send({ error: true, ...e });
     }
@@ -208,7 +212,7 @@ export default async function uploadRoutes(fastify) {
 
     let event, plan;
     try {
-      ({ event, plan } = await getValidatedEvent(slug));
+      ({ event, plan } = await getValidatedEvent(slug, request.user));
     } catch (e) {
       return reply.status(e.statusCode || 500).send({ error: true, ...e });
     }
