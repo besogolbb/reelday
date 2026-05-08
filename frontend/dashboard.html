@@ -1717,32 +1717,18 @@
       const styleParts = ['position:relative', 'overflow:hidden'];
       let videoEl = '';
       let imageEl = '';
-      if (isVideo && mediaSrc) {
-        // Don't load metadata until the tile is visible (set via observer
-        // below). Once in view, the browser fetches just enough to draw
-        // the first frame as a poster.
-        videoEl = `<video data-lazy-src="${escapeAttr(mediaSrc)}#t=0.1"
-                          muted playsinline preload="none"
-                          style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#1a1a1a;"></video>
-                  <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
-                              width:36px;height:36px;border-radius:50%;
-                              background:rgba(0,0,0,.55);color:#fff;
-                              display:flex;align-items:center;justify-content:center;
-                              font-size:14px;pointer-events:none;">▶</div>`;
+      if (isVideo) {
+        // Video elements are handled by the activateVideo function for lazy loading.
+        // The placeholder is added if mediaSrc is not available.
+        videoEl = `<video data-lazy-src="${escapeAttr(mediaSrc || '')}#t=0.1" muted playsinline loop preload="none" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#1a1a1a;"></video>`;
+        videoEl += `<div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;pointer-events:none;z-index:2;border:2px solid rgba(255,255,255,.3);">▶</div>`;
+        if (!mediaSrc) {
+          videoEl += `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#1a1a1a;color:#fff;font-size:10px;font-family:var(--mono);">VIDEO</div>`;
+        }
       } else if (mediaSrc) {
-        // Fall back to the streaming proxy if the direct R2 URL fails
-        // (CORS/private bucket/etc) so tiles never end up as flat colour.
-        const proxyFallback = u.id
-          ? `/api/uploads/file/${encodeURIComponent(u.id)}`
-          : '';
         imageEl = `<img src="${escapeAttr(mediaSrc)}" alt="${escapeAttr(label)}"
                        loading="lazy" decoding="async" fetchpriority="low"
-                       data-fallback="${escapeAttr(proxyFallback)}"
-                       onerror="(function(el){
-                         var f = el.getAttribute('data-fallback');
-                         if (f && el.src !== f) { el.removeAttribute('data-fallback'); el.src = f; }
-                         else { el.remove(); }
-                       })(this)">`;
+                       onerror="this.remove()">`; // Remove image if direct R2 URL fails
       }
 
       const msgPreview = u.message

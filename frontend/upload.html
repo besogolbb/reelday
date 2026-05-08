@@ -869,9 +869,11 @@ body { background: var(--paper); min-height: 100dvh; }
     const allUrls  = Object.values(itemDataUrls);   // one per selected file
     const now      = Date.now();
 
+    const fileEntries = Object.entries(itemFiles); // [ [qId, file], ... ]
+
     /* ── Step 1: Save one entry per file immediately (no thumbnails yet) ── */
-    const entries = allUrls.length > 0
-      ? allUrls.map((_, i) => ({
+    const entries = fileEntries.length > 0
+      ? fileEntries.map(([qId, file], i) => ({
           id:            now + i,
           uploader_name: name,
           message:       i === 0 ? msg : '',   // message only on first
@@ -879,6 +881,7 @@ body { background: var(--paper); min-height: 100dvh; }
           timestamp:     new Date().toISOString(),
           status:        'pending',
           featured:      false,
+          file_type:     file.type.startsWith('video/') ? 'video' : 'photo',
         }))
       : [{
           id:               now,
@@ -939,8 +942,6 @@ body { background: var(--paper); min-height: 100dvh; }
     });
 
     /* ── Step 3: Direct R2 upload via presigned URL ── */
-    const fileEntries = Object.entries(itemFiles);
-    
     const processUpload = async (file, queueId, i, isVidMsg = false) => {
       const entryId = now + i;
       const isVideo = file.type.startsWith('video/');
@@ -980,7 +981,13 @@ body { background: var(--paper); min-height: 100dvh; }
 
         const stored = JSON.parse(localStorage.getItem(localKey) || '[]');
         const found = stored.find(u => u.id === entryId);
-        if (found) { found.id = upload.id; found.file_url = upload.file_url; found.synced = true; localStorage.setItem(localKey, JSON.stringify(stored)); }
+        if (found) { 
+          found.id = upload.id; 
+          found.file_url = upload.file_url; 
+          found.file_type = upload.file_type;
+          found.synced = true; 
+          localStorage.setItem(localKey, JSON.stringify(stored)); 
+        }
       } catch (err) {
         const s = document.getElementById('s' + queueId);
         if (s) s.textContent = 'Failed';

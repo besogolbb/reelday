@@ -198,7 +198,7 @@ export default async function uploadRoutes(fastify) {
     }
 
     const fileUrl = `https://media.reelday.ph/${fileKey}`;
-    const isVideo = file_type === 'video' || fileKey.match(/\.(mp4|webm|mov)$/i);
+    const isVideo = file_type === 'video' || (file_type !== 'photo' && fileKey.match(/\.(mp4|webm|mov|m4v|ogg)$/i));
     const isVidMsg = isVideo && is_video_message === true;
 
     if (isVidMsg && event.plan === 'libre') {
