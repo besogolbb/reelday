@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS events (
   event_type      VARCHAR(50)  DEFAULT 'wedding',
   event_date      DATE,
   cover_photo_url TEXT,
-  plan            VARCHAR(20)  DEFAULT 'libre',
+  plan            VARCHAR(20)  DEFAULT 'tala',
   is_paid         BOOLEAN      DEFAULT false,
   is_active       BOOLEAN      DEFAULT true,
   password_hash   TEXT,

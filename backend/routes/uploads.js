@@ -128,8 +128,8 @@ export default async function uploadRoutes(fastify) {
     const isVideo        = fileMime.startsWith('video/');
     const isVideoMessage = isVideo && fields.is_video_message === 'true';
 
-    if (isVideoMessage && event.plan === 'libre') {
-      return reply.status(403).send({ error: true, message: 'Upgrade to Selebrasyon to send video messages' });
+    if (isVideoMessage && (event.plan === 'tala' || event.plan === 'libre')) {
+      return reply.status(403).send({ error: true, message: 'Upgrade to Sinag to send video messages' });
     }
     const filename       = `${randomUUID()}${fileExt}`;
     const fileUrl        = await fastify.uploadFile(fileBuffer, filename, fileMime);
@@ -221,8 +221,8 @@ export default async function uploadRoutes(fastify) {
     const isVideo = file_type === 'video' || (file_type !== 'photo' && fileKey.match(/\.(mp4|webm|mov|m4v|ogg)$/i));
     const isVidMsg = isVideo && is_video_message === true;
 
-    if (isVidMsg && event.plan === 'libre') {
-      return reply.status(403).send({ error: true, message: 'Upgrade to Selebrasyon for video messages' });
+    if (isVidMsg && (event.plan === 'tala' || event.plan === 'libre')) {
+      return reply.status(403).send({ error: true, message: 'Upgrade to Sinag for video messages' });
     }
 
     let isApproved;
