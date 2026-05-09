@@ -1730,8 +1730,15 @@
     }, 500);
   }
 
-  let lastSeenPollId = null;
+  // Compose an identity key from (id, started_at) so that re-running
+  // the same poll counts as a fresh show on the wall — pre-fix, the
+  // wall saw a matching id and quietly fell through to renderPollBars
+  // without re-opening the overlay.
+  let lastSeenPollKey    = null;
+  let lastSeenPollId     = null;
   let lastSeenPollStatus = null;
+  function pollKey(p) { return p ? (p.id + '|' + (p.started_at || '')) : null; }
+
   async function pollPolls() {
     try {
       const res = await fetch(`/api/events/${slug}/polls/active`, { cache: 'no-store' });
@@ -1753,17 +1760,30 @@
         } else if (!activePollId) {
           // Already idle — nothing to do.
         }
-        lastSeenPollId = null;
+        lastSeenPollKey    = null;
+        lastSeenPollId     = null;
         lastSeenPollStatus = null;
         return;
       }
 
-      // New poll arrived.
-      if (poll.id !== lastSeenPollId) {
-        activePollId = poll.id;
-        lastSeenPollId = poll.id;
+      // New poll OR same poll re-run (started_at changed). Either way,
+      // open the overlay fresh so the wall doesn't sit on a stale
+      // results screen while the host is running a new round.
+      const key = pollKey(poll);
+      if (key !== lastSeenPollKey) {
+        activePollId       = poll.id;
+        lastSeenPollKey    = key;
+        lastSeenPollId     = poll.id;
         lastSeenPollStatus = poll.status;
         showPollOverlay(poll);
+        return;
+      }
+
+      // Same key but the overlay was hidden (e.g. results grace expired
+      // mid-rerun) — bring it back.
+      if (poll.status === 'live' && !pollOverlay.classList.contains('visible')) {
+        showPollOverlay(poll);
+        lastSeenPollStatus = 'live';
         return;
       }
 

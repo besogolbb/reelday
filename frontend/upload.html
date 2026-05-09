@@ -1098,7 +1098,7 @@ body { background: var(--paper); min-height: 100dvh; }
     votedKey:    null,           // option this guest has already submitted
     timerId:     null,           // setInterval handle for the countdown
     deadline:    0,              // unix ms when seconds_left hits 0
-    lastPollId:  null,           // dedup so a stale poll re-render doesn't reset state
+    lastPollKey: null,           // id|started_at — changes when host re-runs
   };
 
   function bindPollLifecycle() {
@@ -1129,17 +1129,22 @@ body { background: var(--paper); min-height: 100dvh; }
       slot.innerHTML = '';
       if (empty) empty.style.display = '';
       if (pollState.timerId) clearInterval(pollState.timerId);
-      pollState = { activeId: null, selectedKey: null, votedKey: null, timerId: null, deadline: 0, lastPollId: null };
+      pollState = { activeId: null, selectedKey: null, votedKey: null, timerId: null, deadline: 0, lastPollKey: null };
       return;
     }
 
     if (empty) empty.style.display = 'none';
 
-    // First time we see this poll? Reset the local "voted/selected" memory.
-    if (poll.id !== pollState.lastPollId) {
+    // Treat (id, started_at) as the identity. A re-run keeps the same id
+    // but bumps started_at, so we reset the guest's voted/selected state
+    // and force a full rebuild — otherwise the old "thanks for voting"
+    // results screen would persist into the new round.
+    const key = poll.id + '|' + (poll.started_at || '');
+    const isNewRun = key !== pollState.lastPollKey;
+    if (isNewRun) {
       pollState.selectedKey = null;
       pollState.votedKey    = null;
-      pollState.lastPollId  = poll.id;
+      pollState.lastPollKey = key;
     }
     pollState.activeId = poll.id;
 
@@ -1154,13 +1159,14 @@ body { background: var(--paper); min-height: 100dvh; }
 
     // Decide whether we can patch the existing card in place vs rebuild it.
     // Rebuilding every 2s is what makes the slot blink — only do a full
-    // render when the identity (new poll or live → results transition) flips.
+    // render when identity (new poll/run) or display mode flips.
     const existingCard = slot.querySelector('#pollCard');
     const inResultsDom = existingCard?.classList.contains('results') ?? null;
     const needFullRender =
       !existingCard ||
       slot.style.display === 'none' ||
-      inResultsDom !== showResults;
+      inResultsDom !== showResults ||
+      isNewRun;
 
     if (needFullRender) {
       const optsHtml = (poll.options || []).map(opt => {

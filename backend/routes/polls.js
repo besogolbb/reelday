@@ -236,6 +236,14 @@ export default async function pollRoutes(fastify) {
       [ctx.event.id, request.params.id],
     );
 
+    // Wipe previous votes when re-running an ended poll — guests get a
+    // clean slate and the wall starts the new run with a 0% tally.
+    // Cheap (poll_votes is small per poll) and avoids confusing carry-over.
+    await fastify.db.query(
+      'DELETE FROM poll_votes WHERE poll_id = $1',
+      [request.params.id],
+    );
+
     const { rows } = await fastify.db.query(
       `UPDATE polls
           SET status = 'live',
