@@ -504,7 +504,7 @@ body { background: var(--paper); min-height: 100dvh; }
       <input type="file" id="fileInput" multiple accept="image/*,video/*" onchange="handleFiles(event)" />
       <div class="icon">+</div>
       <h3>Tap to share</h3>
-      <p>Photos · videos up to 30s &amp; 30&nbsp;MB · 4K auto-optimized</p>
+      <p>Photos · videos up to 30s &amp; 50&nbsp;MB · 4K auto-optimized</p>
       <div class="choose-btn">Choose from gallery</div>
     </div>
     <div class="queue" id="galleryQueue"></div>
@@ -1099,11 +1099,10 @@ body { background: var(--paper); min-height: 100dvh; }
   // Hard cap on guest video messages — keeps R2 bills predictable and the
   // wall snappy. Surfaced in the UI copy so guests know the limit upfront.
   const MAX_RECORD_SECS = 30;
-  // Defensive size cap for gallery picks at <=1080p. A clean 30s 1080p
-  // H.264 clip lands ~15-20MB, so 30MB is generous but not abusable.
-  // Over-resolution clips (4K, 2K) bypass this check because they get
-  // re-encoded to 1280x720 / 2.5Mbps before upload (transcodeVideoToHd).
-  const MAX_VIDEO_BYTES = 30 * 1024 * 1024;
+  // Defensive size cap for gallery picks at <=1080p. Over-resolution
+  // clips (4K, 2K) bypass this check because they get re-encoded to
+  // 1280x720 / 2.5Mbps before upload (transcodeVideoToHd).
+  const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
 
   function stopRecord() {
     recording = false;
