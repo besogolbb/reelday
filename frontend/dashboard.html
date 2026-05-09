@@ -468,10 +468,40 @@
     .approve-toggle:disabled { opacity: .55; cursor: not-allowed; }
 
     /* ── Live polls panel ─────────────────────────────────── */
-    .polls-panel { padding: 22px 24px 24px; }
-    .polls-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
-    .polls-h2 { font-family: var(--display); font-size: 22px; font-weight: 500; color: var(--ink); margin-bottom: 4px; }
-    .polls-sub { font-size: 13px; color: var(--dash-muted); line-height: 1.5; max-width: 520px; }
+    .polls-panel { padding: 0; overflow: hidden; }
+    .polls-toggle {
+      display: flex; align-items: center; gap: 14px;
+      width: 100%; padding: 16px 22px;
+      background: transparent; border: 0; cursor: pointer; text-align: left;
+      font: inherit; color: inherit;
+    }
+    .polls-head-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+    .polls-h2 { font-family: var(--display); font-size: 20px; font-weight: 500; color: var(--ink); }
+    .polls-summary {
+      font-family: var(--mono); font-size: 11px; font-weight: 700;
+      letter-spacing: .12em; text-transform: uppercase; color: var(--dash-muted);
+    }
+    .polls-summary.live { color: #b03022; }
+    .polls-summary.live::before { content: '● '; animation: pollsPulse 1.2s infinite; }
+    @keyframes pollsPulse { 50% { opacity: .35; } }
+    .polls-chevron {
+      flex-shrink: 0; font-size: 16px; color: var(--ink-soft);
+      transition: transform .25s cubic-bezier(.2,.8,.2,1);
+    }
+    .polls-panel:not(.polls-collapsed) .polls-chevron { transform: rotate(180deg); }
+    /* Slide reveal — max-height transition is the cheapest trick that
+       still animates smoothly without measuring children every frame. */
+    .polls-body {
+      padding: 0 22px 22px;
+      max-height: 1500px; opacity: 1;
+      transition: max-height .35s ease, opacity .25s ease, padding .35s ease;
+    }
+    .polls-panel.polls-collapsed .polls-body {
+      max-height: 0; opacity: 0; padding-top: 0; padding-bottom: 0;
+      pointer-events: none;
+    }
+    .polls-sub { font-size: 13px; color: var(--dash-muted); line-height: 1.5; max-width: 520px; margin-bottom: 14px; }
+    .polls-actions { margin-bottom: 14px; }
     .polls-create-btn { flex-shrink: 0; }
     .polls-list { display: flex; flex-direction: column; gap: 10px; }
     .polls-empty { font-size: 13px; color: var(--dash-muted); padding: 18px 0; text-align: center; font-style: italic; }
@@ -1303,19 +1333,28 @@
       <button type="button" class="we-dismiss" id="we-dismiss">Dismiss</button>
     </div>
 
-    <!-- ── Live polls panel ───────────────────────────── -->
-    <div class="panel polls-panel" id="polls-panel" style="display:none; margin-bottom:18px;">
-      <div class="polls-head">
-        <div>
-          <div class="polls-h2">Live Questions &amp; Poll</div>
-          <div class="polls-sub">Polls collect opinions; questions reveal a correct answer on the wall. Pick the type when you create one — guests vote from their phones either way.</div>
+    <!-- ── Live polls panel ─────────────────────────────
+         Collapsible: starts collapsed, auto-expands when something is
+         live, and the host's manual choice (in localStorage) wins after
+         that. Keeps the photo grid the centre of attention. -->
+    <div class="panel polls-panel polls-collapsed" id="polls-panel" style="display:none; margin-bottom:18px;">
+      <button type="button" class="polls-head polls-toggle" id="polls-toggle" aria-expanded="false" aria-controls="polls-body">
+        <span class="polls-head-main">
+          <span class="polls-h2">Live Questions &amp; Poll</span>
+          <span class="polls-summary" id="polls-summary">Tap to expand</span>
+        </span>
+        <span class="polls-chevron" aria-hidden="true">▾</span>
+      </button>
+      <div class="polls-body" id="polls-body">
+        <div class="polls-sub">Polls collect opinions; questions reveal a correct answer on the wall. Pick the type when you create one — guests vote from their phones either way.</div>
+        <div class="polls-actions">
+          <button type="button" class="btn btn-accent polls-create-btn" id="polls-create-btn">+ New</button>
         </div>
-        <button type="button" class="btn btn-accent polls-create-btn" id="polls-create-btn">+ New</button>
+        <div class="polls-locked" id="polls-locked" style="display:none;">
+          Live Questions &amp; Poll are unlocked on the Sinag plan. <a href="/#pricing">Upgrade →</a>
+        </div>
+        <div class="polls-list" id="polls-list"></div>
       </div>
-      <div class="polls-locked" id="polls-locked" style="display:none;">
-        Live Questions &amp; Poll are unlocked on the Sinag plan. <a href="/#pricing">Upgrade →</a>
-      </div>
-      <div class="polls-list" id="polls-list"></div>
     </div>
 
     <div class="panel">
@@ -2509,6 +2548,32 @@
   let editingPollId   = null;
   let pollsRefreshTimer = null;
 
+  // Collapse/expand the panel. Auto-expand once when something goes
+  // live so the host doesn't miss the tally; after that the host's
+  // manual choice (persisted) wins.
+  const pollsToggle      = document.getElementById('polls-toggle');
+  const pollsSummary     = document.getElementById('polls-summary');
+  const POLLS_COLLAPSED_KEY = 'reelday_polls_collapsed';
+  let pollsAutoExpanded  = false;
+  function setPollsCollapsed(collapsed, persist = true) {
+    if (!pollsPanel) return;
+    pollsPanel.classList.toggle('polls-collapsed', collapsed);
+    pollsToggle?.setAttribute('aria-expanded', String(!collapsed));
+    if (persist) {
+      try { localStorage.setItem(POLLS_COLLAPSED_KEY, collapsed ? '1' : '0'); } catch {}
+    }
+  }
+  pollsToggle?.addEventListener('click', () => {
+    const wasCollapsed = pollsPanel.classList.contains('polls-collapsed');
+    setPollsCollapsed(!wasCollapsed);
+    pollsAutoExpanded = true; // any manual click locks out the auto-expand
+  });
+  // Initial collapsed state — default true unless localStorage says otherwise.
+  try {
+    const saved = localStorage.getItem(POLLS_COLLAPSED_KEY);
+    setPollsCollapsed(saved === null ? true : saved === '1', false);
+  } catch { setPollsCollapsed(true, false); }
+
   function authHeader() {
     const t = localStorage.getItem('reelday_token');
     return t ? { 'Authorization': `Bearer ${t}` } : {};
@@ -2545,6 +2610,28 @@
 
   function renderPolls(polls) {
     if (!pollsList) return;
+
+    // Update collapsed-header summary so the host can see at a glance
+    // whether anything is live, even with the panel folded up.
+    if (pollsSummary) {
+      const live  = polls.filter(p => p.status === 'live').length;
+      const draft = polls.filter(p => p.status === 'draft').length;
+      const ended = polls.filter(p => p.status === 'ended').length;
+      pollsSummary.classList.toggle('live', live > 0);
+      if (live)        pollsSummary.textContent = `${live} live · tap to view`;
+      else if (draft || ended) pollsSummary.textContent = `${draft + ended} saved · tap to expand`;
+      else             pollsSummary.textContent = 'Tap to add your first';
+
+      // First time we see something live, pop the panel open. Once the
+      // host has clicked the chevron themselves we leave their choice alone.
+      if (live > 0 && !pollsAutoExpanded) {
+        pollsAutoExpanded = true;
+        if (pollsPanel.classList.contains('polls-collapsed')) {
+          setPollsCollapsed(false, false);
+        }
+      }
+    }
+
     if (!polls.length) {
       pollsList.innerHTML = '<div class="polls-empty">Nothing yet. Tap "+ New" to create a poll or trivia question.</div>';
       return;
