@@ -623,10 +623,15 @@
 
   function wallMediaUrl(upload) {
     if (!upload) return null;
+    if (isVideoItem(upload)) {
+      // Prefer the server-transcoded 720p MP4 with faststart when ready.
+      // Falls back to the original until the background ffmpeg job lands.
+      return upload.web_url || upload.file_url || upload.thumb || null;
+    }
     const raw = upload.file_url || upload.thumb || null;
     if (!raw) return null;
     // 1920 covers any reasonable TV; format=auto picks AVIF/WebP per browser.
-    return isVideoItem(upload) ? raw : cdnImage(raw, 1920);
+    return cdnImage(raw, 1920);
   }
 
   let items      = [];
@@ -762,6 +767,17 @@
       inPic.style.animation            = 'none';
 
       inLayer.classList.add('has-video');
+
+      // Show the server-generated poster (first frame of the clip) on the
+      // backdrop while the MP4 streams in. The wall paints something the
+      // moment the slide enters instead of a black rectangle for ~1s.
+      if (item.poster_url) {
+        const posterUrl = cdnImage(item.poster_url, 1280);
+        inBackdrop.style.backgroundImage = `url('${posterUrl}')`;
+        inVid.setAttribute('poster', posterUrl);
+      } else {
+        inVid.removeAttribute('poster');
+      }
 
       // Reset and (re)load the source. Always call load() so a fresh stream
       // gets requested — especially important for the proxied

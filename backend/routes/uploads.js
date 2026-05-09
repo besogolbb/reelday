@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto';
 import { PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { resolvePlan } from '../lib/plans.js';
+import { transcodeUploadInBackground } from '../lib/videoTranscode.js';
 import { verifyToken } from '../plugins/auth.js';
 
 export default async function uploadRoutes(fastify) {
@@ -181,6 +182,11 @@ export default async function uploadRoutes(fastify) {
       ],
     );
 
+    if (isVideo) {
+      transcodeUploadInBackground(fastify, rows[0])
+        .catch(err => fastify.log.warn({ err: err.message, upload_id: rows[0].id }, 'transcode kickoff failed'));
+    }
+
     return reply.status(201).send({
       upload:  rows[0],
       message: 'Salamat! Na-share mo na ang iyong momento.',
@@ -269,6 +275,15 @@ export default async function uploadRoutes(fastify) {
         isApproved,
       ],
     );
+
+    // Fire-and-forget the wall-friendly transcode for video uploads.
+    // Photos are skipped inside transcodeUploadInBackground. The guest's
+    // POST returns immediately; web_url + poster_url get filled in 5–15s
+    // later and the wall picks them up on its next /uploads/:slug poll.
+    if (isVideo) {
+      transcodeUploadInBackground(fastify, rows[0])
+        .catch(err => fastify.log.warn({ err: err.message, upload_id: rows[0].id }, 'transcode kickoff failed'));
+    }
 
     return reply.status(201).send({ upload: rows[0] });
   });
@@ -409,7 +424,7 @@ export default async function uploadRoutes(fastify) {
       return null;
     }
     const { rows } = await fastify.db.query(
-      `SELECT u.id, u.file_url, u.event_id, e.user_id
+      `SELECT u.id, u.file_url, u.web_url, u.poster_url, u.event_id, e.user_id
          FROM uploads u
          JOIN events  e ON e.id = u.event_id
         WHERE u.id = $1`,
@@ -433,18 +448,26 @@ export default async function uploadRoutes(fastify) {
     const row = await loadUploadForOwner(request, reply, id);
     if (!row) return;
 
-    const key = extractStorageKey(row.file_url);
-    if (key && process.env.R2_BUCKET_NAME) {
-      try {
-        await fastify.storage.send(new DeleteObjectCommand({
-          Bucket: process.env.R2_BUCKET_NAME,
-          Key:    key,
-        }));
-      } catch (err) {
-        // Don't block the DB delete on a storage hiccup — the row is the
-        // source of truth and a stale R2 object is recoverable later.
-        request.log.warn({ err, upload_id: id, key }, 'R2 object delete failed');
-      }
+    // Build the full set of R2 keys to drop: original + transcode
+    // derivatives (_web.mp4, _poster.jpg) when present.
+    const keys = [
+      extractStorageKey(row.file_url),
+      extractStorageKey(row.web_url),
+      extractStorageKey(row.poster_url),
+    ].filter(Boolean);
+    if (keys.length && process.env.R2_BUCKET_NAME) {
+      await Promise.all(keys.map(async key => {
+        try {
+          await fastify.storage.send(new DeleteObjectCommand({
+            Bucket: process.env.R2_BUCKET_NAME,
+            Key:    key,
+          }));
+        } catch (err) {
+          // Don't block the DB delete on a storage hiccup — the row is the
+          // source of truth and a stale R2 object is recoverable later.
+          request.log.warn({ err: err.message, upload_id: id, key }, 'R2 object delete failed');
+        }
+      }));
     }
 
     await fastify.db.query('DELETE FROM uploads WHERE id = $1', [id]);

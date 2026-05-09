@@ -41,6 +41,13 @@ const MIGRATIONS = `
   -- detects a new burst, plays the queue, then resumes photos.
   ALTER TABLE events ADD COLUMN IF NOT EXISTS playback_burst_id    INTEGER DEFAULT 0;
   ALTER TABLE events ADD COLUMN IF NOT EXISTS playback_burst_queue JSONB   DEFAULT '[]'::jsonb;
+
+  -- Server-side video transcode pipeline: web_url is the wall-friendly
+  -- 720p H.264 MP4 (with faststart), poster_url is a JPEG of the first
+  -- frame. Both are NULL until the background ffmpeg job finishes; the
+  -- frontend falls back to file_url while the transcode is in flight.
+  ALTER TABLE uploads ADD COLUMN IF NOT EXISTS web_url    TEXT;
+  ALTER TABLE uploads ADD COLUMN IF NOT EXISTS poster_url TEXT;
 `;
 
 async function dbPlugin(fastify) {

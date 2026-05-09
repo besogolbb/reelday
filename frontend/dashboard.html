@@ -1397,10 +1397,24 @@
     // Local-only uploads carry their own data-URL thumb — use it.
     if (!isVideo && upload.thumb) return upload.thumb;
 
+    if (isVideo) {
+      // Prefer the server-transcoded 720p MP4 with faststart when ready.
+      // Falls back to the original until the background ffmpeg job lands.
+      return upload.web_url || upload.file_url || upload.thumbnail_url || null;
+    }
     const raw = upload.file_url || upload.thumbnail_url || null;
     if (!raw) return raw;
-    if (isVideo) return raw;
     return width ? cdnImage(raw, width) : raw;
+  }
+
+  // Pick the best still image to show for an upload — used by the grid
+  // tile background. For videos this is the server-generated poster
+  // (or the file_url thumbnail_url fallback). For photos it's the
+  // CDN-resized original.
+  function uploadPosterUrl(upload, width = 600) {
+    if (!upload) return null;
+    if (upload.poster_url) return cdnImage(upload.poster_url, width);
+    return uploadMediaUrl(upload, false, width);
   }
 
   function applyTheme(eventType) {
@@ -1821,9 +1835,13 @@
       let videoEl = '';
       let imageEl = '';
       if (isVideo) {
+        // Server-generated poster (first frame). Painted as the tile
+        // background so the grid shows something instantly instead of a
+        // black rectangle while the lazy video loads.
+        const posterSrc = uploadPosterUrl(u, 320);
+        if (posterSrc) styleParts.push(`background-image:url('${posterSrc}')`, 'background-size:cover', 'background-position:center');
         // Video elements are handled by the activateVideo function for lazy loading.
-        // The placeholder is added if mediaSrc is not available.
-        videoEl = `<video data-lazy-src="${escapeAttr(mediaSrc || '')}#t=0.1" muted playsinline loop preload="none" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#1a1a1a;"></video>`;
+        videoEl = `<video data-lazy-src="${escapeAttr(mediaSrc || '')}#t=0.1"${posterSrc ? ` poster="${escapeAttr(posterSrc)}"` : ''} muted playsinline loop preload="none" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:transparent;"></video>`;
         videoEl += `<div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;pointer-events:none;z-index:2;border:2px solid rgba(255,255,255,.3);">▶</div>`;
         if (!mediaSrc) {
           videoEl += `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#1a1a1a;color:#fff;font-size:10px;font-family:var(--mono);">VIDEO</div>`;
