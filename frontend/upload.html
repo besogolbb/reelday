@@ -397,19 +397,23 @@ body { background: var(--paper); min-height: 100dvh; }
   font-family: var(--display); font-style: italic; font-size: 13px;
   color: rgba(253,250,245,.6); line-height: 1.4;
 }
+.ty-actions {
+  display: flex; gap: 12px; align-items: center; justify-content: center;
+  margin-top: 4px;
+}
 .ty-close {
-  position: absolute; top: 20px; right: 20px; z-index: 3;
-  width: 36px; height: 36px; border-radius: 50%;
+  width: 48px; height: 48px; border-radius: 50%;
   background: rgba(253,250,245,.12); border: 1px solid rgba(253,250,245,.2);
-  color: rgba(253,250,245,.7); font-size: 14px; cursor: pointer;
+  color: rgba(253,250,245,.85); font-size: 18px; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   transition: background .2s, color .2s;
+  flex-shrink: 0;
 }
 .ty-close:hover { background: rgba(253,250,245,.25); color: #fdfaf5; }
 .ty-btn {
   background: rgba(253,250,245,.12); color: #fdfaf5;
   border: 1px solid rgba(253,250,245,.2); border-radius: 999px;
-  padding: 14px 28px; font-size: 14px; font-weight: 500; cursor: pointer;
+  padding: 14px 28px; font-size: 16px; font-weight: 500; cursor: pointer;
   transition: background .2s;
 }
 .ty-btn:hover { background: rgba(253,250,245,.2); }
@@ -421,7 +425,6 @@ body { background: var(--paper); min-height: 100dvh; }
 <div class="ty-screen" id="tyScreen">
   <div class="ty-bg" id="tyBg"></div>
   <div class="ty-vignette"></div>
-  <button class="ty-close" onclick="uploadMore()" title="Close">✕</button>
   <div class="ty-body">
     <div class="ty-star">★</div>
     <div class="ty-heading">Salamat!</div>
@@ -433,7 +436,10 @@ body { background: var(--paper); min-height: 100dvh; }
         <div class="ty-card-msg" id="tyCardMsg"></div>
       </div>
     </div>
-    <button class="ty-btn" onclick="uploadMore()">Upload more →</button>
+    <div class="ty-actions">
+      <button class="ty-btn" onclick="uploadMore()">Upload more →</button>
+      <button class="ty-close" onclick="uploadMore()" title="Close" aria-label="Close">✕</button>
+    </div>
   </div>
 </div>
 
@@ -1343,13 +1349,46 @@ body { background: var(--paper); min-height: 100dvh; }
 
   function uploadMore() {
     document.getElementById('tyScreen').classList.remove('visible');
+
+    // ── Gallery panel reset ────────────────────────────
     document.getElementById('galleryQueue').innerHTML = '';
-    document.getElementById('galleryName').value = '';
+    const galleryName = document.getElementById('galleryName');
+    if (galleryName) galleryName.value = '';
     if (document.getElementById('msgText')) document.getElementById('msgText').value = '';
-    document.querySelector('#panel-gallery .send-btn').textContent = 'Share moments →';
+    // The <input type=file> remembers the last selection; without resetting
+    // it, picking the SAME files again is a no-op (no `change` event fires)
+    // and the queue stays empty.
+    const fileInput = document.getElementById('fileInput');
+    if (fileInput) fileInput.value = '';
+    const gBtn = document.querySelector('#panel-gallery .send-btn');
+    if (gBtn) {
+      gBtn.textContent = 'Share moments →';
+      gBtn.disabled = false;
+    }
     Object.keys(itemDataUrls).forEach(k => delete itemDataUrls[k]);
     Object.keys(itemFiles).forEach(k => delete itemFiles[k]);
+
+    // ── Record panel reset ─────────────────────────────
+    // Drop the previous clip, hide the preview, reset the timer + status
+    // pill, re-enable Send. Without this the second video-message attempt
+    // sees a stale recordedBlob and the clipPreview from the previous send.
+    if (typeof discardClip === 'function') discardClip();
+    const recordName = document.getElementById('recordName');
+    if (recordName) recordName.value = '';
+    const rBtn = document.getElementById('recordSendBtn');
+    if (rBtn) {
+      rBtn.disabled = false;
+      rBtn.style.display = 'none';
+    }
+
+    // ── Shared state ───────────────────────────────────
+    const overlay = document.getElementById('uploadOverlay');
+    if (overlay) {
+      overlay.classList.remove('visible');
+      overlay.setAttribute('aria-hidden', 'true');
+    }
     updateMsgPreview();
+    updateSendBtn();
   }
 
   loadEvent();
