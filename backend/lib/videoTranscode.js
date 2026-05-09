@@ -207,70 +207,82 @@ export async function transcodeUploadInBackground(fastify, upload) {
 
   const log = fastify.log.child({ upload_id: upload.id, op: 'transcode' });
 
-  // Wait our turn in the queue. The slot is released in `finally` so a
-  // crash inside the body can never permanently leak a slot.
-  log.info({ inFlight, queued: waiters.length, max: MAX_CONCURRENT }, 'Queued for transcode');
-  await acquireSlot();
-  log.info({ inFlight, queued: waiters.length }, 'Acquired slot, starting transcode');
+  // Pull the original key out of the public URL we stored.
+  let originalKey;
+  try {
+    const u = new URL(upload.file_url);
+    originalKey = decodeURIComponent(u.pathname.replace(/^\/+/, ''));
+  } catch {
+    log.warn('Could not parse file_url; skipping transcode');
+    return;
+  }
 
   let workdir = null;
-  const startedAt = Date.now();
+  let originalBytesOnDisk = false;
   try {
-    // Pull the original key out of the public URL we stored.
-    let originalKey;
-    try {
-      const u = new URL(upload.file_url);
-      originalKey = decodeURIComponent(u.pathname.replace(/^\/+/, ''));
-    } catch {
-      log.warn('Could not parse file_url; skipping transcode');
-      return;
-    }
-
     workdir = await mkdtemp(join(tmpdir(), 'reelday-tx-'));
     const inPath     = join(workdir, 'in');
     const webPath    = join(workdir, 'out.mp4');
     const posterPath = join(workdir, 'poster.jpg');
+    const { webKey, posterKey } = derivedKeys(originalKey);
 
     log.info({ key: originalKey }, 'Downloading original from R2');
     const original = await r2Download(fastify.storage, originalKey);
     await writeFile(inPath, original);
+    originalBytesOnDisk = true;
 
-    // Run passes SEQUENTIALLY rather than in parallel. The semaphore
-    // already controls global concurrency; doubling ffmpeg processes
-    // inside a single transcode just halves each one's CPU budget and
-    // produces no real speedup. Sequential lets each ffmpeg use both
-    // vCPUs (default threading), so the slot frees up sooner and the
-    // next queued upload starts faster.
-    log.info({ bytes: original.length }, 'Running ffmpeg pass 1/2 (web mp4)');
-    await runFfmpeg(['-y', '-i', inPath, ...VIDEO_ARGS,  webPath]);
+    // ── Phase 1: poster first, OUTSIDE the semaphore. ────────────────
+    // Extracting one frame is sub-second work even on 4K; queueing it
+    // behind the slow video encode would mean the wall has no poster
+    // for 5–15s — exactly when buffering of the original looks worst.
+    // Update the DB the moment the poster lands so the wall's next 2s
+    // poll picks it up and slaps it onto <video poster=...> +
+    // backdrop, masking the slow first-pass download of the original.
+    try {
+      const posterStart = Date.now();
+      await runFfmpeg(['-y', '-i', inPath, ...POSTER_ARGS, posterPath]);
+      const posterBuf = await readFile(posterPath);
+      const posterUrl = await r2Upload(fastify.storage, posterKey, posterBuf, 'image/jpeg');
+      await fastify.db.query(
+        `UPDATE uploads SET poster_url = $2 WHERE id = $1`,
+        [upload.id, posterUrl],
+      );
+      log.info({ posterUrl, posterBytes: posterBuf.length, elapsedMs: Date.now() - posterStart }, 'Poster ready');
+    } catch (err) {
+      // Poster failure shouldn't block the video transcode below.
+      log.warn({ err: err.message }, 'Poster generation failed; continuing to web mp4');
+    }
 
-    log.info('Running ffmpeg pass 2/2 (poster)');
-    await runFfmpeg(['-y', '-i', inPath, ...POSTER_ARGS, posterPath]);
-
-    const [webBuf, posterBuf] = await Promise.all([
-      readFile(webPath),
-      readFile(posterPath),
-    ]);
-    const { webKey, posterKey } = derivedKeys(originalKey);
-
-    log.info({ webBytes: webBuf.length, posterBytes: posterBuf.length }, 'Uploading derivatives to R2');
-    const [webUrl, posterUrl] = await Promise.all([
-      r2Upload(fastify.storage, webKey,    webBuf,    'video/mp4'),
-      r2Upload(fastify.storage, posterKey, posterBuf, 'image/jpeg'),
-    ]);
-
-    await fastify.db.query(
-      `UPDATE uploads SET web_url = $2, poster_url = $3 WHERE id = $1`,
-      [upload.id, webUrl, posterUrl],
-    );
-    const elapsedMs = Date.now() - startedAt;
-    log.info({ webUrl, posterUrl, elapsedMs }, 'Transcode complete');
+    // ── Phase 2: video transcode, INSIDE the semaphore. ──────────────
+    // This is the CPU-heavy job; cap concurrency at vCPU count so we
+    // don't thrash. Slot is released in finally{} so a crash never
+    // leaks a slot.
+    log.info({ inFlight, queued: waiters.length, max: MAX_CONCURRENT }, 'Queued for video transcode');
+    await acquireSlot();
+    const videoStart = Date.now();
+    try {
+      log.info({ bytes: original.length }, 'Running ffmpeg (web mp4)');
+      await runFfmpeg(['-y', '-i', inPath, ...VIDEO_ARGS, webPath]);
+      const webBuf = await readFile(webPath);
+      const webUrl = await r2Upload(fastify.storage, webKey, webBuf, 'video/mp4');
+      await fastify.db.query(
+        `UPDATE uploads SET web_url = $2 WHERE id = $1`,
+        [upload.id, webUrl],
+      );
+      log.info({ webUrl, webBytes: webBuf.length, elapsedMs: Date.now() - videoStart }, 'Video transcode complete');
+    } finally {
+      releaseSlot();
+    }
   } catch (err) {
     log.warn({ err: err.message }, 'Transcode failed — wall will fall back to file_url');
   } finally {
     if (workdir) {
       try { await rm(workdir, { recursive: true, force: true }); } catch {}
     }
-    releaseSlot();
+    if (!originalBytesOnDisk) {
+      // We never even downloaded the original — log so we know R2 reads
+      // are the bottleneck if this becomes a pattern.
+      log.warn('Bailed before downloading original from R2');
+    }
   }
 }
