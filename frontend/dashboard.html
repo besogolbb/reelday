@@ -402,7 +402,34 @@
       .panel-head > .pill,
       .panel-head > .approve-toggle,
       .panel-head > .message-burst-controls { justify-self: start; }
-      .stream-tab { padding: 11px 8px; font-size: 14px; }
+
+      /* Stream tabs collapse to icon-on-top, short label below.
+         "Photo stream" / "Video upload" / "Video messages" never fit
+         inline at 3-up on a phone — they were overlapping into a single
+         word smear. Stacking + abbreviating fixes it. The active-state
+         underline (::after) is replaced per tab below by a content
+         pseudo so we override its positioning at the same time. */
+      .stream-tab {
+        flex-direction: column;
+        gap: 4px;
+        padding: 10px 4px 12px;
+        line-height: 1.1;
+      }
+      .stream-tab svg { width: 22px; height: 22px; }
+      /* Hide the desktop label and surface a short mobile one via the
+         tab-data-mobile-label attribute we read from the original span
+         text in JS (see dashboardSetMobileLabel). */
+      .stream-tab > span { display: none; }
+      .stream-tab::before {
+        font-family: var(--mono);
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: .14em;
+        text-transform: uppercase;
+        content: attr(data-mobile-label);
+      }
+      /* Re-anchor the active underline under the shorter label. */
+      .stream-tab.active::after { left: 22%; right: 22%; bottom: 5px; }
     }
 
     /* ── Auto-approve toggle (video stream) ───────────────── */
@@ -933,9 +960,38 @@
       .event-header-top { margin-bottom: 32px; }
       .event-header .nav { overflow-x: auto; max-width: 100%; }
       .hero-summary-grid { grid-template-columns: 1fr; }
-      .tab-row { padding: 12px 16px; }
+      .tab-row { padding: 10px 14px; gap: 4px; }
       .tab { font-size: 12px; padding: 6px 10px; }
       .photo-grid { padding: 14px; gap: 8px; }
+
+      /* Info card "Plan / Upgrade" row was wrapping awkwardly — give it
+         dedicated tighter spacing and let the upgrade pill sit on its
+         own line below the plan name when needed. */
+      .info-card { padding: 18px 16px; gap: 14px; }
+      .info-card h3 { font-size: 17px; }
+      .info-card .info-row { gap: 10px; }
+      .info-card .pill { padding: 6px 10px; font-size: 10px; letter-spacing: .12em; }
+
+      /* Panel chrome shrinks on small screens */
+      .panel-head { padding: 14px 16px 0; }
+      .panel-head-copy p { font-size: 13px; line-height: 1.45; }
+      .stream-tabs { padding: 4px; border-radius: 18px; }
+      .approve-toggle { font-size: 10px; }
+      .approve-toggle-track { width: 34px; height: 20px; }
+      .approve-toggle-thumb { width: 14px; height: 14px; }
+      .approve-toggle[aria-checked="true"] .approve-toggle-thumb { left: 17px; }
+
+      /* Sub-tab counts get visually squeezed — slim them so all 5 fit
+         on a typical phone width without wrapping to two rows. */
+      .tab > span {
+        min-width: 16px; padding: 0 5px;
+        font-size: 9px;
+      }
+
+      /* Modal action buttons stack instead of overflow on phones */
+      .preview-modal-card { width: 100%; max-height: 92vh; border-radius: 18px; }
+      .preview-modal-actions { padding: 12px 16px 18px; gap: 8px; }
+      .preview-modal-actions button { flex: 1 1 calc(50% - 4px); padding: 11px 14px; font-size: 13px; }
     }
   </style>
 </head>
@@ -1034,7 +1090,7 @@
         <div class="stream-tabs-3d" id="stream-tabs-3d">
           <canvas class="stream-tabs-3d-canvas" id="stream-tabs-canvas"></canvas>
           <div class="stream-tabs" id="stream-tabs" role="tablist">
-            <button type="button" class="stream-tab active" data-stream="photo" role="tab" aria-selected="true">
+            <button type="button" class="stream-tab active" data-stream="photo" data-mobile-label="Photos" aria-label="Photo stream" role="tab" aria-selected="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <rect x="3" y="6" width="18" height="14" rx="2"/>
                 <path d="M8 6V4h8v2"/>
@@ -1042,14 +1098,14 @@
               </svg>
               <span>Photo stream</span>
             </button>
-            <button type="button" class="stream-tab" data-stream="video" role="tab" aria-selected="false">
+            <button type="button" class="stream-tab" data-stream="video" data-mobile-label="Videos" aria-label="Video upload" role="tab" aria-selected="false">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <rect x="3" y="6" width="13" height="12" rx="2"/>
                 <path d="M16 10l5-3v10l-5-3z"/>
               </svg>
               <span>Video upload</span>
             </button>
-            <button type="button" class="stream-tab" data-stream="message" role="tab" aria-selected="false">
+            <button type="button" class="stream-tab" data-stream="message" data-mobile-label="Messages" aria-label="Video messages" role="tab" aria-selected="false">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M4 5h16v11H8l-4 4z"/>
                 <path d="M10 11l2 1.2L14 9"/>
