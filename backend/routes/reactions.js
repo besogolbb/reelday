@@ -14,7 +14,12 @@ import { resolvePlan } from '../lib/plans.js';
 
 // Closed allow-list. Stops anyone from POSTing arbitrary unicode that
 // would either break the wall layout or be used as a hidden channel.
-const ALLOWED_EMOJI = ['❤️', '😂', '🔥', '👏', '💃', '🙏'];
+// Skewed toward positive / celebration emoji — events are happy moments,
+// no need for the angry / sad end of the spectrum.
+const ALLOWED_EMOJI = [
+  '❤️', '😂', '🔥', '👏', '💃', '🙏',
+  '🥰', '✨', '🎉', '🥹', '🌹', '💖',
+];
 
 export default async function reactionsRoutes(fastify) {
   // Tighter bucket for the write side — each row is a DB insert and

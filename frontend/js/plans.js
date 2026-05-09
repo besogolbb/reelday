@@ -43,7 +43,7 @@ export const PLANS = {
     uploadWindowDays: 1,
     features: {
       videoMessage: true,
-      reactions:    false,
+      reactions:    true,
       website:      false,
       customDomain: false,
     },
