@@ -206,8 +206,19 @@
 </div>
 
 <script>
-  const ADMIN_PW_KEY = 'reelday_admin_pw';
-  const CORRECT_PW   = 'reelday2026';
+  // The token we send is compared server-side against ADMIN_TOKEN env on
+  // every /api/admin/* call. The localStorage cache is just so an admin
+  // doesn't have to re-paste it on every page load — losing it doesn't
+  // grant access by itself.
+  const ADMIN_TOKEN_KEY = 'reelday_admin_token';
+
+  function adminFetch(url, opts = {}) {
+    const token = localStorage.getItem(ADMIN_TOKEN_KEY) || '';
+    return fetch(url, {
+      ...opts,
+      headers: { ...(opts.headers || {}), 'Authorization': `Bearer ${token}` },
+    });
+  }
 
   function esc(s) {
     return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -223,12 +234,20 @@
   }
 
   // ── Auth ─────────────────────────────────────────────
-  function isAuthed() { return localStorage.getItem(ADMIN_PW_KEY) === CORRECT_PW; }
+  // Real check happens on the server. We just verify the cached token by
+  // hitting a cheap admin endpoint; if it's accepted we proceed.
+  async function tokenWorks(token) {
+    const r = await fetch('/api/admin/stats', {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    return r.ok;
+  }
 
-  document.getElementById('login-btn').onclick = () => {
-    const val = document.getElementById('pw-input').value;
-    if (val === CORRECT_PW) {
-      localStorage.setItem(ADMIN_PW_KEY, val);
+  document.getElementById('login-btn').onclick = async () => {
+    const val = document.getElementById('pw-input').value.trim();
+    if (!val) return;
+    if (await tokenWorks(val)) {
+      localStorage.setItem(ADMIN_TOKEN_KEY, val);
       showAdmin();
     } else {
       document.getElementById('login-error').style.display = 'block';
@@ -239,7 +258,7 @@
   });
 
   document.getElementById('btn-logout').onclick = () => {
-    localStorage.removeItem(ADMIN_PW_KEY);
+    localStorage.removeItem(ADMIN_TOKEN_KEY);
     location.reload();
   };
 
@@ -249,7 +268,13 @@
     loadAll();
   }
 
-  if (isAuthed()) showAdmin();
+  // Try cached token on page load; if the server rejects it, drop it and
+  // show the login screen (covers ADMIN_TOKEN rotation).
+  (async () => {
+    const cached = localStorage.getItem(ADMIN_TOKEN_KEY);
+    if (cached && await tokenWorks(cached)) showAdmin();
+    else if (cached) localStorage.removeItem(ADMIN_TOKEN_KEY);
+  })();
 
   // ── Data ─────────────────────────────────────────────
   async function loadAll() {
@@ -258,7 +283,7 @@
 
   async function loadStats() {
     try {
-      const r = await fetch('/api/admin/stats');
+      const r = await adminFetch('/api/admin/stats');
       const d = await r.json();
       document.getElementById('s-events').textContent  = d.total_events ?? 0;
       document.getElementById('s-paid').textContent    = d.paid_events   ?? 0;
@@ -269,7 +294,7 @@
 
   async function loadPending() {
     try {
-      const r = await fetch('/api/admin/payments/pending');
+      const r = await adminFetch('/api/admin/payments/pending');
       const { payments } = await r.json();
       document.getElementById('pending-badge').textContent = payments.length;
       const tbody = document.getElementById('pending-tbody');
@@ -298,7 +323,7 @@
 
   async function loadEvents() {
     try {
-      const r = await fetch('/api/admin/events');
+      const r = await adminFetch('/api/admin/events');
       const { events } = await r.json();
       const tbody = document.getElementById('events-tbody');
       if (!events.length) {
@@ -326,7 +351,7 @@
   async function verify(id) {
     if (!confirm('Mark this GCash payment as verified and activate the event?')) return;
     try {
-      const r = await fetch(`/api/admin/payments/verify/${id}`, { method: 'POST' });
+      const r = await adminFetch(`/api/admin/payments/verify/${id}`, { method: 'POST' });
       if (!r.ok) throw new Error();
       document.getElementById(`row-${id}`)?.remove();
       await Promise.all([loadStats(), loadEvents()]);
@@ -336,7 +361,7 @@
   async function reject(id) {
     if (!confirm('Reject this payment?')) return;
     try {
-      const r = await fetch(`/api/admin/payments/reject/${id}`, { method: 'POST' });
+      const r = await adminFetch(`/api/admin/payments/reject/${id}`, { method: 'POST' });
       if (!r.ok) throw new Error();
       document.getElementById(`row-${id}`)?.remove();
       await loadStats();
@@ -346,7 +371,7 @@
   async function deactivate(slug, btn) {
     if (!confirm(`Deactivate event "${slug}"? Guests will no longer be able to upload.`)) return;
     try {
-      const r = await fetch(`/api/admin/events/${slug}/deactivate`, { method: 'POST' });
+      const r = await adminFetch(`/api/admin/events/${slug}/deactivate`, { method: 'POST' });
       if (!r.ok) throw new Error();
       btn.replaceWith(Object.assign(document.createElement('span'), {
         textContent: 'Inactive',

@@ -1,4 +1,30 @@
+import { timingSafeEqual } from 'crypto';
+
+// Admin gate: every /admin/* route must present `Authorization: Bearer <ADMIN_TOKEN>`
+// matching the env var. Compared via timingSafeEqual to defeat timing oracles.
+// We deliberately do NOT use the user-JWT system here so a compromised host
+// account can't escalate to admin without also stealing the env secret.
+function requireAdmin(request, reply, done) {
+  const expected = process.env.ADMIN_TOKEN || '';
+  if (!expected) {
+    reply.status(503).send({ error: true, message: 'Admin disabled (no ADMIN_TOKEN configured)' });
+    return;
+  }
+  const header = request.headers.authorization || '';
+  const got = header.startsWith('Bearer ') ? header.slice(7) : '';
+  const a = Buffer.from(got);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length || !timingSafeEqual(a, b)) {
+    reply.status(401).send({ error: true, message: 'Admin authentication required' });
+    return;
+  }
+  done();
+}
+
 export default async function adminRoutes(fastify) {
+  // Apply the admin gate to every route in this plugin.
+  fastify.addHook('preHandler', requireAdmin);
+
   // GET /api/admin/payments/pending
   fastify.get('/admin/payments/pending', async () => {
     const { rows } = await fastify.db.query(

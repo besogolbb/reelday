@@ -1,5 +1,30 @@
+import { createHmac, timingSafeEqual } from 'crypto';
 import { buildAppUrl } from '../utils/appUrl.js';
 import { PLANS, resolvePlan, galleryExpiryFor, uploadWindowEndFor } from '../lib/plans.js';
+
+/**
+ * Verify a PayMongo webhook signature.
+ * Header format: `t=<unix_ts>,te=<test_sig>,li=<live_sig>`.
+ * The signed payload is `${timestamp}.${rawBody}` and the algorithm is
+ * HMAC-SHA256 using the per-webhook secret.
+ * Without this check anyone could POST a fake "payment.paid" event and
+ * upgrade arbitrary user_id values for free.
+ */
+function verifyPaymongoSignature(rawBody, header, secret) {
+  if (!header || !secret || !rawBody) return false;
+  const parts = Object.fromEntries(
+    header.split(',').map(kv => kv.split('=').map(s => s.trim())),
+  );
+  const ts  = parts.t;
+  const sig = parts.li || parts.te;
+  if (!ts || !sig) return false;
+  const expected = createHmac('sha256', secret)
+    .update(`${ts}.${rawBody.toString('utf8')}`)
+    .digest('hex');
+  const a = Buffer.from(sig, 'hex');
+  const b = Buffer.from(expected, 'hex');
+  return a.length === b.length && timingSafeEqual(a, b);
+}
 
 /* Tier metadata for the checkout UI / receipts (centavo amounts for PayMongo) */
 const PAID_TIERS = {
@@ -194,14 +219,15 @@ export default async function paymentRoutes(fastify) {
     const userId = request.user.id;
     const ref    = `gcash-${reference.trim()}`;
 
+    // Insert as manual_pending ONLY. The tier upgrade fires from
+    // /admin/payments/verify/:id once an admin has actually checked the
+    // GCash reference. The previous "optimistic" upgrade meant a user
+    // could submit any string and immediately get the paid plan for free.
     await fastify.db.query(
       `INSERT INTO payments (user_id, event_id, paymongo_payment_id, amount, plan, tier, status)
        VALUES ($1, NULL, $2, $3, $4, $4, 'manual_pending')`,
       [userId, ref, tierConfig.amount, tier],
     );
-
-    // Optimistically apply the tier — admin verifies the reference later.
-    await applyTierUpgrade(fastify.db, { userId, tier, slug });
 
     if (slug) {
       await fastify.db.query(
@@ -211,13 +237,31 @@ export default async function paymentRoutes(fastify) {
       );
     }
 
-    return reply.status(201).send({ success: true, tier, slug: slug ?? null });
+    return reply.status(202).send({
+      success: true,
+      pending: true,
+      tier,
+      slug: slug ?? null,
+      message: 'Reference submitted. Your upgrade will activate after we verify the GCash transfer (usually within a few hours).',
+    });
   });
 
-  // POST /api/payments/webhook — PayMongo webhook
+  // POST /api/payments/webhook — PayMongo webhook (signature-verified).
   fastify.post('/payments/webhook', async (request, reply) => {
-    const payload = request.body;
+    const secret = process.env.PAYMONGO_WEBHOOK_SECRET;
+    if (!secret) {
+      // Refuse rather than silently accept anything when the secret isn't
+      // wired up — no fail-open path on a money endpoint.
+      request.log.error('PAYMONGO_WEBHOOK_SECRET is not set; rejecting webhook');
+      return reply.status(503).send({ error: true, message: 'Webhook handler disabled' });
+    }
+    const sigHeader = request.headers['paymongo-signature'];
+    if (!verifyPaymongoSignature(request.rawBody, sigHeader, secret)) {
+      request.log.warn({ sigHeader }, 'Rejected webhook with bad/missing signature');
+      return reply.status(401).send({ error: true, message: 'Invalid signature' });
+    }
 
+    const payload = request.body;
     if (!payload?.data?.attributes) {
       return reply.status(400).send({ error: true, message: 'Invalid webhook payload' });
     }
@@ -225,14 +269,15 @@ export default async function paymentRoutes(fastify) {
     const type       = payload.data.attributes.type;
     const resourceId = payload.data.attributes.data?.id;
 
-    // Successful checkout — apply the tier purchase to the user
+    // Successful checkout. We trust the webhook here because the signature
+    // matched our shared secret; the metadata user_id is what PayMongo
+    // saw when we created the checkout session in createCheckoutSession.
     if (type === 'checkout_session.payment.paid' && resourceId) {
       const meta = payload.data.attributes.data?.attributes?.metadata ?? {};
       const { user_id: userId, tier, slug } = meta;
 
       if (userId && PAID_TIERS[tier]) {
         await applyTierUpgrade(fastify.db, { userId, tier, slug: slug || null });
-
         await fastify.db.query(
           `UPDATE payments SET status = 'succeeded'
             WHERE paymongo_payment_id = $1`,
@@ -241,7 +286,9 @@ export default async function paymentRoutes(fastify) {
       }
     }
 
-    // Legacy payment_intent webhook — look the payment up and apply
+    // Legacy payment_intent webhook — find the payment we already created
+    // and use ITS stored user_id (not anything from the webhook payload)
+    // as a defense-in-depth measure if signature secrets are ever rotated.
     if (type === 'payment_intent.succeeded' && resourceId) {
       const { rows: paymentRows } = await fastify.db.query(
         `UPDATE payments SET status = 'succeeded'

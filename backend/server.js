@@ -23,6 +23,20 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 // Load .env from the same directory as this file (backend/.env)
 loadEnv({ path: join(__dirname, '.env') });
 
+// Fail loud and early if any required secret is missing. We've been bitten
+// by silent fallbacks before — a missing JWT_SECRET shouldn't let the
+// server boot with a baked-in default that ships in the repo.
+const REQUIRED_ENV = ['JWT_SECRET', 'DATABASE_URL', 'R2_ACCOUNT_ID', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'R2_BUCKET_NAME'];
+const missing = REQUIRED_ENV.filter(k => !process.env[k]);
+if (missing.length) {
+  console.error(`[boot] Missing required env vars: ${missing.join(', ')}`);
+  process.exit(1);
+}
+if (process.env.JWT_SECRET.length < 32) {
+  console.error('[boot] JWT_SECRET must be at least 32 characters (use a long random string)');
+  process.exit(1);
+}
+
 const fastify = Fastify({
   logger: {
     level: process.env.NODE_ENV === 'development' ? 'info' : 'warn',
@@ -83,6 +97,24 @@ await fastify.register(multipart, {
 });
 
 await fastify.register(formbody);
+
+// Capture the raw body for every JSON request so the PayMongo webhook can
+// verify the signature against the exact bytes we received. Also still
+// returns the parsed object to handlers transparently.
+fastify.addContentTypeParser(
+  'application/json',
+  { parseAs: 'buffer' },
+  (req, body, done) => {
+    req.rawBody = body;
+    if (!body.length) return done(null, undefined);
+    try {
+      done(null, JSON.parse(body.toString('utf8')));
+    } catch (err) {
+      err.statusCode = 400;
+      done(err, undefined);
+    }
+  },
+);
 
 await fastify.register(staticFiles, {
   root: join(__dirname, '..', 'frontend'),

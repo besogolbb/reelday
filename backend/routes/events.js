@@ -200,11 +200,22 @@ export default async function eventRoutes(fastify) {
   });
 
   // POST /api/events/:slug/play-videos — push a burst to the wall.
-  // Body: { ids: ['<upload-uuid>', ...] }. Pass an empty array to
-  // signal "stop the current burst and resume photos immediately".
-  fastify.post('/events/:slug/play-videos', async (request, reply) => {
+  // Event-owner only. Body: { ids: ['<upload-uuid>', ...] }; pass an
+  // empty array to "stop the current burst and resume photos".
+  fastify.post('/events/:slug/play-videos', { preHandler: fastify.authenticate }, async (request, reply) => {
     const { slug } = request.params;
     const ids = Array.isArray(request.body?.ids) ? request.body.ids : [];
+
+    const { rows: ownerRows } = await fastify.db.query(
+      'SELECT id, user_id FROM events WHERE slug = $1',
+      [slug],
+    );
+    if (!ownerRows.length) {
+      return reply.status(404).send({ error: true, message: 'Event not found' });
+    }
+    if (ownerRows[0].user_id !== request.user.id) {
+      return reply.status(403).send({ error: true, message: 'Not your event' });
+    }
 
     // Ensure each id is actually an upload on this event so we don't
     // queue arbitrary UUIDs from outside.
@@ -212,10 +223,10 @@ export default async function eventRoutes(fastify) {
     if (ids.length) {
       const { rows: validRows } = await fastify.db.query(
         `SELECT id FROM uploads
-          WHERE event_id = (SELECT id FROM events WHERE slug = $1)
+          WHERE event_id = $1
             AND id = ANY($2::uuid[])
             AND is_approved = true`,
-        [slug, ids],
+        [ownerRows[0].id, ids],
       );
       const ok = new Set(validRows.map(r => r.id));
       validIds = ids.filter(id => ok.has(id));
@@ -229,10 +240,6 @@ export default async function eventRoutes(fastify) {
         RETURNING playback_burst_id, playback_burst_queue`,
       [slug, JSON.stringify(validIds)],
     );
-
-    if (!rows.length) {
-      return reply.status(404).send({ error: true, message: 'Event not found' });
-    }
 
     return {
       playback_burst_id:    rows[0].playback_burst_id,
@@ -269,8 +276,8 @@ export default async function eventRoutes(fastify) {
     return { qr_code };
   });
 
-  // PATCH /api/events/:slug — update event settings
-  fastify.patch('/events/:slug', async (request, reply) => {
+  // PATCH /api/events/:slug — update event settings (owner only).
+  fastify.patch('/events/:slug', { preHandler: fastify.authenticate }, async (request, reply) => {
     const { slug } = request.params;
     const {
       couple_names, event_date, cover_photo_url, is_active,
@@ -283,6 +290,8 @@ export default async function eventRoutes(fastify) {
     // Treat empty string as "clear this field"; treat undefined as "leave alone"
     const orNull = v => (v === undefined ? null : v);
 
+    // The WHERE clause carries the ownership check so a guess-the-slug
+    // attempt against someone else's event returns the same 404 either way.
     const { rows } = await fastify.db.query(
       `UPDATE events
        SET couple_names               = COALESCE($2, couple_names),
@@ -295,7 +304,7 @@ export default async function eventRoutes(fastify) {
            auto_approve               = COALESCE($9,  auto_approve),
            video_auto_approve         = COALESCE($10, video_auto_approve),
            video_message_auto_approve = COALESCE($11, video_message_auto_approve)
-       WHERE slug = $1
+       WHERE slug = $1 AND user_id = $12
        RETURNING *`,
       [
         slug,
@@ -309,6 +318,7 @@ export default async function eventRoutes(fastify) {
         typeof auto_approve               === 'boolean' ? auto_approve               : null,
         typeof video_auto_approve         === 'boolean' ? video_auto_approve         : null,
         typeof video_message_auto_approve === 'boolean' ? video_message_auto_approve : null,
+        request.user.id,
       ],
     );
 

@@ -390,21 +390,40 @@ export default async function uploadRoutes(fastify) {
     };
   });
 
-  // DELETE /api/uploads/:id — remove an upload (admin).
-  // Also removes the underlying object from R2 so storage doesn't leak.
-  fastify.delete('/uploads/:id', async (request, reply) => {
-    const { id } = request.params;
-
-    // Look up the row so we know the storage key before we drop it.
+  // Confirms `request.user` (a JWT-authenticated host) owns the event that
+  // this upload belongs to. Returns the joined { upload, event } rows or
+  // sends a 401/403/404 and returns null.
+  async function loadUploadForOwner(request, reply, uploadId) {
+    if (!request.user?.id) {
+      reply.status(401).send({ error: true, message: 'Authentication required' });
+      return null;
+    }
     const { rows } = await fastify.db.query(
-      'SELECT file_url FROM uploads WHERE id = $1',
-      [id],
+      `SELECT u.id, u.file_url, u.event_id, e.user_id
+         FROM uploads u
+         JOIN events  e ON e.id = u.event_id
+        WHERE u.id = $1`,
+      [uploadId],
     );
     if (!rows.length) {
-      return reply.status(404).send({ error: true, message: 'Upload not found' });
+      reply.status(404).send({ error: true, message: 'Upload not found' });
+      return null;
     }
+    if (rows[0].user_id !== request.user.id) {
+      reply.status(403).send({ error: true, message: 'Not your event' });
+      return null;
+    }
+    return rows[0];
+  }
 
-    const key = extractStorageKey(rows[0].file_url);
+  // DELETE /api/uploads/:id — remove an upload (event owner only).
+  // Also removes the underlying object from R2 so storage doesn't leak.
+  fastify.delete('/uploads/:id', { preHandler: fastify.authenticate }, async (request, reply) => {
+    const { id } = request.params;
+    const row = await loadUploadForOwner(request, reply, id);
+    if (!row) return;
+
+    const key = extractStorageKey(row.file_url);
     if (key && process.env.R2_BUCKET_NAME) {
       try {
         await fastify.storage.send(new DeleteObjectCommand({
@@ -422,25 +441,22 @@ export default async function uploadRoutes(fastify) {
     return { success: true };
   });
 
-  // PATCH /api/uploads/:id/approve — toggle approval (admin)
-  fastify.patch('/uploads/:id/approve', async (request, reply) => {
+  // PATCH /api/uploads/:id/approve — toggle approval (event owner only).
+  fastify.patch('/uploads/:id/approve', { preHandler: fastify.authenticate }, async (request, reply) => {
     const { id } = request.params;
     const { is_approved } = request.body ?? {};
+    const row = await loadUploadForOwner(request, reply, id);
+    if (!row) return;
 
     const { rows } = await fastify.db.query(
       'UPDATE uploads SET is_approved = $2 WHERE id = $1 RETURNING *',
       [id, is_approved ?? true],
     );
-
-    if (!rows.length) {
-      return reply.status(404).send({ error: true, message: 'Upload not found' });
-    }
-
     return { upload: rows[0] };
   });
 
-  // PATCH/POST /api/uploads/:id/flag — host re-classifies an upload as a
-  // video message (or back to a regular video). Only is_video_message
+  // PATCH/POST /api/uploads/:id/flag — event owner re-classifies an upload
+  // as a video message (or back to a regular video). Only is_video_message
   // is mutable here so this can't accidentally be used to bypass the
   // approval flow. Accepts both PATCH and POST so deploys behind proxies
   // that strip PATCH (some Caddy/Traefik configs) still work.
@@ -455,6 +471,9 @@ export default async function uploadRoutes(fastify) {
       });
     }
 
+    const row = await loadUploadForOwner(request, reply, id);
+    if (!row) return;
+
     const { rows } = await fastify.db.query(
       'UPDATE uploads SET is_video_message = $2 WHERE id = $1 RETURNING *',
       [id, flag],
@@ -466,6 +485,6 @@ export default async function uploadRoutes(fastify) {
 
     return { upload: rows[0] };
   }
-  fastify.patch('/uploads/:id/flag', flagHandler);
-  fastify.post('/uploads/:id/flag',  flagHandler);
+  fastify.patch('/uploads/:id/flag', { preHandler: fastify.authenticate }, flagHandler);
+  fastify.post('/uploads/:id/flag',  { preHandler: fastify.authenticate }, flagHandler);
 }

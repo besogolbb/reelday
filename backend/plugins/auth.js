@@ -1,14 +1,23 @@
 import fp from 'fastify-plugin';
 import jwt from 'jsonwebtoken';
 
-const SECRET = process.env.JWT_SECRET || 'reelday2026ph';
+// Read the secret at call time so dotenv has populated process.env first.
+// Bail loudly if it's missing — silent fallback to a baked-in string would
+// mean every JWT in production is forgeable by anyone who reads the repo.
+function getSecret() {
+  const s = process.env.JWT_SECRET;
+  if (!s || s.length < 32) {
+    throw new Error('JWT_SECRET env is missing or too short (need >=32 chars)');
+  }
+  return s;
+}
 
 export function signToken(payload) {
-  return jwt.sign(payload, SECRET, { expiresIn: '30d' });
+  return jwt.sign(payload, getSecret(), { expiresIn: '30d' });
 }
 
 export function verifyToken(token) {
-  return jwt.verify(token, SECRET);
+  return jwt.verify(token, getSecret());
 }
 
 async function authPlugin(fastify) {
