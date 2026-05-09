@@ -559,9 +559,33 @@
     return apiUploads;
   }
 
+  // Wrap an R2 image URL with Cloudflare's free /cdn-cgi/image/ transform
+  // so the wall pulls a 1920px JPEG/AVIF/WebP instead of a 10MB original.
+  // Videos and data: URLs (local-only previews) are returned untouched.
+  function cdnImage(url, width) {
+    if (!url) return url;
+    if (url.startsWith('data:') || url.startsWith('blob:')) return url;
+    if (/\.(mp4|webm|mov|m4v|ogg)(\?|$)/i.test(url)) return url;
+    try {
+      const u = new URL(url, location.href);
+      // Only apply to URLs we control (the R2 public host). Falling back to
+      // the raw URL keeps demo/external assets working.
+      if (!/(^|\.)reelday\.ph$/.test(u.hostname)) return url;
+      // Already wrapped? Don't double-wrap.
+      if (u.pathname.startsWith('/cdn-cgi/image/')) return url;
+      const opts = `width=${width},quality=82,format=auto,fit=scale-down`;
+      return `${u.origin}/cdn-cgi/image/${opts}${u.pathname}${u.search}`;
+    } catch {
+      return url;
+    }
+  }
+
   function wallMediaUrl(upload) {
     if (!upload) return null;
-    return upload.file_url || upload.thumb || null;
+    const raw = upload.file_url || upload.thumb || null;
+    if (!raw) return null;
+    // 1920 covers any reasonable TV; format=auto picks AVIF/WebP per browser.
+    return isVideoItem(upload) ? raw : cdnImage(raw, 1920);
   }
 
   let items      = [];

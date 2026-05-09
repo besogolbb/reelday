@@ -1298,13 +1298,35 @@
     return escapeHtml(value).replace(/`/g, '&#96;');
   }
 
-  function uploadMediaUrl(upload, isVideo) {
+  // Wrap an R2 image URL with Cloudflare's free /cdn-cgi/image/ transform
+  // so the grid pulls a small JPEG instead of a 10MB original. Videos,
+  // data:/blob: previews, and non-Reelday hosts pass through untouched.
+  function cdnImage(url, width) {
+    if (!url) return url;
+    if (url.startsWith('data:') || url.startsWith('blob:')) return url;
+    if (/\.(mp4|webm|mov|m4v|ogg)(\?|$)/i.test(url)) return url;
+    try {
+      const u = new URL(url, location.href);
+      if (!/(^|\.)reelday\.ph$/.test(u.hostname)) return url;
+      if (u.pathname.startsWith('/cdn-cgi/image/')) return url;
+      const opts = `width=${width},quality=82,format=auto,fit=scale-down`;
+      return `${u.origin}/cdn-cgi/image/${opts}${u.pathname}${u.search}`;
+    } catch {
+      return url;
+    }
+  }
+
+  // width=null → return the original (used for preview modal "open" links).
+  function uploadMediaUrl(upload, isVideo, width = 600) {
     if (!upload) return null;
 
     // Local-only uploads carry their own data-URL thumb — use it.
     if (!isVideo && upload.thumb) return upload.thumb;
 
-    return upload.file_url || upload.thumbnail_url || null;
+    const raw = upload.file_url || upload.thumbnail_url || null;
+    if (!raw) return raw;
+    if (isVideo) return raw;
+    return width ? cdnImage(raw, width) : raw;
   }
 
   function applyTheme(eventType) {
@@ -2132,9 +2154,10 @@
       previewVideo.removeAttribute('src');
       previewVideo.load();
       previewImage.style.display = 'block';
-      // Use the largest source available for the modal — that's the
-      // R2 URL when synced, the data URL when local-only.
-      previewImage.src = upload.file_url || upload.thumb || upload.thumbnail_url || '';
+      // Modal needs a larger image than the grid. Local data URLs pass
+      // through; R2 URLs get a 1600px CDN variant.
+      const raw = upload.file_url || upload.thumb || upload.thumbnail_url || '';
+      previewImage.src = (upload.thumb && !upload.file_url) ? raw : cdnImage(raw, 1600);
     }
     previewUploader.textContent = upload.uploader_name || 'Anonymous guest';
     if (upload.created_at) {

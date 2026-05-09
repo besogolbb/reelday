@@ -450,7 +450,7 @@ body { background: var(--paper); min-height: 100dvh; }
       <input type="file" id="fileInput" multiple accept="image/*,video/*" onchange="handleFiles(event)" />
       <div class="icon">+</div>
       <h3>Tap to share</h3>
-      <p>Photos and videos · up to 100 MB each</p>
+      <p>Photos · videos up to 30s</p>
       <div class="choose-btn">Choose from gallery</div>
     </div>
     <div class="queue" id="galleryQueue"></div>
@@ -500,10 +500,11 @@ body { background: var(--paper); min-height: 100dvh; }
             <svg id="recIcon" viewBox="0 0 24 24" width="24" height="24" fill="white"><circle cx="12" cy="12" r="6"/></svg>
           </button>
           <div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;">
-            <span style="font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);text-align:center;line-height:1.3;">Max<br/>60s</span>
+            <span style="font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);text-align:center;line-height:1.3;">Max<br/>30s</span>
           </div>
         </div>
-        <div class="rec-status" id="recStatus">Tap to start recording</div>
+        <div class="rec-status" id="recStatus">Tap to record · 30-second video message</div>
+        <div style="text-align:center;font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin-top:6px;">Recording stops automatically at 30s</div>
         <div class="clip-preview" id="clipPreview">
           <div class="clip-thumb"></div>
           <div class="clip-info">
@@ -675,9 +676,47 @@ body { background: var(--paper); min-height: 100dvh; }
   const itemDataUrls = {};
   const itemFiles    = {}; // keep the original File objects for the actual API upload
 
-  function handleFiles(e) {
-    const files = Array.from(e.target.files);
+  // Probe a video file's duration without uploading. Resolves with the
+  // duration in seconds (or 0 if it can't be read).
+  function probeVideoDuration(file) {
+    return new Promise(resolve => {
+      const v = document.createElement('video');
+      v.preload = 'metadata';
+      v.muted = true;
+      v.playsInline = true;
+      const url = URL.createObjectURL(file);
+      const cleanup = () => { try { URL.revokeObjectURL(url); } catch {} };
+      v.onloadedmetadata = () => {
+        const d = Number.isFinite(v.duration) ? v.duration : 0;
+        cleanup();
+        resolve(d);
+      };
+      v.onerror = () => { cleanup(); resolve(0); };
+      v.src = url;
+    });
+  }
+
+  async function handleFiles(e) {
+    const incoming = Array.from(e.target.files);
     const queue = document.getElementById('galleryQueue');
+
+    // Filter out over-length videos before they hit the queue. We only block
+    // videos here; over-size photos are handled by the resize step downstream.
+    const files = [];
+    let rejected = 0;
+    for (const f of incoming) {
+      if ((f.type || '').startsWith('video/')) {
+        const secs = await probeVideoDuration(f);
+        if (secs > MAX_RECORD_SECS + 0.5) {
+          rejected += 1;
+          continue;
+        }
+      }
+      files.push(f);
+    }
+    if (rejected > 0) {
+      alert(`Videos are limited to ${MAX_RECORD_SECS} seconds. ${rejected} clip${rejected > 1 ? 's were' : ' was'} skipped.`);
+    }
 
     files.forEach((f, i) => {
       const reader = new FileReader();
@@ -811,9 +850,13 @@ body { background: var(--paper); min-height: 100dvh; }
       recSecs++;
       document.getElementById('recTimer').textContent = fmt(recSecs);
       document.getElementById('recTimeDisplay').textContent = fmt(recSecs);
-      if (recSecs >= 60) stopRecord();
+      if (recSecs >= MAX_RECORD_SECS) stopRecord();
     }, 1000);
   }
+
+  // Hard cap on guest video messages — keeps R2 bills predictable and the
+  // wall snappy. Surfaced in the UI copy so guests know the limit upfront.
+  const MAX_RECORD_SECS = 30;
 
   function stopRecord() {
     recording = false;
@@ -846,7 +889,7 @@ body { background: var(--paper); min-height: 100dvh; }
     document.getElementById('recordSendBtn').style.display = 'none';
     document.getElementById('recTimer').classList.remove('visible');
     document.getElementById('recTimer').textContent = '00:00';
-    document.getElementById('recStatus').textContent = 'Tap to start recording';
+    document.getElementById('recStatus').textContent = 'Tap to record · 30-second video message';
     document.querySelector('.clip-thumb').innerHTML = '';
     recordedBlob = null; recordedChunks = []; recSecs = 0;
   }
