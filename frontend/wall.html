@@ -423,6 +423,30 @@
     body.poll-active .ticker .stats,
     body.poll-active .upcoming { opacity: 0; transition: opacity .4s ease; }
 
+    /* ── Net-error badge (top-left) ─────────────────────────
+       Shown when consecutive API calls fail. The slideshow advance is
+       gated on netFrozen so the current slide stays put until things
+       recover. */
+    .net-err-badge {
+      position: fixed; top: 14px; left: 14px; z-index: 60;
+      display: flex; align-items: center; gap: 9px;
+      padding: 8px 14px 8px 12px; border-radius: 999px;
+      background: rgba(176,48,34,.94); color: #fff;
+      font-family: var(--mono); font-size: 11px; font-weight: 700;
+      letter-spacing: .14em; text-transform: uppercase;
+      box-shadow: 0 6px 24px rgba(0,0,0,.35);
+      opacity: 0; transform: translateY(-6px); pointer-events: none;
+      transition: opacity .25s ease, transform .25s ease;
+    }
+    .net-err-badge.visible { opacity: 1; transform: translateY(0); }
+    .net-err-badge .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #ffd2cb;
+      animation: netPulse 1.2s ease-in-out infinite;
+    }
+    @keyframes netPulse { 50% { opacity: .35; transform: scale(.8); } }
+    body.net-frozen .frame { filter: grayscale(.35) brightness(.55); transition: filter .3s ease; }
+
     /* ── Burst (now playing video message) banner ──────────── */
     .burst-banner {
       position: fixed; top: 76px; left: 50%; transform: translateX(-50%);
@@ -659,6 +683,14 @@
 <div class="slide-progress"><div class="fill" id="progress-fill"></div></div>
 <div class="pause-btn" id="pause-btn" onclick="togglePause()">⏸ Paused — tap to resume</div>
 
+<!-- ════ NET ERROR BADGE ═════════════════════════════════
+     Shown top-left when our /api/* calls start failing (Cloudflare 5xx,
+     origin down, network offline). Slideshow freezes until recovery. -->
+<div class="net-err-badge" id="net-err-badge" aria-live="polite">
+  <span class="dot"></span>
+  <span class="text">Connection error</span>
+</div>
+
 <!-- ════ LIVE POLL OVERLAY ═══════════════════════════════ -->
 <div class="poll-overlay" id="poll-overlay" aria-live="polite" aria-hidden="true">
   <div class="poll-tag"><span class="ring"></span><span>Live poll</span></div>
@@ -826,6 +858,82 @@
   let currentIdx = 0;
   let activeLayer = 'A';   // 'A' or 'B'
   let isPaused   = false;
+  let netFrozen  = false;
+
+  /* ══════════════════════════════════════════════════════════
+     Net health tracker
+     Wraps window.fetch so we notice when our /api/* calls start
+     failing (Cloudflare 5xx, origin down, network offline). After
+     a few consecutive failures, freeze the slideshow and surface a
+     small badge top-left. First success clears it.
+  ══════════════════════════════════════════════════════════ */
+  (function () {
+    const FREEZE_AFTER = 3;
+    let failCount = 0;
+    const orig = window.fetch.bind(window);
+
+    function badgeEl()    { return document.getElementById('net-err-badge'); }
+    function badgeText()  { return badgeEl()?.querySelector('.text'); }
+
+    function showError(label) {
+      const el = badgeEl(); if (el) { const t = badgeText(); if (t) t.textContent = label; el.classList.add('visible'); }
+      if (!netFrozen) {
+        netFrozen = true;
+        document.body.classList.add('net-frozen');
+        try { clearTimeout(slideTimer); } catch {}
+        try { stopProgress?.(); } catch {}
+        try {
+          const v = (typeof activeLayer !== 'undefined' && activeLayer === 'A')
+            ? (typeof vidA !== 'undefined' ? vidA : null)
+            : (typeof vidB !== 'undefined' ? vidB : null);
+          if (v && items?.__currentIsVideo) v.pause();
+        } catch {}
+      }
+    }
+    function clearError() {
+      failCount = 0;
+      const el = badgeEl(); if (el) el.classList.remove('visible');
+      if (netFrozen) {
+        netFrozen = false;
+        document.body.classList.remove('net-frozen');
+        // Resume slideshow if it was running and the user hadn't paused.
+        try { if (typeof isRunning !== 'undefined' && isRunning && !isPaused) {
+          startProgress?.(); scheduleAdvance?.();
+        } } catch {}
+      }
+    }
+    function isOurUrl(u) {
+      const url = typeof u === 'string' ? u : (u?.url || '');
+      if (!url) return false;
+      if (url.startsWith('/api/') || url.startsWith('/cdn-cgi/')) return true;
+      try {
+        const p = new URL(url, location.href);
+        return p.host === location.host && p.pathname.startsWith('/api/');
+      } catch { return false; }
+    }
+
+    window.fetch = async function (input, init) {
+      const tracked = isOurUrl(input);
+      try {
+        const res = await orig(input, init);
+        if (tracked) {
+          if (res.ok || res.status === 401 || res.status === 403 || res.status === 404) {
+            clearError();
+          } else if (res.status >= 500) {
+            failCount++;
+            if (failCount >= FREEZE_AFTER) showError(`Server error · ${res.status}`);
+          }
+        }
+        return res;
+      } catch (err) {
+        if (tracked) {
+          failCount++;
+          if (failCount >= FREEZE_AFTER) showError('Network offline');
+        }
+        throw err;
+      }
+    };
+  })();
   let isRunning  = false;
   let slideTimer = null;
   let qrTimer    = null;
@@ -1054,7 +1162,7 @@
   // advance most of the time — the timer is just a safety net.
   function scheduleAdvance() {
     clearTimeout(slideTimer);
-    if (isPaused || items.length < 2) return;
+    if (isPaused || netFrozen || items.length < 2) return;
 
     if (!items.__currentIsVideo) {
       slideTimer = setTimeout(advance, SLIDE_DURATION);
@@ -1086,7 +1194,7 @@
   }
 
   function advance() {
-    if (isPaused || items.length === 0) return;
+    if (isPaused || netFrozen || items.length === 0) return;
 
     const nextIdx = items.length === 1 ? 0 : (currentIdx + 1) % items.length;
     currentIdx = nextIdx;
