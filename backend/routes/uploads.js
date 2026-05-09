@@ -1,6 +1,6 @@
 import { extname } from 'path';
 import { randomUUID } from 'crypto';
-import { PutObjectCommand } from '@aws-sdk/client-s3';
+import { PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { resolvePlan } from '../lib/plans.js';
 import { verifyToken } from '../plugins/auth.js';
@@ -377,19 +377,35 @@ export default async function uploadRoutes(fastify) {
     };
   });
 
-  // DELETE /api/uploads/:id — remove an upload (admin)
+  // DELETE /api/uploads/:id — remove an upload (admin).
+  // Also removes the underlying object from R2 so storage doesn't leak.
   fastify.delete('/uploads/:id', async (request, reply) => {
     const { id } = request.params;
 
-    const { rowCount } = await fastify.db.query(
-      'DELETE FROM uploads WHERE id = $1',
+    // Look up the row so we know the storage key before we drop it.
+    const { rows } = await fastify.db.query(
+      'SELECT file_url FROM uploads WHERE id = $1',
       [id],
     );
-
-    if (!rowCount) {
+    if (!rows.length) {
       return reply.status(404).send({ error: true, message: 'Upload not found' });
     }
 
+    const key = extractStorageKey(rows[0].file_url);
+    if (key && process.env.R2_BUCKET_NAME) {
+      try {
+        await fastify.storage.send(new DeleteObjectCommand({
+          Bucket: process.env.R2_BUCKET_NAME,
+          Key:    key,
+        }));
+      } catch (err) {
+        // Don't block the DB delete on a storage hiccup — the row is the
+        // source of truth and a stale R2 object is recoverable later.
+        request.log.warn({ err, upload_id: id, key }, 'R2 object delete failed');
+      }
+    }
+
+    await fastify.db.query('DELETE FROM uploads WHERE id = $1', [id]);
     return { success: true };
   });
 

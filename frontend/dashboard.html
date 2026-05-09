@@ -516,6 +516,12 @@
       background: rgba(196,90,58,.15);
       border-color: rgba(196,90,58,.35);
     }
+    .preview-modal-actions .btn-delete {
+      background: rgba(220,53,69,.18);
+      border-color: rgba(220,53,69,.55);
+      color: #ffd6d9;
+    }
+    .preview-modal-actions .btn-delete:hover { background: rgba(220,53,69,.32); border-color: #dc3545; color: #fff; }
     .preview-modal-actions button:disabled { opacity: .5; cursor: not-allowed; transform: none; }
     .pill { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); padding: 8px 12px; border-radius: 999px; background: #f6eadc; border: 1px solid rgba(196,90,58,.12); white-space: nowrap; }
 
@@ -1168,6 +1174,7 @@
       <button type="button" class="btn-approve" id="preview-modal-approve">Approve · publish to wall</button>
       <button type="button" id="preview-modal-move">Move to Video messages</button>
       <button type="button" class="btn-hide"    id="preview-modal-hide">Hide</button>
+      <button type="button" class="btn-delete"  id="preview-modal-delete">Delete</button>
       <button type="button" id="preview-modal-close">Close</button>
     </div>
   </div>
@@ -2099,6 +2106,7 @@
   const previewApprove   = document.getElementById('preview-modal-approve');
   const previewMove      = document.getElementById('preview-modal-move');
   const previewHide      = document.getElementById('preview-modal-hide');
+  const previewDelete    = document.getElementById('preview-modal-delete');
   const previewClose     = document.getElementById('preview-modal-close');
   let previewingId = null;
   let previewingIsMessage = false;
@@ -2297,6 +2305,55 @@
       showToast(err.message);
     } finally {
       previewMove.disabled = false;
+    }
+  });
+
+  previewDelete?.addEventListener('click', async () => {
+    if (!previewingId) return;
+    const kind = previewVideo.style.display === 'block' ? 'video' : 'photo';
+    const ok = confirm(
+      `Delete this ${kind} permanently?\n\n` +
+      `This removes it from the wall, the dashboard, and Cloudflare R2 storage. ` +
+      `This action cannot be undone.`
+    );
+    if (!ok) return;
+
+    previewDelete.disabled = true;
+    const deletedId = previewingId;
+    try {
+      const token = localStorage.getItem('reelday_token');
+      const apiUpload = isApiUpload({ id: deletedId });
+      if (apiUpload) {
+        const res = await fetch(`/api/uploads/${deletedId}`, {
+          method:  'DELETE',
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.message || 'Delete failed');
+        }
+      }
+
+      // Remove from any localStorage cache and the in-memory list so the
+      // grid reflects the deletion immediately.
+      try {
+        const key = `reelday_uploads_${slug}`;
+        const cached = JSON.parse(localStorage.getItem(key) || '[]');
+        const next = cached.filter(u => String(u.id) !== String(deletedId));
+        localStorage.setItem(key, JSON.stringify(next));
+      } catch { /* localStorage unavailable */ }
+
+      const updated = (allUploads || []).filter(u => String(u.id) !== String(deletedId));
+      renderStats(updated);
+      renderGallery(updated);
+
+      showToast('Deleted');
+      closePreview();
+      refreshUploads();
+    } catch (err) {
+      showToast(err.message || 'Delete failed');
+    } finally {
+      previewDelete.disabled = false;
     }
   });
 
