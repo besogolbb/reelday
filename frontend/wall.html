@@ -508,7 +508,7 @@
   const FADE_DURATION    = 1600;  // ms for crossfade (matches CSS 1.6s)
   const KB_DURATION      = 14;    // seconds for Ken Burns
   const KB_ANIMS         = ['kb1', 'kb2', 'kb3', 'kb4'];
-  const POLL_INTERVAL    = 4000;  // ms between refresh polls — short so host approvals show up on the wall within a slide
+  const POLL_INTERVAL    = 2000;  // ms between upload polls — short so host approvals jump to the wall fast
   const QR_HIDE_AFTER    = 20000; // ms before QR badge auto-hides
 
   const THEME_META = {
@@ -1119,17 +1119,21 @@
     const prevCount = items.length;
     const newOnes   = slideable.filter(u => !knownIds.has(u.id));
 
-    if (newOnes.length > 0 && isRunning && prevCount > 0) {
+    if (newOnes.length > 0 && isRunning && prevCount > 0 && !inBurst) {
       // Slideshow is running — splice new approvals in right after the
-      // current slide so the host's approval shows up next, without
-      // cutting off the current slide. Older items keep their order.
+      // current slide and jump straight to the first new one so the host
+      // sees their approval reach the wall immediately. Older items keep
+      // their relative order so the cycle resumes naturally afterwards.
       newOnes.forEach(u => knownIds.add(u.id));
-      const head   = items.slice(0, currentIdx + 1);
-      const tail   = items.slice(currentIdx + 1).filter(u => !newOnes.some(n => n.id === u.id));
+      const safeIdx = Math.min(currentIdx, items.length - 1);
+      const head    = items.slice(0, safeIdx + 1);
+      const tail    = items.slice(safeIdx + 1).filter(u => !newOnes.some(n => n.id === u.id));
       items = [...head, ...newOnes, ...tail];
       const name = newOnes[0].uploader_name || 'Panauhin';
       showToast(`✨ ${name} just shared a moment!`);
       spawnEmoji(3 + Math.floor(Math.random() * 2));
+      // Jump now — clears the pending slideTimer and shows the new one.
+      goTo(safeIdx + 1);
     } else {
       // Not running yet, or empty — replace the deck wholesale.
       items = slideable;
