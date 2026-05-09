@@ -100,7 +100,27 @@ export default async function pollRoutes(fastify) {
     let duration = parseInt(body?.duration_s, 10);
     if (!Number.isFinite(duration)) duration = 30;
     duration = Math.max(MIN_DURATION_S, Math.min(MAX_DURATION_S, duration));
-    return { question, options, duration_s: duration };
+
+    // 'poll'     = opinion poll, no correct answer (legacy default)
+    // 'question' = trivia, one option is correct (correct_key required)
+    const rawKind = (body?.kind || 'poll').toString().toLowerCase();
+    const kind = rawKind === 'question' ? 'question' : 'poll';
+
+    let correctKey = (body?.correct_key || '').toString().trim();
+    if (kind === 'question') {
+      if (!correctKey) {
+        throw { statusCode: 400, message: 'Pick the correct answer for a question' };
+      }
+      if (!seenKeys.has(correctKey)) {
+        throw { statusCode: 400, message: 'correct_key must match one of the options' };
+      }
+    } else {
+      // Force-null for opinion polls so a leftover correct_key from an
+      // earlier edit doesn't accidentally leak onto the wall.
+      correctKey = null;
+    }
+
+    return { question, options, duration_s: duration, kind, correct_key: correctKey };
   }
 
   /**
@@ -129,10 +149,10 @@ export default async function pollRoutes(fastify) {
     catch (e) { return reply.status(e.statusCode || 400).send({ error: true, message: e.message }); }
 
     const { rows } = await fastify.db.query(
-      `INSERT INTO polls (event_id, question, options, duration_s)
-       VALUES ($1, $2, $3::jsonb, $4)
+      `INSERT INTO polls (event_id, question, options, duration_s, kind, correct_key)
+       VALUES ($1, $2, $3::jsonb, $4, $5, $6)
        RETURNING *`,
-      [ctx.event.id, payload.question, JSON.stringify(payload.options), payload.duration_s],
+      [ctx.event.id, payload.question, JSON.stringify(payload.options), payload.duration_s, payload.kind, payload.correct_key],
     );
     return reply.status(201).send({ poll: rows[0] });
   });
@@ -184,10 +204,11 @@ export default async function pollRoutes(fastify) {
 
     const { rows } = await fastify.db.query(
       `UPDATE polls
-          SET question = $2, options = $3::jsonb, duration_s = $4
+          SET question = $2, options = $3::jsonb, duration_s = $4,
+              kind = $5, correct_key = $6
         WHERE id = $1
         RETURNING *`,
-      [id, payload.question, JSON.stringify(payload.options), payload.duration_s],
+      [id, payload.question, JSON.stringify(payload.options), payload.duration_s, payload.kind, payload.correct_key],
     );
     return { poll: rows[0] };
   });
@@ -268,6 +289,7 @@ export default async function pollRoutes(fastify) {
 
     const { rows } = await fastify.db.query(
       `SELECT p.id, p.question, p.options, p.duration_s, p.status,
+              p.kind, p.correct_key,
               p.started_at, p.ended_at,
               EXTRACT(EPOCH FROM (p.started_at + (p.duration_s || ' seconds')::INTERVAL - NOW()))::int AS seconds_left,
               COALESCE(v.tally, '[]'::jsonb) AS tally,

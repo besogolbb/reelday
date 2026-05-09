@@ -82,6 +82,13 @@ const MIGRATIONS = `
   );
   CREATE INDEX IF NOT EXISTS idx_polls_event_status ON polls(event_id, status);
 
+  -- Polls have two kinds:
+  --   'poll'     - opinion poll, no right answer (legacy default)
+  --   'question' - trivia-style; one option is the correct answer and the
+  --               wall flags it on the results screen
+  ALTER TABLE polls ADD COLUMN IF NOT EXISTS kind        VARCHAR(16) DEFAULT 'poll';
+  ALTER TABLE polls ADD COLUMN IF NOT EXISTS correct_key VARCHAR(40);
+
   -- One vote per guest per poll. Upsert via the primary key lets a
   -- guest change their mind while the poll is live.
   CREATE TABLE IF NOT EXISTS poll_votes (

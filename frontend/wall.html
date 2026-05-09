@@ -382,6 +382,25 @@
     .poll-overlay .poll-bar.leader .fill { background: linear-gradient(90deg, var(--gold), #f5d089); }
     .poll-overlay .poll-bar.leader { border-color: rgba(216,160,90,.55); box-shadow: 0 0 0 2px rgba(216,160,90,.25); }
 
+    /* Correct-answer badge (only for kind=question, only in results state).
+       The fill on the right answer turns green so it pops against the
+       gold-leader fill, and the label gets a "✓ CORRECT" pill. */
+    .poll-overlay.results-state .poll-bar.is-correct {
+      border-color: rgba(45,122,74,.6);
+      box-shadow: 0 0 0 2px rgba(45,122,74,.28);
+    }
+    .poll-overlay.results-state .poll-bar.is-correct .fill {
+      background: linear-gradient(90deg, #2d7a4a, #5fb27a) !important;
+    }
+    .poll-overlay .poll-bar .correct-tag {
+      display: none;
+      font-family: var(--mono); font-size: clamp(18px, 2vw, 32px); font-weight: 700;
+      letter-spacing: .12em; padding: 6px 14px; border-radius: 999px;
+      background: rgba(45,122,74,.85); color: #fff;
+      margin-right: 14px;
+    }
+    .poll-overlay.results-state .poll-bar.is-correct .correct-tag { display: inline-flex; align-items: center; }
+
     /* While voting: hide percentages + bar fills so guests can't peek
        at the running tally — only the option labels are visible. */
     .poll-overlay.live-state .poll-bar .stats,
@@ -1579,19 +1598,28 @@
     const max   = Math.max(1, ...Array.from(tally.values()));
     pollQuestion.textContent = poll.question;
 
+    const isQuestion = poll.kind === 'question' && !!poll.correct_key;
     pollBars.innerHTML = (poll.options || []).map(opt => {
       const count = tally.get(opt.key) || 0;
       const pct   = total ? Math.round((count / total) * 100) : 0;
       const fill  = total ? Math.round((count / max)   * 100) : 0;
-      const isLeader = opts.leaderHighlight && count > 0 && count === max && total > 0;
+      const isLeader  = opts.leaderHighlight && count > 0 && count === max && total > 0;
+      const isCorrect = isQuestion && opt.key === poll.correct_key;
       // When animating results, paint with width:0 first, then expand on
       // the next frame so the .fill transition actually fires.
       const initialFill = opts.animate ? 0 : fill;
+      const cls = ['poll-bar'];
+      if (isLeader)  cls.push('leader');
+      if (isCorrect) cls.push('is-correct');
+      // The "✓ CORRECT" pill is rendered for the right answer only and
+      // controlled visually via the .results-state class on the overlay
+      // (hidden while voting, shown once results land).
+      const correctTag = isCorrect ? '<span class="correct-tag">✓ Correct</span>' : '';
       return `
-        <div class="poll-bar ${isLeader ? 'leader' : ''}">
+        <div class="${cls.join(' ')}">
           <span class="fill" style="width:${initialFill}%" data-target="${fill}"></span>
           <span class="row">
-            <span class="label">${escapeWallHtml(opt.label)}</span>
+            <span class="label">${correctTag}${escapeWallHtml(opt.label)}</span>
             <span class="stats" data-pct="${pct}" data-count="${count}">${pct}% · ${count}</span>
           </span>
         </div>`;

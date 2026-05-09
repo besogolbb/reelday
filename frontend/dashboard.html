@@ -493,6 +493,13 @@
     .poll-row .poll-status.live  { background: rgba(229,76,59,.14); color: #b03022; }
     .poll-row .poll-status.live::before { content: '●'; animation: pollPulse 1s infinite; }
     .poll-row .poll-status.ended { background: rgba(45,122,74,.14); color: #1f5e3b; }
+    .poll-row .poll-kind-badge {
+      display: inline-block; margin-left: 6px; padding: 3px 8px;
+      border-radius: 999px; font-family: var(--mono); font-size: 9px;
+      font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+      background: rgba(45,122,74,.14); color: #1f5e3b;
+    }
+    .poll-row .poll-kind-badge.poll-kind-poll { background: rgba(60,90,150,.12); color: #2a4480; }
     @keyframes pollPulse { 50% { opacity: .35; } }
 
     .poll-row .poll-q {
@@ -599,6 +606,33 @@
     }
     .poll-modal-actions .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
     .poll-modal-actions .btn-primary:hover { background: var(--accent-deep); }
+
+    /* Kind toggle (Poll vs Question) inside the editor modal */
+    .poll-kind-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .poll-kind-toggle .kind-opt {
+      display: flex; flex-direction: column; gap: 2px;
+      padding: 10px 12px; border: 1.5px solid var(--line);
+      border-radius: 10px; cursor: pointer; background: #fff;
+      transition: border-color .15s, background .15s;
+    }
+    .poll-kind-toggle .kind-opt input { position: absolute; opacity: 0; pointer-events: none; }
+    .poll-kind-toggle .kind-opt.active { border-color: var(--accent); background: rgba(196,90,58,.06); }
+    .poll-kind-toggle .kind-label { font-weight: 600; font-size: 14px; color: var(--ink); }
+    .poll-kind-toggle .kind-hint  { font-size: 11px; color: var(--ink-soft); }
+
+    /* Correct-answer radio inside each option row (visible only in Question mode) */
+    .poll-options-list .poll-option-input { display: flex; align-items: center; gap: 8px; }
+    .poll-options-list .opt-correct {
+      flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%;
+      border: 1.5px solid var(--line); background: #fff;
+      cursor: pointer; display: none; align-items: center; justify-content: center;
+      color: transparent; font-weight: 700; transition: border-color .15s, color .15s, background .15s;
+    }
+    .poll-modal[data-kind="question"] .opt-correct { display: inline-flex; }
+    .poll-options-list .opt-correct.active {
+      border-color: #1f5e3b; color: #fff; background: #2d7a4a;
+    }
+    .poll-options-list .opt-correct::before { content: '✓'; }
 
     /* ── Video preview modal ──────────────────────────────── */
     .preview-modal {
@@ -1273,13 +1307,13 @@
     <div class="panel polls-panel" id="polls-panel" style="display:none; margin-bottom:18px;">
       <div class="polls-head">
         <div>
-          <div class="polls-h2">Live polls</div>
-          <div class="polls-sub">Run a quick question on the wall — guests vote from their phones, results appear in real time.</div>
+          <div class="polls-h2">Live polling &amp; questions</div>
+          <div class="polls-sub">Polls collect opinions; questions reveal a correct answer on the wall. Pick the type when you create one — guests vote from their phones either way.</div>
         </div>
-        <button type="button" class="btn btn-accent polls-create-btn" id="polls-create-btn">+ Create poll</button>
+        <button type="button" class="btn btn-accent polls-create-btn" id="polls-create-btn">+ New</button>
       </div>
       <div class="polls-locked" id="polls-locked" style="display:none;">
-        Live polls are unlocked on the Sinag plan. <a href="/#pricing">Upgrade →</a>
+        Live polling &amp; questions are unlocked on the Sinag plan. <a href="/#pricing">Upgrade →</a>
       </div>
       <div class="polls-list" id="polls-list"></div>
     </div>
@@ -1441,14 +1475,32 @@
 <div class="poll-modal" id="poll-modal" role="dialog" aria-modal="true" aria-labelledby="poll-modal-title">
   <div class="poll-modal-card">
     <h3 id="poll-modal-title">Create poll</h3>
+
+    <div class="poll-field">
+      <span>Type</span>
+      <div class="poll-kind-toggle" id="poll-kind-toggle" role="radiogroup">
+        <label class="kind-opt active">
+          <input type="radio" name="poll-kind" value="poll" checked />
+          <span class="kind-label">Poll</span>
+          <span class="kind-hint">Opinion · no correct answer</span>
+        </label>
+        <label class="kind-opt">
+          <input type="radio" name="poll-kind" value="question" />
+          <span class="kind-label">Question</span>
+          <span class="kind-hint">Trivia · pick one correct answer</span>
+        </label>
+      </div>
+    </div>
+
     <label class="poll-field">
-      <span>Question</span>
+      <span id="poll-q-label">Question</span>
       <input type="text" id="poll-question-input" maxlength="140" placeholder="e.g. Best dance of the night?" />
     </label>
     <div class="poll-field">
-      <span>Options (2–6)</span>
+      <span id="poll-opts-label">Options (2–6)</span>
       <div class="poll-options-list" id="poll-options-list"></div>
       <button type="button" class="poll-add-option" id="poll-add-option">+ Add option</button>
+      <div class="poll-correct-hint" id="poll-correct-hint" style="display:none; margin-top:6px; font-size:11px; color:var(--ink-soft);">Tap the ✓ next to the correct answer.</div>
     </div>
     <label class="poll-field poll-field-row">
       <span>Duration</span>
@@ -2494,7 +2546,7 @@
   function renderPolls(polls) {
     if (!pollsList) return;
     if (!polls.length) {
-      pollsList.innerHTML = '<div class="polls-empty">No polls yet. Tap "Create poll" to make your first one.</div>';
+      pollsList.innerHTML = '<div class="polls-empty">Nothing yet. Tap "+ New" to create a poll or trivia question.</div>';
       return;
     }
     pollsList.innerHTML = polls.map(p => {
@@ -2529,10 +2581,14 @@
         <button class="btn-del" data-act="delete" data-id="${p.id}">Delete</button>
       `;
 
+      const kindBadge = p.kind === 'question'
+        ? '<span class="poll-kind-badge">Question</span>'
+        : '<span class="poll-kind-badge poll-kind-poll">Poll</span>';
       return `
         <div class="poll-row">
           <div>
             <span class="poll-status ${p.status}">${p.status}${total ? ' · ' + total + ' vote' + (total === 1 ? '' : 's') : ''}</span>
+            ${kindBadge}
             <div class="poll-q">${escapeHtml(p.question)}</div>
             <div class="poll-opts">${escapeHtml(optsLabel)}</div>
           </div>
@@ -2584,24 +2640,50 @@
   };
 
   // ── Poll editor modal ───────────────────────────────
-  function newOptionInput(value = '') {
+  function newOptionInput(value = '', isCorrect = false) {
     const wrap = document.createElement('div');
     wrap.className = 'poll-option-input';
     wrap.innerHTML = `
+      <button type="button" class="opt-correct${isCorrect ? ' active' : ''}" aria-label="Mark as correct answer" title="Mark as correct answer"></button>
       <input type="text" maxlength="80" placeholder="Option label" value="${escapeAttr(value)}">
-      <button type="button" aria-label="Remove">✕</button>`;
-    wrap.querySelector('button').addEventListener('click', () => wrap.remove());
+      <button type="button" class="opt-remove" aria-label="Remove">✕</button>`;
+    // Tapping the ✓ marks this option correct (single-select within the list).
+    wrap.querySelector('.opt-correct').addEventListener('click', () => {
+      const wasActive = wrap.querySelector('.opt-correct').classList.contains('active');
+      pollOptsList.querySelectorAll('.opt-correct').forEach(b => b.classList.remove('active'));
+      if (!wasActive) wrap.querySelector('.opt-correct').classList.add('active');
+    });
+    wrap.querySelector('.opt-remove').addEventListener('click', () => wrap.remove());
     return wrap;
   }
 
+  // Track which kind (poll | question) the host is editing right now.
+  // Drives the modal title, the visibility of the ✓ buttons, and the
+  // body sent to the server.
+  let editingKind = 'poll';
+  function setKind(kind) {
+    editingKind = kind === 'question' ? 'question' : 'poll';
+    pollModal.dataset.kind = editingKind;
+    pollModal.querySelectorAll('#poll-kind-toggle .kind-opt').forEach(opt => {
+      opt.classList.toggle('active', opt.querySelector('input').value === editingKind);
+    });
+    const hint = document.getElementById('poll-correct-hint');
+    if (hint) hint.style.display = editingKind === 'question' ? '' : 'none';
+    pollModalTitle.textContent = (editingPollId ? 'Edit ' : 'Create ') + editingKind;
+  }
+  pollModal?.querySelectorAll('#poll-kind-toggle input').forEach(input => {
+    input.addEventListener('change', () => setKind(input.value));
+  });
+
   function openPollModal(existing) {
     editingPollId = existing?.id || null;
-    pollModalTitle.textContent = existing ? 'Edit poll' : 'Create poll';
     pollQInput.value = existing?.question || '';
     pollDurInput.value = String(existing?.duration_s || 30);
     pollOptsList.innerHTML = '';
     const opts = existing?.options || [{ label: '' }, { label: '' }];
-    opts.forEach(o => pollOptsList.appendChild(newOptionInput(o.label || '')));
+    const correctKey = existing?.correct_key || null;
+    opts.forEach(o => pollOptsList.appendChild(newOptionInput(o.label || '', !!correctKey && o.key === correctKey)));
+    setKind(existing?.kind || 'poll');
     pollModal.classList.add('open');
     setTimeout(() => pollQInput.focus(), 100);
   }
@@ -2614,7 +2696,7 @@
   pollsCreateBtn?.addEventListener('click', () => openPollModal(null));
   pollAddOptBtn?.addEventListener('click', () => {
     if (pollOptsList.children.length >= 6) {
-      showToast('Polls can have at most 6 options');
+      showToast('At most 6 options');
       return;
     }
     pollOptsList.appendChild(newOptionInput(''));
@@ -2625,10 +2707,25 @@
   pollSaveBtn?.addEventListener('click', async () => {
     const question = pollQInput.value.trim();
     if (!question) { showToast('Question is required'); return; }
-    const options = Array.from(pollOptsList.querySelectorAll('input'))
-      .map((inp, idx) => ({ key: 'o' + idx, label: inp.value.trim() }))
-      .filter(o => o.label);
+
+    // Build options + figure out which one is the correct answer (by index).
+    const rows = Array.from(pollOptsList.querySelectorAll('.poll-option-input'));
+    const options = [];
+    let correct_key = null;
+    rows.forEach((row, idx) => {
+      const label = row.querySelector('input').value.trim();
+      if (!label) return;
+      const key = 'o' + idx;
+      options.push({ key, label });
+      if (row.querySelector('.opt-correct')?.classList.contains('active')) {
+        correct_key = key;
+      }
+    });
     if (options.length < 2) { showToast('Add at least 2 options'); return; }
+    if (editingKind === 'question' && !correct_key) {
+      showToast('Pick the correct answer (tap the ✓)');
+      return;
+    }
 
     const duration_s = parseInt(pollDurInput.value, 10) || 30;
     const url = editingPollId
@@ -2641,7 +2738,7 @@
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json', ...authHeader() },
-        body: JSON.stringify({ question, options, duration_s }),
+        body: JSON.stringify({ question, options, duration_s, kind: editingKind, correct_key }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Save failed');
