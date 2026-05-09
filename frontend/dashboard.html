@@ -1218,6 +1218,21 @@
       <a class="lb-cta" id="lb-cta" href="/#pricing">Upgrade →</a>
     </div>
 
+    <!-- ── Live polls panel ───────────────────────────── -->
+    <div class="panel polls-panel" id="polls-panel" style="display:none; margin-bottom:18px;">
+      <div class="polls-head">
+        <div>
+          <div class="polls-h2">Live polls</div>
+          <div class="polls-sub">Run a quick question on the wall — guests vote from their phones, results appear in real time.</div>
+        </div>
+        <button type="button" class="btn btn-accent polls-create-btn" id="polls-create-btn">+ Create poll</button>
+      </div>
+      <div class="polls-locked" id="polls-locked" style="display:none;">
+        Live polls are unlocked on the Sinag plan. <a href="/#pricing">Upgrade →</a>
+      </div>
+      <div class="polls-list" id="polls-list"></div>
+    </div>
+
     <div class="panel">
       <div class="panel-head">
         <div class="stream-tabs-3d" id="stream-tabs-3d">
@@ -1285,53 +1300,7 @@
       <div class="photo-grid" id="photo-grid"></div>
     </div>
 
-    <!-- ════ LIVE POLLS PANEL (Sinag+) ═══════════════════ -->
-    <div class="panel polls-panel" id="polls-panel" style="display:none; margin-top: 20px;">
-      <div class="polls-head">
-        <div>
-          <h2 class="polls-h2">Live polls</h2>
-          <p class="polls-sub">Pre-write a question, then tap “Run on wall” when you’re ready. Guests see it on their phone; the wall pauses photos while votes come in.</p>
-        </div>
-        <button type="button" class="btn btn-accent polls-create-btn" id="polls-create-btn">+ Create poll</button>
-      </div>
-      <div class="polls-list" id="polls-list">
-        <div class="polls-empty">No polls yet. Tap “Create poll” to make your first one.</div>
-      </div>
-      <div class="polls-locked" id="polls-locked" style="display:none;">
-        Live polls are part of <b>Sinag</b> and higher. <a href="/#pricing">Upgrade →</a>
-      </div>
-    </div>
-
-    <!-- Poll editor modal -->
-    <div class="poll-modal" id="poll-modal" role="dialog" aria-modal="true" aria-label="Create or edit poll" style="display:none;">
-      <div class="poll-modal-card">
-        <h3 id="poll-modal-title">Create poll</h3>
-        <label class="poll-field">
-          <span>Question</span>
-          <input type="text" id="poll-question-input" maxlength="200" placeholder="e.g. Beach or mountain honeymoon?" />
-        </label>
-        <div class="poll-field">
-          <span>Options (2–6)</span>
-          <div class="poll-options-list" id="poll-options-list"></div>
-          <button type="button" class="poll-add-option" id="poll-add-option">+ Add option</button>
-        </div>
-        <label class="poll-field poll-field-row">
-          <span>Duration</span>
-          <select id="poll-duration-input">
-            <option value="15">15 seconds</option>
-            <option value="30" selected>30 seconds</option>
-            <option value="45">45 seconds</option>
-            <option value="60">60 seconds</option>
-            <option value="90">90 seconds</option>
-            <option value="120">2 minutes</option>
-          </select>
-        </label>
-        <div class="poll-modal-actions">
-          <button type="button" id="poll-modal-cancel">Cancel</button>
-          <button type="button" class="btn-primary" id="poll-modal-save">Save draft</button>
-        </div>
-      </div>
-    </div>
+    <!-- Poll editor modal — appended at body-level below for proper stacking -->
   </div>
 
   <!-- ── Sidebar (right) ────────────────────────────────── -->
@@ -1413,6 +1382,36 @@
       <button type="button" class="btn-hide"    id="preview-modal-hide">Hide</button>
       <button type="button" class="btn-delete"  id="preview-modal-delete">Delete</button>
       <button type="button" id="preview-modal-close">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Poll editor modal (body-level for stacking) ─────── -->
+<div class="poll-modal" id="poll-modal" role="dialog" aria-modal="true" aria-labelledby="poll-modal-title">
+  <div class="poll-modal-card">
+    <h3 id="poll-modal-title">Create poll</h3>
+    <label class="poll-field">
+      <span>Question</span>
+      <input type="text" id="poll-question-input" maxlength="140" placeholder="e.g. Best dance of the night?" />
+    </label>
+    <div class="poll-field">
+      <span>Options (2–6)</span>
+      <div class="poll-options-list" id="poll-options-list"></div>
+      <button type="button" class="poll-add-option" id="poll-add-option">+ Add option</button>
+    </div>
+    <label class="poll-field poll-field-row">
+      <span>Duration</span>
+      <select id="poll-duration-input">
+        <option value="15">15 seconds</option>
+        <option value="30" selected>30 seconds</option>
+        <option value="60">1 minute</option>
+        <option value="120">2 minutes</option>
+        <option value="300">5 minutes</option>
+      </select>
+    </label>
+    <div class="poll-modal-actions">
+      <button type="button" id="poll-modal-cancel">Cancel</button>
+      <button type="button" class="btn-primary" id="poll-modal-save">Save poll</button>
     </div>
   </div>
 </div>
@@ -3037,5 +3036,6 @@
   loadAll();
   setInterval(refreshUploads, 10000);
 </script>
+
 </body>
 </html>
