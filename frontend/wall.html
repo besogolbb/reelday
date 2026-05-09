@@ -1577,6 +1577,12 @@
   let activePollId    = null;
   let pollCountdownTimer = null;
   let pollSlideshowResumeAt = 0;
+  // Pending-timer handles so a fast re-run can cancel hide animations
+  // queued by the previous round — otherwise the queued hide fires after
+  // showPollOverlay and yanks the overlay right back off.
+  let pollHideTimer        = null;
+  let pollEndAnimTimer     = null;
+  let pollResultsHideTimer = null;
 
   function pausePollSlideshow() {
     if (!isRunning) return;
@@ -1661,6 +1667,14 @@
   }
 
   function showPollOverlay(poll) {
+    // Cancel any pending hide animations from the previous run — without
+    // this, a re-run within ~10s of the prior results would re-open the
+    // overlay only to have the queued hide-timer yank it back off.
+    if (pollHideTimer)        { clearTimeout(pollHideTimer);        pollHideTimer = null; }
+    if (pollEndAnimTimer)     { clearTimeout(pollEndAnimTimer);     pollEndAnimTimer = null; }
+    if (pollResultsHideTimer) { clearTimeout(pollResultsHideTimer); pollResultsHideTimer = null; }
+    pollSlideshowResumeAt = Number.MAX_SAFE_INTEGER;
+
     pollOverlay.classList.add('visible', 'live-state');
     pollOverlay.classList.remove('ending', 'results-state');
     pollOverlay.setAttribute('aria-hidden', 'false');
@@ -1708,7 +1722,9 @@
     }
 
     pollSlideshowResumeAt = Date.now() + 10000;
-    setTimeout(() => {
+    if (pollResultsHideTimer) clearTimeout(pollResultsHideTimer);
+    pollResultsHideTimer = setTimeout(() => {
+      pollResultsHideTimer = null;
       // Only hide if no NEW poll has started in the meantime.
       if (Date.now() >= pollSlideshowResumeAt - 50) hidePollOverlay();
     }, 10000);
@@ -1717,7 +1733,9 @@
   function hidePollOverlay() {
     if (!pollOverlay.classList.contains('visible')) return;
     pollOverlay.classList.add('ending');
-    setTimeout(() => {
+    if (pollEndAnimTimer) clearTimeout(pollEndAnimTimer);
+    pollEndAnimTimer = setTimeout(() => {
+      pollEndAnimTimer = null;
       pollOverlay.classList.remove('visible', 'ending');
       pollOverlay.setAttribute('aria-hidden', 'true');
       pollBars.innerHTML = '';
@@ -1755,8 +1773,9 @@
           pollOverlay.classList.remove('live-state');
           pollOverlay.classList.add('results-state');
           if (pollCountdownTimer) clearInterval(pollCountdownTimer);
-          // Hide after a short grace.
-          setTimeout(hidePollOverlay, 4000);
+          // Hide after a short grace — tracked so a re-run can cancel it.
+          if (pollHideTimer) clearTimeout(pollHideTimer);
+          pollHideTimer = setTimeout(() => { pollHideTimer = null; hidePollOverlay(); }, 4000);
         } else if (!activePollId) {
           // Already idle — nothing to do.
         }

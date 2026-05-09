@@ -236,20 +236,25 @@ export default async function pollRoutes(fastify) {
       [ctx.event.id, request.params.id],
     );
 
-    // Wipe previous votes when re-running an ended poll — guests get a
-    // clean slate and the wall starts the new run with a 0% tally.
-    // Cheap (poll_votes is small per poll) and avoids confusing carry-over.
+    // Wipe previous votes when re-running — guests get a clean slate and
+    // the wall starts the new run with a 0% tally. Cheap (poll_votes is
+    // small per poll) and avoids confusing carry-over from prior rounds.
     await fastify.db.query(
       'DELETE FROM poll_votes WHERE poll_id = $1',
       [request.params.id],
     );
 
+    // Idempotent: a fresh started_at + status='live' regardless of the
+    // current status. The previous WHERE filter on ('draft','ended') made
+    // /start silently 404 if a stale 'live' status sat in the row (e.g. a
+    // prior /start that didn't auto-end yet), which surfaced as the
+    // "Run again button does nothing" bug.
     const { rows } = await fastify.db.query(
       `UPDATE polls
           SET status = 'live',
               started_at = NOW(),
               ended_at = NULL
-        WHERE id = $1 AND event_id = $2 AND status IN ('draft', 'ended')
+        WHERE id = $1 AND event_id = $2
         RETURNING *`,
       [request.params.id, ctx.event.id],
     );
