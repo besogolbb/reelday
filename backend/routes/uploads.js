@@ -142,7 +142,7 @@ export default async function uploadRoutes(fastify) {
     //  - video message: manual review unless video_message_auto_approve is on
     let isApproved;
     if (!isVideo) {
-      isApproved = event.auto_approve !== false;
+      isApproved = event.auto_approve === true;
     } else if (isVideoMessage) {
       isApproved = event.video_message_auto_approve === true;
     } else {
@@ -219,9 +219,12 @@ export default async function uploadRoutes(fastify) {
       return reply.status(403).send({ error: true, message: 'Upgrade to Sinag for video messages' });
     }
 
+    // Strict: ALL three approval gates require an explicit true. A NULL
+    // column (older events that predate the toggle) is treated as OFF so
+    // host review is the safe default.
     let isApproved;
     if (!isVideo) {
-      isApproved = event.auto_approve !== false;
+      isApproved = event.auto_approve === true;
     } else if (isVidMsg) {
       isApproved = event.video_message_auto_approve === true;
     } else {

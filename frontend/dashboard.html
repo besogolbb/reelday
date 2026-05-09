@@ -1390,7 +1390,7 @@
     // Approve status (photo stream toggle)
     const pToggle = document.getElementById('photo-approve-toggle');
     if (pToggle) {
-      const on = event.auto_approve !== false;
+      const on = event.auto_approve === true;
       pToggle.setAttribute('aria-checked', String(on));
       pToggle.querySelector('.approve-toggle-text').textContent =
         on ? 'Auto-approve · ON' : 'Auto-approve · OFF';

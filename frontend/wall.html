@@ -508,7 +508,7 @@
   const FADE_DURATION    = 1600;  // ms for crossfade (matches CSS 1.6s)
   const KB_DURATION      = 14;    // seconds for Ken Burns
   const KB_ANIMS         = ['kb1', 'kb2', 'kb3', 'kb4'];
-  const POLL_INTERVAL    = 15000; // ms between refresh polls
+  const POLL_INTERVAL    = 4000;  // ms between refresh polls — short so host approvals show up on the wall within a slide
   const QR_HIDE_AFTER    = 20000; // ms before QR badge auto-hides
 
   const THEME_META = {
@@ -1115,30 +1115,32 @@
     const merged = mergeUploads(apiUploads);
     allUploads = merged;
 
-    // Include every approved upload — photos, picked videos, and recorded
-    // video messages. The slide engine knows how to play videos.
     const slideable = merged;
     const prevCount = items.length;
-    items = slideable;
     const newOnes   = slideable.filter(u => !knownIds.has(u.id));
 
-    if (newOnes.length > 0) {
+    if (newOnes.length > 0 && isRunning && prevCount > 0) {
+      // Slideshow is running — splice new approvals in right after the
+      // current slide so the host's approval shows up next, without
+      // cutting off the current slide. Older items keep their order.
       newOnes.forEach(u => knownIds.add(u.id));
-      if (isRunning) {
-        const name = newOnes[0].uploader_name || 'Panauhin';
-        showToast(`✨ ${name} just shared a moment!`);
-        spawnEmoji(3 + Math.floor(Math.random() * 2));
-        goTo(0);
-      }
+      const head   = items.slice(0, currentIdx + 1);
+      const tail   = items.slice(currentIdx + 1).filter(u => !newOnes.some(n => n.id === u.id));
+      items = [...head, ...newOnes, ...tail];
+      const name = newOnes[0].uploader_name || 'Panauhin';
+      showToast(`✨ ${name} just shared a moment!`);
+      spawnEmoji(3 + Math.floor(Math.random() * 2));
+    } else {
+      // Not running yet, or empty — replace the deck wholesale.
+      items = slideable;
+      slideable.forEach(u => knownIds.add(u.id));
     }
 
     if (!isRunning && slideable.length > 0) {
-      slideable.forEach(u => knownIds.add(u.id));
       emptyState.classList.remove('visible');
       startSlideshow();
       scheduleRandomEmoji();
     } else if (isRunning && prevCount === 0 && slideable.length > 0) {
-      slideable.forEach(u => knownIds.add(u.id));
       emptyState.classList.remove('visible');
       startSlideshow();
     }
@@ -1194,10 +1196,12 @@
 
   document.addEventListener('mousemove', resetQrTimer);
 
-  // Cross-tab sync: pick up new uploads from upload.html immediately
-  window.addEventListener('storage', e => {
-    if (e.key === `reelday_uploads_${slug}`) refreshUploads();
-  });
+  // Note: we intentionally do NOT listen for `storage` events from
+  // upload.html. localStorage entries are written before the host has had
+  // a chance to approve, so trusting them would briefly flash unapproved
+  // content on the wall (same-browser scenario). The wall is now
+  // server-driven only — the next refreshUploads() poll picks up new
+  // approvals.
 
   /* ══════════════════════════════════════════════════════════
      FULLSCREEN
