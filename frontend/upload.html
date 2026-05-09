@@ -145,7 +145,7 @@ body { background: var(--paper); min-height: 100dvh; }
 .upload-hero .welcome { margin-top: 16px; font-family: var(--display); font-style: italic; font-size: 15px; color: var(--ink-soft); max-width: 32ch; margin-left: auto; margin-right: auto; line-height: 1.5; }
 
 /* ── Share mode tabs ─────────────────────────────────── */
-.share-tabs { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 16px; }
+.share-tabs { display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; margin-bottom: 16px; }
 
 /* Closed-state card — replaces the upload UI when the event's window ends */
 .closed-card {
@@ -174,10 +174,10 @@ body { background: var(--paper); min-height: 100dvh; }
 .closed-link:hover { background: var(--ink, #2a1a14); }
 .share-tab {
   background: #fff; border: 1.5px solid var(--line);
-  border-radius: var(--r); padding: 14px 8px 12px;
+  border-radius: var(--r); padding: 12px 4px 10px;
   text-align: center; cursor: pointer;
   transition: border-color .2s, background .2s;
-  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
 }
 .share-tab:hover { border-color: var(--accent); background: var(--paper-2); }
 .share-tab.active { border-color: var(--accent); background: var(--paper-2); }
@@ -404,6 +404,26 @@ body { background: var(--paper); min-height: 100dvh; }
   text-transform: uppercase; color: var(--ink-faint);
   text-align: center;
 }
+.poll-option.selected { border-color: var(--accent); background: rgba(196,90,58,.10); }
+.poll-submit-btn {
+  width: 100%; margin-top: 14px; padding: 13px;
+  background: var(--accent); color: #fff; border: none; border-radius: 12px;
+  font-family: var(--mono); font-size: 12px; font-weight: 700; letter-spacing: .14em;
+  text-transform: uppercase; cursor: pointer; transition: background .15s, opacity .15s;
+}
+.poll-submit-btn:hover:not(:disabled) { background: var(--accent-deep); }
+.poll-submit-btn:disabled { opacity: .45; cursor: not-allowed; }
+.poll-fastest {
+  margin-top: 12px; padding: 10px 12px; border-radius: 10px;
+  background: rgba(45,122,74,.08); border: 1px dashed rgba(45,122,74,.3);
+  font-size: 13px; color: var(--ink); text-align: center; line-height: 1.4;
+}
+.poll-fastest b { color: #1f5e3b; font-weight: 600; }
+.poll-empty {
+  margin-top: 18px; padding: 24px 16px; border-radius: var(--r-lg);
+  background: var(--paper-2); border: 1px dashed var(--line-2);
+  text-align: center; font-size: 14px; color: var(--ink-soft);
+}
 
 /* ── Toast (friendly, non-blocking notices like rate-limit hints) ── */
 .toast { position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 12px); z-index: 1000; max-width: min(90vw, 420px); padding: 12px 18px; border-radius: 999px; background: rgba(20,20,20,.92); color: #fff; font-size: 14px; line-height: 1.35; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,.25); opacity: 0; pointer-events: none; transition: opacity .2s ease, transform .2s ease; }
@@ -600,6 +620,12 @@ body { background: var(--paper); min-height: 100dvh; }
       </div>
       <div class="tab-label">Wall<br/>React</div>
     </div>
+    <div class="share-tab" onclick="switchTab('poll',this)">
+      <div class="tab-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="4" height="9" rx="1"/><rect x="10" y="6" width="4" height="14" rx="1"/><rect x="17" y="14" width="4" height="6" rx="1"/></svg>
+      </div>
+      <div class="tab-label">Live<br/>Poll</div>
+    </div>
   </div>
 
   <!-- ════ PANEL 1: Gallery ═════════════════════════════ -->
@@ -716,9 +742,23 @@ body { background: var(--paper); min-height: 100dvh; }
         <b>Reactions are a Sinag-tier feature</b>
         Ask the host to upgrade and you'll be able to send wall reactions live.
       </div>
+    </div>
+  </div>
 
-      <!-- Future home of the live-poll card; kept hidden until polls ship. -->
+  <!-- ════ PANEL 4: Live Poll ═══════════════════════════ -->
+  <div class="share-panel" id="panel-poll">
+    <div class="react-panel">
+      <h2>Live poll</h2>
+      <div class="react-sub">Answer the host's question. Tap an option, then submit before the timer runs out.</div>
+
+      <div class="name-field" id="nameFieldPoll">
+        <label>Your name <span style="color:var(--accent)">*</span></label>
+        <input type="text" id="pollName" placeholder="e.g. Tita Marivic, JM's cousin"
+          oninput="onNameInput(this)" />
+      </div>
+
       <div class="poll-slot" id="pollSlot" style="display:none;"></div>
+      <div class="poll-empty" id="pollEmpty">Waiting for the host to start a poll…</div>
     </div>
   </div>
 
@@ -906,7 +946,7 @@ body { background: var(--paper); min-height: 100dvh; }
   const GUEST_NAME_KEY = 'reelday_guest_name';
   function broadcastGuestName(value) {
     const v = (value || '').trim();
-    ['galleryName', 'recordName', 'reactName'].forEach(id => {
+    ['galleryName', 'recordName', 'reactName', 'pollName'].forEach(id => {
       const el = document.getElementById(id);
       if (el && el.value !== v) el.value = v;
     });
@@ -1054,10 +1094,11 @@ body { background: var(--paper); min-height: 100dvh; }
   const POLL_TICK_MS = 2000;
   let pollState = {
     activeId:    null,           // currently-displayed poll id (or null)
-    votedKey:    null,           // which option THIS guest picked (sticky local memory)
+    selectedKey: null,           // option tapped but not yet submitted
+    votedKey:    null,           // option this guest has already submitted
     timerId:     null,           // setInterval handle for the countdown
     deadline:    0,              // unix ms when seconds_left hits 0
-    lastPollId:  null,           // dedup so a stale poll re-render doesn't reset votedKey
+    lastPollId:  null,           // dedup so a stale poll re-render doesn't reset state
   };
 
   function bindPollLifecycle() {
@@ -1078,37 +1119,46 @@ body { background: var(--paper); min-height: 100dvh; }
   }
 
   function renderPollSlot(poll) {
-    const slot = document.getElementById('pollSlot');
+    const slot  = document.getElementById('pollSlot');
+    const empty = document.getElementById('pollEmpty');
     if (!slot) return;
 
     if (!poll) {
-      // No live poll — clear the slot and reset state.
+      // No live poll — clear the slot, reset state, show empty placeholder.
       slot.style.display = 'none';
       slot.innerHTML = '';
+      if (empty) empty.style.display = '';
       if (pollState.timerId) clearInterval(pollState.timerId);
-      pollState = { activeId: null, votedKey: null, timerId: null, deadline: 0, lastPollId: null };
+      pollState = { activeId: null, selectedKey: null, votedKey: null, timerId: null, deadline: 0, lastPollId: null };
       return;
     }
 
-    // First time we see this poll? Reset the local "voted" memory.
+    if (empty) empty.style.display = 'none';
+
+    // First time we see this poll? Reset the local "voted/selected" memory.
     if (poll.id !== pollState.lastPollId) {
-      pollState.votedKey   = null;
-      pollState.lastPollId = poll.id;
+      pollState.selectedKey = null;
+      pollState.votedKey    = null;
+      pollState.lastPollId  = poll.id;
     }
     pollState.activeId = poll.id;
 
     const tally = new Map((poll.tally || []).map(t => [t.key, t.count]));
     const total = poll.total_votes || 0;
-    const showResults = pollState.votedKey !== null || total > 0;
+    const showResults = pollState.votedKey !== null;
 
     const optsHtml = (poll.options || []).map(opt => {
-      const count = tally.get(opt.key) || 0;
-      const pct   = total ? Math.round((count / total) * 100) : 0;
-      const voted = pollState.votedKey === opt.key;
+      const count    = tally.get(opt.key) || 0;
+      const pct      = total ? Math.round((count / total) * 100) : 0;
+      const voted    = pollState.votedKey    === opt.key;
+      const selected = pollState.selectedKey === opt.key;
+      const cls = ['poll-option'];
+      if (voted)    cls.push('voted');
+      if (selected && !showResults) cls.push('selected');
       return `
-        <button type="button" class="poll-option ${voted ? 'voted' : ''}"
+        <button type="button" class="${cls.join(' ')}"
                 data-key="${escapeAttr(opt.key)}"
-                ${pollState.votedKey ? 'aria-pressed="' + (voted ? 'true' : 'false') + '"' : ''}>
+                ${showResults ? 'disabled' : ''}>
           <span class="bar" style="width:${pct}%"></span>
           <span class="label">
             <span>${escapeHtml(opt.label)}</span>
@@ -1120,6 +1170,21 @@ body { background: var(--paper); min-height: 100dvh; }
     const secondsLeft = Math.max(0, Number(poll.seconds_left) || 0);
     pollState.deadline = Date.now() + secondsLeft * 1000;
 
+    let fastestHtml = '';
+    if (showResults && poll.fastest_voter && poll.fastest_voter.guest_name) {
+      const fv = poll.fastest_voter;
+      const secs = Number(fv.response_seconds);
+      const secsLabel = Number.isFinite(secs) ? `${secs.toFixed(1)}s` : '';
+      fastestHtml = `<div class="poll-fastest">⚡ Fastest: <b>${escapeHtml(fv.guest_name)}</b>${secsLabel ? ' · ' + secsLabel : ''}</div>`;
+    }
+
+    const submitHtml = showResults
+      ? `<div class="poll-footer">${total} vote${total === 1 ? '' : 's'} · thanks for voting!</div>`
+      : `<button type="button" class="poll-submit-btn" id="pollSubmitBtn" ${pollState.selectedKey ? '' : 'disabled'}>
+           Submit vote
+         </button>
+         <div class="poll-footer">Pick an option, then tap submit</div>`;
+
     slot.innerHTML = `
       <div class="poll-card ${showResults ? 'results' : ''}" id="pollCard">
         <div class="poll-meta">
@@ -1128,20 +1193,27 @@ body { background: var(--paper); min-height: 100dvh; }
         </div>
         <h3>${escapeHtml(poll.question)}</h3>
         <div class="poll-options">${optsHtml}</div>
-        <div class="poll-footer">
-          ${showResults ? `${total} vote${total === 1 ? '' : 's'} · tap to change` : 'Tap to vote'}
-        </div>
+        ${submitHtml}
+        ${fastestHtml}
       </div>`;
     slot.style.display = '';
 
-    // Wire option taps. We attach per-render rather than via delegation
-    // because the slot HTML is replaced wholesale on each poll tick.
+    // Tap an option to select it (does NOT submit). Re-render only the
+    // option buttons + submit-disabled state to keep the rest stable.
     slot.querySelectorAll('.poll-option').forEach(btn => {
-      btn.addEventListener('click', () => sendPollVote(poll.id, btn.dataset.key));
+      btn.addEventListener('click', () => {
+        if (showResults) return;
+        pollState.selectedKey = btn.dataset.key;
+        slot.querySelectorAll('.poll-option').forEach(b => b.classList.toggle('selected', b.dataset.key === pollState.selectedKey));
+        const sb = document.getElementById('pollSubmitBtn');
+        if (sb) sb.disabled = false;
+      });
     });
 
-    // Countdown ticker — purely cosmetic; the server is the source of
-    // truth for poll status. A drift of <1s is fine.
+    const submitBtn = document.getElementById('pollSubmitBtn');
+    if (submitBtn) submitBtn.addEventListener('click', () => submitPollVote(poll.id));
+
+    // Countdown ticker — purely cosmetic; server is the source of truth.
     if (pollState.timerId) clearInterval(pollState.timerId);
     pollState.timerId = setInterval(() => {
       const left = Math.max(0, Math.round((pollState.deadline - Date.now()) / 1000));
@@ -1151,41 +1223,51 @@ body { background: var(--paper); min-height: 100dvh; }
     }, 1000);
   }
 
-  async function sendPollVote(pollId, optionKey) {
-    if (!currentEvent?.slug || !pollId || !optionKey) return;
-    // Optimistic local mark so the UI flips to results immediately.
-    const wasVoted = pollState.votedKey;
-    pollState.votedKey = optionKey;
+  async function submitPollVote(pollId) {
+    if (!currentEvent?.slug || !pollId) return;
+    const optionKey = pollState.selectedKey;
+    if (!optionKey) { showToast('Pick an option first'); return; }
+
+    const name = (document.getElementById('pollName')?.value
+               || document.getElementById('reactName')?.value
+               || document.getElementById('galleryName')?.value
+               || '').trim();
+    if (!name) {
+      document.getElementById('nameFieldPoll')?.classList.add('error');
+      document.getElementById('pollName')?.focus();
+      showToast('Please type your name first');
+      return;
+    }
+
+    const submitBtn = document.getElementById('pollSubmitBtn');
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Submitting…'; }
 
     try {
-      const name = (document.getElementById('reactName')?.value
-                 || document.getElementById('galleryName')?.value
-                 || '').trim();
       const res = await fetch(`/api/events/${currentEvent.slug}/polls/${pollId}/vote`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-Guest-Id':   GUEST_ID,
         },
-        body: JSON.stringify({ option_key: optionKey, guest_name: name || null }),
+        body: JSON.stringify({ option_key: optionKey, guest_name: name }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         if (res.status === 429 || err.code === 'rate_limited') {
           showToast(RATE_LIMIT_MSG);
         } else if (err.code === 'poll_not_live') {
-          // Host stopped it between the user picking and us POSTing.
-          // Force a refresh so the slot updates correctly.
+          showToast('Poll just ended');
           fetchActivePoll();
+        } else {
+          showToast(err.message || 'Could not submit vote');
         }
-        // Roll back the optimistic flip on any error.
-        pollState.votedKey = wasVoted;
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Submit vote'; }
         return;
       }
-      // Success — pull a fresh tally on the next tick.
+      pollState.votedKey = optionKey;
       fetchActivePoll();
     } catch {
-      pollState.votedKey = wasVoted;
+      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Submit vote'; }
     }
   }
 

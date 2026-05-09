@@ -271,7 +271,8 @@ export default async function pollRoutes(fastify) {
               p.started_at, p.ended_at,
               EXTRACT(EPOCH FROM (p.started_at + (p.duration_s || ' seconds')::INTERVAL - NOW()))::int AS seconds_left,
               COALESCE(v.tally, '[]'::jsonb) AS tally,
-              COALESCE(v.total, 0)           AS total_votes
+              COALESCE(v.total, 0)           AS total_votes,
+              f.fastest_voter
          FROM polls p
          LEFT JOIN LATERAL (
            SELECT jsonb_agg(jsonb_build_object('key', option_key, 'count', cnt) ORDER BY option_key) AS tally,
@@ -283,6 +284,20 @@ export default async function pollRoutes(fastify) {
                 GROUP BY option_key
              ) sub
          ) v ON true
+         LEFT JOIN LATERAL (
+           SELECT jsonb_build_object(
+                    'guest_name', pv.guest_name,
+                    'option_key', pv.option_key,
+                    'response_seconds',
+                      ROUND(EXTRACT(EPOCH FROM (pv.created_at - p.started_at))::numeric, 1)
+                  ) AS fastest_voter
+             FROM poll_votes pv
+            WHERE pv.poll_id = p.id
+              AND pv.guest_name IS NOT NULL
+              AND pv.guest_name <> ''
+            ORDER BY pv.created_at ASC
+            LIMIT 1
+         ) f ON true
         WHERE p.event_id = $1 AND p.status = 'live'
         ORDER BY p.started_at DESC
         LIMIT 1`,
