@@ -270,6 +270,10 @@ body { background: var(--paper); min-height: 100dvh; }
 .upload-card .uo-bar span { display: block; height: 100%; background: var(--accent); border-radius: 3px; width: 0%; transition: width .2s ease; }
 .upload-card .uo-pct { margin-top: 10px; font-size: 13px; color: var(--ink); font-variant-numeric: tabular-nums; }
 
+/* ── Toast (friendly, non-blocking notices like rate-limit hints) ── */
+.toast { position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 12px); z-index: 1000; max-width: min(90vw, 420px); padding: 12px 18px; border-radius: 999px; background: rgba(20,20,20,.92); color: #fff; font-size: 14px; line-height: 1.35; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,.25); opacity: 0; pointer-events: none; transition: opacity .2s ease, transform .2s ease; }
+.toast.visible { opacity: 1; transform: translate(-50%, 0); }
+
 /* ── Queue ───────────────────────────────────────────── */
 .queue { margin-top: 14px; display: grid; gap: 8px; }
 .queue-item { display: grid; grid-template-columns: 48px 1fr auto auto; gap: 10px; align-items: center; background: #fff; border: 1px solid var(--line); border-radius: var(--r); padding: 8px 10px 8px 8px; }
@@ -391,6 +395,9 @@ body { background: var(--paper); min-height: 100dvh; }
     <button class="ty-btn" onclick="uploadMore()">Upload more →</button>
   </div>
 </div>
+
+<!-- Friendly inline toast (non-blocking notices, e.g. rate-limit hints) -->
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <!-- Aggregate upload progress overlay (shown while files are uploading) -->
 <div class="upload-overlay" id="uploadOverlay" aria-live="polite" aria-hidden="true">
@@ -671,6 +678,20 @@ body { background: var(--paper); min-height: 100dvh; }
     document.querySelectorAll('#langSwitch button').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
   }
+
+  // Friendly inline toast — used for non-fatal notices like rate-limit
+  // hints. Stays up for ~3.5s; new calls reset the timer and the text.
+  let toastTimer = null;
+  function showToast(text, ms = 3500) {
+    const el = document.getElementById('toast');
+    if (!el) return;
+    el.textContent = text;
+    el.classList.add('visible');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('visible'), ms);
+  }
+  // The friendly Tagalog notice for HTTP 429 from our API.
+  const RATE_LIMIT_MSG = 'Easy lang po! Masyado mabilis ang upload niyo. Wait ng konti.';
 
   /* ── Gallery ───────────────────────────────────────── */
   const itemDataUrls = {};
@@ -1075,8 +1096,14 @@ body { background: var(--paper); min-height: 100dvh; }
           const errData = await preRes.json().catch(() => ({}));
           console.error('Presigned API error:', errData);
           const s = document.getElementById('s' + queueId);
-          if (s) s.textContent = 'Failed: ' + (errData.message || 'Error');
-          if (i === 0) alert(errData.message || 'Failed to initialize upload. Please check your login status.');
+          const isRateLimited = preRes.status === 429 || errData.code === 'rate_limited';
+          if (isRateLimited) {
+            if (s) s.textContent = 'Slow down…';
+            if (i === 0) showToast(RATE_LIMIT_MSG);
+          } else {
+            if (s) s.textContent = 'Failed: ' + (errData.message || 'Error');
+            if (i === 0) alert(errData.message || 'Failed to initialize upload. Please check your login status.');
+          }
           throw new Error(errData.message || 'presigned failed');
         }
 
@@ -1117,6 +1144,13 @@ body { background: var(--paper); min-height: 100dvh; }
           },
           body: JSON.stringify({ slug: currentEvent.slug, fileKey, uploader_name: name, message: msgToSend, file_type: isVideo ? 'video' : 'photo', is_video_message: isVidMsg })
         });
+        if (!compRes.ok) {
+          const errData = await compRes.json().catch(() => ({}));
+          if (compRes.status === 429 || errData.code === 'rate_limited') {
+            if (i === 0) showToast(RATE_LIMIT_MSG);
+          }
+          throw new Error(errData.message || 'complete failed');
+        }
         const { upload } = await compRes.json();
 
         const stored = JSON.parse(localStorage.getItem(localKey) || '[]');

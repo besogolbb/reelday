@@ -6,6 +6,7 @@ import cors from '@fastify/cors';
 import multipart from '@fastify/multipart';
 import formbody from '@fastify/formbody';
 import staticFiles from '@fastify/static';
+import rateLimit from '@fastify/rate-limit';
 
 import dbPlugin from './plugins/database.js';
 import storagePlugin from './plugins/storage.js';
@@ -25,6 +26,33 @@ loadEnv({ path: join(__dirname, '.env') });
 const fastify = Fastify({
   logger: {
     level: process.env.NODE_ENV === 'development' ? 'info' : 'warn',
+  },
+});
+
+// Friendly rate-limit response shown to guests when they exceed a bucket.
+// The frontend checks for code === 'rate_limited' and surfaces a toast.
+const FRIENDLY_RATE_LIMIT = {
+  error: true,
+  code: 'rate_limited',
+  message: 'Easy lang po! Masyado mabilis ang upload niyo. Wait ng konti.',
+};
+
+// Global rate-limit. Routes that need a tighter bucket (uploads) re-register
+// the plugin per-route with their own max/timeWindow.
+await fastify.register(rateLimit, {
+  global: true,
+  max: 120,                   // ~2 req/sec sustained per IP
+  timeWindow: '1 minute',
+  ban: 0,
+  // Logged-in hosts shouldn't get throttled by guest-facing limits while
+  // they're triaging uploads in the dashboard.
+  allowList: req => Boolean(req.headers.authorization),
+  errorResponseBuilder: () => FRIENDLY_RATE_LIMIT,
+  addHeaders: {
+    'x-ratelimit-limit':     true,
+    'x-ratelimit-remaining': true,
+    'x-ratelimit-reset':     true,
+    'retry-after':           true,
   },
 });
 

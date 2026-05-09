@@ -87,8 +87,17 @@ export default async function uploadRoutes(fastify) {
     return { event, plan };
   }
 
+  // Per-IP cap for upload-write endpoints. Tighter than the global default
+  // because each request triggers an R2 PUT signing or a DB write.
+  const UPLOAD_WRITE_LIMIT = {
+    rateLimit: {
+      max: 20,
+      timeWindow: '1 minute',
+    },
+  };
+
   // POST /api/uploads/:slug — legacy multipart upload (kept for compatibility)
-  fastify.post('/uploads/:slug', async (request, reply) => {
+  fastify.post('/uploads/:slug', { config: UPLOAD_WRITE_LIMIT }, async (request, reply) => {
     const { slug } = request.params;
     let event, plan;
     try {
@@ -172,7 +181,7 @@ export default async function uploadRoutes(fastify) {
   });
 
   // POST /api/uploads/presigned — generate a PUT URL for direct R2 upload
-  fastify.post('/uploads/presigned', async (request, reply) => {
+  fastify.post('/uploads/presigned', { config: UPLOAD_WRITE_LIMIT }, async (request, reply) => {
     const { slug, filename, contentType } = request.body;
 
     // Optionally authenticate the user if a token is present
@@ -197,7 +206,7 @@ export default async function uploadRoutes(fastify) {
   });
 
   // POST /api/uploads/complete — confirm R2 upload and save to DB
-  fastify.post('/uploads/complete', async (request, reply) => {
+  fastify.post('/uploads/complete', { config: UPLOAD_WRITE_LIMIT }, async (request, reply) => {
     const { slug, fileKey, uploader_name, message, file_type, is_video_message } = request.body;
 
     // Optionally authenticate the user if a token is present
