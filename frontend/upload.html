@@ -508,7 +508,7 @@ body { background: var(--paper); min-height: 100dvh; }
       <input type="file" id="fileInput" multiple accept="image/*,video/*" onchange="handleFiles(event)" />
       <div class="icon">+</div>
       <h3>Tap to share</h3>
-      <p>Photos · videos up to 30s &amp; 50&nbsp;MB · 4K auto-optimized</p>
+      <p>Photos · videos up to 30s &amp; 100&nbsp;MB · 4K auto-optimized</p>
       <div class="choose-btn">Choose from gallery</div>
     </div>
     <div class="queue" id="galleryQueue"></div>
@@ -827,12 +827,13 @@ body { background: var(--paper); min-height: 100dvh; }
     });
   }
 
-  // Can we transcode an over-resolution clip in-browser? Needs canvas
-  // capture + MediaRecorder. Modern Chrome/Edge/Firefox/Safari all OK.
-  function canTranscodeVideo() {
-    return typeof MediaRecorder !== 'undefined' &&
-           typeof HTMLCanvasElement.prototype.captureStream === 'function';
-  }
+  // (Browser-side video transcoding was removed — the server runs ffmpeg
+  // on any uploaded video and produces a 720p H.264 MP4 + poster JPG
+  // within 5–15s. Doing the same work in the guest's browser was both
+  // redundant and slower — guests waited ~30s of real-time playback for
+  // the canvas+MediaRecorder pipeline to finish before they could even
+  // tap Send. Originals now go straight to R2; the wall picks up the
+  // server-transcoded version on its next poll.)
 
   // Pick the MediaRecorder mime that produces the most wall-friendly file:
   //   MP4 (H.264/AAC) when the browser can natively mux it (Safari).
@@ -861,200 +862,30 @@ body { background: var(--paper); min-height: 100dvh; }
     return '.webm';
   }
 
-  // Re-encode a high-resolution video down to 1280px on the longest edge,
-  // 30fps, 2.5Mbps — same envelope as our in-app recorder. Runs in real
-  // time (a 30s clip takes ~30s) because MediaRecorder needs the source
-  // to play through. The aggregate upload overlay covers the wait.
-  async function transcodeVideoToHd(file, onProgress) {
-    const url = URL.createObjectURL(file);
-    const src = document.createElement('video');
-    src.src = url;
-    src.muted = false;
-    src.playsInline = true;
-    await new Promise((resolve, reject) => {
-      src.onloadedmetadata = resolve;
-      src.onerror = () => reject(new Error('Could not read source video'));
-    });
-    const srcW = src.videoWidth, srcH = src.videoHeight;
-    const targetMax = 1280;
-    const r = Math.min(targetMax / Math.max(srcW, srcH), 1);
-    const w = Math.max(2, Math.round(srcW * r) & ~1);  // even numbers
-    const h = Math.max(2, Math.round(srcH * r) & ~1);
-
-    const canvas = document.createElement('canvas');
-    canvas.width = w; canvas.height = h;
-    const ctx = canvas.getContext('2d');
-
-    // 24fps instead of 30fps — fewer frames means less decode work on
-    // the wall TV/Chromecast. Visually indistinguishable for this use.
-    const canvasStream = canvas.captureStream(24);
-    let audioTrack = null;
-    try {
-      const cap = src.captureStream ? src.captureStream() : src.mozCaptureStream?.();
-      audioTrack = cap?.getAudioTracks?.()[0] || null;
-    } catch { /* no audio is OK */ }
-    const tracks = canvasStream.getVideoTracks();
-    if (audioTrack) tracks.push(audioTrack);
-    const combined = new MediaStream(tracks);
-
-    // Codec preference order (first one supported wins):
-    //   MP4 (H.264/AAC)  — Safari only; plays universally on the wall
-    //   WebM VP8         — broadly supported, decodes ~2x faster than VP9
-    //   WebM VP9         — last resort, smaller file but heavier decode
-    // VP9 was the previous default and was the actual cause of wall lag
-    // on weaker playback devices (older smart TVs, Chromecasts).
-    const mime = pickRecorderMime();
-    const opts = { videoBitsPerSecond: 2_000_000, audioBitsPerSecond: 96_000 };
-    if (mime) opts.mimeType = mime;
-    const rec = new MediaRecorder(combined, opts);
-
-    const chunks = [];
-    rec.ondataavailable = ev => { if (ev.data.size > 0) chunks.push(ev.data); };
-
-    let drawing = true;
-    let stopped = false;
-    function drawFrame() {
-      if (!drawing) return;
-      ctx.drawImage(src, 0, 0, w, h);
-      if (onProgress && Number.isFinite(src.duration) && src.duration > 0) {
-        onProgress(Math.min(1, src.currentTime / src.duration));
-      }
-      requestAnimationFrame(drawFrame);
-    }
-
-    return new Promise((resolve, reject) => {
-      const finish = () => {
-        if (stopped) return;
-        stopped = true;
-        // Give the recorder a beat to flush its last chunk before stop().
-        setTimeout(() => { try { rec.stop(); } catch {} }, 250);
-      };
-
-      rec.onstop = () => {
-        drawing = false;
-        try { URL.revokeObjectURL(url); } catch {}
-        try { src.pause(); } catch {}
-        const blob = new Blob(chunks, { type: rec.mimeType });
-        const ext  = extForMime(rec.mimeType);
-        const newName = file.name.replace(/\.[^.]+$/, '') + ext;
-        resolve(new File([blob], newName, { type: blob.type, lastModified: Date.now() }));
-      };
-
-      // Belt-and-suspenders end detection. captureStream() can suppress
-      // the `ended` event on some browsers (Chrome did this for years),
-      // so we also watch timeupdate for the playhead reaching duration
-      // and fall back to a hard wall-clock timeout based on the clip
-      // length. Any one of these firing closes out the recorder.
-      src.onended = finish;
-      src.ontimeupdate = () => {
-        if (Number.isFinite(src.duration) && src.duration > 0 &&
-            src.currentTime >= src.duration - 0.08) {
-          finish();
-        }
-      };
-      const startedAt = Date.now();
-      const fallbackMs = Math.max(2000, Math.ceil((src.duration || MAX_RECORD_SECS) * 1000) + 3000);
-      const fallbackTimer = setTimeout(() => {
-        if (!stopped) {
-          console.warn('Transcode end-event missed; stopping by wall-clock timeout', { fallbackMs });
-          finish();
-        }
-      }, fallbackMs);
-
-      // Wrap the resolver so we always clear the fallback timer.
-      const origResolve = resolve;
-      resolve = (val) => { clearTimeout(fallbackTimer); origResolve(val); };
-      const origReject = reject;
-      reject = (err) => { clearTimeout(fallbackTimer); drawing = false; origReject(err); };
-
-      src.onerror  = () => reject(new Error('Source playback failed'));
-      rec.onerror  = ev => reject(ev.error || new Error('Recorder failed'));
-      try { rec.start(500); } catch (e) { return reject(e); }
-      src.play().then(drawFrame).catch(reject);
-    });
-  }
-
   async function handleFiles(e) {
     const incoming = Array.from(e.target.files);
     const queue = document.getElementById('galleryQueue');
 
-    // First pass: probe + classify each file so we can show one consolidated
-    // alert per rejection reason instead of bombarding the guest.
-    let rejectedLong = 0, rejectedBig = 0, rejected4kBlocked = 0;
-    const accepted = [];   // { file, needsTranscode }
+    // Probe + filter on duration and size only. Resolution is no longer
+    // checked — the server's ffmpeg pipeline downscales any 4K/2K input
+    // to a wall-friendly 720p MP4 in 5–15s. Originals upload as-is.
+    let rejectedLong = 0, rejectedBig = 0;
+    const files = [];
     for (const f of incoming) {
       if ((f.type || '').startsWith('video/')) {
+        if (f.size > MAX_VIDEO_BYTES) { rejectedBig++; continue; }
         const meta = await probeVideo(f);
         if (meta.duration > MAX_RECORD_SECS + 0.5) { rejectedLong++; continue; }
-
-        const longestEdge = Math.max(meta.width, meta.height);
-        const isOver1080  = longestEdge > 1920;  // 4K, 2K, anything taller than 1080p
-        if (isOver1080) {
-          if (canTranscodeVideo()) {
-            // Skip the size cap on over-resolution clips: the original is
-            // big precisely because of the resolution we're about to drop.
-            accepted.push({ file: f, needsTranscode: true });
-          } else {
-            rejected4kBlocked++;
-          }
-        } else {
-          if (f.size > MAX_VIDEO_BYTES) { rejectedBig++; continue; }
-          accepted.push({ file: f, needsTranscode: false });
-        }
-      } else {
-        accepted.push({ file: f, needsTranscode: false });
       }
+      files.push(f);
     }
     if (rejectedLong > 0) {
       alert(`Videos are limited to ${MAX_RECORD_SECS} seconds. ${rejectedLong} clip${rejectedLong > 1 ? 's were' : ' was'} skipped.`);
     }
     if (rejectedBig > 0) {
       const mb = Math.round(MAX_VIDEO_BYTES / (1024 * 1024));
-      alert(`Videos must be under ${mb} MB. ${rejectedBig} clip${rejectedBig > 1 ? 's were' : ' was'} skipped — try recording in the app.`);
+      alert(`Videos must be under ${mb} MB. ${rejectedBig} clip${rejectedBig > 1 ? 's were' : ' was'} skipped — try a shorter or lower-resolution clip.`);
     }
-    if (rejected4kBlocked > 0) {
-      alert(`This browser can't auto-shrink 4K clips. Please record using the app camera, or pick a 1080p video. ${rejected4kBlocked} skipped.`);
-    }
-
-    // Second pass: transcode oversize clips with a clear progress overlay.
-    const transcodeJobs = accepted.filter(a => a.needsTranscode);
-    if (transcodeJobs.length) {
-      const overlay = document.getElementById('uploadOverlay');
-      const uoTitle = document.getElementById('uoTitle');
-      const uoSub   = document.getElementById('uoSub');
-      const uoBar   = document.getElementById('uoBar');
-      const uoPct   = document.getElementById('uoPct');
-      if (overlay) {
-        overlay.classList.add('visible');
-        overlay.setAttribute('aria-hidden', 'false');
-      }
-      let done = 0;
-      for (const job of transcodeJobs) {
-        if (uoTitle) uoTitle.textContent = 'Optimizing your video…';
-        if (uoSub)   uoSub.textContent   = `Clip ${done + 1} of ${transcodeJobs.length} · ~${MAX_RECORD_SECS}s wait`;
-        if (uoBar)   uoBar.style.width   = '0%';
-        if (uoPct)   uoPct.textContent   = '0%';
-        try {
-          job.file = await transcodeVideoToHd(job.file, p => {
-            const pct = Math.round(p * 100);
-            if (uoBar) uoBar.style.width = pct + '%';
-            if (uoPct) uoPct.textContent = pct + '%';
-          });
-          done++;
-        } catch (err) {
-          console.error('Transcode failed:', err);
-          job.skip = true;
-        }
-      }
-      if (overlay) {
-        overlay.classList.remove('visible');
-        overlay.setAttribute('aria-hidden', 'true');
-      }
-      const skipped = transcodeJobs.filter(j => j.skip).length;
-      if (skipped) showToast('Hindi na-optimize ang ilang video. (Some videos could not be optimized.)');
-    }
-
-    const files = accepted.filter(a => !a.skip).map(a => a.file);
 
     files.forEach((f, i) => {
       const reader = new FileReader();
@@ -1230,10 +1061,11 @@ body { background: var(--paper); min-height: 100dvh; }
   // Hard cap on guest video messages — keeps R2 bills predictable and the
   // wall snappy. Surfaced in the UI copy so guests know the limit upfront.
   const MAX_RECORD_SECS = 30;
-  // Defensive size cap for gallery picks at <=1080p. Over-resolution
-  // clips (4K, 2K) bypass this check because they get re-encoded to
-  // 1280x720 / 2.5Mbps before upload (transcodeVideoToHd).
-  const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
+  // Defensive size cap for gallery picks. Bumped to 100MB to accept raw
+  // 4K iPhone clips (a 30s 4K HEVC clip is ~80MB). The server-side
+  // ffmpeg pipeline transcodes them to a ~6MB 720p MP4 once they land
+  // in R2, so the wall never has to play the original.
+  const MAX_VIDEO_BYTES = 100 * 1024 * 1024;
 
   function stopRecord() {
     recording = false;
