@@ -1,6 +1,6 @@
 import { extname } from 'path';
 import { randomUUID } from 'crypto';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { resolvePlan } from '../lib/plans.js';
 import { verifyToken } from '../plugins/auth.js';
@@ -39,32 +39,32 @@ export default async function uploadRoutes(fastify) {
     }
     const event = eventRows[0];
 
-    // If a user is logged in (and is the owner), bypass window and payment restrictions
+    // QR / event must belong to a registered account.
+    if (!event.user_id) {
+      throw { statusCode: 403, code: 'orphan_event', message: 'This event is not linked to an account.' };
+    }
+
     const isOwner = currentUser && currentUser.id === event.user_id;
 
     fastify.log.info({ slug, isOwner, userId: currentUser?.id, eventUserId: event.user_id }, 'Validating event upload');
 
+    // Owner must still exist (account not deleted). Pulls the live tier as well.
     let effectiveTier = event.plan;
-    if (event.user_id) {
-      try {
-        const { rows: ownerRows } = await fastify.db.query(
-          `SELECT subscription_tier FROM users WHERE id = $1`,
-          [event.user_id],
-        );
-        if (ownerRows.length && ownerRows[0].subscription_tier) {
-          effectiveTier = ownerRows[0].subscription_tier;
-        }
-      } catch (e) {
-        fastify.log.warn({ err: e.message }, 'subscription_tier lookup failed — schema may not be migrated');
-      }
+    const { rows: ownerRows } = await fastify.db.query(
+      `SELECT subscription_tier FROM users WHERE id = $1`,
+      [event.user_id],
+    );
+    if (!ownerRows.length) {
+      throw { statusCode: 403, code: 'owner_missing', message: 'Event owner account no longer exists.' };
+    }
+    if (ownerRows[0].subscription_tier) {
+      effectiveTier = ownerRows[0].subscription_tier;
     }
     const plan = resolvePlan(effectiveTier);
 
-    if (isOwner) { /* bypass */ } else if (!event.is_paid && plan.price > 0 && plan.id !== resolvePlan(event.plan).id) {
-      // Account-tier upgrade covers it
-    } else if (!event.is_paid && plan.price > 0) {
-      throw { statusCode: 403, message: 'Payment pending verification' };
-    }
+    // NOTE: uploads are intentionally OPEN regardless of event.is_paid —
+    // PH manual-payment flow can lag, and we don't want guests blocked at the QR.
+    // Viewing the gallery is still gated elsewhere when is_paid is false.
 
     if (!isOwner && event.gallery_expires_at && new Date(event.gallery_expires_at) < new Date()) {
       throw { statusCode: 403, code: 'gallery_locked', message: 'Gallery archived. Uploads closed.' };
