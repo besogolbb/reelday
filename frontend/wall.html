@@ -230,23 +230,27 @@
       height: 100%; background: rgba(240,163,122,.8); width: 0;
     }
 
-    /* ── Fullscreen toggle button (YouTube-style, bottom-right) ── */
-    .fs-btn {
+    /* ── Bottom-right control cluster (sound + fullscreen) ────── */
+    .controls-tray {
       position: fixed; bottom: 18px; right: 18px; z-index: 25;
+      display: flex; align-items: center; gap: 10px;
+      opacity: 0; transition: opacity .3s;
+    }
+    body:hover .controls-tray,
+    .controls-tray:focus-within,
+    .controls-tray.always-visible { opacity: 1; }
+
+    .fs-btn {
       width: 44px; height: 44px; border-radius: 50%;
       background: rgba(0,0,0,.55); color: #fff;
       border: 1px solid rgba(255,255,255,.18);
       display: flex; align-items: center; justify-content: center;
-      cursor: pointer; opacity: 0; transition: opacity .3s, background .2s, transform .2s;
+      cursor: pointer;
+      transition: background .2s, transform .2s;
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
     }
-
     .fs-btn:hover { background: rgba(0,0,0,.78); transform: scale(1.08); }
-
-    body:hover .fs-btn,
-    .fs-btn:focus-visible { opacity: 1; }
-
     .fs-btn svg { width: 20px; height: 20px; }
 
     /* ── Pause overlay ──────────────────────────────────────── */
@@ -261,25 +265,39 @@
 
     .pause-btn.visible { opacity: 1; pointer-events: auto; }
 
-    /* ── Unmute toggle (only shows while a video slide is on screen) ── */
+    /* ── Unmute toggle (only shows while a video slide is on screen) ──
+       Lives in the .controls-tray so it sits next to fullscreen. When
+       a video starts playing muted, the button pulses in the accent
+       colour to draw the eye. */
     .sound-btn {
-      position: fixed; top: 22px; right: 22px;
-      z-index: 16;
       display: none;
       align-items: center; gap: 8px;
-      font-family: var(--mono); font-size: 11px; letter-spacing: .22em;
+      font-family: var(--mono); font-size: 12px; font-weight: 700; letter-spacing: .18em;
       text-transform: uppercase;
       background: rgba(0,0,0,.55); color: #fff;
       border: 1px solid rgba(255,255,255,.18);
       border-radius: 999px;
-      padding: 10px 16px;
+      padding: 11px 18px;
       backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
       cursor: pointer;
-      transition: background .15s, transform .15s;
+      transition: background .15s, transform .15s, box-shadow .25s;
     }
     .sound-btn:hover { background: rgba(0,0,0,.75); transform: translateY(-1px); }
     .sound-btn.visible { display: inline-flex; }
-    .sound-btn .icon { font-size: 14px; }
+    .sound-btn .icon { font-size: 16px; }
+    /* Loud-button state: when a video is playing AND we're still muted,
+       pulse to make the unmute action obvious — guests miss the small
+       icon otherwise. Drops the moment the user taps it. */
+    .sound-btn.attention {
+      background: var(--accent, #c45a3a);
+      border-color: rgba(255,255,255,.35);
+      animation: soundPulse 1.6s ease-in-out infinite;
+    }
+    @keyframes soundPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(196,90,58,.6),  0 4px 12px rgba(0,0,0,.4); }
+      50%      { box-shadow: 0 0 0 10px rgba(196,90,58,0), 0 4px 16px rgba(0,0,0,.5); }
+    }
 
     /* ── Burst (now playing video message) banner ──────────── */
     .burst-banner {
@@ -466,11 +484,6 @@
 <div class="slide-progress"><div class="fill" id="progress-fill"></div></div>
 <div class="pause-btn" id="pause-btn" onclick="togglePause()">⏸ Paused — tap to resume</div>
 
-<button type="button" class="sound-btn" id="sound-btn" aria-label="Toggle sound">
-  <span class="icon" id="sound-icon">🔇</span>
-  <span class="label" id="sound-label">Tap for sound</span>
-</button>
-
 <div class="burst-banner" id="burst-banner">
   <span class="dot"></span>
   <span>Now playing</span>
@@ -478,12 +491,18 @@
   <span id="burst-counter">1 / 1</span>
 </div>
 
-<!-- ════ FULLSCREEN TOGGLE ════════════════════════════════ -->
-<button class="fs-btn" id="fs-btn" type="button" aria-label="Toggle fullscreen" title="Fullscreen (F)">
-  <svg id="fs-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>
-  </svg>
-</button>
+<!-- ════ BOTTOM-RIGHT CONTROLS (sound + fullscreen) ═══════ -->
+<div class="controls-tray" id="controls-tray">
+  <button type="button" class="sound-btn" id="sound-btn" aria-label="Toggle sound">
+    <span class="icon" id="sound-icon">🔇</span>
+    <span class="label" id="sound-label">Tap for sound</span>
+  </button>
+  <button class="fs-btn" id="fs-btn" type="button" aria-label="Toggle fullscreen" title="Fullscreen (F)">
+    <svg id="fs-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>
+    </svg>
+  </button>
+</div>
 
 <!-- ════ EXTRAS ═══════════════════════════════════════════ -->
 <div id="emoji-container"></div>
@@ -644,6 +663,8 @@
     soundIcon.textContent  = wallSoundOn ? '🔊' : '🔇';
     soundLabel.textContent = wallSoundOn ? 'Sound on' : 'Tap for sound';
     [vidA, vidB].forEach(v => { if (v) v.muted = !wallSoundOn; });
+    // Sound is on now → drop the attention pulse (no need to nag).
+    if (wallSoundOn) soundBtn?.classList.remove('attention');
   }
   applySoundState();
 
@@ -786,7 +807,10 @@
     items.__currentIsVideo = itemIsVideo;
 
     // Show the unmute toggle only when there's a video on screen.
+    // Pulse it (the .attention class) whenever the video is muted so
+    // guests notice the unmute action — small icon was easy to miss.
     soundBtn?.classList.toggle('visible', itemIsVideo);
+    soundBtn?.classList.toggle('attention', itemIsVideo && !wallSoundOn);
 
     // Crossfade layers
     inLayer.classList.remove('out');
@@ -1329,32 +1353,69 @@
 
   /* ══════════════════════════════════════════════════════════
      FULLSCREEN
+     iOS Safari does NOT support requestFullscreen() on arbitrary
+     elements — only on <video>. Detect and route accordingly:
+       * desktop / Android: standard requestFullscreen on <html>
+       * iOS Safari: webkitEnterFullscreen on the active <video>
+         (only works while a video slide is playing — guests get
+         fullscreen video for the message; photos can't go FS on iOS)
   ══════════════════════════════════════════════════════════ */
   const fsBtn  = document.getElementById('fs-btn');
   const fsIcon = document.getElementById('fs-icon');
   const ICON_ENTER = '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>';
   const ICON_EXIT  = '<path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/>';
 
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.platform) ||
+                (navigator.userAgent.includes('Mac') && 'ontouchend' in document);
+  const docFsSupported =
+    document.documentElement.requestFullscreen ||
+    document.documentElement.webkitRequestFullscreen;
+
+  function activeWallVideo() {
+    return activeLayer === 'A' ? vidA : vidB;
+  }
+
   function toggleFullscreen() {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
+    // Standard path: works on desktop Chrome/Firefox/Edge/Safari + Android.
+    if (!isIOS && docFsSupported) {
+      if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+        const req = document.documentElement.requestFullscreen ||
+                    document.documentElement.webkitRequestFullscreen;
+        try { req.call(document.documentElement); } catch {}
+      } else {
+        const exit = document.exitFullscreen || document.webkitExitFullscreen;
+        try { exit.call(document); } catch {}
+      }
+      return;
+    }
+    // iOS Safari: only the <video> element can go fullscreen.
+    const v = activeWallVideo();
+    if (v && typeof v.webkitEnterFullscreen === 'function' && items.__currentIsVideo) {
+      // Audio defaults to on inside iOS native player, so we can also flip
+      // the wall's mute state to match what the guest is about to see.
+      v.muted = false;
+      try { v.webkitEnterFullscreen(); }
+      catch { /* swallow — user can tap Tap-for-sound instead */ }
     } else {
-      document.exitFullscreen();
+      // No active video to fullscreen on iOS — let the guest know.
+      showToast?.('On iPhone, tap a video slide to go fullscreen.');
     }
   }
 
   if (fsBtn) fsBtn.addEventListener('click', toggleFullscreen);
 
   document.addEventListener('fullscreenchange', () => {
-    fsIcon.innerHTML = document.fullscreenElement ? ICON_EXIT : ICON_ENTER;
+    fsIcon.innerHTML = (document.fullscreenElement || document.webkitFullscreenElement) ? ICON_EXIT : ICON_ENTER;
+  });
+  document.addEventListener('webkitfullscreenchange', () => {
+    fsIcon.innerHTML = (document.fullscreenElement || document.webkitFullscreenElement) ? ICON_EXIT : ICON_ENTER;
   });
 
   document.body.addEventListener('click', e => {
     if (e.target.closest('.qr-badge') ||
         e.target.closest('.upcoming') ||
         e.target.closest('.pause-btn') ||
-        e.target.closest('.sound-btn') ||
-        e.target.closest('.fs-btn')) return;
+        e.target.closest('.controls-tray')) return;
     if (isRunning) goTo(currentIdx + 1);
   });
 
