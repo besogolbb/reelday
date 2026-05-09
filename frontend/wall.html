@@ -1733,30 +1733,29 @@
     pollFootStat.textContent = 'FINAL RESULTS';
     renderPollBars(poll, { leaderHighlight: true, animate: true });
 
+    // Fastest reveal is question-only by design: opinion polls don't
+    // have a "winner," so calling out the first voter would feel weird.
     const fastestEl = document.getElementById('poll-fastest');
     const fv = poll.fastest_voter;
     const isQuestion = poll.kind === 'question' && !!poll.correct_key;
     if (fastestEl) {
-      if (fv && fv.guest_name) {
+      if (!isQuestion) {
+        fastestEl.classList.remove('miss');
+        fastestEl.style.display = 'none';
+        fastestEl.innerHTML = '';
+      } else if (fv && fv.guest_name) {
         const secs = Number(fv.response_seconds);
         const secsLabel = Number.isFinite(secs)
           ? `<span class="secs">${secs.toFixed(1)}s</span>` : '';
-        // Trivia mode → celebrate fastest *correct* answer; opinion polls
-        // just call out who voted first.
-        const heading = isQuestion ? 'Fastest correct answer' : 'Fastest answer';
         fastestEl.classList.remove('miss');
-        fastestEl.innerHTML = `⚡ ${heading} · <b>${escapeWallHtml(fv.guest_name)}</b>${secsLabel}`;
+        fastestEl.innerHTML = `⚡ Fastest correct answer · <b>${escapeWallHtml(fv.guest_name)}</b>${secsLabel}`;
         fastestEl.style.display = '';
-      } else if (isQuestion) {
+      } else {
         // Trivia with no correct answers — call it out instead of going
         // silent so the room knows the question stumped everyone.
         fastestEl.classList.add('miss');
         fastestEl.innerHTML = `🤷 No one got it right`;
         fastestEl.style.display = '';
-      } else {
-        fastestEl.classList.remove('miss');
-        fastestEl.style.display = 'none';
-        fastestEl.innerHTML = '';
       }
     }
 

@@ -1307,13 +1307,13 @@
     <div class="panel polls-panel" id="polls-panel" style="display:none; margin-bottom:18px;">
       <div class="polls-head">
         <div>
-          <div class="polls-h2">Live polling &amp; questions</div>
+          <div class="polls-h2">Live Questions &amp; Poll</div>
           <div class="polls-sub">Polls collect opinions; questions reveal a correct answer on the wall. Pick the type when you create one — guests vote from their phones either way.</div>
         </div>
         <button type="button" class="btn btn-accent polls-create-btn" id="polls-create-btn">+ New</button>
       </div>
       <div class="polls-locked" id="polls-locked" style="display:none;">
-        Live polling &amp; questions are unlocked on the Sinag plan. <a href="/#pricing">Upgrade →</a>
+        Live Questions &amp; Poll are unlocked on the Sinag plan. <a href="/#pricing">Upgrade →</a>
       </div>
       <div class="polls-list" id="polls-list"></div>
     </div>
@@ -1480,14 +1480,14 @@
       <span>Type</span>
       <div class="poll-kind-toggle" id="poll-kind-toggle" role="radiogroup">
         <label class="kind-opt active">
-          <input type="radio" name="poll-kind" value="poll" checked />
-          <span class="kind-label">Poll</span>
-          <span class="kind-hint">Opinion · no correct answer</span>
-        </label>
-        <label class="kind-opt">
-          <input type="radio" name="poll-kind" value="question" />
+          <input type="radio" name="poll-kind" value="question" checked />
           <span class="kind-label">Question</span>
           <span class="kind-hint">Trivia · pick one correct answer</span>
+        </label>
+        <label class="kind-opt">
+          <input type="radio" name="poll-kind" value="poll" />
+          <span class="kind-label">Poll</span>
+          <span class="kind-hint">Opinion · no correct answer</span>
         </label>
       </div>
     </div>
@@ -2683,7 +2683,10 @@
     const opts = existing?.options || [{ label: '' }, { label: '' }];
     const correctKey = existing?.correct_key || null;
     opts.forEach(o => pollOptsList.appendChild(newOptionInput(o.label || '', !!correctKey && o.key === correctKey)));
-    setKind(existing?.kind || 'poll');
+    // New entries default to Question (the more common host use case);
+    // edits respect the existing kind so we don't silently flip a poll
+    // into a question with no correct answer set.
+    setKind(existing?.kind || 'question');
     pollModal.classList.add('open');
     setTimeout(() => pollQInput.focus(), 100);
   }
