@@ -946,13 +946,29 @@ body { background: var(--paper); min-height: 100dvh; }
       const entryId = now + i;
       const isVideo = file.type.startsWith('video/');
       const msgToSend = (i === 0 && msg) ? msg : '';
+      const token = localStorage.getItem('reelday_token');
 
       try {
         const preRes = await fetch('/api/uploads/presigned', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          },
           body: JSON.stringify({ slug: currentEvent.slug, filename: file.name || 'blob', contentType: file.type })
         });
+
+        if (!preRes.ok) {
+          const errData = await preRes.json().catch(() => ({}));
+          console.error('Presigned error:', errData);
+          const s = document.getElementById('s' + queueId);
+          if (s) s.textContent = 'Failed: ' + (errData.message || 'Error');
+          
+          // Only alert for the first failure to avoid spamming the user
+          if (i === 0) alert(errData.message || 'Failed to initialize upload. Please check your login status.');
+          return; // STOP the execution
+        }
+
         const { uploadUrl, fileKey } = await preRes.json();
 
         await new Promise((resolve, reject) => {
@@ -974,7 +990,10 @@ body { background: var(--paper); min-height: 100dvh; }
 
         const compRes = await fetch('/api/uploads/complete', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          },
           body: JSON.stringify({ slug: currentEvent.slug, fileKey, uploader_name: name, message: msgToSend, file_type: isVideo ? 'video' : 'photo', is_video_message: isVidMsg })
         });
         const { upload } = await compRes.json();

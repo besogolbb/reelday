@@ -42,6 +42,8 @@ export default async function uploadRoutes(fastify) {
     // If a user is logged in (and is the owner), bypass window and payment restrictions
     const isOwner = currentUser && currentUser.id === event.user_id;
 
+    fastify.log.info({ slug, isOwner, userId: currentUser?.id, eventUserId: event.user_id }, 'Validating event upload');
+
     let effectiveTier = event.plan;
     if (event.user_id) {
       try {
