@@ -172,10 +172,10 @@ export default async function uploadRoutes(fastify) {
   // POST /api/uploads/presigned — generate a PUT URL for direct R2 upload
   fastify.post('/uploads/presigned', async (request, reply) => {
     const { slug, filename, contentType } = request.body;
-    console.log('Presigned request for slug:', slug);
 
     // Optionally authenticate the user if a token is present
     request.user = tryGetUser(request);
+    console.log('Presigned request for slug:', slug, 'User:', request.user?.id || 'Guest');
 
     try {
       await getValidatedEvent(slug, request.user);
