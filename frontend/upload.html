@@ -792,6 +792,33 @@ body { background: var(--paper); min-height: 100dvh; }
            typeof HTMLCanvasElement.prototype.captureStream === 'function';
   }
 
+  // Pick the MediaRecorder mime that produces the most wall-friendly file:
+  //   MP4 (H.264/AAC) when the browser can natively mux it (Safari).
+  //   WebM VP8 ahead of VP9 — VP8 decodes ~2x faster on weaker playback
+  //   hardware (older smart TVs, Chromecasts) which was the actual cause
+  //   of the wall lag complaint, not the file size.
+  function pickRecorderMime() {
+    if (typeof MediaRecorder === 'undefined') return '';
+    const candidates = [
+      'video/mp4;codecs=avc1.42E01E,mp4a.40.2',  // H.264 baseline + AAC-LC
+      'video/mp4',
+      'video/webm;codecs=vp8,opus',
+      'video/webm;codecs=vp9,opus',
+      'video/webm',
+    ];
+    return candidates.find(m => {
+      try { return MediaRecorder.isTypeSupported(m); } catch { return false; }
+    }) || '';
+  }
+
+  // Match the file extension to whatever the recorder actually produced
+  // so backend content-sniffing and download UX both line up.
+  function extForMime(m) {
+    if (!m) return '.webm';
+    if (m.startsWith('video/mp4'))  return '.mp4';
+    return '.webm';
+  }
+
   // Re-encode a high-resolution video down to 1280px on the longest edge,
   // 30fps, 2.5Mbps — same envelope as our in-app recorder. Runs in real
   // time (a 30s clip takes ~30s) because MediaRecorder needs the source
@@ -816,7 +843,9 @@ body { background: var(--paper); min-height: 100dvh; }
     canvas.width = w; canvas.height = h;
     const ctx = canvas.getContext('2d');
 
-    const canvasStream = canvas.captureStream(30);
+    // 24fps instead of 30fps — fewer frames means less decode work on
+    // the wall TV/Chromecast. Visually indistinguishable for this use.
+    const canvasStream = canvas.captureStream(24);
     let audioTrack = null;
     try {
       const cap = src.captureStream ? src.captureStream() : src.mozCaptureStream?.();
@@ -826,9 +855,14 @@ body { background: var(--paper); min-height: 100dvh; }
     if (audioTrack) tracks.push(audioTrack);
     const combined = new MediaStream(tracks);
 
-    const mime = ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm']
-      .find(m => MediaRecorder.isTypeSupported(m)) || '';
-    const opts = { videoBitsPerSecond: 2_500_000, audioBitsPerSecond: 96_000 };
+    // Codec preference order (first one supported wins):
+    //   MP4 (H.264/AAC)  — Safari only; plays universally on the wall
+    //   WebM VP8         — broadly supported, decodes ~2x faster than VP9
+    //   WebM VP9         — last resort, smaller file but heavier decode
+    // VP9 was the previous default and was the actual cause of wall lag
+    // on weaker playback devices (older smart TVs, Chromecasts).
+    const mime = pickRecorderMime();
+    const opts = { videoBitsPerSecond: 2_000_000, audioBitsPerSecond: 96_000 };
     if (mime) opts.mimeType = mime;
     const rec = new MediaRecorder(combined, opts);
 
@@ -859,7 +893,8 @@ body { background: var(--paper); min-height: 100dvh; }
         try { URL.revokeObjectURL(url); } catch {}
         try { src.pause(); } catch {}
         const blob = new Blob(chunks, { type: rec.mimeType });
-        const newName = file.name.replace(/\.[^.]+$/, '') + '.webm';
+        const ext  = extForMime(rec.mimeType);
+        const newName = file.name.replace(/\.[^.]+$/, '') + ext;
         resolve(new File([blob], newName, { type: blob.type, lastModified: Date.now() }));
       };
 
@@ -1099,13 +1134,12 @@ body { background: var(--paper); min-height: 100dvh; }
   function startRecord() {
     recordedChunks = []; recordedBlob = null; recSecs = 0; recording = true;
 
-    const mimeType = ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4']
-      .find(m => MediaRecorder.isTypeSupported(m)) || '';
-    // Cap encoder bitrate so a 30s clip lands around 9MB (~2.5Mbps video +
-    // ~96Kbps audio) instead of whatever the browser default picks (often
-    // 8-10Mbps on mobile, which produces 30-40MB clips).
+    // Match the gallery transcode pipeline: prefer MP4 (Safari), then VP8
+    // (decodes faster than VP9 on the wall TV), then VP9 as last resort.
+    // 2 Mbps target keeps a 30s clip around 8MB.
+    const mimeType = pickRecorderMime();
     const recOpts = {
-      videoBitsPerSecond: 2_500_000,
+      videoBitsPerSecond: 2_000_000,
       audioBitsPerSecond:    96_000,
     };
     if (mimeType) recOpts.mimeType = mimeType;
@@ -1158,7 +1192,8 @@ body { background: var(--paper); min-height: 100dvh; }
     thumb.style.backgroundImage = '';
     thumb.innerHTML = `<video src="${url}" style="width:100%;height:100%;object-fit:cover;border-radius:6px;" muted loop autoplay playsinline></video>`;
     document.getElementById('clipDur').textContent = fmt(recSecs);
-    document.querySelector('.clip-name').textContent = `clip-${Date.now()}.webm`;
+    document.querySelector('.clip-name').textContent =
+      `clip-${Date.now()}${extForMime(blob.type)}`;
     document.getElementById('clipPreview').classList.add('visible');
     document.getElementById('recordSendBtn').style.display = 'block';
     document.getElementById('recordSendBtn').dataset.blobUrl = url;
