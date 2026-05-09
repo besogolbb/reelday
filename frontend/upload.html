@@ -451,7 +451,7 @@ body { background: var(--paper); min-height: 100dvh; }
       <div class="mp-char-count" id="charCount">0 / 160</div>
     </div>
 
-    <button class="btn btn-primary send-btn" onclick="handleSend('gallery')">Share moments →</button>
+    <button class="btn btn-primary send-btn" onclick="handleSend('gallery', event)">Share moments →</button>
     <div class="success-banner" id="gallerySuccess">
       <div class="s-icon">★</div>
       <div><b>Your moments are live!</b><span>They'll appear on the wall in a few seconds.</span></div>
@@ -498,7 +498,7 @@ body { background: var(--paper); min-height: 100dvh; }
       <label>Your name (optional)</label>
       <input type="text" id="recordName" placeholder="e.g. Tita Marivic" />
     </div>
-    <button class="btn btn-primary send-btn" id="recordSendBtn" onclick="handleSend('record')" style="display:none;">Send video →</button>
+    <button class="btn btn-primary send-btn" id="recordSendBtn" onclick="handleSend('record', event)" style="display:none;">Send video →</button>
     <div class="success-banner" id="recordSuccess">
       <div class="s-icon">★</div>
       <div><b>Your video is live!</b><span>It'll appear on the wall in a few seconds.</span></div>
@@ -845,10 +845,10 @@ body { background: var(--paper); min-height: 100dvh; }
 
 
   /* ── Send ──────────────────────────────────────────── */
-  async function handleSend(mode) {
+  async function handleSend(mode, event) {
     if (mode === 'record' && !recordedBlob) return;
     
-    const btn = event.currentTarget;
+    const btn = event?.currentTarget || {};
     btn.disabled = true;
 
     const nameInput = mode === 'gallery'
@@ -960,7 +960,7 @@ body { background: var(--paper); min-height: 100dvh; }
 
         if (!preRes.ok) {
           const errData = await preRes.json().catch(() => ({}));
-          console.error('Presigned error:', errData);
+          console.error('Presigned API error:', errData);
           const s = document.getElementById('s' + queueId);
           if (s) s.textContent = 'Failed: ' + (errData.message || 'Error');
           
@@ -970,6 +970,7 @@ body { background: var(--paper); min-height: 100dvh; }
         }
 
         const { uploadUrl, fileKey } = await preRes.json();
+        console.log('Got upload URL:', uploadUrl);
 
         await new Promise((resolve, reject) => {
           const xhr = new XMLHttpRequest();
@@ -980,10 +981,14 @@ body { background: var(--paper); min-height: 100dvh; }
               const pct = Math.round((e.loaded / e.total) * 100);
               const b = document.getElementById('b' + queueId), s = document.getElementById('s' + queueId);
               if (b) b.style.width = pct + '%';
-              if (s) s.textContent = pct < 100 ? pct + '%' : '✓ Complete';
+              if (s) s.textContent = pct < 100 ? pct + '%' : '✓ Uploading...';
             }
           };
-          xhr.onload = () => xhr.status === 200 ? resolve() : reject();
+          xhr.onload = () => {
+            console.log('R2 Response Status:', xhr.status);
+            if (xhr.status === 200 || xhr.status === 204) resolve();
+            else reject(new Error('S3 upload failed with status ' + xhr.status));
+          };
           xhr.onerror = reject;
           xhr.send(file);
         });

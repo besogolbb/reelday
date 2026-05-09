@@ -177,12 +177,16 @@ export default async function uploadRoutes(fastify) {
 
     // Optionally authenticate the user if a token is present
     request.user = tryGetUser(request);
-    console.log('Presigned request for slug:', slug, 'User:', request.user?.id || 'Guest');
+    fastify.log.info({ slug, userId: request.user?.id, filename }, 'Generating presigned URL');
 
     try {
       await getValidatedEvent(slug, request.user);
     } catch (e) {
       return reply.status(e.statusCode || 500).send({ error: true, ...e });
+    }
+
+    if (!process.env.R2_ENDPOINT || !process.env.R2_BUCKET_NAME) {
+      return reply.status(500).send({ error: true, message: 'Storage configuration missing on server.' });
     }
 
     const fileKey = `uploads/${slug}/${Date.now()}-${filename}`;
@@ -194,6 +198,8 @@ export default async function uploadRoutes(fastify) {
         secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
       },
     });
+
+    fastify.log.info({ bucket: process.env.R2_BUCKET_NAME, key: fileKey, endpoint: process.env.R2_ENDPOINT }, 'S3 configuration for presigned URL');
 
     const command = new PutObjectCommand({
       Bucket: process.env.R2_BUCKET_NAME,
