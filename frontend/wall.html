@@ -1146,29 +1146,21 @@
   }
 
   /* ══════════════════════════════════════════════════════════
-     FLOATING EMOJIS
+     FLOATING EMOJIS — driven by guest reactions only.
+     The previous random/scheduled emoji storm is gone; every
+     floating emoji on the wall now corresponds to a real tap from
+     a real guest via /api/reactions/:slug.
   ══════════════════════════════════════════════════════════ */
-  function spawnEmoji(count = 1) {
-    const pool = themeMeta.emoji;
-    for (let i = 0; i < count; i++) {
-      setTimeout(() => {
-        const el = document.createElement('div');
-        el.className  = 'float-emoji';
-        el.textContent = pool[Math.floor(Math.random() * pool.length)];
-        el.style.left = `${5 + Math.random() * 88}%`;
-        el.style.fontSize = `${1.4 + Math.random() * 1.8}rem`;
-        el.style.animationDuration = `${3.5 + Math.random() * 2.5}s`;
-        emojiBox.appendChild(el);
-        el.addEventListener('animationend', () => el.remove());
-      }, i * 200);
-    }
-  }
-
-  function scheduleRandomEmoji() {
-    setTimeout(() => {
-      if (isRunning && !isPaused) spawnEmoji(2 + Math.floor(Math.random() * 2));
-      scheduleRandomEmoji();
-    }, 8000 + Math.random() * 7000);
+  function spawnEmoji(emoji) {
+    if (!emoji) return;
+    const el = document.createElement('div');
+    el.className  = 'float-emoji';
+    el.textContent = emoji;
+    el.style.left = `${5 + Math.random() * 88}%`;
+    el.style.fontSize = `${1.6 + Math.random() * 1.8}rem`;
+    el.style.animationDuration = `${3.5 + Math.random() * 2.5}s`;
+    emojiBox.appendChild(el);
+    el.addEventListener('animationend', () => el.remove());
   }
 
   /* ══════════════════════════════════════════════════════════
@@ -1283,6 +1275,45 @@
     });
   });
 
+  // ── Reactions polling ────────────────────────────────────
+  // The endpoint returns { reactions:[…], server_time } where
+  // server_time lets us pin the next ?since to the SERVER clock, not
+  // the wall's (avoids drift if the wall TV's clock is off). We start
+  // at "now" so old reactions aren't replayed on page load.
+  let reactionsSince = new Date().toISOString();
+  let reactionDropFrame = false;
+  async function pollReactions() {
+    try {
+      const url = `/api/reactions/${slug}?since=${encodeURIComponent(reactionsSince)}`;
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = await res.json();
+      const list = Array.isArray(data.reactions) ? data.reactions : [];
+      if (data.server_time) reactionsSince = data.server_time;
+
+      // Soft cap: at very high tap rates spawn one frame per emoji but
+      // skip every other frame so the GPU + DOM don't churn. Drops to
+      // normal cadence when the storm subsides.
+      const heavy = list.length > 12;
+      list.forEach((r, i) => {
+        if (heavy) {
+          reactionDropFrame = !reactionDropFrame;
+          if (reactionDropFrame) return;
+        }
+        // Stagger spawns slightly so even a batched poll feels like a
+        // continuous trickle rather than a thunderclap.
+        setTimeout(() => spawnEmoji(r.emoji), i * 90);
+      });
+
+      // Caption banner for the FIRST reaction in this batch only.
+      // During a storm, names would just blur past unreadably.
+      if (list.length && !heavy) {
+        const r = list[0];
+        showToast(`${r.emoji} ${r.guest_name || 'Panauhin'}`);
+      }
+    } catch { /* network blip — try again next tick */ }
+  }
+
   async function pollBurst() {
     try {
       const res = await fetch(`/api/events/${slug}`);
@@ -1342,7 +1373,6 @@
       items = [...head, ...newOnes, ...tail];
       const name = newOnes[0].uploader_name || 'Panauhin';
       showToast(`✨ ${name} just shared a moment!`);
-      spawnEmoji(3 + Math.floor(Math.random() * 2));
       // Jump now — clears the pending slideTimer and shows the new one.
       goTo(safeIdx + 1);
     } else {
@@ -1354,7 +1384,6 @@
     if (!isRunning && slideable.length > 0) {
       emptyState.classList.remove('visible');
       startSlideshow();
-      scheduleRandomEmoji();
     } else if (isRunning && prevCount === 0 && slideable.length > 0) {
       emptyState.classList.remove('visible');
       startSlideshow();
@@ -1561,7 +1590,6 @@
 
     if (items.length > 0) {
       startSlideshow();
-      scheduleRandomEmoji();
     } else {
       await showEmptyState(eventData);
     }
@@ -1572,6 +1600,12 @@
     // "Play video messages" sees the wall react within a few seconds.
     pollBurst();
     setInterval(pollBurst, 3000);
+
+    // Reactions: poll every second for new emoji taps from guests.
+    // The endpoint is keyset-style (?since=<iso>) so only the deltas
+    // ship; empty calls cost ~zero.
+    pollReactions();
+    setInterval(pollReactions, 1000);
   }
 
   init();

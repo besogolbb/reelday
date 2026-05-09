@@ -145,7 +145,7 @@ body { background: var(--paper); min-height: 100dvh; }
 .upload-hero .welcome { margin-top: 16px; font-family: var(--display); font-style: italic; font-size: 15px; color: var(--ink-soft); max-width: 32ch; margin-left: auto; margin-right: auto; line-height: 1.5; }
 
 /* ── Share mode tabs ─────────────────────────────────── */
-.share-tabs { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; margin-bottom: 16px; }
+.share-tabs { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 16px; }
 
 /* Closed-state card — replaces the upload UI when the event's window ends */
 .closed-card {
@@ -310,6 +310,49 @@ body { background: var(--paper); min-height: 100dvh; }
 .upload-card .uo-bar { height: 6px; background: var(--paper-3); border-radius: 3px; overflow: hidden; }
 .upload-card .uo-bar span { display: block; height: 100%; background: var(--accent); border-radius: 3px; width: 0%; transition: width .2s ease; }
 .upload-card .uo-pct { margin-top: 10px; font-size: 13px; color: var(--ink); font-variant-numeric: tabular-nums; }
+
+/* ── React panel (wall reactions + future poll slot) ─────── */
+.react-panel { background: #fff; border: 1px solid var(--line); border-radius: var(--r-lg); padding: 22px 18px 24px; }
+.react-panel h2 { font-family: var(--display); font-size: 22px; font-weight: 500; margin-bottom: 6px; color: var(--ink); }
+.react-panel .react-sub { font-size: 14px; color: var(--ink-soft); margin-bottom: 20px; line-height: 1.5; }
+.react-panel .react-name-hint { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-faint); margin-top: 18px; text-align: center; }
+.react-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+  margin-top: 4px;
+}
+.react-btn {
+  background: var(--paper-2); border: 1px solid var(--line);
+  border-radius: 16px; padding: 18px 8px;
+  font-size: 36px; line-height: 1;
+  cursor: pointer;
+  transition: transform .12s ease, background .15s, border-color .15s, box-shadow .2s;
+  user-select: none;
+  display: flex; align-items: center; justify-content: center;
+}
+.react-btn:hover { background: var(--paper-3); border-color: var(--accent); }
+.react-btn:active { transform: scale(.92); }
+/* Animated pulse on tap so guests get instant local feedback even
+   before the network round-trip lands. */
+.react-btn.pulsed {
+  animation: reactPulse .55s ease;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+@keyframes reactPulse {
+  0%   { transform: scale(1);    box-shadow: 0 0 0 0 rgba(196,90,58,.55); }
+  40%  { transform: scale(1.18); box-shadow: 0 0 0 14px rgba(196,90,58,0); }
+  100% { transform: scale(1);    box-shadow: 0 0 0 0 rgba(196,90,58,0); }
+}
+.react-btn[disabled] { opacity: .45; cursor: not-allowed; }
+.react-locked {
+  margin-top: 14px; padding: 14px; border-radius: var(--r);
+  background: var(--paper-2); border: 1px dashed var(--line-2);
+  text-align: center; font-size: 13px; color: var(--ink-soft); line-height: 1.5;
+}
+.react-locked b { color: var(--ink); display: block; margin-bottom: 4px; font-weight: 600; }
+/* Future home of the live-poll card; kept hidden until polls ship. */
+.poll-slot { margin-top: 16px; }
 
 /* ── Toast (friendly, non-blocking notices like rate-limit hints) ── */
 .toast { position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 12px); z-index: 1000; max-width: min(90vw, 420px); padding: 12px 18px; border-radius: 999px; background: rgba(20,20,20,.92); color: #fff; font-size: 14px; line-height: 1.35; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,.25); opacity: 0; pointer-events: none; transition: opacity .2s ease, transform .2s ease; }
@@ -500,6 +543,12 @@ body { background: var(--paper); min-height: 100dvh; }
       </div>
       <div class="tab-label">Record<br/>Video</div>
     </div>
+    <div class="share-tab" onclick="switchTab('react',this)">
+      <div class="tab-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      </div>
+      <div class="tab-label">Wall<br/>React</div>
+    </div>
   </div>
 
   <!-- ════ PANEL 1: Gallery ═════════════════════════════ -->
@@ -580,6 +629,39 @@ body { background: var(--paper); min-height: 100dvh; }
     <div class="success-banner" id="recordSuccess">
       <div class="s-icon">★</div>
       <div><b>Your video is live!</b><span>It'll appear on the wall in a few seconds.</span></div>
+    </div>
+  </div>
+
+  <!-- ════ PANEL 3: Wall React ══════════════════════════ -->
+  <div class="share-panel" id="panel-react">
+    <div class="react-panel">
+      <h2>React on the wall</h2>
+      <div class="react-sub">Tap to send a reaction. It floats up on the live wall right away.</div>
+
+      <div class="name-field" id="nameFieldReact">
+        <label>Your name <span style="color:var(--accent)">*</span></label>
+        <input type="text" id="reactName" placeholder="e.g. Tita Marivic, JM's cousin"
+          oninput="onReactNameInput(this)" />
+      </div>
+
+      <div class="react-grid" id="reactGrid" style="margin-top:18px;">
+        <button type="button" class="react-btn" data-emoji="❤️" aria-label="React heart">❤️</button>
+        <button type="button" class="react-btn" data-emoji="😂" aria-label="React laugh">😂</button>
+        <button type="button" class="react-btn" data-emoji="🔥" aria-label="React fire">🔥</button>
+        <button type="button" class="react-btn" data-emoji="👏" aria-label="React clap">👏</button>
+        <button type="button" class="react-btn" data-emoji="💃" aria-label="React dance">💃</button>
+        <button type="button" class="react-btn" data-emoji="🙏" aria-label="React thanks">🙏</button>
+      </div>
+
+      <div class="react-name-hint" id="reactNameHint">Type your name to start reacting</div>
+
+      <div class="react-locked" id="reactLocked" style="display:none;">
+        <b>Reactions are a Sinag-tier feature</b>
+        Ask the host to upgrade and you'll be able to send wall reactions live.
+      </div>
+
+      <!-- Future home of the live-poll card; kept hidden until polls ship. -->
+      <div class="poll-slot" id="pollSlot" style="display:none;"></div>
     </div>
   </div>
 
@@ -687,6 +769,25 @@ body { background: var(--paper); min-height: 100dvh; }
 
     currentEvent = event;
     applyEvent(event);
+
+    // Reactions require Sinag+ on the event owner's tier. data.plan_info
+    // ships the resolved feature flags from the backend; if reactions
+    // aren't included we mark the grid locked and refreshReactGate()
+    // will swap the buttons for the upgrade hint.
+    const grid = document.getElementById('reactGrid');
+    const reactionsAllowed = !!event.plan?.features?.reactions;
+    if (grid) grid.dataset.locked = reactionsAllowed ? 'false' : 'true';
+
+    // Restore any previously-typed name from localStorage so guests
+    // returning to the page (or just switching tabs) don't have to
+    // retype.
+    try {
+      const saved = localStorage.getItem(GUEST_NAME_KEY);
+      if (saved) broadcastGuestName(saved);
+    } catch {}
+
+    bindReactButtons();
+    refreshReactGate();
   }
 
   function applyEvent(ev) {
@@ -736,9 +837,31 @@ body { background: var(--paper); min-height: 100dvh; }
     }
   }
 
-  /* ── Name field ────────────────────────────────────── */
+  /* ── Name field ──────────────────────────────────────
+     Names sync across the three panels so a guest who typed "Tita
+     Marivic" on Photos doesn't have to retype on Record or React.
+     Persisted to localStorage so the same phone keeps the name across
+     reloads. */
+  const GUEST_NAME_KEY = 'reelday_guest_name';
+  function broadcastGuestName(value) {
+    const v = (value || '').trim();
+    ['galleryName', 'recordName', 'reactName'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && el.value !== v) el.value = v;
+    });
+    try {
+      if (v) localStorage.setItem(GUEST_NAME_KEY, v);
+      else   localStorage.removeItem(GUEST_NAME_KEY);
+    } catch {}
+    refreshReactGate();
+  }
   function onNameInput(input) {
     document.getElementById('nameField').classList.remove('error');
+    broadcastGuestName(input.value);
+  }
+  function onReactNameInput(input) {
+    document.getElementById('nameFieldReact')?.classList.remove('error');
+    broadcastGuestName(input.value);
   }
 
   /* ── Tab switching ─────────────────────────────────── */
@@ -753,6 +876,7 @@ body { background: var(--paper); min-height: 100dvh; }
     } else {
       releaseCamera();
     }
+    if (id === 'react') refreshReactGate();
   }
 
   function setLang(lang, btn) {
@@ -780,6 +904,86 @@ body { background: var(--paper); min-height: 100dvh; }
   }
   // The friendly Tagalog notice for HTTP 429 from our API.
   const RATE_LIMIT_MSG = 'Easy lang po! Masyado mabilis ang upload niyo. Wait ng konti.';
+
+  /* ── Wall reactions ───────────────────────────────────
+     Tap an emoji on the React panel -> POST to /api/reactions/:slug ->
+     wall picks it up on its next 1s poll and floats it. The buttons
+     are disabled until the guest has typed a name, since the backend
+     requires guest_name on every POST. */
+  const REACT_LOCKOUT_MS = 350;   // local de-bounce so a triple-tap still feels snappy but doesn't fire 5 reqs
+  let reactGateInitialized = false;
+  function refreshReactGate() {
+    const grid    = document.getElementById('reactGrid');
+    const hint    = document.getElementById('reactNameHint');
+    const locked  = document.getElementById('reactLocked');
+    if (!grid) return;
+
+    // Plan-level lock takes precedence (set by applyEvent based on plan_info).
+    if (grid.dataset.locked === 'true') {
+      grid.style.display = 'none';
+      if (hint)   hint.style.display   = 'none';
+      if (locked) locked.style.display = '';
+      return;
+    }
+    if (locked) locked.style.display = 'none';
+    grid.style.display = '';
+
+    const name = (document.getElementById('reactName')?.value || '').trim();
+    const ready = name.length > 0;
+    grid.querySelectorAll('.react-btn').forEach(b => { b.disabled = !ready; });
+    if (hint) hint.style.display = ready ? 'none' : '';
+  }
+
+  function bindReactButtons() {
+    if (reactGateInitialized) return;
+    reactGateInitialized = true;
+    document.querySelectorAll('#reactGrid .react-btn').forEach(btn => {
+      btn.addEventListener('click', () => sendReaction(btn));
+    });
+  }
+
+  async function sendReaction(btn) {
+    if (btn.disabled) return;
+    const emoji = btn.dataset.emoji;
+    const name  = (document.getElementById('reactName')?.value || '').trim();
+    if (!emoji || !name) { refreshReactGate(); return; }
+    if (!currentEvent?.slug) return;
+
+    // Local pulse fires immediately for responsiveness; the network
+    // call runs in the background. Lock just this button briefly so a
+    // tap-storm doesn't fire dozens of redundant requests in a row.
+    btn.classList.add('pulsed');
+    btn.disabled = true;
+    setTimeout(() => {
+      btn.classList.remove('pulsed');
+      // Re-enable based on the gate (name might have been cleared).
+      refreshReactGate();
+    }, REACT_LOCKOUT_MS);
+
+    try {
+      const res = await fetch(`/api/reactions/${currentEvent.slug}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Guest-Id':   GUEST_ID,
+        },
+        body: JSON.stringify({ emoji, guest_name: name }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        if (res.status === 429 || err.code === 'rate_limited') {
+          showToast(RATE_LIMIT_MSG);
+        } else if (err.code === 'reactions_locked') {
+          // Plan was downgraded mid-session — relock the panel.
+          const grid = document.getElementById('reactGrid');
+          if (grid) grid.dataset.locked = 'true';
+          refreshReactGate();
+        }
+      }
+    } catch {
+      // Network blip — silent (next tap will succeed).
+    }
+  }
 
   // Per-device token so the backend rate-limiter can give each guest
   // their own bucket — important at events where everyone shares one

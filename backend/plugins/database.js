@@ -48,6 +48,22 @@ const MIGRATIONS = `
   -- frontend falls back to file_url while the transcode is in flight.
   ALTER TABLE uploads ADD COLUMN IF NOT EXISTS web_url    TEXT;
   ALTER TABLE uploads ADD COLUMN IF NOT EXISTS poster_url TEXT;
+
+  -- Wall reactions: guests tap an emoji on the upload page, the wall
+  -- floats it up over the current slide. guest_id is the X-Guest-Id
+  -- header (also used by the rate-limiter); guest_name is captured at
+  -- react-time so old reactions still credit the right person even if
+  -- the guest later changes their name.
+  CREATE TABLE IF NOT EXISTS reactions (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    event_id    UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+    upload_id   UUID NULL REFERENCES uploads(id) ON DELETE SET NULL,
+    guest_id    VARCHAR(64)  NOT NULL,
+    guest_name  VARCHAR(120) NOT NULL,
+    emoji       VARCHAR(8)   NOT NULL,
+    created_at  TIMESTAMPTZ DEFAULT NOW()
+  );
+  CREATE INDEX IF NOT EXISTS idx_reactions_event_time ON reactions(event_id, created_at DESC);
 `;
 
 async function dbPlugin(fastify) {
