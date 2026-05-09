@@ -20,7 +20,7 @@
 
 import { resolvePlan } from '../lib/plans.js';
 
-const MAX_OPTIONS    = 6;
+const MAX_OPTIONS    = 4;
 const MIN_OPTIONS    = 2;
 const MIN_DURATION_S = 10;
 const MAX_DURATION_S = 120;

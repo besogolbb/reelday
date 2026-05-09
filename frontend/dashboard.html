@@ -1497,7 +1497,7 @@
       <input type="text" id="poll-question-input" maxlength="140" placeholder="e.g. Best dance of the night?" />
     </label>
     <div class="poll-field">
-      <span id="poll-opts-label">Options (2–6)</span>
+      <span id="poll-opts-label">Options (2–4)</span>
       <div class="poll-options-list" id="poll-options-list"></div>
       <button type="button" class="poll-add-option" id="poll-add-option">+ Add option</button>
       <div class="poll-correct-hint" id="poll-correct-hint" style="display:none; margin-top:6px; font-size:11px; color:var(--ink-soft);">Tap the ✓ next to the correct answer.</div>
@@ -2695,8 +2695,8 @@
 
   pollsCreateBtn?.addEventListener('click', () => openPollModal(null));
   pollAddOptBtn?.addEventListener('click', () => {
-    if (pollOptsList.children.length >= 6) {
-      showToast('At most 6 options');
+    if (pollOptsList.children.length >= 4) {
+      showToast('At most 4 options');
       return;
     }
     pollOptsList.appendChild(newOptionInput(''));
