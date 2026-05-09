@@ -35,6 +35,71 @@ const FFMPEG = process.env.FFMPEG_PATH || 'ffmpeg';
 const USE_NICE   = process.platform !== 'win32';
 const NICE_LEVEL = 10;
 
+// Cap how many ffmpeg pipelines run at once. Without this, 5 guests
+// uploading simultaneously would spawn 5+ ffmpeg processes competing
+// for the same 2 vCPUs — each transcode runs SLOWER than running them
+// serially, and 1080p decode buffers can OOM the container at scale.
+//
+// Default of 2 matches the KVM 2 vCPU count: each in-flight transcode
+// gets one core's worth of CPU when the queue is full, but each
+// individual encode can still use both cores when the queue is short.
+// Override with TRANSCODE_CONCURRENCY env var if you upgrade to KVM 4+.
+const MAX_CONCURRENT = Math.max(1, Number(process.env.TRANSCODE_CONCURRENCY) || 2);
+let inFlight = 0;
+const waiters = [];
+
+function acquireSlot() {
+  return new Promise(resolve => {
+    if (inFlight < MAX_CONCURRENT) {
+      inFlight += 1;
+      resolve();
+    } else {
+      waiters.push(resolve);
+    }
+  });
+}
+
+function releaseSlot() {
+  inFlight = Math.max(0, inFlight - 1);
+  const next = waiters.shift();
+  if (next) {
+    inFlight += 1;
+    next();
+  }
+}
+
+/**
+ * Re-queue any video uploads that landed but never got a transcode —
+ * typically because the Node process was restarted between insert and
+ * the background ffmpeg job finishing. Call once at startup.
+ *
+ * Bounded to videos uploaded in the last 24h so a long-running outage
+ * doesn't dump thousands of stale jobs into the queue at boot.
+ */
+export async function reconcilePendingTranscodes(fastify) {
+  try {
+    const { rows } = await fastify.db.query(
+      `SELECT id, file_url, file_type
+         FROM uploads
+        WHERE file_type = 'video'
+          AND web_url IS NULL
+          AND created_at > NOW() - INTERVAL '24 hours'
+        ORDER BY created_at ASC`,
+    );
+    if (!rows.length) {
+      fastify.log.info('No pending transcodes to reconcile');
+      return;
+    }
+    fastify.log.info({ pending: rows.length }, 'Re-queuing pending transcodes from previous run');
+    for (const row of rows) {
+      transcodeUploadInBackground(fastify, row)
+        .catch(err => fastify.log.warn({ err: err.message, upload_id: row.id }, 'Reconcile transcode failed'));
+    }
+  } catch (err) {
+    fastify.log.warn({ err: err.message }, 'reconcilePendingTranscodes failed');
+  }
+}
+
 // Ffmpeg arg sets — kept separate so a future "Hiraya 1080p" tier can
 // reuse the same pipeline by swapping these constants.
 const VIDEO_ARGS = [
@@ -126,8 +191,15 @@ export async function transcodeUploadInBackground(fastify, upload) {
   if (!upload || upload.file_type !== 'video' || !upload.file_url) return;
 
   const log = fastify.log.child({ upload_id: upload.id, op: 'transcode' });
-  let workdir = null;
 
+  // Wait our turn in the queue. The slot is released in `finally` so a
+  // crash inside the body can never permanently leak a slot.
+  log.info({ inFlight, queued: waiters.length, max: MAX_CONCURRENT }, 'Queued for transcode');
+  await acquireSlot();
+  log.info({ inFlight, queued: waiters.length }, 'Acquired slot, starting transcode');
+
+  let workdir = null;
+  const startedAt = Date.now();
   try {
     // Pull the original key out of the public URL we stored.
     let originalKey;
@@ -148,13 +220,17 @@ export async function transcodeUploadInBackground(fastify, upload) {
     const original = await r2Download(fastify.storage, originalKey);
     await writeFile(inPath, original);
 
-    log.info({ bytes: original.length }, 'Running ffmpeg (transcode + poster)');
-    // Run both passes in parallel — ffmpeg is single-threaded per process,
-    // so two processes use both vCPUs without thrashing.
-    await Promise.all([
-      runFfmpeg(['-y', '-i', inPath, ...VIDEO_ARGS,  webPath]),
-      runFfmpeg(['-y', '-i', inPath, ...POSTER_ARGS, posterPath]),
-    ]);
+    // Run passes SEQUENTIALLY rather than in parallel. The semaphore
+    // already controls global concurrency; doubling ffmpeg processes
+    // inside a single transcode just halves each one's CPU budget and
+    // produces no real speedup. Sequential lets each ffmpeg use both
+    // vCPUs (default threading), so the slot frees up sooner and the
+    // next queued upload starts faster.
+    log.info({ bytes: original.length }, 'Running ffmpeg pass 1/2 (web mp4)');
+    await runFfmpeg(['-y', '-i', inPath, ...VIDEO_ARGS,  webPath]);
+
+    log.info('Running ffmpeg pass 2/2 (poster)');
+    await runFfmpeg(['-y', '-i', inPath, ...POSTER_ARGS, posterPath]);
 
     const [webBuf, posterBuf] = await Promise.all([
       readFile(webPath),
@@ -172,12 +248,14 @@ export async function transcodeUploadInBackground(fastify, upload) {
       `UPDATE uploads SET web_url = $2, poster_url = $3 WHERE id = $1`,
       [upload.id, webUrl, posterUrl],
     );
-    log.info({ webUrl, posterUrl }, 'Transcode complete');
+    const elapsedMs = Date.now() - startedAt;
+    log.info({ webUrl, posterUrl, elapsedMs }, 'Transcode complete');
   } catch (err) {
     log.warn({ err: err.message }, 'Transcode failed — wall will fall back to file_url');
   } finally {
     if (workdir) {
       try { await rm(workdir, { recursive: true, force: true }); } catch {}
     }
+    releaseSlot();
   }
 }

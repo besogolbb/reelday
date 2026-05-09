@@ -17,6 +17,7 @@ import uploadRoutes from './routes/uploads.js';
 import paymentRoutes from './routes/payments.js';
 import authRoutes from './routes/auth.js';
 import adminRoutes from './routes/admin.js';
+import { reconcilePendingTranscodes } from './lib/videoTranscode.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -184,6 +185,13 @@ const port = Number(process.env.PORT) || 3000;
 try {
   await fastify.listen({ port, host: '0.0.0.0' });
   console.log(`\n  Reelday running at http://localhost:${port}\n`);
+
+  // Re-queue any video uploads that landed but never finished transcoding
+  // (typically because we restarted between insert and the background
+  // ffmpeg job completing). Bounded to the last 24h server-side.
+  reconcilePendingTranscodes(fastify).catch(err =>
+    fastify.log.warn({ err: err.message }, 'Startup transcode reconcile failed'),
+  );
 } catch (err) {
   fastify.log.error(err);
   process.exit(1);
