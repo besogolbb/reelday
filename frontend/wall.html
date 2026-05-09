@@ -419,13 +419,13 @@
 <div class="layer" id="layer-a">
   <div class="backdrop" id="backdrop-a"></div>
   <div class="pic" id="pic-a"></div>
-  <video class="vid" id="vid-a" muted playsinline loop preload="auto"></video>
+  <video class="vid" id="vid-a" muted playsinline preload="auto"></video>
   <div class="vignette"></div>
 </div>
 <div class="layer out" id="layer-b">
   <div class="backdrop" id="backdrop-b"></div>
   <div class="pic" id="pic-b"></div>
-  <video class="vid" id="vid-b" muted playsinline loop preload="auto"></video>
+  <video class="vid" id="vid-b" muted playsinline preload="metadata"></video>
   <div class="vignette"></div>
 </div>
 
@@ -670,10 +670,20 @@
     const inVid      = activeLayer === 'A' ? vidB    : vidA;
     const outVid     = activeLayer === 'A' ? vidA    : vidB;
 
-    // Stop the outgoing video (if any) so it doesn't keep playing in the background
-    if (outVid && !outVid.paused) {
-      try { outVid.pause(); outVid.currentTime = 0; } catch {}
+    // Fully release the outgoing video so the browser can free its decoder
+    // and stop streaming bytes for a clip nobody is watching anymore. This
+    // is the single biggest contributor to wall lag during video playback.
+    if (outVid) {
+      try {
+        outVid.pause();
+        outVid.removeAttribute('src');
+        outVid.load();
+      } catch {}
     }
+    // Make the incoming layer the bandwidth-priority one; the other can
+    // stay on metadata-only until it becomes active again.
+    if (inVid)  inVid.preload  = 'auto';
+    if (outVid) outVid.preload = 'metadata';
 
     const mediaUrl = wallMediaUrl(item);
     const itemIsVideo = isVideoItem(item) && !!mediaUrl;
@@ -751,17 +761,56 @@
     frame.style.display = 'flex';
   }
 
-  // Pick the duration for the *currently shown* slide.
-  // Videos: their playback time, capped at MAX_VIDEO_DURATION.
-  // Photos: standard SLIDE_DURATION.
-  const MAX_VIDEO_DURATION = 30000;
+  // Slide duration policy:
+  //   Photos: fixed SLIDE_DURATION.
+  //   Videos: timer is REARMED inside scheduleAdvance() once the video's
+  //           own metadata loads, so we play the full clip (capped at
+  //           MAX_VIDEO_DURATION to defend against runaway streams).
+  //           A short bootstrap timer fires only if metadata never arrives.
+  const MAX_VIDEO_DURATION = 60000;
+  const VIDEO_BOOT_TIMEOUT = 12000; // give the video a chance to load metadata
   function currentSlideDuration() {
     if (!items.__currentIsVideo) return SLIDE_DURATION;
-    // Whichever layer is now active holds the playing video.
     const activeVid = activeLayer === 'A' ? vidA : vidB;
     const secs = Number.isFinite(activeVid?.duration) ? activeVid.duration : 0;
-    if (secs > 0) return Math.min(secs * 1000 + 400, MAX_VIDEO_DURATION);
-    return Math.min(SLIDE_DURATION, MAX_VIDEO_DURATION);
+    if (secs > 0) return Math.min(secs * 1000 + 500, MAX_VIDEO_DURATION);
+    return VIDEO_BOOT_TIMEOUT;
+  }
+
+  // Schedule the next advance. For videos we wait for `loadedmetadata`
+  // before locking in the real duration, and rely on `ended` to actually
+  // advance most of the time — the timer is just a safety net.
+  function scheduleAdvance() {
+    clearTimeout(slideTimer);
+    if (isPaused || items.length < 2) return;
+
+    if (!items.__currentIsVideo) {
+      slideTimer = setTimeout(advance, SLIDE_DURATION);
+      return;
+    }
+
+    const activeVid = activeLayer === 'A' ? vidA : vidB;
+    if (!activeVid) {
+      slideTimer = setTimeout(advance, VIDEO_BOOT_TIMEOUT);
+      return;
+    }
+
+    const arm = () => {
+      clearTimeout(slideTimer);
+      const secs = Number.isFinite(activeVid.duration) ? activeVid.duration : 0;
+      const ms   = secs > 0
+        ? Math.min(secs * 1000 + 500, MAX_VIDEO_DURATION)
+        : VIDEO_BOOT_TIMEOUT;
+      slideTimer = setTimeout(advance, ms);
+    };
+
+    if (Number.isFinite(activeVid.duration) && activeVid.duration > 0) {
+      arm();
+    } else {
+      // Bootstrap timer in case metadata never loads (broken stream).
+      slideTimer = setTimeout(advance, VIDEO_BOOT_TIMEOUT);
+      activeVid.addEventListener('loadedmetadata', arm, { once: true });
+    }
   }
 
   function advance() {
@@ -771,8 +820,8 @@
     currentIdx = nextIdx;
     showSlide(currentIdx);
     startProgress();
-
-    slideTimer = setTimeout(advance, currentSlideDuration());
+    prewarmNext();
+    scheduleAdvance();
   }
 
   function startSlideshow() {
@@ -783,10 +832,8 @@
     showSlide(0);
     startProgress();
     emptyState.classList.remove('visible');
-
-    if (items.length > 1) {
-      slideTimer = setTimeout(advance, currentSlideDuration());
-    }
+    prewarmNext();
+    scheduleAdvance();
   }
 
   function goTo(idx) {
@@ -794,21 +841,48 @@
     currentIdx = ((idx % items.length) + items.length) % items.length;
     showSlide(currentIdx);
     startProgress();
-    if (!isPaused && items.length > 1) {
-      slideTimer = setTimeout(advance, currentSlideDuration());
+    prewarmNext();
+    if (!isPaused && items.length > 1) scheduleAdvance();
+  }
+
+  // Pre-warm the next slide so the cross-fade is snappy. For photos this
+  // gets the bytes into the HTTP cache; for videos we hand it to a hidden
+  // <video> with preload="metadata" so the browser opens a Range request
+  // early but doesn't fully buffer (avoids fighting the active stream).
+  const prewarmImg = new Image();
+  const prewarmVid = document.createElement('video');
+  prewarmVid.preload = 'metadata';
+  prewarmVid.muted = true;
+  prewarmVid.playsInline = true;
+  function prewarmNext() {
+    if (items.length < 2) return;
+    const next = items[(currentIdx + 1) % items.length];
+    const url  = wallMediaUrl(next);
+    if (!url) return;
+    if (isVideoItem(next)) {
+      try {
+        if (prewarmVid.src !== new URL(url, location.href).toString()) {
+          prewarmVid.src = url;
+          // load() kicks off the Range request without committing to full buffer
+          prewarmVid.load();
+        }
+      } catch { /* ignore */ }
+    } else {
+      try { prewarmImg.src = url; } catch { /* ignore */ }
     }
   }
 
-  // When a video finishes naturally before its timer fires, jump ahead.
-  // Skip during a burst — the burst engine has its own ended handler.
+  // When a video finishes naturally, jump ahead. Both regular slideshow
+  // and burst (video-messages playback) rely on this since we no longer
+  // set the `loop` attribute on the <video> elements.
   [vidA, vidB].forEach(v => {
     v?.addEventListener('ended', () => {
-      if (!isRunning || isPaused || inBurst) return;
-      // Only advance if the *active* layer's video ended (the other layer is from the previous slide).
+      if (!isRunning || isPaused) return;
       const activeVid = activeLayer === 'A' ? vidA : vidB;
       if (v !== activeVid) return;
       clearTimeout(slideTimer);
-      advance();
+      if (inBurst) advanceBurstOrEnd();
+      else        advance();
     });
   });
 
@@ -828,7 +902,7 @@
       if (items.__currentIsVideo && activeVid) {
         const p = activeVid.play(); if (p?.catch) p.catch(() => {});
       }
-      if (items.length > 1) slideTimer = setTimeout(advance, currentSlideDuration());
+      scheduleAdvance();
     }
   }
 
