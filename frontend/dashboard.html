@@ -1072,6 +1072,44 @@
     }
     .lock-banner .lb-cta:hover { background: var(--ink); }
 
+    /* ── Wall playback errors banner + tile badge ───────── */
+    .wall-err-banner {
+      display: flex; align-items: center; gap: 14px;
+      background: linear-gradient(135deg, #fff4f1 0%, #ffe1d7 100%);
+      border: 1px solid rgba(176,48,34,.3);
+      border-radius: 18px; padding: 14px 18px; margin-bottom: 16px;
+      box-shadow: 0 4px 16px rgba(176,48,34,.06);
+    }
+    .wall-err-banner .we-icon {
+      width: 34px; height: 34px; border-radius: 50%;
+      background: rgba(176,48,34,.15); color: #b03022;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 17px; flex-shrink: 0;
+    }
+    .wall-err-banner .we-body { flex: 1; min-width: 0; }
+    .wall-err-banner .we-title { font-family: var(--display); font-weight: 500; font-size: 15px; color: var(--ink); margin-bottom: 2px; }
+    .wall-err-banner .we-sub { font-size: 12px; color: var(--ink-soft); line-height: 1.4; }
+    .wall-err-banner .we-dismiss {
+      flex-shrink: 0; padding: 7px 14px; font-size: 12px;
+      background: #fff; color: var(--ink); border: 1px solid var(--line);
+      border-radius: 999px; cursor: pointer; font-weight: 600;
+      font-family: var(--mono); letter-spacing: .08em; text-transform: uppercase;
+    }
+    .wall-err-banner .we-dismiss:hover { background: var(--paper-2); }
+
+    /* Per-tile warning corner — shown on uploads the wall failed to
+       play. Sits above the actions overlay so it's visible at a glance. */
+    .placeholder.wall-error::after {
+      content: '⚠ Wall skipped';
+      position: absolute; top: 6px; left: 6px; z-index: 3;
+      padding: 3px 8px; border-radius: 999px;
+      background: rgba(176,48,34,.92); color: #fff;
+      font-family: var(--mono); font-size: 9px; font-weight: 700;
+      letter-spacing: .1em; text-transform: uppercase;
+      box-shadow: 0 2px 8px rgba(0,0,0,.25);
+      pointer-events: none;
+    }
+
     /* ── Loading + error states ───────────────────────────── */
     .page-loading { display: flex; align-items: center; justify-content: center; min-height: 60vh; }
     .page-error { display: none; text-align: center; padding: 6rem 2rem; color: var(--ink-soft); }
@@ -1216,6 +1254,19 @@
         <div class="lb-msg" id="lb-msg">You've used all 50 uploads on the Tala plan. Existing photos remain visible — upgrade to keep accepting new ones.</div>
       </div>
       <a class="lb-cta" id="lb-cta" href="/#pricing">Upgrade →</a>
+    </div>
+
+    <!-- ── Wall playback errors banner ────────────────────
+         Surfaced when the wall reports a video that failed to play.
+         Helps the host find and re-upload broken clips without the
+         wall freezing on them. -->
+    <div class="wall-err-banner" id="wall-err-banner" style="display:none;">
+      <span class="we-icon" aria-hidden="true">⚠</span>
+      <div class="we-body">
+        <div class="we-title" id="we-title">1 video failed to play on the wall</div>
+        <div class="we-sub">The wall skipped over them. Tiles below show a warning corner.</div>
+      </div>
+      <button type="button" class="we-dismiss" id="we-dismiss">Dismiss</button>
     </div>
 
     <!-- ── Live polls panel ───────────────────────────── -->
@@ -3032,9 +3083,86 @@
     });
   }
 
+  // ── Wall playback errors ────────────────────────────
+  // Poll the in-memory error buffer the wall populates. Tiles whose
+  // upload_id appears here pick up a warning corner via .wall-error,
+  // and a banner above the gallery summarises the count.
+  let wallErrorSet = new Set();
+  let wallErrorDismissed = false;
+  const wallErrBanner = document.getElementById('wall-err-banner');
+  const wallErrTitle  = document.getElementById('we-title');
+  const wallErrDismiss = document.getElementById('we-dismiss');
+
+  async function refreshWallErrors() {
+    if (!slug) return;
+    try {
+      const res = await fetch(`/api/events/${slug}/wall-errors`, { headers: authHeader(), cache: 'no-store' });
+      if (!res.ok) return;
+      const { items = [] } = await res.json();
+      const next = new Set(items.map(i => String(i.upload_id)));
+      const changed = next.size !== wallErrorSet.size
+        || Array.from(next).some(id => !wallErrorSet.has(id));
+      wallErrorSet = next;
+      if (changed) {
+        if (next.size === 0) wallErrorDismissed = false;
+        // Re-decorate tiles already in the DOM without rebuilding the grid.
+        applyWallErrorBadges();
+      }
+      updateWallErrorBanner(items);
+    } catch { /* silent */ }
+  }
+
+  function applyWallErrorBadges() {
+    if (!photoGrid) return;
+    const tiles = photoGrid.querySelectorAll('.placeholder');
+    const filtered = filterUploads(filterByStream(allUploads || []), currentTab);
+    tiles.forEach((tile, idx) => {
+      const u = filtered[idx];
+      if (!u) return;
+      tile.classList.toggle('wall-error', wallErrorSet.has(String(u.id)));
+    });
+  }
+
+  function updateWallErrorBanner(items) {
+    if (!wallErrBanner) return;
+    const n = items.length;
+    if (n === 0 || wallErrorDismissed) {
+      wallErrBanner.style.display = 'none';
+      return;
+    }
+    wallErrBanner.style.display = '';
+    if (wallErrTitle) {
+      wallErrTitle.textContent = `${n} video${n === 1 ? '' : 's'} failed to play on the wall`;
+    }
+  }
+
+  wallErrDismiss?.addEventListener('click', async () => {
+    wallErrorDismissed = true;
+    if (wallErrBanner) wallErrBanner.style.display = 'none';
+    try {
+      await fetch(`/api/events/${slug}/wall-errors`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', ...authHeader() },
+        body: JSON.stringify({}),
+      });
+    } catch {}
+    wallErrorSet = new Set();
+    applyWallErrorBadges();
+  });
+
+  // Decorate after every gallery render so newly-created tiles pick up
+  // the warning corner without needing a full refresh cycle.
+  const _renderGallery = renderGallery;
+  renderGallery = function (uploads) {
+    _renderGallery(uploads);
+    applyWallErrorBadges();
+  };
+
   // ── Init ──────────────────────────────────────────────
   loadAll();
   setInterval(refreshUploads, 10000);
+  refreshWallErrors();
+  setInterval(refreshWallErrors, 5000);
 </script>
 
 </body>

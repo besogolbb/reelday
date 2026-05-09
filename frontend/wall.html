@@ -1264,6 +1264,34 @@
       if (inBurst) advanceBurstOrEnd();
       else        advance();
     });
+
+    // Video failed to load (404 from R2, codec mismatch, network mid-play).
+    // Skip immediately so the wall doesn't sit on a broken stream for 12s,
+    // and beacon the host so it shows up as a tile warning on the dashboard.
+    v?.addEventListener('error', () => {
+      const activeVid = activeLayer === 'A' ? vidA : vidB;
+      if (v !== activeVid) return;
+      const item = items[currentIdx];
+      if (item?.id) {
+        const code   = v.error?.code;
+        const reason = code === 4 ? 'src_not_supported'
+                     : code === 3 ? 'decode_error'
+                     : code === 2 ? 'network_error'
+                     : code === 1 ? 'aborted'
+                                  : 'video_error';
+        try {
+          fetch(`/api/events/${slug}/wall-errors`, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ upload_id: item.id, reason }),
+            keepalive: true,
+          });
+        } catch {}
+      }
+      clearTimeout(slideTimer);
+      if (inBurst) advanceBurstOrEnd();
+      else         advance();
+    });
   });
 
   /* ══════════════════════════════════════════════════════════
