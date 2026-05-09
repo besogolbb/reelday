@@ -320,6 +320,10 @@ export default async function pollRoutes(fastify) {
              ) sub
          ) v ON true
          LEFT JOIN LATERAL (
+           -- For trivia questions we want the fastest *correct* answer
+           -- (the dramatic reveal on the wall), so filter the fastest
+           -- subquery to votes matching the correct_key. For plain polls
+           -- there's no right answer, so we just pick the first voter.
            SELECT jsonb_build_object(
                     'guest_name', pv.guest_name,
                     'option_key', pv.option_key,
@@ -330,6 +334,7 @@ export default async function pollRoutes(fastify) {
             WHERE pv.poll_id = p.id
               AND pv.guest_name IS NOT NULL
               AND pv.guest_name <> ''
+              AND (p.kind <> 'question' OR p.correct_key IS NULL OR pv.option_key = p.correct_key)
             ORDER BY pv.created_at ASC
             LIMIT 1
          ) f ON true
