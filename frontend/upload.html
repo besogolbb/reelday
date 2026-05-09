@@ -457,7 +457,7 @@ body { background: var(--paper); min-height: 100dvh; }
       <input type="file" id="fileInput" multiple accept="image/*,video/*" onchange="handleFiles(event)" />
       <div class="icon">+</div>
       <h3>Tap to share</h3>
-      <p>Photos · videos up to 30s</p>
+      <p>Photos · videos up to 30s &amp; 50&nbsp;MB</p>
       <div class="choose-btn">Choose from gallery</div>
     </div>
     <div class="queue" id="galleryQueue"></div>
@@ -740,22 +740,25 @@ body { background: var(--paper); min-height: 100dvh; }
     const incoming = Array.from(e.target.files);
     const queue = document.getElementById('galleryQueue');
 
-    // Filter out over-length videos before they hit the queue. We only block
-    // videos here; over-size photos are handled by the resize step downstream.
+    // Filter out over-length OR over-size videos before they hit the queue.
+    // Over-size photos are handled by the downstream resize step.
     const files = [];
-    let rejected = 0;
+    let rejectedLong = 0;
+    let rejectedBig  = 0;
     for (const f of incoming) {
       if ((f.type || '').startsWith('video/')) {
+        if (f.size > MAX_VIDEO_BYTES) { rejectedBig += 1; continue; }
         const secs = await probeVideoDuration(f);
-        if (secs > MAX_RECORD_SECS + 0.5) {
-          rejected += 1;
-          continue;
-        }
+        if (secs > MAX_RECORD_SECS + 0.5) { rejectedLong += 1; continue; }
       }
       files.push(f);
     }
-    if (rejected > 0) {
-      alert(`Videos are limited to ${MAX_RECORD_SECS} seconds. ${rejected} clip${rejected > 1 ? 's were' : ' was'} skipped.`);
+    if (rejectedLong > 0) {
+      alert(`Videos are limited to ${MAX_RECORD_SECS} seconds. ${rejectedLong} clip${rejectedLong > 1 ? 's were' : ' was'} skipped.`);
+    }
+    if (rejectedBig > 0) {
+      const mb = Math.round(MAX_VIDEO_BYTES / (1024 * 1024));
+      alert(`Videos must be under ${mb} MB. ${rejectedBig} clip${rejectedBig > 1 ? 's were' : ' was'} skipped — try recording in the app or pick a smaller file.`);
     }
 
     files.forEach((f, i) => {
@@ -824,9 +827,18 @@ body { background: var(--paper); min-height: 100dvh; }
     const lbl = document.getElementById('vfLabel');
     lbl.textContent = 'Starting camera…';
     try {
+      // Cap capture at 720p / 30fps. Without `max` constraints modern phones
+      // default to 4K @ 60fps which makes a 30-second clip ~80MB and the
+      // wall painfully slow to load it back. 720p looks indistinguishable
+      // on the live wall and shrinks the clip ~10x.
       mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: true
+        video: {
+          facingMode,
+          width:     { ideal: 1280, max: 1280 },
+          height:    { ideal: 720,  max: 720  },
+          frameRate: { ideal: 30,   max: 30   },
+        },
+        audio: true,
       });
       const vid = document.getElementById('viewfinderVideo');
       vid.srcObject = mediaStream;
@@ -871,7 +883,15 @@ body { background: var(--paper); min-height: 100dvh; }
 
     const mimeType = ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4']
       .find(m => MediaRecorder.isTypeSupported(m)) || '';
-    mediaRecorder = new MediaRecorder(mediaStream, mimeType ? { mimeType } : {});
+    // Cap encoder bitrate so a 30s clip lands around 9MB (~2.5Mbps video +
+    // ~96Kbps audio) instead of whatever the browser default picks (often
+    // 8-10Mbps on mobile, which produces 30-40MB clips).
+    const recOpts = {
+      videoBitsPerSecond: 2_500_000,
+      audioBitsPerSecond:    96_000,
+    };
+    if (mimeType) recOpts.mimeType = mimeType;
+    mediaRecorder = new MediaRecorder(mediaStream, recOpts);
     mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
     mediaRecorder.onstop = () => {
       recordedBlob = new Blob(recordedChunks, { type: mediaRecorder.mimeType });
@@ -897,6 +917,11 @@ body { background: var(--paper); min-height: 100dvh; }
   // Hard cap on guest video messages — keeps R2 bills predictable and the
   // wall snappy. Surfaced in the UI copy so guests know the limit upfront.
   const MAX_RECORD_SECS = 30;
+  // Defensive size cap for gallery picks (in-app recordings are already
+  // bitrate-capped). 50MB lets a 30s 4K clip from a recent iPhone slip
+  // through; anything heavier is clearly a long pre-recorded video that
+  // would hammer R2 + the wall on playback.
+  const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
 
   function stopRecord() {
     recording = false;
