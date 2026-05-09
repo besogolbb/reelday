@@ -1568,7 +1568,19 @@ body { background: var(--paper); min-height: 100dvh; }
     }
   }
 
+  // Drop focus + dismiss the on-screen keyboard. iOS Safari keeps the
+  // keyboard up across screen transitions if the input that opened it
+  // never gets blurred — the user then taps "Upload more" and the
+  // keyboard pops right back up, hiding the drop zone.
+  function dismissKeyboard() {
+    try {
+      const a = document.activeElement;
+      if (a && typeof a.blur === 'function' && a !== document.body) a.blur();
+    } catch {}
+  }
+
   function showThankYou(name, msg, thumbUrl) {
+    dismissKeyboard();
     const bg = document.getElementById('tyBg');
     if (thumbUrl) bg.style.backgroundImage = `url(${thumbUrl})`;
     else if (currentEvent && currentEvent.cover)
@@ -1584,6 +1596,7 @@ body { background: var(--paper); min-height: 100dvh; }
   }
 
   function uploadMore() {
+    dismissKeyboard();
     document.getElementById('tyScreen').classList.remove('visible');
 
     // ── Gallery panel reset ────────────────────────────
