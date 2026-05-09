@@ -37,16 +37,25 @@ const FRIENDLY_RATE_LIMIT = {
   message: 'Easy lang po! Masyado mabilis ang upload niyo. Wait ng konti.',
 };
 
-// Global rate-limit. Routes that need a tighter bucket (uploads) re-register
-// the plugin per-route with their own max/timeWindow.
+// At a real event every guest shares one WiFi (= one public IP). Keying
+// the limiter on IP would lump them all into a single bucket — 6 guests
+// would already eat a 20/min cap. We instead key on an opaque per-device
+// token (sent as `X-Guest-Id`, generated and persisted client-side in
+// localStorage). Falls back to the source IP for clients that don't send
+// the header so the limit can never be fully bypassed.
+const limiterKey = req =>
+  (typeof req.headers['x-guest-id'] === 'string' && req.headers['x-guest-id'].slice(0, 64)) ||
+  req.ip;
+
 await fastify.register(rateLimit, {
   global: true,
-  max: 120,                   // ~2 req/sec sustained per IP
+  max: 240,                   // generous global cap per device-token / IP
   timeWindow: '1 minute',
   ban: 0,
   // Logged-in hosts shouldn't get throttled by guest-facing limits while
   // they're triaging uploads in the dashboard.
   allowList: req => Boolean(req.headers.authorization),
+  keyGenerator: limiterKey,
   errorResponseBuilder: () => FRIENDLY_RATE_LIMIT,
   addHeaders: {
     'x-ratelimit-limit':     true,
@@ -55,10 +64,15 @@ await fastify.register(rateLimit, {
     'retry-after':           true,
   },
 });
+// Expose the limiter key strategy + friendly payload to route files so
+// they can apply tighter, per-route buckets without re-implementing both.
+fastify.decorate('limiterKey',          limiterKey);
+fastify.decorate('friendlyRateLimit',   FRIENDLY_RATE_LIMIT);
 
 await fastify.register(cors, {
   origin: ['https://reelday.ph', 'http://localhost:3000'], // Allow specific origins for production and local development
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'], // Allow necessary methods
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Guest-Id'],
 });
 
 await fastify.register(multipart, {

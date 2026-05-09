@@ -87,12 +87,16 @@ export default async function uploadRoutes(fastify) {
     return { event, plan };
   }
 
-  // Per-IP cap for upload-write endpoints. Tighter than the global default
-  // because each request triggers an R2 PUT signing or a DB write.
+  // Tighter cap for upload-write endpoints (presigned URL / R2 PUT / DB
+  // insert). Keyed on the per-device token so guests sharing one venue
+  // WiFi don't share one bucket. Plan-level upload caps still apply via
+  // getValidatedEvent(); this just stops a single device from hammering.
   const UPLOAD_WRITE_LIMIT = {
     rateLimit: {
-      max: 20,
+      max: 40,
       timeWindow: '1 minute',
+      keyGenerator: fastify.limiterKey,
+      errorResponseBuilder: () => fastify.friendlyRateLimit,
     },
   };
 

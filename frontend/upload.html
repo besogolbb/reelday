@@ -693,6 +693,25 @@ body { background: var(--paper); min-height: 100dvh; }
   // The friendly Tagalog notice for HTTP 429 from our API.
   const RATE_LIMIT_MSG = 'Easy lang po! Masyado mabilis ang upload niyo. Wait ng konti.';
 
+  // Per-device token so the backend rate-limiter can give each guest
+  // their own bucket — important at events where everyone shares one
+  // venue WiFi (= one public IP). Persisted in localStorage so the same
+  // phone keeps its identity across reloads.
+  function getGuestId() {
+    try {
+      let id = localStorage.getItem('reelday_guest_id');
+      if (!id) {
+        id = (crypto.randomUUID && crypto.randomUUID()) ||
+             (Date.now().toString(36) + Math.random().toString(36).slice(2, 10));
+        localStorage.setItem('reelday_guest_id', id);
+      }
+      return id;
+    } catch {
+      return Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+    }
+  }
+  const GUEST_ID = getGuestId();
+
   /* ── Gallery ───────────────────────────────────────── */
   const itemDataUrls = {};
   const itemFiles    = {}; // keep the original File objects for the actual API upload
@@ -1087,6 +1106,7 @@ body { background: var(--paper); min-height: 100dvh; }
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'X-Guest-Id': GUEST_ID,
             ...(token ? { 'Authorization': `Bearer ${token}` } : {})
           },
           body: JSON.stringify({ slug: currentEvent.slug, filename: file.name || 'blob', contentType: file.type })
@@ -1140,6 +1160,7 @@ body { background: var(--paper); min-height: 100dvh; }
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'X-Guest-Id': GUEST_ID,
             ...(token ? { 'Authorization': `Bearer ${token}` } : {})
           },
           body: JSON.stringify({ slug: currentEvent.slug, fileKey, uploader_name: name, message: msgToSend, file_type: isVideo ? 'video' : 'photo', is_video_message: isVidMsg })
