@@ -351,8 +351,59 @@ body { background: var(--paper); min-height: 100dvh; }
   text-align: center; font-size: 13px; color: var(--ink-soft); line-height: 1.5;
 }
 .react-locked b { color: var(--ink); display: block; margin-bottom: 4px; font-weight: 600; }
-/* Future home of the live-poll card; kept hidden until polls ship. */
-.poll-slot { margin-top: 16px; }
+/* ── Live poll card (rendered into #pollSlot when host runs a poll) ── */
+.poll-slot { margin-top: 18px; }
+.poll-card {
+  background: linear-gradient(135deg, #fff 0%, #fff7ec 100%);
+  border: 1px solid var(--accent);
+  border-radius: var(--r-lg);
+  padding: 18px 16px;
+  box-shadow: 0 6px 18px rgba(196,90,58,.12);
+  animation: pollFade .35s ease;
+}
+@keyframes pollFade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.poll-card .poll-meta {
+  display: flex; justify-content: space-between; align-items: center;
+  font-family: var(--mono); font-size: 10px; font-weight: 700;
+  letter-spacing: .14em; text-transform: uppercase;
+  color: var(--accent-deep); margin-bottom: 10px;
+}
+.poll-card .poll-meta .countdown { color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.poll-card h3 {
+  font-family: var(--display); font-size: 18px; font-weight: 500;
+  color: var(--ink); margin-bottom: 14px; line-height: 1.3;
+}
+.poll-options { display: flex; flex-direction: column; gap: 8px; }
+.poll-option {
+  position: relative;
+  background: var(--paper-2); border: 1.5px solid var(--line-2);
+  border-radius: 12px; padding: 12px 14px;
+  font-size: 15px; font-weight: 500; color: var(--ink);
+  cursor: pointer; text-align: left;
+  transition: border-color .15s, transform .12s;
+  overflow: hidden;
+}
+.poll-option:hover { border-color: var(--accent); }
+.poll-option:active { transform: scale(.98); }
+.poll-option .label { position: relative; z-index: 1; display: flex; justify-content: space-between; gap: 12px; }
+.poll-option .pct { font-family: var(--mono); font-size: 12px; color: var(--ink-soft); display: none; }
+.poll-option .bar {
+  position: absolute; left: 0; top: 0; bottom: 0; z-index: 0;
+  width: 0%;
+  background: rgba(196,90,58,.18);
+  transition: width .5s ease;
+  display: none;
+}
+.poll-card.results .poll-option .pct { display: inline; }
+.poll-card.results .poll-option .bar { display: block; }
+.poll-card.results .poll-option { cursor: default; }
+.poll-option.voted { border-color: var(--accent); background: rgba(196,90,58,.10); }
+.poll-card .poll-footer {
+  margin-top: 12px;
+  font-family: var(--mono); font-size: 11px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--ink-faint);
+  text-align: center;
+}
 
 /* ── Toast (friendly, non-blocking notices like rate-limit hints) ── */
 .toast { position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 12px); z-index: 1000; max-width: min(90vw, 420px); padding: 12px 18px; border-radius: 999px; background: rgba(20,20,20,.92); color: #fff; font-size: 14px; line-height: 1.35; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,.25); opacity: 0; pointer-events: none; transition: opacity .2s ease, transform .2s ease; }
@@ -794,6 +845,10 @@ body { background: var(--paper); min-height: 100dvh; }
 
     bindReactButtons();
     refreshReactGate();
+
+    // Polls follow the same plan gate; no point hammering the endpoint
+    // on Tala events where the server will always return null anyway.
+    if (event.plan?.features?.polls) bindPollLifecycle();
   }
 
   function applyEvent(ev) {
@@ -988,6 +1043,149 @@ body { background: var(--paper); min-height: 100dvh; }
       }
     } catch {
       // Network blip — silent (next tap will succeed).
+    }
+  }
+
+  /* ── Live polls ───────────────────────────────────────
+     Poll /api/events/:slug/polls/active every 2s. Render the active
+     poll into #pollSlot when one is running; clear it when none.
+     The slot lives inside the React panel so the poll surfaces only
+     where the guest is already paying attention. */
+  const POLL_TICK_MS = 2000;
+  let pollState = {
+    activeId:    null,           // currently-displayed poll id (or null)
+    votedKey:    null,           // which option THIS guest picked (sticky local memory)
+    timerId:     null,           // setInterval handle for the countdown
+    deadline:    0,              // unix ms when seconds_left hits 0
+    lastPollId:  null,           // dedup so a stale poll re-render doesn't reset votedKey
+  };
+
+  function bindPollLifecycle() {
+    if (window.__reeldayPollPolling) return;
+    window.__reeldayPollPolling = true;
+    fetchActivePoll();
+    setInterval(fetchActivePoll, POLL_TICK_MS);
+  }
+
+  async function fetchActivePoll() {
+    if (!currentEvent?.slug) return;
+    try {
+      const res = await fetch(`/api/events/${currentEvent.slug}/polls/active`, { cache: 'no-store' });
+      if (!res.ok) return;
+      const { poll } = await res.json();
+      renderPollSlot(poll);
+    } catch { /* silent */ }
+  }
+
+  function renderPollSlot(poll) {
+    const slot = document.getElementById('pollSlot');
+    if (!slot) return;
+
+    if (!poll) {
+      // No live poll — clear the slot and reset state.
+      slot.style.display = 'none';
+      slot.innerHTML = '';
+      if (pollState.timerId) clearInterval(pollState.timerId);
+      pollState = { activeId: null, votedKey: null, timerId: null, deadline: 0, lastPollId: null };
+      return;
+    }
+
+    // First time we see this poll? Reset the local "voted" memory.
+    if (poll.id !== pollState.lastPollId) {
+      pollState.votedKey   = null;
+      pollState.lastPollId = poll.id;
+    }
+    pollState.activeId = poll.id;
+
+    const tally = new Map((poll.tally || []).map(t => [t.key, t.count]));
+    const total = poll.total_votes || 0;
+    const showResults = pollState.votedKey !== null || total > 0;
+
+    const optsHtml = (poll.options || []).map(opt => {
+      const count = tally.get(opt.key) || 0;
+      const pct   = total ? Math.round((count / total) * 100) : 0;
+      const voted = pollState.votedKey === opt.key;
+      return `
+        <button type="button" class="poll-option ${voted ? 'voted' : ''}"
+                data-key="${escapeAttr(opt.key)}"
+                ${pollState.votedKey ? 'aria-pressed="' + (voted ? 'true' : 'false') + '"' : ''}>
+          <span class="bar" style="width:${pct}%"></span>
+          <span class="label">
+            <span>${escapeHtml(opt.label)}</span>
+            <span class="pct">${pct}% · ${count}</span>
+          </span>
+        </button>`;
+    }).join('');
+
+    const secondsLeft = Math.max(0, Number(poll.seconds_left) || 0);
+    pollState.deadline = Date.now() + secondsLeft * 1000;
+
+    slot.innerHTML = `
+      <div class="poll-card ${showResults ? 'results' : ''}" id="pollCard">
+        <div class="poll-meta">
+          <span>POLL · LIVE</span>
+          <span class="countdown" id="pollCountdown">${secondsLeft}s left</span>
+        </div>
+        <h3>${escapeHtml(poll.question)}</h3>
+        <div class="poll-options">${optsHtml}</div>
+        <div class="poll-footer">
+          ${showResults ? `${total} vote${total === 1 ? '' : 's'} · tap to change` : 'Tap to vote'}
+        </div>
+      </div>`;
+    slot.style.display = '';
+
+    // Wire option taps. We attach per-render rather than via delegation
+    // because the slot HTML is replaced wholesale on each poll tick.
+    slot.querySelectorAll('.poll-option').forEach(btn => {
+      btn.addEventListener('click', () => sendPollVote(poll.id, btn.dataset.key));
+    });
+
+    // Countdown ticker — purely cosmetic; the server is the source of
+    // truth for poll status. A drift of <1s is fine.
+    if (pollState.timerId) clearInterval(pollState.timerId);
+    pollState.timerId = setInterval(() => {
+      const left = Math.max(0, Math.round((pollState.deadline - Date.now()) / 1000));
+      const el = document.getElementById('pollCountdown');
+      if (el) el.textContent = left > 0 ? `${left}s left` : 'finishing…';
+      if (left <= 0) clearInterval(pollState.timerId);
+    }, 1000);
+  }
+
+  async function sendPollVote(pollId, optionKey) {
+    if (!currentEvent?.slug || !pollId || !optionKey) return;
+    // Optimistic local mark so the UI flips to results immediately.
+    const wasVoted = pollState.votedKey;
+    pollState.votedKey = optionKey;
+
+    try {
+      const name = (document.getElementById('reactName')?.value
+                 || document.getElementById('galleryName')?.value
+                 || '').trim();
+      const res = await fetch(`/api/events/${currentEvent.slug}/polls/${pollId}/vote`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Guest-Id':   GUEST_ID,
+        },
+        body: JSON.stringify({ option_key: optionKey, guest_name: name || null }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        if (res.status === 429 || err.code === 'rate_limited') {
+          showToast(RATE_LIMIT_MSG);
+        } else if (err.code === 'poll_not_live') {
+          // Host stopped it between the user picking and us POSTing.
+          // Force a refresh so the slot updates correctly.
+          fetchActivePoll();
+        }
+        // Roll back the optimistic flip on any error.
+        pollState.votedKey = wasVoted;
+        return;
+      }
+      // Success — pull a fresh tally on the next tick.
+      fetchActivePoll();
+    } catch {
+      pollState.votedKey = wasVoted;
     }
   }
 

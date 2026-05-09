@@ -467,6 +467,139 @@
     }
     .approve-toggle:disabled { opacity: .55; cursor: not-allowed; }
 
+    /* ── Live polls panel ─────────────────────────────────── */
+    .polls-panel { padding: 22px 24px 24px; }
+    .polls-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+    .polls-h2 { font-family: var(--display); font-size: 22px; font-weight: 500; color: var(--ink); margin-bottom: 4px; }
+    .polls-sub { font-size: 13px; color: var(--dash-muted); line-height: 1.5; max-width: 520px; }
+    .polls-create-btn { flex-shrink: 0; }
+    .polls-list { display: flex; flex-direction: column; gap: 10px; }
+    .polls-empty { font-size: 13px; color: var(--dash-muted); padding: 18px 0; text-align: center; font-style: italic; }
+    .polls-locked { padding: 16px; border-radius: 10px; background: rgba(196,90,58,.08); color: var(--ink-soft); font-size: 13px; text-align: center; border: 1px dashed rgba(196,90,58,.3); }
+    .polls-locked a { color: var(--accent); font-weight: 600; text-decoration: none; }
+
+    .poll-row {
+      background: #fff; border: 1px solid var(--line); border-radius: 14px;
+      padding: 14px 16px;
+      display: grid; grid-template-columns: 1fr auto; gap: 10px 14px; align-items: center;
+    }
+    .poll-row .poll-status {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 10px; font-weight: 700;
+      letter-spacing: .14em; text-transform: uppercase;
+      padding: 4px 10px; border-radius: 999px;
+    }
+    .poll-row .poll-status.draft { background: var(--paper-3); color: var(--ink-soft); }
+    .poll-row .poll-status.live  { background: rgba(229,76,59,.14); color: #b03022; }
+    .poll-row .poll-status.live::before { content: '●'; animation: pollPulse 1s infinite; }
+    .poll-row .poll-status.ended { background: rgba(45,122,74,.14); color: #1f5e3b; }
+    @keyframes pollPulse { 50% { opacity: .35; } }
+
+    .poll-row .poll-q {
+      font-family: var(--display); font-size: 16px; font-weight: 500; color: var(--ink);
+      margin-top: 6px; line-height: 1.3;
+    }
+    .poll-row .poll-opts {
+      font-size: 12px; color: var(--dash-muted); margin-top: 4px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .poll-row .poll-actions {
+      display: flex; gap: 6px; align-items: center;
+      grid-column: 2; grid-row: 1 / span 3;
+    }
+    .poll-row .poll-actions button {
+      padding: 7px 12px; border-radius: 999px; font-size: 12px; font-weight: 600;
+      border: 1px solid var(--line); background: #fff; color: var(--ink);
+      cursor: pointer; transition: background .12s;
+      font-family: var(--sans);
+    }
+    .poll-row .poll-actions button:hover { background: var(--paper-2); }
+    .poll-row .poll-actions .btn-run {
+      background: var(--accent); color: #fff; border-color: var(--accent);
+    }
+    .poll-row .poll-actions .btn-run:hover { background: var(--accent-deep); }
+    .poll-row .poll-actions .btn-stop { background: #b03022; color: #fff; border-color: #b03022; }
+    .poll-row .poll-actions .btn-stop:hover { background: #8a2418; }
+    .poll-row .poll-actions .btn-del { color: #b03022; }
+
+    /* Result tally rendered in the row when status='ended' */
+    .poll-row .poll-tally {
+      grid-column: 1 / -1;
+      display: flex; flex-direction: column; gap: 4px;
+      margin-top: 6px;
+    }
+    .poll-row .poll-tally .tally-bar {
+      position: relative; height: 22px; border-radius: 6px;
+      background: var(--paper-2); overflow: hidden;
+      font-size: 12px;
+    }
+    .poll-row .poll-tally .tally-bar .fill {
+      position: absolute; left: 0; top: 0; bottom: 0; width: 0%;
+      background: rgba(196,90,58,.22);
+      transition: width .4s;
+    }
+    .poll-row .poll-tally .tally-bar .text {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 10px;
+      color: var(--ink); font-weight: 500;
+    }
+
+    /* ── Poll editor modal ───────────────────────────────── */
+    .poll-modal {
+      position: fixed; inset: 0; z-index: 1000;
+      display: none;
+      align-items: center; justify-content: center;
+      padding: 20px;
+      background: rgba(20,12,8,.55);
+      backdrop-filter: blur(8px);
+    }
+    .poll-modal.open { display: flex; animation: pmFade .25s ease both; }
+    .poll-modal-card {
+      background: #fff; border-radius: 18px;
+      width: min(520px, 100%); max-height: 88vh;
+      padding: 24px;
+      overflow-y: auto;
+      box-shadow: 0 30px 80px rgba(0,0,0,.35);
+    }
+    .poll-modal-card h3 { font-family: var(--display); font-size: 22px; margin-bottom: 18px; color: var(--ink); }
+    .poll-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+    .poll-field > span { font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); }
+    .poll-field input,
+    .poll-field select {
+      padding: 10px 12px; border-radius: 10px;
+      border: 1px solid var(--line); background: var(--paper);
+      font-family: var(--sans); font-size: 14px; color: var(--ink);
+    }
+    .poll-field-row { flex-direction: row; align-items: center; gap: 12px; }
+    .poll-field-row > span { flex: 0 0 auto; }
+    .poll-field-row select { flex: 1; }
+    .poll-options-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 6px; }
+    .poll-options-list .poll-option-input {
+      display: flex; gap: 6px;
+    }
+    .poll-options-list input { flex: 1; }
+    .poll-options-list button {
+      padding: 0 10px; border-radius: 10px; border: 1px solid var(--line);
+      background: #fff; color: var(--ink-soft); cursor: pointer;
+    }
+    .poll-add-option {
+      align-self: flex-start;
+      background: none; border: none; color: var(--accent); cursor: pointer;
+      font-size: 13px; font-weight: 600; padding: 4px 0;
+    }
+    .poll-modal-actions {
+      display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;
+    }
+    .poll-modal-actions button {
+      padding: 10px 18px; border-radius: 999px;
+      border: 1px solid var(--line); background: #fff;
+      font-family: var(--sans); font-size: 14px; font-weight: 600; color: var(--ink);
+      cursor: pointer;
+    }
+    .poll-modal-actions .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .poll-modal-actions .btn-primary:hover { background: var(--accent-deep); }
+
     /* ── Video preview modal ──────────────────────────────── */
     .preview-modal {
       position: fixed; inset: 0; z-index: 1000;
@@ -1150,6 +1283,54 @@
         <span class="tab" data-tab="hidden">Hidden <span id="tab-hidden-count">0</span></span>
       </div>
       <div class="photo-grid" id="photo-grid"></div>
+    </div>
+
+    <!-- ════ LIVE POLLS PANEL (Sinag+) ═══════════════════ -->
+    <div class="panel polls-panel" id="polls-panel" style="display:none; margin-top: 20px;">
+      <div class="polls-head">
+        <div>
+          <h2 class="polls-h2">Live polls</h2>
+          <p class="polls-sub">Pre-write a question, then tap “Run on wall” when you’re ready. Guests see it on their phone; the wall pauses photos while votes come in.</p>
+        </div>
+        <button type="button" class="btn btn-accent polls-create-btn" id="polls-create-btn">+ Create poll</button>
+      </div>
+      <div class="polls-list" id="polls-list">
+        <div class="polls-empty">No polls yet. Tap “Create poll” to make your first one.</div>
+      </div>
+      <div class="polls-locked" id="polls-locked" style="display:none;">
+        Live polls are part of <b>Sinag</b> and higher. <a href="/#pricing">Upgrade →</a>
+      </div>
+    </div>
+
+    <!-- Poll editor modal -->
+    <div class="poll-modal" id="poll-modal" role="dialog" aria-modal="true" aria-label="Create or edit poll" style="display:none;">
+      <div class="poll-modal-card">
+        <h3 id="poll-modal-title">Create poll</h3>
+        <label class="poll-field">
+          <span>Question</span>
+          <input type="text" id="poll-question-input" maxlength="200" placeholder="e.g. Beach or mountain honeymoon?" />
+        </label>
+        <div class="poll-field">
+          <span>Options (2–6)</span>
+          <div class="poll-options-list" id="poll-options-list"></div>
+          <button type="button" class="poll-add-option" id="poll-add-option">+ Add option</button>
+        </div>
+        <label class="poll-field poll-field-row">
+          <span>Duration</span>
+          <select id="poll-duration-input">
+            <option value="15">15 seconds</option>
+            <option value="30" selected>30 seconds</option>
+            <option value="45">45 seconds</option>
+            <option value="60">60 seconds</option>
+            <option value="90">90 seconds</option>
+            <option value="120">2 minutes</option>
+          </select>
+        </label>
+        <div class="poll-modal-actions">
+          <button type="button" id="poll-modal-cancel">Cancel</button>
+          <button type="button" class="btn-primary" id="poll-modal-save">Save draft</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -2210,6 +2391,219 @@
     'New video messages will auto-publish', 'New video messages require review',
   );
 
+  // ── Live polls ───────────────────────────────────────
+  const pollsPanel    = document.getElementById('polls-panel');
+  const pollsList     = document.getElementById('polls-list');
+  const pollsLocked   = document.getElementById('polls-locked');
+  const pollsCreateBtn= document.getElementById('polls-create-btn');
+  const pollModal     = document.getElementById('poll-modal');
+  const pollModalTitle= document.getElementById('poll-modal-title');
+  const pollQInput    = document.getElementById('poll-question-input');
+  const pollOptsList  = document.getElementById('poll-options-list');
+  const pollDurInput  = document.getElementById('poll-duration-input');
+  const pollAddOptBtn = document.getElementById('poll-add-option');
+  const pollSaveBtn   = document.getElementById('poll-modal-save');
+  const pollCancelBtn = document.getElementById('poll-modal-cancel');
+  let editingPollId   = null;
+  let pollsRefreshTimer = null;
+
+  function authHeader() {
+    const t = localStorage.getItem('reelday_token');
+    return t ? { 'Authorization': `Bearer ${t}` } : {};
+  }
+
+  function showPollsPanel(featureEnabled) {
+    if (!pollsPanel) return;
+    pollsPanel.style.display = '';
+    if (!featureEnabled) {
+      if (pollsList) pollsList.style.display = 'none';
+      if (pollsCreateBtn) pollsCreateBtn.style.display = 'none';
+      if (pollsLocked) pollsLocked.style.display = '';
+      return;
+    }
+    if (pollsList) pollsList.style.display = '';
+    if (pollsCreateBtn) pollsCreateBtn.style.display = '';
+    if (pollsLocked) pollsLocked.style.display = 'none';
+    refreshPolls();
+    // Light refresh while a poll is live so the dashboard tally
+    // updates as votes come in.
+    if (pollsRefreshTimer) clearInterval(pollsRefreshTimer);
+    pollsRefreshTimer = setInterval(refreshPolls, 3000);
+  }
+
+  async function refreshPolls() {
+    if (!slug) return;
+    try {
+      const res = await fetch(`/api/events/${slug}/polls`, { headers: authHeader() });
+      if (!res.ok) return;
+      const { polls } = await res.json();
+      renderPolls(polls || []);
+    } catch { /* silent */ }
+  }
+
+  function renderPolls(polls) {
+    if (!pollsList) return;
+    if (!polls.length) {
+      pollsList.innerHTML = '<div class="polls-empty">No polls yet. Tap "Create poll" to make your first one.</div>';
+      return;
+    }
+    pollsList.innerHTML = polls.map(p => {
+      const tally = new Map((p.tally || []).map(t => [t.key, t.count]));
+      const total = p.total_votes || 0;
+      const optsLabel = (p.options || []).map(o => o.label).join(' · ');
+      const isLive  = p.status === 'live';
+      const isEnded = p.status === 'ended';
+      const isDraft = p.status === 'draft';
+
+      const tallyHtml = (isLive || isEnded) ? `
+        <div class="poll-tally">
+          ${(p.options || []).map(o => {
+            const c = tally.get(o.key) || 0;
+            const pct = total ? Math.round((c / total) * 100) : 0;
+            return `
+              <div class="tally-bar">
+                <span class="fill" style="width:${pct}%"></span>
+                <span class="text"><span>${escapeHtml(o.label)}</span><span>${pct}% · ${c}</span></span>
+              </div>`;
+          }).join('')}
+        </div>` : '';
+
+      const actions = isLive ? `
+        <button class="btn-stop" data-act="stop" data-id="${p.id}">Stop</button>
+      ` : isDraft ? `
+        <button class="btn-run"  data-act="start" data-id="${p.id}">Run on wall</button>
+        <button data-act="edit"   data-id="${p.id}">Edit</button>
+        <button class="btn-del" data-act="delete" data-id="${p.id}">Delete</button>
+      ` : `
+        <button class="btn-run" data-act="start" data-id="${p.id}">Run again</button>
+        <button class="btn-del" data-act="delete" data-id="${p.id}">Delete</button>
+      `;
+
+      return `
+        <div class="poll-row">
+          <div>
+            <span class="poll-status ${p.status}">${p.status}${total ? ' · ' + total + ' vote' + (total === 1 ? '' : 's') : ''}</span>
+            <div class="poll-q">${escapeHtml(p.question)}</div>
+            <div class="poll-opts">${escapeHtml(optsLabel)}</div>
+          </div>
+          <div class="poll-actions">${actions}</div>
+          ${tallyHtml}
+        </div>`;
+    }).join('');
+
+    pollsList.querySelectorAll('.poll-actions button').forEach(b => {
+      b.addEventListener('click', () => onPollAction(b.dataset.act, b.dataset.id));
+    });
+  }
+
+  async function onPollAction(action, id) {
+    if (!slug || !id) return;
+    if (action === 'edit') {
+      const row = pollsList.querySelector(`[data-id="${id}"]`).closest('.poll-row');
+      const poll = pollsCache.get(id);
+      if (poll) openPollModal(poll);
+      return;
+    }
+    if (action === 'delete') {
+      if (!confirm('Delete this poll?')) return;
+      await fetch(`/api/events/${slug}/polls/${id}`, { method: 'DELETE', headers: authHeader() });
+      refreshPolls();
+      return;
+    }
+    if (action === 'start') {
+      const res = await fetch(`/api/events/${slug}/polls/${id}/start`, { method: 'POST', headers: authHeader() });
+      if (res.ok) showToast('Poll is live on the wall');
+      refreshPolls();
+      return;
+    }
+    if (action === 'stop') {
+      await fetch(`/api/events/${slug}/polls/${id}/stop`, { method: 'POST', headers: authHeader() });
+      showToast('Poll stopped');
+      refreshPolls();
+      return;
+    }
+  }
+
+  // Cache the latest poll list so "Edit" can hydrate the modal without
+  // re-fetching just-to-pull-options.
+  let pollsCache = new Map();
+  const _renderPolls = renderPolls;
+  renderPolls = function (polls) {
+    pollsCache = new Map(polls.map(p => [p.id, p]));
+    _renderPolls(polls);
+  };
+
+  // ── Poll editor modal ───────────────────────────────
+  function newOptionInput(value = '') {
+    const wrap = document.createElement('div');
+    wrap.className = 'poll-option-input';
+    wrap.innerHTML = `
+      <input type="text" maxlength="80" placeholder="Option label" value="${escapeAttr(value)}">
+      <button type="button" aria-label="Remove">✕</button>`;
+    wrap.querySelector('button').addEventListener('click', () => wrap.remove());
+    return wrap;
+  }
+
+  function openPollModal(existing) {
+    editingPollId = existing?.id || null;
+    pollModalTitle.textContent = existing ? 'Edit poll' : 'Create poll';
+    pollQInput.value = existing?.question || '';
+    pollDurInput.value = String(existing?.duration_s || 30);
+    pollOptsList.innerHTML = '';
+    const opts = existing?.options || [{ label: '' }, { label: '' }];
+    opts.forEach(o => pollOptsList.appendChild(newOptionInput(o.label || '')));
+    pollModal.classList.add('open');
+    setTimeout(() => pollQInput.focus(), 100);
+  }
+
+  function closePollModal() {
+    pollModal.classList.remove('open');
+    editingPollId = null;
+  }
+
+  pollsCreateBtn?.addEventListener('click', () => openPollModal(null));
+  pollAddOptBtn?.addEventListener('click', () => {
+    if (pollOptsList.children.length >= 6) {
+      showToast('Polls can have at most 6 options');
+      return;
+    }
+    pollOptsList.appendChild(newOptionInput(''));
+  });
+  pollCancelBtn?.addEventListener('click', closePollModal);
+  pollModal?.addEventListener('click', e => { if (e.target === pollModal) closePollModal(); });
+
+  pollSaveBtn?.addEventListener('click', async () => {
+    const question = pollQInput.value.trim();
+    if (!question) { showToast('Question is required'); return; }
+    const options = Array.from(pollOptsList.querySelectorAll('input'))
+      .map((inp, idx) => ({ key: 'o' + idx, label: inp.value.trim() }))
+      .filter(o => o.label);
+    if (options.length < 2) { showToast('Add at least 2 options'); return; }
+
+    const duration_s = parseInt(pollDurInput.value, 10) || 30;
+    const url = editingPollId
+      ? `/api/events/${slug}/polls/${editingPollId}`
+      : `/api/events/${slug}/polls`;
+    const method = editingPollId ? 'PATCH' : 'POST';
+
+    pollSaveBtn.disabled = true;
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json', ...authHeader() },
+        body: JSON.stringify({ question, options, duration_s }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Save failed');
+      closePollModal();
+      refreshPolls();
+    } catch (err) {
+      showToast(err.message);
+    } finally {
+      pollSaveBtn.disabled = false;
+    }
+  });
+
   // ── Preview modal (photos and videos) ────────────────
   const previewModal     = document.getElementById('preview-modal');
   const previewVideo     = document.getElementById('preview-modal-video');
@@ -2532,6 +2926,10 @@
       // Backend resolves owner's current subscription tier into plan_info.id;
       // override event.plan locally so all downstream rendering follows it.
       if (eventJson.plan_info?.id) event.plan = eventJson.plan_info.id;
+
+      // Polls panel visibility + locked state mirrors the resolved plan.
+      const pollsAllowed = !!eventJson.plan_info?.features?.polls;
+      showPollsPanel(pollsAllowed);
       const uploadsJson = uploadsRes.ok ? await uploadsRes.json() : { uploads: [] };
       const qrJson      = qrRes.ok      ? await qrRes.json()      : { qr_code: null };
       const uploads = uploadsJson.uploads || [];

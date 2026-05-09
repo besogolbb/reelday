@@ -64,6 +64,34 @@ const MIGRATIONS = `
     created_at  TIMESTAMPTZ DEFAULT NOW()
   );
   CREATE INDEX IF NOT EXISTS idx_reactions_event_time ON reactions(event_id, created_at DESC);
+
+  -- Live polls: host pre-creates questions in the dashboard, then taps
+  -- "Run on wall" to set status='live'. The wall poll picks it up,
+  -- pauses photos, and shows the question + a live tally. Auto-ends
+  -- after duration_s seconds, or the host can stop early.
+  CREATE TABLE IF NOT EXISTS polls (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    event_id    UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+    question    VARCHAR(200) NOT NULL,
+    options     JSONB NOT NULL,           -- [{key:'a', label:'Beach'}, ...]
+    duration_s  INTEGER NOT NULL DEFAULT 30,
+    status      VARCHAR(20) NOT NULL DEFAULT 'draft', -- draft|live|ended
+    started_at  TIMESTAMPTZ,
+    ended_at    TIMESTAMPTZ,
+    created_at  TIMESTAMPTZ DEFAULT NOW()
+  );
+  CREATE INDEX IF NOT EXISTS idx_polls_event_status ON polls(event_id, status);
+
+  -- One vote per guest per poll. Upsert via the primary key lets a
+  -- guest change their mind while the poll is live.
+  CREATE TABLE IF NOT EXISTS poll_votes (
+    poll_id     UUID NOT NULL REFERENCES polls(id) ON DELETE CASCADE,
+    guest_id    VARCHAR(64) NOT NULL,
+    option_key  VARCHAR(40) NOT NULL,
+    guest_name  VARCHAR(120),
+    created_at  TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (poll_id, guest_id)
+  );
 `;
 
 async function dbPlugin(fastify) {

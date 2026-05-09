@@ -26,6 +26,7 @@ export const PLANS = {
     features: {
       videoMessage: false,
       reactions:    false,
+      polls:        false,
       website:      false,
       customDomain: false,
     },
@@ -44,6 +45,7 @@ export const PLANS = {
     features: {
       videoMessage: true,
       reactions:    true,
+      polls:        true,
       website:      false,
       customDomain: false,
     },
@@ -62,6 +64,7 @@ export const PLANS = {
     features: {
       videoMessage: true,
       reactions:    true,
+      polls:        true,
       website:      true,
       customDomain: false,
     },
@@ -81,6 +84,7 @@ export const PLANS = {
     features: {
       videoMessage: true,
       reactions:    true,
+      polls:        true,
       website:      true,
       customDomain: true,
     },

@@ -299,6 +299,97 @@
       50%      { box-shadow: 0 0 0 10px rgba(196,90,58,0), 0 4px 16px rgba(0,0,0,.5); }
     }
 
+    /* ── Live poll overlay ──────────────────────────────────
+       Full-screen takeover that pauses the photo slideshow when the
+       host runs a poll. Slideshow + emoji + caption all stay alive
+       behind it, just hidden by .poll-active on the body. */
+    .poll-overlay {
+      position: fixed; inset: 0; z-index: 30;
+      background:
+        radial-gradient(circle at 30% 20%, rgba(196,90,58,.22), transparent 60%),
+        linear-gradient(180deg, rgba(15,7,3,.92), rgba(15,7,3,.96));
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      display: none;
+      flex-direction: column; align-items: center; justify-content: center;
+      padding: 6vh 6vw;
+      color: #fff;
+      animation: pollIn .55s cubic-bezier(.2,.8,.2,1);
+    }
+    .poll-overlay.visible { display: flex; }
+    .poll-overlay.ending  { animation: pollOut .5s ease both; }
+    @keyframes pollIn  { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: scale(1); } }
+    @keyframes pollOut { to   { opacity: 0; transform: scale(1.04); } }
+
+    .poll-overlay .poll-tag {
+      font-family: var(--mono); font-size: clamp(11px, 1vw, 14px);
+      letter-spacing: .32em; text-transform: uppercase;
+      color: var(--accent-soft);
+      margin-bottom: 24px;
+      display: flex; align-items: center; gap: 14px;
+    }
+    .poll-overlay .poll-tag .ring {
+      width: 14px; height: 14px; border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 0 rgba(196,90,58,.5);
+      animation: pollRing 1.6s ease infinite;
+    }
+    @keyframes pollRing { 50% { box-shadow: 0 0 0 14px rgba(196,90,58,0); } }
+
+    .poll-overlay h1 {
+      font-family: var(--display); font-style: italic; font-weight: 500;
+      font-size: clamp(36px, 6vw, 84px); line-height: 1.15;
+      text-align: center; max-width: 18ch;
+      text-shadow: 0 8px 30px rgba(0,0,0,.6);
+      margin-bottom: 40px;
+    }
+
+    .poll-overlay .poll-bars {
+      display: flex; flex-direction: column; gap: 14px;
+      width: min(900px, 92vw);
+    }
+    .poll-overlay .poll-bar {
+      position: relative; overflow: hidden;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 18px;
+      padding: 18px 22px;
+      font-size: clamp(18px, 2vw, 26px);
+      font-weight: 500;
+      backdrop-filter: blur(6px);
+    }
+    .poll-overlay .poll-bar .fill {
+      position: absolute; left: 0; top: 0; bottom: 0; width: 0%;
+      background: linear-gradient(90deg, var(--accent), var(--accent-soft));
+      transition: width .8s cubic-bezier(.2,.8,.2,1);
+      z-index: 0;
+    }
+    .poll-overlay .poll-bar .row {
+      position: relative; z-index: 1;
+      display: flex; justify-content: space-between; align-items: baseline; gap: 16px;
+    }
+    .poll-overlay .poll-bar .label { letter-spacing: .01em; }
+    .poll-overlay .poll-bar .stats {
+      font-family: var(--mono); font-size: clamp(13px, 1.1vw, 16px);
+      letter-spacing: .12em; opacity: .85; font-variant-numeric: tabular-nums;
+    }
+    .poll-overlay .poll-bar.leader .fill { background: linear-gradient(90deg, var(--gold), #f5d089); }
+    .poll-overlay .poll-bar.leader { border-color: rgba(216,160,90,.5); }
+
+    .poll-overlay .poll-foot {
+      margin-top: 36px;
+      font-family: var(--mono); font-size: clamp(11px, 1vw, 14px);
+      letter-spacing: .26em; text-transform: uppercase;
+      opacity: .75;
+    }
+    .poll-overlay .poll-countdown {
+      color: var(--gold);
+      font-variant-numeric: tabular-nums;
+    }
+    body.poll-active .frame,
+    body.poll-active .ticker .stats,
+    body.poll-active .upcoming { opacity: 0; transition: opacity .4s ease; }
+
     /* ── Burst (now playing video message) banner ──────────── */
     .burst-banner {
       position: fixed; top: 76px; left: 50%; transform: translateX(-50%);
@@ -534,6 +625,16 @@
 <!-- ════ PROGRESS + PAUSE ═════════════════════════════════ -->
 <div class="slide-progress"><div class="fill" id="progress-fill"></div></div>
 <div class="pause-btn" id="pause-btn" onclick="togglePause()">⏸ Paused — tap to resume</div>
+
+<!-- ════ LIVE POLL OVERLAY ═══════════════════════════════ -->
+<div class="poll-overlay" id="poll-overlay" aria-live="polite" aria-hidden="true">
+  <div class="poll-tag"><span class="ring"></span><span>Live poll</span></div>
+  <h1 id="poll-question"></h1>
+  <div class="poll-bars" id="poll-bars"></div>
+  <div class="poll-foot">
+    <span id="poll-foot-status">VOTING ENDS IN <span class="poll-countdown" id="poll-countdown">30s</span></span>
+  </div>
+</div>
 
 <div class="burst-banner" id="burst-banner">
   <span class="dot"></span>
@@ -1275,6 +1376,155 @@
     });
   });
 
+  // ── Live poll polling ────────────────────────────────────
+  // The host runs a poll from the dashboard; the wall pauses photos and
+  // shows a full-screen takeover. Slideshow timers stay paused while
+  // the overlay is active so we don't advance behind the scenes.
+  const pollOverlay   = document.getElementById('poll-overlay');
+  const pollQuestion  = document.getElementById('poll-question');
+  const pollBars      = document.getElementById('poll-bars');
+  const pollCountdown = document.getElementById('poll-countdown');
+  const pollFootStat  = document.getElementById('poll-foot-status');
+  let activePollId    = null;
+  let pollCountdownTimer = null;
+  let pollSlideshowResumeAt = 0;
+
+  function pausePollSlideshow() {
+    if (!isRunning) return;
+    isPaused = true;
+    clearTimeout(slideTimer);
+    document.body.classList.add('poll-active');
+  }
+  function resumePollSlideshow() {
+    if (isRunning) {
+      isPaused = false;
+      scheduleAdvance();
+    }
+    document.body.classList.remove('poll-active');
+  }
+
+  function renderPollBars(poll, opts = {}) {
+    const tally = new Map((poll.tally || []).map(t => [t.key, t.count]));
+    const total = poll.total_votes || 0;
+    const max   = Math.max(1, ...Array.from(tally.values()));
+    pollQuestion.textContent = poll.question;
+
+    pollBars.innerHTML = (poll.options || []).map(opt => {
+      const count = tally.get(opt.key) || 0;
+      const pct   = total ? Math.round((count / total) * 100) : 0;
+      const fill  = total ? Math.round((count / max)   * 100) : 0;
+      const isLeader = opts.leaderHighlight && count > 0 && count === max && total > 0;
+      return `
+        <div class="poll-bar ${isLeader ? 'leader' : ''}">
+          <span class="fill" style="width:${fill}%"></span>
+          <span class="row">
+            <span class="label">${escapeWallHtml(opt.label)}</span>
+            <span class="stats">${pct}% · ${count}</span>
+          </span>
+        </div>`;
+    }).join('');
+  }
+
+  // Tiny local escape — wall.html doesn't import the upload-page helper.
+  function escapeWallHtml(s) {
+    return String(s ?? '')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  function showPollOverlay(poll) {
+    pollOverlay.classList.add('visible');
+    pollOverlay.classList.remove('ending');
+    pollOverlay.setAttribute('aria-hidden', 'false');
+    pausePollSlideshow();
+    renderPollBars(poll);
+
+    // Countdown ticker — server is the source of truth; this is purely
+    // cosmetic so the displayed seconds-left feels live between polls.
+    if (pollCountdownTimer) clearInterval(pollCountdownTimer);
+    let secondsLeft = Math.max(0, Number(poll.seconds_left) || 0);
+    pollCountdown.textContent = `${secondsLeft}s`;
+    pollFootStat.innerHTML = `VOTING ENDS IN <span class="poll-countdown" id="poll-countdown">${secondsLeft}s</span>`;
+    pollCountdownTimer = setInterval(() => {
+      secondsLeft = Math.max(0, secondsLeft - 1);
+      const el = document.getElementById('poll-countdown');
+      if (el) el.textContent = `${secondsLeft}s`;
+      if (secondsLeft === 0) clearInterval(pollCountdownTimer);
+    }, 1000);
+  }
+
+  function showPollResultsThenHide(poll) {
+    // Announce results state visually for ~8 seconds so the room can
+    // see the final tally before photos resume.
+    if (pollCountdownTimer) clearInterval(pollCountdownTimer);
+    pollFootStat.textContent = 'FINAL RESULTS';
+    renderPollBars(poll, { leaderHighlight: true });
+    pollSlideshowResumeAt = Date.now() + 8000;
+    setTimeout(() => {
+      // Only hide if no NEW poll has started in the meantime.
+      if (Date.now() >= pollSlideshowResumeAt - 50) hidePollOverlay();
+    }, 8000);
+  }
+
+  function hidePollOverlay() {
+    if (!pollOverlay.classList.contains('visible')) return;
+    pollOverlay.classList.add('ending');
+    setTimeout(() => {
+      pollOverlay.classList.remove('visible', 'ending');
+      pollOverlay.setAttribute('aria-hidden', 'true');
+      pollBars.innerHTML = '';
+      pollQuestion.textContent = '';
+      activePollId = null;
+      resumePollSlideshow();
+    }, 500);
+  }
+
+  let lastSeenPollId = null;
+  let lastSeenPollStatus = null;
+  async function pollPolls() {
+    try {
+      const res = await fetch(`/api/events/${slug}/polls/active`, { cache: 'no-store' });
+      if (!res.ok) return;
+      const { poll } = await res.json();
+
+      // No poll on the server side.
+      if (!poll) {
+        if (lastSeenPollStatus === 'live' && activePollId) {
+          // Was live, now gone — show "ended" results briefly. The
+          // server already auto-ends; we have the last tally cached
+          // in the DOM, so just transition to results state.
+          pollFootStat.textContent = 'FINAL RESULTS';
+          if (pollCountdownTimer) clearInterval(pollCountdownTimer);
+          // Hide after a short grace.
+          setTimeout(hidePollOverlay, 4000);
+        } else if (!activePollId) {
+          // Already idle — nothing to do.
+        }
+        lastSeenPollId = null;
+        lastSeenPollStatus = null;
+        return;
+      }
+
+      // New poll arrived.
+      if (poll.id !== lastSeenPollId) {
+        activePollId = poll.id;
+        lastSeenPollId = poll.id;
+        lastSeenPollStatus = poll.status;
+        showPollOverlay(poll);
+        return;
+      }
+
+      // Same poll, still live — refresh the tally.
+      if (poll.status === 'live') {
+        renderPollBars(poll);
+      } else if (poll.status === 'ended' && lastSeenPollStatus === 'live') {
+        // Transition: live -> ended -> results -> hide.
+        lastSeenPollStatus = 'ended';
+        showPollResultsThenHide(poll);
+      }
+    } catch { /* network blip */ }
+  }
+
   // ── Reactions polling ────────────────────────────────────
   // The endpoint returns { reactions:[…], server_time } where
   // server_time lets us pin the next ?since to the SERVER clock, not
@@ -1606,6 +1856,12 @@
     // ship; empty calls cost ~zero.
     pollReactions();
     setInterval(pollReactions, 1000);
+
+    // Live polls: 2s cadence. Snappy enough that the wall takes over
+    // within ~2s of the host hitting "Run on wall" and updates the
+    // tally as votes arrive.
+    pollPolls();
+    setInterval(pollPolls, 2000);
   }
 
   init();
