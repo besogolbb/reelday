@@ -177,7 +177,7 @@ export default async function uploadRoutes(fastify) {
 
     // Optionally authenticate the user if a token is present
     request.user = tryGetUser(request);
-    fastify.log.info({ slug, userId: request.user?.id, filename }, 'Generating presigned URL');
+    fastify.log.info({ slug, userId: request.user?.id, filename, bucket: process.env.R2_BUCKET_NAME }, 'Generating presigned URL');
 
     try {
       await getValidatedEvent(slug, request.user);
@@ -185,29 +185,14 @@ export default async function uploadRoutes(fastify) {
       return reply.status(e.statusCode || 500).send({ error: true, ...e });
     }
 
-    if (!process.env.R2_ENDPOINT || !process.env.R2_BUCKET_NAME) {
-      return reply.status(500).send({ error: true, message: 'Storage configuration missing on server.' });
-    }
-
     const fileKey = `uploads/${slug}/${Date.now()}-${filename}`;
-    const s3 = new S3Client({
-      region: 'auto',
-      endpoint: process.env.R2_ENDPOINT,
-      credentials: {
-        accessKeyId: process.env.R2_ACCESS_KEY_ID,
-        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
-      },
-    });
-
-    fastify.log.info({ bucket: process.env.R2_BUCKET_NAME, key: fileKey, endpoint: process.env.R2_ENDPOINT }, 'S3 configuration for presigned URL');
-
     const command = new PutObjectCommand({
       Bucket: process.env.R2_BUCKET_NAME,
       Key: fileKey,
       ContentType: contentType,
     });
 
-    const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 300 });
+    const uploadUrl = await getSignedUrl(fastify.storage, command, { expiresIn: 300 });
     return { uploadUrl, fileKey };
   });
 
@@ -225,7 +210,8 @@ export default async function uploadRoutes(fastify) {
       return reply.status(e.statusCode || 500).send({ error: true, ...e });
     }
 
-    const fileUrl = `https://media.reelday.ph/${fileKey}`;
+    const publicBase = (process.env.R2_PUBLIC_URL || 'https://media.reelday.ph').replace(/\/+$/, '');
+    const fileUrl = `${publicBase}/${fileKey}`;
     const isVideo = file_type === 'video' || (file_type !== 'photo' && fileKey.match(/\.(mp4|webm|mov|m4v|ogg)$/i));
     const isVidMsg = isVideo && is_video_message === true;
 

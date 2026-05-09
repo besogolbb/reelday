@@ -21,7 +21,8 @@ async function storagePlugin(fastify) {
       ContentType: contentType,
     }));
 
-    return `${process.env.R2_PUBLIC_URL}/${key}`;
+    const publicBase = (process.env.R2_PUBLIC_URL || '').replace(/\/+$/, '');
+    return `${publicBase}/${key}`;
   }
 
   async function getFile(key, range) {
