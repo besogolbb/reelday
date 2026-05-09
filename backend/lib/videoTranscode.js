@@ -103,7 +103,22 @@ export async function reconcilePendingTranscodes(fastify) {
 // Ffmpeg arg sets — kept separate so a future "Hiraya 1080p" tier can
 // reuse the same pipeline by swapping these constants.
 const VIDEO_ARGS = [
-  '-vf', 'scale=w=1280:h=720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2:black',
+  // Filter chain explained:
+  //   scale + flags=lanczos  — Lanczos beats the default bilinear when
+  //                            downsampling (4K→720p is a 9x pixel
+  //                            reduction; bilinear loses fine detail).
+  //   pad                    — letterbox tall/odd aspect ratios into
+  //                            the 1280x720 frame so the wall doesn't
+  //                            stretch portrait clips.
+  //   unsharp=5:5:0.8:5:5:0  — gentle sharpening pass to recover detail
+  //                            lost in the downscale. 5x5 luma matrix
+  //                            at amount 0.8 is the safe recipe — the
+  //                            often-quoted 3:3:1.5 introduces ringing
+  //                            (halos) on hard edges, especially faces.
+  //                            Chroma sharpening forced to 0 since
+  //                            sharpening colour channels just amplifies
+  //                            compression noise.
+  '-vf', 'scale=w=1280:h=720:force_original_aspect_ratio=decrease:flags=lanczos,pad=1280:720:(ow-iw)/2:(oh-ih)/2:black,unsharp=5:5:0.8:5:5:0',
   '-c:v', 'libx264',
   '-preset', 'veryfast',          // 5–15s for a 30s clip on 2 vCPU
   '-profile:v', 'main',           // broadest hardware-decode support
