@@ -338,23 +338,23 @@
 
     .poll-overlay h1 {
       font-family: var(--display); font-style: italic; font-weight: 500;
-      font-size: clamp(36px, 6vw, 84px); line-height: 1.15;
+      font-size: clamp(56px, 8.5vw, 140px); line-height: 1.1;
       text-align: center; max-width: 18ch;
       text-shadow: 0 8px 30px rgba(0,0,0,.6);
-      margin-bottom: 40px;
+      margin-bottom: 48px;
     }
 
     .poll-overlay .poll-bars {
-      display: flex; flex-direction: column; gap: 14px;
-      width: min(900px, 92vw);
+      display: flex; flex-direction: column; gap: 18px;
+      width: min(1200px, 94vw);
     }
     .poll-overlay .poll-bar {
       position: relative; overflow: hidden;
       background: rgba(255,255,255,.08);
       border: 1px solid rgba(255,255,255,.14);
-      border-radius: 18px;
-      padding: 18px 22px;
-      font-size: clamp(18px, 2vw, 26px);
+      border-radius: 22px;
+      padding: 28px 36px;
+      font-size: clamp(34px, 4.2vw, 72px);
       font-weight: 500;
       backdrop-filter: blur(6px);
     }
@@ -366,25 +366,52 @@
     }
     .poll-overlay .poll-bar .row {
       position: relative; z-index: 1;
-      display: flex; justify-content: space-between; align-items: baseline; gap: 16px;
+      display: flex; justify-content: space-between; align-items: baseline; gap: 24px;
     }
     .poll-overlay .poll-bar .label { letter-spacing: .01em; }
     .poll-overlay .poll-bar .stats {
-      font-family: var(--mono); font-size: clamp(13px, 1.1vw, 16px);
-      letter-spacing: .12em; opacity: .85; font-variant-numeric: tabular-nums;
+      font-family: var(--mono); font-size: clamp(28px, 3vw, 56px); font-weight: 700;
+      letter-spacing: .08em; opacity: .95; font-variant-numeric: tabular-nums;
     }
     .poll-overlay .poll-bar.leader .fill { background: linear-gradient(90deg, var(--gold), #f5d089); }
-    .poll-overlay .poll-bar.leader { border-color: rgba(216,160,90,.5); }
+    .poll-overlay .poll-bar.leader { border-color: rgba(216,160,90,.55); box-shadow: 0 0 0 2px rgba(216,160,90,.25); }
+
+    /* While voting: hide percentages + bar fills so guests can't peek
+       at the running tally — only the option labels are visible. */
+    .poll-overlay.live-state .poll-bar .stats,
+    .poll-overlay.live-state .poll-bar .fill { display: none; }
+
+    /* Final-results state: bigger labels, prominent stats. */
+    .poll-overlay.results-state .poll-bar { padding: 32px 40px; }
+
+    .poll-overlay .poll-fastest {
+      margin-top: 32px; padding: 18px 32px;
+      border-radius: 20px;
+      background: rgba(216,160,90,.14);
+      border: 1px solid rgba(216,160,90,.45);
+      font-family: var(--display); font-style: italic;
+      font-size: clamp(28px, 3.4vw, 56px); font-weight: 500;
+      color: #f5d089; text-align: center;
+      width: min(1200px, 94vw);
+    }
+    .poll-overlay .poll-fastest b { color: #fff; font-style: normal; font-weight: 600; }
+    .poll-overlay .poll-fastest .secs {
+      font-family: var(--mono); font-size: .7em; letter-spacing: .08em;
+      opacity: .85; margin-left: 12px;
+    }
 
     .poll-overlay .poll-foot {
-      margin-top: 36px;
-      font-family: var(--mono); font-size: clamp(11px, 1vw, 14px);
+      margin-top: 40px;
+      font-family: var(--mono); font-size: clamp(20px, 2.2vw, 36px);
       letter-spacing: .26em; text-transform: uppercase;
-      opacity: .75;
+      opacity: .9; font-weight: 700;
     }
     .poll-overlay .poll-countdown {
       color: var(--gold);
+      font-size: clamp(36px, 4vw, 72px);
+      font-weight: 800;
       font-variant-numeric: tabular-nums;
+      margin-left: 10px;
     }
     body.poll-active .frame,
     body.poll-active .ticker .stats,
@@ -631,6 +658,7 @@
   <div class="poll-tag"><span class="ring"></span><span>Live poll</span></div>
   <h1 id="poll-question"></h1>
   <div class="poll-bars" id="poll-bars"></div>
+  <div class="poll-fastest" id="poll-fastest" style="display:none;"></div>
   <div class="poll-foot">
     <span id="poll-foot-status">VOTING ENDS IN <span class="poll-countdown" id="poll-countdown">30s</span></span>
   </div>
@@ -1433,9 +1461,11 @@
   }
 
   function showPollOverlay(poll) {
-    pollOverlay.classList.add('visible');
-    pollOverlay.classList.remove('ending');
+    pollOverlay.classList.add('visible', 'live-state');
+    pollOverlay.classList.remove('ending', 'results-state');
     pollOverlay.setAttribute('aria-hidden', 'false');
+    const fastestEl = document.getElementById('poll-fastest');
+    if (fastestEl) { fastestEl.style.display = 'none'; fastestEl.innerHTML = ''; }
     pausePollSlideshow();
     renderPollBars(poll);
 
@@ -1454,16 +1484,34 @@
   }
 
   function showPollResultsThenHide(poll) {
-    // Announce results state visually for ~8 seconds so the room can
-    // see the final tally before photos resume.
+    // Announce results state visually so the room can see the final
+    // tally + the fastest responder before photos resume.
     if (pollCountdownTimer) clearInterval(pollCountdownTimer);
+    pollOverlay.classList.remove('live-state');
+    pollOverlay.classList.add('results-state');
     pollFootStat.textContent = 'FINAL RESULTS';
     renderPollBars(poll, { leaderHighlight: true });
-    pollSlideshowResumeAt = Date.now() + 8000;
+
+    const fastestEl = document.getElementById('poll-fastest');
+    const fv = poll.fastest_voter;
+    if (fastestEl) {
+      if (fv && fv.guest_name) {
+        const secs = Number(fv.response_seconds);
+        const secsLabel = Number.isFinite(secs)
+          ? `<span class="secs">${secs.toFixed(1)}s</span>` : '';
+        fastestEl.innerHTML = `⚡ Fastest answer · <b>${escapeWallHtml(fv.guest_name)}</b>${secsLabel}`;
+        fastestEl.style.display = '';
+      } else {
+        fastestEl.style.display = 'none';
+        fastestEl.innerHTML = '';
+      }
+    }
+
+    pollSlideshowResumeAt = Date.now() + 10000;
     setTimeout(() => {
       // Only hide if no NEW poll has started in the meantime.
       if (Date.now() >= pollSlideshowResumeAt - 50) hidePollOverlay();
-    }, 8000);
+    }, 10000);
   }
 
   function hidePollOverlay() {
@@ -1474,6 +1522,9 @@
       pollOverlay.setAttribute('aria-hidden', 'true');
       pollBars.innerHTML = '';
       pollQuestion.textContent = '';
+      pollOverlay.classList.remove('live-state', 'results-state');
+      const fastestEl = document.getElementById('poll-fastest');
+      if (fastestEl) { fastestEl.style.display = 'none'; fastestEl.innerHTML = ''; }
       activePollId = null;
       resumePollSlideshow();
     }, 500);
@@ -1494,6 +1545,8 @@
           // server already auto-ends; we have the last tally cached
           // in the DOM, so just transition to results state.
           pollFootStat.textContent = 'FINAL RESULTS';
+          pollOverlay.classList.remove('live-state');
+          pollOverlay.classList.add('results-state');
           if (pollCountdownTimer) clearInterval(pollCountdownTimer);
           // Hide after a short grace.
           setTimeout(hidePollOverlay, 4000);
