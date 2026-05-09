@@ -280,7 +280,7 @@ body { background: var(--paper); min-height: 100dvh; }
 .gallery-msg { margin-top: 14px; display: flex; flex-direction: column; gap: 0; }
 .mp-textarea-wrap { background: #fff; border: 1.5px solid var(--line); border-radius: var(--r); padding: 12px 14px; transition: border-color .2s, box-shadow .2s; }
 .mp-textarea-wrap:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(196,90,58,.1); }
-.mp-textarea-wrap label { font-family: var(--mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); display: block; margin-bottom: 6px; }
+.mp-textarea-wrap label { font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--ink); display: block; margin-bottom: 6px; }
 .mp-textarea { width: 100%; border: none; outline: none; background: transparent; font-family: var(--display); font-size: 16px; font-style: italic; color: var(--ink); resize: none; line-height: 1.5; min-height: 72px; }
 .mp-textarea::placeholder { color: var(--ink-faint); }
 .mp-wall-preview { border-radius: var(--r); overflow: hidden; position: relative; aspect-ratio: 16/6; background: #1a0f0a; }
@@ -298,7 +298,7 @@ body { background: var(--paper); min-height: 100dvh; }
 .name-field:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(196,90,58,.1); }
 .name-field.error { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(196,90,58,.15); animation: shake .3s ease; }
 @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
-.name-field label { font-family: var(--mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); display: block; margin-bottom: 4px; }
+.name-field label { font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--ink); display: block; margin-bottom: 4px; }
 .name-field input { width: 100%; border: none; outline: none; font-size: 15px; background: transparent; color: var(--ink); }
 
 /* ── Upload progress overlay (aggregate) ─────────────── */
@@ -317,10 +317,14 @@ body { background: var(--paper); min-height: 100dvh; }
 
 /* ── Queue ───────────────────────────────────────────── */
 .queue { margin-top: 14px; display: grid; gap: 8px; }
-.queue-item { display: grid; grid-template-columns: 48px 1fr auto auto; gap: 10px; align-items: center; background: #fff; border: 1px solid var(--line); border-radius: var(--r); padding: 8px 10px 8px 8px; }
+.queue-item { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto auto; gap: 10px; align-items: center; background: #fff; border: 1px solid var(--line); border-radius: var(--r); padding: 8px 10px 8px 8px; }
 .queue-item.done { border-color: rgba(45,122,74,.3); }
+/* The middle column needs explicit min-width:0 so the q-name ellipsis
+   actually engages — without it CSS grid lets the column stretch to
+   fit the content and long filenames blow out the row width. */
+.q-info  { min-width: 0; overflow: hidden; }
 .q-thumb { aspect-ratio: 1; border-radius: 6px; }
-.q-name  { font-weight: 500; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.q-name  { font-weight: 500; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .q-prog  { height: 3px; background: var(--paper-3); border-radius: 2px; margin-top: 4px; overflow: hidden; }
 .q-prog span { display: block; height: 100%; background: var(--accent); border-radius: 2px; }
 .q-status { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-soft); white-space: nowrap; }
@@ -725,6 +729,13 @@ body { background: var(--paper); min-height: 100dvh; }
     btn.classList.add('active');
   }
 
+  // Tiny escape helpers so guest-supplied filenames (or any user text we
+  // ever drop into innerHTML) can't break out into an HTML/JS injection.
+  function escapeHtml(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+  function escapeAttr(s) { return escapeHtml(s).replace(/`/g,'&#96;'); }
+
   // Friendly inline toast — used for non-fatal notices like rate-limit
   // hints. Stays up for ~3.5s; new calls reset the timer and the text.
   let toastTimer = null;
@@ -1022,7 +1033,7 @@ body { background: var(--paper); min-height: 100dvh; }
       const thumbId = 'th' + id;
       item.innerHTML = `
         <div class="q-thumb placeholder placeholder--coral" id="${thumbId}"></div>
-        <div><div class="q-name">${f.name}</div><div class="q-prog"><span id="b${id}" style="width:0%"></span></div></div>
+        <div class="q-info"><div class="q-name" title="${escapeAttr(f.name)}">${escapeHtml(f.name)}</div><div class="q-prog"><span id="b${id}" style="width:0%"></span></div></div>
         <div class="q-status" id="s${id}">Queued</div>
         <button class="q-remove" onclick="removeItem('${id}')" title="Remove">✕</button>`;
       queue.appendChild(item);
@@ -1042,6 +1053,25 @@ body { background: var(--paper); min-height: 100dvh; }
       if (s) s.textContent = 'Ready to share';
     });
     updateSendBtn();
+
+    // The drop zone is huge and dominates the screen — without an explicit
+    // confirmation guests can't tell whether the pick worked. Show a toast
+    // and pull focus down to the name field so the next action is obvious.
+    if (files.length > 0) {
+      const n = files.length;
+      showToast(
+        n === 1
+          ? '✓ File added — type your name to send.'
+          : `✓ ${n} files added — type your name to send.`,
+      );
+      const nameInput = document.getElementById('galleryName');
+      if (nameInput) {
+        // Smooth-scroll then focus on a short delay so the keyboard
+        // doesn't pop up mid-scroll on iOS.
+        try { nameInput.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch {}
+        setTimeout(() => { try { nameInput.focus({ preventScroll: true }); } catch {} }, 350);
+      }
+    }
   }
 
   function removeItem(id) {
