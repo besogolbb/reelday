@@ -143,8 +143,11 @@ export default async function uploadRoutes(fastify) {
     const isVideo        = fileMime.startsWith('video/');
     const isVideoMessage = isVideo && fields.is_video_message === 'true';
 
-    if (isVideoMessage && (event.plan === 'tala' || event.plan === 'libre')) {
-      return reply.status(403).send({ error: true, message: 'Upgrade to Sinag to send video messages' });
+    if (isVideoMessage && !plan.features?.videoMessage) {
+      return reply.status(403).send({
+        error: true,
+        message: 'Video messages need a Sinag plan or higher.',
+      });
     }
     const filename       = `${randomUUID()}${fileExt}`;
     const fileUrl        = await fastify.uploadFile(fileBuffer, filename, fileMime);
@@ -228,8 +231,15 @@ export default async function uploadRoutes(fastify) {
     const isVideo = file_type === 'video' || (file_type !== 'photo' && fileKey.match(/\.(mp4|webm|mov|m4v|ogg)$/i));
     const isVidMsg = isVideo && is_video_message === true;
 
-    if (isVidMsg && (event.plan === 'tala' || event.plan === 'libre')) {
-      return reply.status(403).send({ error: true, message: 'Upgrade to Sinag for video messages' });
+    // Gate on the EFFECTIVE plan (computed from users.subscription_tier
+    // inside getValidatedEvent), not event.plan — that column gets stale
+    // after the host upgrades their account but the event row was created
+    // on Tala. Hosts on Sinag/Dalisay/Hiraya should always be allowed.
+    if (isVidMsg && !plan.features?.videoMessage) {
+      return reply.status(403).send({
+        error: true,
+        message: 'Video messages need a Sinag plan or higher.',
+      });
     }
 
     // Strict: ALL three approval gates require an explicit true. A NULL
