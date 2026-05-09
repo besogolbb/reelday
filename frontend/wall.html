@@ -551,11 +551,12 @@
   }
 
   function mergeUploads(apiUploads) {
-    const local  = readLocalUploads();
-    const apiIds = new Set(apiUploads.map(u => String(u.id)));
-    const extras = local.filter(u => !apiIds.has(String(u.id)));
-    // newest first — already the order localStorage uses (unshift on save)
-    return [...extras, ...apiUploads];
+    // The wall must reflect the host's approval decisions. The backend
+    // already filters out is_approved=false rows, so we trust that list as
+    // the source of truth. We do NOT merge in localStorage entries here:
+    // those are written by upload.html on the same browser and would
+    // otherwise bypass the host's auto-approve setting.
+    return apiUploads;
   }
 
   function wallMediaUrl(upload) {

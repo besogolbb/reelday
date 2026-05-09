@@ -260,6 +260,16 @@ body { background: var(--paper); min-height: 100dvh; }
 .name-field label { font-family: var(--mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); display: block; margin-bottom: 4px; }
 .name-field input { width: 100%; border: none; outline: none; font-size: 15px; background: transparent; color: var(--ink); }
 
+/* ── Upload progress overlay (aggregate) ─────────────── */
+.upload-overlay { position: fixed; inset: 0; background: rgba(20,20,20,.55); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 999; }
+.upload-overlay.visible { display: flex; }
+.upload-card { background: #fff; border-radius: 14px; padding: 22px 22px 18px; width: min(320px, 86vw); box-shadow: 0 12px 40px rgba(0,0,0,.18); text-align: center; }
+.upload-card h4 { margin: 0 0 6px; font-size: 15px; color: var(--ink); }
+.upload-card .uo-sub { font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 12px; }
+.upload-card .uo-bar { height: 6px; background: var(--paper-3); border-radius: 3px; overflow: hidden; }
+.upload-card .uo-bar span { display: block; height: 100%; background: var(--accent); border-radius: 3px; width: 0%; transition: width .2s ease; }
+.upload-card .uo-pct { margin-top: 10px; font-size: 13px; color: var(--ink); font-variant-numeric: tabular-nums; }
+
 /* ── Queue ───────────────────────────────────────────── */
 .queue { margin-top: 14px; display: grid; gap: 8px; }
 .queue-item { display: grid; grid-template-columns: 48px 1fr auto auto; gap: 10px; align-items: center; background: #fff; border: 1px solid var(--line); border-radius: var(--r); padding: 8px 10px 8px 8px; }
@@ -379,6 +389,16 @@ body { background: var(--paper); min-height: 100dvh; }
       </div>
     </div>
     <button class="ty-btn" onclick="uploadMore()">Upload more →</button>
+  </div>
+</div>
+
+<!-- Aggregate upload progress overlay (shown while files are uploading) -->
+<div class="upload-overlay" id="uploadOverlay" aria-live="polite" aria-hidden="true">
+  <div class="upload-card">
+    <h4 id="uoTitle">Sharing your moments…</h4>
+    <div class="uo-sub" id="uoSub">Preparing</div>
+    <div class="uo-bar"><span id="uoBar"></span></div>
+    <div class="uo-pct" id="uoPct">0%</div>
   </div>
 </div>
 
@@ -942,16 +962,66 @@ body { background: var(--paper); min-height: 100dvh; }
     });
 
     /* ── Step 3: Direct R2 upload via presigned URL ── */
+    // Aggregate progress overlay — bytes-weighted across all files so a big
+    // video doesn't make the bar appear stuck while small photos finish.
+    const totalCount = fileEntries.length + (fileEntries.length === 0 && recordedBlob ? 1 : 0);
+    const fileSizes  = {};
+    fileEntries.forEach(([qId, f]) => { fileSizes[qId] = f.size || 0; });
+    if (fileEntries.length === 0 && recordedBlob) fileSizes['record'] = recordedBlob.size || 0;
+    const totalBytes = Math.max(1, Object.values(fileSizes).reduce((a, b) => a + b, 0));
+    const loadedBytes = {};
+    let completedCount = 0;
+
+    const overlay = document.getElementById('uploadOverlay');
+    const uoBar = document.getElementById('uoBar');
+    const uoPct = document.getElementById('uoPct');
+    const uoSub = document.getElementById('uoSub');
+    const uoTitle = document.getElementById('uoTitle');
+    function refreshOverlay() {
+      const sum = Object.values(loadedBytes).reduce((a, b) => a + b, 0);
+      const pct = Math.min(100, Math.round((sum / totalBytes) * 100));
+      if (uoBar) uoBar.style.width = pct + '%';
+      if (uoPct) uoPct.textContent = pct + '%';
+      if (uoSub) uoSub.textContent = `Uploading ${Math.min(completedCount + 1, totalCount)} of ${totalCount}`;
+    }
+    if (overlay && totalCount > 0) {
+      if (uoTitle) uoTitle.textContent = 'Sharing your moments…';
+      if (uoBar) uoBar.style.width = '0%';
+      if (uoPct) uoPct.textContent = '0%';
+      if (uoSub) uoSub.textContent = `Uploading 1 of ${totalCount}`;
+      overlay.classList.add('visible');
+      overlay.setAttribute('aria-hidden', 'false');
+    }
+
+    // For a recorded video message, no queue item exists yet — inject one
+    // so the per-item progress bar is visible too.
+    if (fileEntries.length === 0 && recordedBlob) {
+      const queue = document.getElementById('galleryQueue');
+      if (queue) {
+        const item = document.createElement('div');
+        item.className = 'queue-item';
+        item.id = 'record';
+        item.innerHTML = `
+          <div class="q-thumb placeholder placeholder--coral"></div>
+          <div><div class="q-name">Video message</div><div class="q-prog"><span id="brecord" style="width:0%"></span></div></div>
+          <div class="q-status" id="srecord">Uploading…</div>
+          <span style="width:24px"></span>`;
+        queue.appendChild(item);
+      }
+    }
+
     const processUpload = async (file, queueId, i, isVidMsg = false) => {
       const entryId = now + i;
       const isVideo = file.type.startsWith('video/');
       const msgToSend = (i === 0 && msg) ? msg : '';
       const token = localStorage.getItem('reelday_token');
+      const fileSize = fileSizes[queueId] || file.size || 0;
+      loadedBytes[queueId] = 0;
 
       try {
         const preRes = await fetch('/api/uploads/presigned', {
           method: 'POST',
-          headers: { 
+          headers: {
             'Content-Type': 'application/json',
             ...(token ? { 'Authorization': `Bearer ${token}` } : {})
           },
@@ -963,39 +1033,42 @@ body { background: var(--paper); min-height: 100dvh; }
           console.error('Presigned API error:', errData);
           const s = document.getElementById('s' + queueId);
           if (s) s.textContent = 'Failed: ' + (errData.message || 'Error');
-          
-          // Only alert for the first failure to avoid spamming the user
           if (i === 0) alert(errData.message || 'Failed to initialize upload. Please check your login status.');
-          return; // STOP the execution
+          throw new Error(errData.message || 'presigned failed');
         }
 
         const { uploadUrl, fileKey } = await preRes.json();
-        console.log('Got upload URL:', uploadUrl);
 
         await new Promise((resolve, reject) => {
           const xhr = new XMLHttpRequest();
           xhr.open('PUT', uploadUrl);
           xhr.setRequestHeader('Content-Type', file.type);
           xhr.upload.onprogress = (e) => {
-            if (e.lengthComputable) {
-              const pct = Math.round((e.loaded / e.total) * 100);
-              const b = document.getElementById('b' + queueId), s = document.getElementById('s' + queueId);
-              if (b) b.style.width = pct + '%';
-              if (s) s.textContent = pct < 100 ? pct + '%' : '✓ Uploading...';
-            }
+            if (!e.lengthComputable) return;
+            const pct = Math.round((e.loaded / e.total) * 100);
+            const b = document.getElementById('b' + queueId);
+            const s = document.getElementById('s' + queueId);
+            if (b) b.style.width = pct + '%';
+            if (s) s.textContent = pct < 100 ? pct + '%' : '✓ Finalizing…';
+            loadedBytes[queueId] = Math.min(fileSize, e.loaded);
+            refreshOverlay();
           };
           xhr.onload = () => {
-            console.log('R2 Response Status:', xhr.status);
-            if (xhr.status === 200 || xhr.status === 204) resolve();
-            else reject(new Error('S3 upload failed with status ' + xhr.status));
+            if (xhr.status === 200 || xhr.status === 204) {
+              loadedBytes[queueId] = fileSize;
+              refreshOverlay();
+              resolve();
+            } else {
+              reject(new Error('S3 upload failed with status ' + xhr.status));
+            }
           };
-          xhr.onerror = reject;
+          xhr.onerror = () => reject(new Error('Network error during upload'));
           xhr.send(file);
         });
 
         const compRes = await fetch('/api/uploads/complete', {
           method: 'POST',
-          headers: { 
+          headers: {
             'Content-Type': 'application/json',
             ...(token ? { 'Authorization': `Bearer ${token}` } : {})
           },
@@ -1005,21 +1078,50 @@ body { background: var(--paper); min-height: 100dvh; }
 
         const stored = JSON.parse(localStorage.getItem(localKey) || '[]');
         const found = stored.find(u => u.id === entryId);
-        if (found) { 
-          found.id = upload.id; 
-          found.file_url = upload.file_url; 
+        if (found) {
+          found.id = upload.id;
+          found.file_url = upload.file_url;
           found.file_type = upload.file_type;
-          found.synced = true; 
-          localStorage.setItem(localKey, JSON.stringify(stored)); 
+          found.synced = true;
+          localStorage.setItem(localKey, JSON.stringify(stored));
         }
+
+        const s = document.getElementById('s' + queueId);
+        const itemEl = document.getElementById(queueId);
+        if (s) s.textContent = '✓ Done';
+        if (itemEl) itemEl.classList.add('done');
+        completedCount += 1;
+        refreshOverlay();
       } catch (err) {
         const s = document.getElementById('s' + queueId);
-        if (s) s.textContent = 'Failed';
+        if (s && !/Failed/.test(s.textContent)) s.textContent = 'Failed';
+        // Count it as "loaded" so the aggregate bar doesn't stay stuck.
+        loadedBytes[queueId] = fileSize;
+        completedCount += 1;
+        refreshOverlay();
+        throw err;
       }
     };
 
-    fileEntries.forEach(([qId, f], i) => processUpload(f, qId, i));
-    if (fileEntries.length === 0 && recordedBlob) processUpload(recordedBlob, 'record', 0, true);
+    const jobs = [
+      ...fileEntries.map(([qId, f], i) => processUpload(f, qId, i)),
+    ];
+    if (fileEntries.length === 0 && recordedBlob) {
+      jobs.push(processUpload(recordedBlob, 'record', 0, true));
+    }
+
+    const results = await Promise.allSettled(jobs);
+    if (overlay) {
+      overlay.classList.remove('visible');
+      overlay.setAttribute('aria-hidden', 'true');
+    }
+
+    const failed = results.filter(r => r.status === 'rejected').length;
+    if (failed && failed === results.length) {
+      // Every upload failed — keep the user on the form so they can retry.
+      btn.disabled = false;
+      return;
+    }
 
     showThankYou(name, msg, allUrls[0] || null);
   }
