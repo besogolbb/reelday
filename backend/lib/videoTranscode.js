@@ -29,6 +29,11 @@ import { mkdtemp, readFile, writeFile, rm } from 'fs/promises';
 import { GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 
 const FFMPEG = process.env.FFMPEG_PATH || 'ffmpeg';
+// Run ffmpeg at a lower scheduling priority so a long encode never
+// starves the main Fastify event loop of a CPU. `nice` only exists on
+// POSIX (Linux/macOS) — on Windows dev we fall back to plain spawn.
+const USE_NICE   = process.platform !== 'win32';
+const NICE_LEVEL = 10;
 
 // Ffmpeg arg sets — kept separate so a future "Hiraya 1080p" tier can
 // reuse the same pipeline by swapping these constants.
@@ -58,7 +63,9 @@ const POSTER_ARGS = [
  */
 function runFfmpeg(args) {
   return new Promise((resolve, reject) => {
-    const proc = spawn(FFMPEG, args, { stdio: ['ignore', 'ignore', 'pipe'] });
+    const cmd      = USE_NICE ? 'nice' : FFMPEG;
+    const fullArgs = USE_NICE ? ['-n', String(NICE_LEVEL), FFMPEG, ...args] : args;
+    const proc = spawn(cmd, fullArgs, { stdio: ['ignore', 'ignore', 'pipe'] });
     let stderr = '';
     proc.stderr.on('data', d => { stderr += d.toString(); });
     proc.on('error', reject);
