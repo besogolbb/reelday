@@ -361,13 +361,19 @@
     .poll-overlay .poll-bar .fill {
       position: absolute; left: 0; top: 0; bottom: 0; width: 0%;
       background: linear-gradient(90deg, var(--accent), var(--accent-soft));
-      transition: width .8s cubic-bezier(.2,.8,.2,1);
+      transition: width 1.2s cubic-bezier(.2,.8,.2,1);
       z-index: 0;
     }
+    .poll-overlay .poll-bar .stats { transition: opacity .4s ease .6s; }
+    .poll-overlay.results-state .poll-bar .stats.fade-in { opacity: 1; }
+    .poll-overlay.results-state .poll-bar .stats { opacity: 0; }
     .poll-overlay .poll-bar .row {
       position: relative; z-index: 1;
       display: flex; justify-content: space-between; align-items: baseline; gap: 24px;
     }
+    /* Live (voting) — center the option label since stats are hidden. */
+    .poll-overlay.live-state .poll-bar { text-align: center; padding: 32px 36px; }
+    .poll-overlay.live-state .poll-bar .row { justify-content: center; }
     .poll-overlay .poll-bar .label { letter-spacing: .01em; }
     .poll-overlay .poll-bar .stats {
       font-family: var(--mono); font-size: clamp(28px, 3vw, 56px); font-weight: 700;
@@ -1442,15 +1448,45 @@
       const pct   = total ? Math.round((count / total) * 100) : 0;
       const fill  = total ? Math.round((count / max)   * 100) : 0;
       const isLeader = opts.leaderHighlight && count > 0 && count === max && total > 0;
+      // When animating results, paint with width:0 first, then expand on
+      // the next frame so the .fill transition actually fires.
+      const initialFill = opts.animate ? 0 : fill;
       return `
         <div class="poll-bar ${isLeader ? 'leader' : ''}">
-          <span class="fill" style="width:${fill}%"></span>
+          <span class="fill" style="width:${initialFill}%" data-target="${fill}"></span>
           <span class="row">
             <span class="label">${escapeWallHtml(opt.label)}</span>
-            <span class="stats">${pct}% · ${count}</span>
+            <span class="stats" data-pct="${pct}" data-count="${count}">${pct}% · ${count}</span>
           </span>
         </div>`;
     }).join('');
+
+    if (opts.animate) {
+      // Two rAFs guarantees the browser commits the 0% style before we
+      // bump it to the target — without this the transition is skipped.
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        pollBars.querySelectorAll('.fill').forEach(el => {
+          el.style.width = (el.dataset.target || 0) + '%';
+        });
+        pollBars.querySelectorAll('.stats').forEach(el => {
+          el.classList.add('fade-in');
+          // Count the number up from 0 → target alongside the bar fill.
+          const targetPct   = parseInt(el.dataset.pct,   10) || 0;
+          const targetCount = parseInt(el.dataset.count, 10) || 0;
+          const startTs = performance.now();
+          const dur = 1100;
+          function tick(now) {
+            const t = Math.min(1, (now - startTs) / dur);
+            const eased = 1 - Math.pow(1 - t, 3);
+            const p = Math.round(targetPct   * eased);
+            const c = Math.round(targetCount * eased);
+            el.textContent = `${p}% · ${c}`;
+            if (t < 1) requestAnimationFrame(tick);
+          }
+          requestAnimationFrame(tick);
+        });
+      }));
+    }
   }
 
   // Tiny local escape — wall.html doesn't import the upload-page helper.
@@ -1490,7 +1526,7 @@
     pollOverlay.classList.remove('live-state');
     pollOverlay.classList.add('results-state');
     pollFootStat.textContent = 'FINAL RESULTS';
-    renderPollBars(poll, { leaderHighlight: true });
+    renderPollBars(poll, { leaderHighlight: true, animate: true });
 
     const fastestEl = document.getElementById('poll-fastest');
     const fv = poll.fastest_voter;

@@ -298,8 +298,12 @@ export default async function pollRoutes(fastify) {
             ORDER BY pv.created_at ASC
             LIMIT 1
          ) f ON true
-        WHERE p.event_id = $1 AND p.status = 'live'
-        ORDER BY p.started_at DESC
+        WHERE p.event_id = $1
+          AND (
+                p.status = 'live'
+             OR (p.status = 'ended' AND p.ended_at > NOW() - INTERVAL '30 seconds')
+              )
+        ORDER BY (p.status = 'live') DESC, p.started_at DESC
         LIMIT 1`,
       [eventId],
     );
