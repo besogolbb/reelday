@@ -588,6 +588,37 @@ body { background: var(--paper); min-height: 100dvh; }
 
 <script>
   /* ════════════════════════════════════════════════════
+     iOS bfcache / app-switch recovery
+     iOS Safari aggressively pauses JS and sometimes serves a frozen
+     frame of the previous page when the user app-switches away and
+     back. The XHR upload, MediaRecorder, and getUserMedia all break
+     in those frozen frames. Force a fresh load whenever:
+       * pageshow fires with persisted=true (real bfcache restore), or
+       * the page becomes visible again after being hidden >2 minutes
+         (covers the "looks blank" case where pageshow doesn't fire).
+     We skip the reload if an upload is mid-flight so we don't drop
+     bytes in the middle of someone's send.
+  ════════════════════════════════════════════════════ */
+  let __reelday_uploadInFlight = false;
+  function __reeldaySafeReload() {
+    if (__reelday_uploadInFlight) return;
+    try { location.reload(); } catch {}
+  }
+  window.addEventListener('pageshow', (ev) => {
+    if (ev.persisted) __reeldaySafeReload();
+  });
+  let __reelday_hiddenAt = 0;
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      __reelday_hiddenAt = Date.now();
+    } else if (document.visibilityState === 'visible' && __reelday_hiddenAt) {
+      const away = Date.now() - __reelday_hiddenAt;
+      __reelday_hiddenAt = 0;
+      if (away > 2 * 60 * 1000) __reeldaySafeReload();
+    }
+  });
+
+  /* ════════════════════════════════════════════════════
      EVENT DATA — reads URL params, falls back to API
   ════════════════════════════════════════════════════ */
   const DEMO_PHOTOS = [
@@ -1396,6 +1427,9 @@ body { background: var(--paper); min-height: 100dvh; }
       overlay.classList.add('visible');
       overlay.setAttribute('aria-hidden', 'false');
     }
+    // Pin the bfcache-recovery so an iOS app-switch mid-upload doesn't
+    // wipe out the in-flight XHR. Released after Promise.allSettled below.
+    __reelday_uploadInFlight = true;
 
     // For a recorded video message, no queue item exists yet — inject one
     // so the per-item progress bar is visible too.
@@ -1535,6 +1569,7 @@ body { background: var(--paper); min-height: 100dvh; }
       overlay.setAttribute('aria-hidden', 'true');
     }
 
+    __reelday_uploadInFlight = false;
     const failed = results.filter(r => r.status === 'rejected');
     if (failed.length && failed.length === results.length) {
       // Every upload failed — keep the user on the form so they can retry.

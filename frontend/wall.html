@@ -502,6 +502,28 @@
 
 <script type="module">
   /* ══════════════════════════════════════════════════════════
+     iOS bfcache / app-switch recovery
+     The wall is often left running on a phone propped against a TV.
+     iOS pauses JS aggressively when the screen sleeps or the user
+     app-switches; the slideshow timers stop and the wall freezes.
+     Force a fresh boot whenever the page is restored from bfcache,
+     or when it becomes visible after >2 minutes hidden.
+  ══════════════════════════════════════════════════════════ */
+  window.addEventListener('pageshow', (ev) => {
+    if (ev.persisted) location.reload();
+  });
+  let __wallHiddenAt = 0;
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      __wallHiddenAt = Date.now();
+    } else if (document.visibilityState === 'visible' && __wallHiddenAt) {
+      const away = Date.now() - __wallHiddenAt;
+      __wallHiddenAt = 0;
+      if (away > 2 * 60 * 1000) location.reload();
+    }
+  });
+
+  /* ══════════════════════════════════════════════════════════
      CONFIG
   ══════════════════════════════════════════════════════════ */
   const SLIDE_DURATION   = 8000;  // ms per slide

@@ -1237,6 +1237,24 @@
 </div>
 
 <script type="module">
+  // iOS bfcache / app-switch recovery — same pattern as upload + wall.
+  // Force a fresh load when iOS Safari restores a frozen frame so the
+  // host doesn't end up staring at a blank dashboard after switching
+  // away from the tab.
+  window.addEventListener('pageshow', (ev) => {
+    if (ev.persisted) location.reload();
+  });
+  let __dashHiddenAt = 0;
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      __dashHiddenAt = Date.now();
+    } else if (document.visibilityState === 'visible' && __dashHiddenAt) {
+      const away = Date.now() - __dashHiddenAt;
+      __dashHiddenAt = 0;
+      if (away > 2 * 60 * 1000) location.reload();
+    }
+  });
+
   import { resolvePlan, nextTier } from '/js/plans.js';
 
   // ── Nav ───────────────────────────────────────────────
