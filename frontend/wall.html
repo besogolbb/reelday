@@ -429,6 +429,57 @@
       font-family: var(--mono); font-size: clamp(.85rem, 2vw, 1rem);
       letter-spacing: .1em; text-transform: uppercase; opacity: .9;
     }
+
+    /* ── Portrait phone fallback ──────────────────────────────
+       The wall is built for landscape TVs. On a portrait phone the
+       upcoming-thumbnails column was eating half the screen, the
+       caption blockquote ended up squeezed into a 100px column and
+       wrapped to one character per line, and the ticker overlapped
+       the QR badge. Hide the chrome that doesn't fit and reflow the
+       caption to use the full width. */
+    @media (max-width: 640px) and (orientation: portrait) {
+      .upcoming { display: none; }
+      .ticker {
+        height: 48px;
+        padding: 0 16px;
+      }
+      .ticker .stats { gap: 14px; font-size: 10px; letter-spacing: .1em; }
+      .ticker .live { font-size: 10px; letter-spacing: .14em; }
+      .qr-badge {
+        right: 14px !important;
+        max-width: calc(100vw - 28px);
+        padding: 10px 12px;
+      }
+      .qr-badge .qr { width: 48px; height: 48px; }
+      .qr-badge .text { font-size: 9px; }
+      .qr-badge .text b { font-size: 12px; }
+
+      .frame {
+        padding: 0 18px 24px;
+        gap: 12px;
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .caption { padding-right: 0; }
+      .caption .uploader {
+        font-size: 12px !important;
+        letter-spacing: .18em;
+        margin-bottom: 10px;
+      }
+      .caption blockquote {
+        font-size: clamp(20px, 6vw, 28px) !important;
+        line-height: 1.25;
+        -webkit-line-clamp: 4;
+      }
+
+      /* Bottom-right tray sits low enough that on a portrait phone it
+         covered the caption text. Lift it just above the caption. */
+      .controls-tray {
+        bottom: auto !important;
+        top: 64px !important;
+        right: 14px !important;
+      }
+    }
   </style>
 </head>
 <body>
