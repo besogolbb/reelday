@@ -836,6 +836,7 @@ body { background: var(--paper); min-height: 100dvh; }
     rec.ondataavailable = ev => { if (ev.data.size > 0) chunks.push(ev.data); };
 
     let drawing = true;
+    let stopped = false;
     function drawFrame() {
       if (!drawing) return;
       ctx.drawImage(src, 0, 0, w, h);
@@ -846,14 +847,49 @@ body { background: var(--paper); min-height: 100dvh; }
     }
 
     return new Promise((resolve, reject) => {
+      const finish = () => {
+        if (stopped) return;
+        stopped = true;
+        // Give the recorder a beat to flush its last chunk before stop().
+        setTimeout(() => { try { rec.stop(); } catch {} }, 250);
+      };
+
       rec.onstop = () => {
         drawing = false;
         try { URL.revokeObjectURL(url); } catch {}
+        try { src.pause(); } catch {}
         const blob = new Blob(chunks, { type: rec.mimeType });
         const newName = file.name.replace(/\.[^.]+$/, '') + '.webm';
         resolve(new File([blob], newName, { type: blob.type, lastModified: Date.now() }));
       };
-      src.onended  = () => setTimeout(() => { try { rec.stop(); } catch {} }, 250);
+
+      // Belt-and-suspenders end detection. captureStream() can suppress
+      // the `ended` event on some browsers (Chrome did this for years),
+      // so we also watch timeupdate for the playhead reaching duration
+      // and fall back to a hard wall-clock timeout based on the clip
+      // length. Any one of these firing closes out the recorder.
+      src.onended = finish;
+      src.ontimeupdate = () => {
+        if (Number.isFinite(src.duration) && src.duration > 0 &&
+            src.currentTime >= src.duration - 0.08) {
+          finish();
+        }
+      };
+      const startedAt = Date.now();
+      const fallbackMs = Math.max(2000, Math.ceil((src.duration || MAX_RECORD_SECS) * 1000) + 3000);
+      const fallbackTimer = setTimeout(() => {
+        if (!stopped) {
+          console.warn('Transcode end-event missed; stopping by wall-clock timeout', { fallbackMs });
+          finish();
+        }
+      }, fallbackMs);
+
+      // Wrap the resolver so we always clear the fallback timer.
+      const origResolve = resolve;
+      resolve = (val) => { clearTimeout(fallbackTimer); origResolve(val); };
+      const origReject = reject;
+      reject = (err) => { clearTimeout(fallbackTimer); drawing = false; origReject(err); };
+
       src.onerror  = () => reject(new Error('Source playback failed'));
       rec.onerror  = ev => reject(ev.error || new Error('Recorder failed'));
       try { rec.start(500); } catch (e) { return reject(e); }
