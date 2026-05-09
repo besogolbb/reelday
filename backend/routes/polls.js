@@ -262,6 +262,42 @@ export default async function pollRoutes(fastify) {
     return { poll: rows[0] };
   });
 
+  // Cumulative trivia tally across every kind='question' poll on this
+  // event. Powers the "Run all" leaderboard the host sees once a quiz
+  // finishes — who got the most correct answers, ranked.
+  fastify.get('/events/:slug/polls/leaderboard', { preHandler: fastify.authenticate }, async (request, reply) => {
+    const ctx = await loadEvent(request.params.slug, request, reply, { requireOwner: true });
+    if (!ctx) return;
+
+    const { rows: questionsRows } = await fastify.db.query(
+      `SELECT COUNT(*)::int AS n
+         FROM polls
+        WHERE event_id = $1 AND kind = 'question' AND correct_key IS NOT NULL`,
+      [ctx.event.id],
+    );
+    const totalQuestions = questionsRows[0]?.n || 0;
+
+    const { rows } = await fastify.db.query(
+      `SELECT pv.guest_name,
+              COUNT(*) FILTER (WHERE pv.option_key = p.correct_key)::int AS correct_count,
+              COUNT(*)::int                                                AS answered_count,
+              ROUND(AVG(EXTRACT(EPOCH FROM (pv.created_at - p.started_at)))
+                FILTER (WHERE pv.option_key = p.correct_key)::numeric, 1) AS avg_correct_seconds
+         FROM poll_votes pv
+         JOIN polls p ON p.id = pv.poll_id
+        WHERE p.event_id = $1
+          AND p.kind = 'question'
+          AND p.correct_key IS NOT NULL
+          AND pv.guest_name IS NOT NULL
+          AND pv.guest_name <> ''
+        GROUP BY pv.guest_name
+        ORDER BY correct_count DESC, avg_correct_seconds ASC NULLS LAST, pv.guest_name ASC
+        LIMIT 50`,
+      [ctx.event.id],
+    );
+    return { total_questions: totalQuestions, leaderboard: rows };
+  });
+
   fastify.post('/events/:slug/polls/:id/stop', { preHandler: fastify.authenticate }, async (request, reply) => {
     const ctx = await loadEvent(request.params.slug, request, reply, { requireOwner: true });
     if (!ctx) return;
