@@ -1232,6 +1232,148 @@
       .preview-modal-actions { padding: 12px 16px 18px; gap: 8px; }
       .preview-modal-actions button { flex: 1 1 calc(50% - 4px); padding: 11px 14px; font-size: 13px; }
     }
+
+    /* ── Upgrade modal ─────────────────────────────────────
+       In-dashboard pricing modal. Mirrors the marketing pricing UI
+       on landing.html so guests don't have to leave the dashboard to
+       upgrade — clicking "Choose [plan]" hands off straight to the
+       PayMongo checkout. */
+    .upgrade-modal {
+      position: fixed; inset: 0; z-index: 1200;
+      display: none;
+      align-items: flex-start; justify-content: center;
+      padding: 40px 20px;
+      background: rgba(20,12,8,.62);
+      backdrop-filter: blur(10px);
+      overflow-y: auto;
+    }
+    .upgrade-modal.open { display: flex; animation: pmFade .25s ease both; }
+    .upgrade-modal-card {
+      background: var(--paper-2, #fbf5ec);
+      border-radius: 22px;
+      width: min(1180px, 100%);
+      padding: 32px clamp(20px, 4vw, 44px) 36px;
+      box-shadow: 0 30px 90px rgba(0,0,0,.4);
+      position: relative;
+    }
+    .upgrade-modal-close {
+      position: absolute; top: 16px; right: 18px;
+      width: 36px; height: 36px; border-radius: 50%;
+      background: rgba(0,0,0,.06); border: 0;
+      font-size: 20px; line-height: 1; color: var(--ink);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .upgrade-modal-close:hover { background: rgba(0,0,0,.12); }
+    .upgrade-modal-eyebrow {
+      font-family: var(--mono); font-size: 11px; font-weight: 700;
+      letter-spacing: .26em; text-transform: uppercase;
+      color: var(--accent); text-align: center; margin-bottom: 8px;
+    }
+    .upgrade-modal-title {
+      font-family: var(--display); font-weight: 400;
+      font-size: clamp(28px, 3.4vw, 44px);
+      letter-spacing: -.02em; text-align: center;
+      color: var(--ink); margin-bottom: 6px;
+    }
+    .upgrade-modal-title em { font-style: italic; color: var(--accent); }
+    .upgrade-modal-sub {
+      font-size: 14px; color: var(--ink-soft);
+      text-align: center; margin-bottom: 28px;
+    }
+    .upgrade-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+    }
+    .up-card {
+      background: #fff; border: 1px solid var(--line);
+      border-radius: 18px; padding: 26px 22px;
+      display: flex; flex-direction: column;
+      box-shadow: 0 2px 8px rgba(42,26,20,.04);
+      transition: transform .2s, box-shadow .2s;
+      position: relative;
+    }
+    .up-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(42,26,20,.08); }
+    .up-card.featured {
+      background: var(--ink); color: var(--paper);
+      border-color: var(--ink); transform: translateY(-8px);
+      box-shadow: 0 12px 40px rgba(42,26,20,.22);
+    }
+    .up-card.featured:hover { transform: translateY(-11px); }
+    .up-card.current {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(196,90,58,.18), 0 2px 8px rgba(42,26,20,.04);
+    }
+    .up-card .up-tier {
+      font-family: var(--display); font-style: italic; font-weight: 500;
+      font-size: 22px; color: var(--accent); margin-bottom: 10px; line-height: 1;
+    }
+    .up-card.featured .up-tier { color: var(--accent-soft); }
+    .up-card .up-price {
+      font-family: var(--display); font-size: 36px; font-weight: 400;
+      line-height: 1; letter-spacing: -.03em; margin-bottom: 4px;
+    }
+    .up-card .up-price sub {
+      font-family: var(--sans); font-size: 11px;
+      color: var(--ink-faint); font-weight: 400;
+    }
+    .up-card.featured .up-price sub { color: rgba(251,245,236,.45); }
+    .up-card .up-desc {
+      font-size: 12px; color: var(--ink-soft); line-height: 1.55;
+      margin-bottom: 16px; padding-bottom: 14px;
+      border-bottom: 1px solid var(--line);
+    }
+    .up-card.featured .up-desc { color: rgba(251,245,236,.6); border-color: rgba(255,255,255,.1); }
+    .up-card ul {
+      list-style: none; display: grid; gap: 8px;
+      font-size: 12px; flex: 1; color: var(--ink-soft);
+      padding: 0; margin: 0;
+    }
+    .up-card.featured ul { color: rgba(251,245,236,.7); }
+    .up-card li { display: flex; gap: 8px; line-height: 1.45; }
+    .up-card li::before {
+      content: '✓'; color: var(--accent); font-weight: 700; flex-shrink: 0;
+    }
+    .up-card.featured li::before { color: var(--accent-soft); }
+    .up-card .up-cta {
+      margin-top: 22px; width: 100%;
+      padding: 11px 16px; border-radius: 999px;
+      font-family: var(--mono); font-size: 11px; font-weight: 700;
+      letter-spacing: .14em; text-transform: uppercase;
+      cursor: pointer; border: 1px solid var(--ink);
+      background: transparent; color: var(--ink);
+      transition: background .15s, color .15s;
+    }
+    .up-card .up-cta:hover { background: var(--ink); color: var(--paper); }
+    .up-card.featured .up-cta {
+      background: var(--accent); color: #fff; border-color: var(--accent);
+    }
+    .up-card.featured .up-cta:hover { background: var(--accent-deep, #a13d23); }
+    .up-card .up-cta.is-current {
+      background: rgba(196,90,58,.1); color: var(--accent);
+      border-color: rgba(196,90,58,.3); cursor: default;
+    }
+    .up-card .up-cta.is-current:hover { background: rgba(196,90,58,.1); color: var(--accent); }
+    .up-card .up-cta:disabled { opacity: .55; cursor: not-allowed; }
+    .up-card .up-cta.loading { opacity: .65; pointer-events: none; }
+    .up-current-badge {
+      position: absolute; top: 12px; right: 12px;
+      font-family: var(--mono); font-size: 9px; font-weight: 700;
+      letter-spacing: .16em; text-transform: uppercase;
+      color: var(--accent); background: rgba(196,90,58,.12);
+      padding: 4px 8px; border-radius: 999px;
+    }
+
+    @media (max-width: 960px) {
+      .upgrade-grid { grid-template-columns: repeat(2, 1fr); }
+      .up-card.featured { transform: none; }
+      .up-card.featured:hover { transform: translateY(-2px); }
+    }
+    @media (max-width: 600px) {
+      .upgrade-modal { padding: 16px 12px; }
+      .upgrade-modal-card { padding: 24px 16px 28px; }
+      .upgrade-grid { grid-template-columns: 1fr; gap: 10px; }
+    }
   </style>
 </head>
 <body>
@@ -1560,6 +1702,71 @@
     <div class="poll-modal-actions">
       <button type="button" id="poll-modal-cancel">Cancel</button>
       <button type="button" class="btn-primary" id="poll-modal-save">Save poll</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Upgrade modal (in-dashboard pricing) ──────────────── -->
+<div class="upgrade-modal" id="upgrade-modal" role="dialog" aria-modal="true" aria-labelledby="upgrade-modal-title" aria-hidden="true">
+  <div class="upgrade-modal-card">
+    <button type="button" class="upgrade-modal-close" id="upgrade-modal-close" aria-label="Close">×</button>
+    <div class="upgrade-modal-eyebrow">— Simple pricing</div>
+    <h2 class="upgrade-modal-title" id="upgrade-modal-title">One payment. <em>Sulit forever.</em></h2>
+    <p class="upgrade-modal-sub">Pick the tier that matches your celebration. Payment is processed instantly via PayMongo (GCash, Maya, card, QR Ph).</p>
+    <div class="upgrade-grid">
+      <div class="up-card" data-plan="tala">
+        <div class="up-tier">Tala</div>
+        <div class="up-price">Free</div>
+        <p class="up-desc">Try Reelday at your next small gathering — no card needed.</p>
+        <ul>
+          <li>Up to 50 uploads</li>
+          <li>7-day gallery</li>
+          <li>QR code</li>
+        </ul>
+        <button type="button" class="up-cta" data-plan="tala">Get started</button>
+      </div>
+      <div class="up-card" data-plan="sinag">
+        <div class="up-tier">Sinag</div>
+        <div class="up-price">₱999<sub> / event</sub></div>
+        <p class="up-desc">For one-day celebrations — debuts, birthdays, intimate weddings.</p>
+        <ul>
+          <li>Unlimited photo &amp; video uploads</li>
+          <li>30-day gallery</li>
+          <li>Ken Burns transition live wall</li>
+          <li>Easy 3-step video message</li>
+          <li>Event-day uploads only</li>
+        </ul>
+        <button type="button" class="up-cta" data-plan="sinag">Choose Sinag</button>
+      </div>
+      <div class="up-card featured" data-plan="dalisay">
+        <div class="up-tier">★ Dalisay</div>
+        <div class="up-price">₱2,499<sub> / package</sub></div>
+        <p class="up-desc">For multi-day celebrations with their own event website.</p>
+        <ul>
+          <li>Unlimited uploads</li>
+          <li>7-day upload window</li>
+          <li>Ken Burns transition live wall</li>
+          <li>Live Wall reactions</li>
+          <li>Live Questions &amp; Poll (trivia)</li>
+          <li>Event website (free subdomain &amp; design)</li>
+          <li>3 active events</li>
+          <li>3-month retention</li>
+        </ul>
+        <button type="button" class="up-cta" data-plan="dalisay">Choose Dalisay →</button>
+      </div>
+      <div class="up-card" data-plan="hiraya">
+        <div class="up-tier">Hiraya</div>
+        <div class="up-price">₱4,990<sub> / year</sub></div>
+        <p class="up-desc">For organizers and venues running multiple events.</p>
+        <ul>
+          <li>Everything in Dalisay</li>
+          <li>10 active events</li>
+          <li>6-month upload window</li>
+          <li>1-year retention</li>
+          <li>Custom domains</li>
+        </ul>
+        <button type="button" class="up-cta" data-plan="hiraya">Choose Hiraya</button>
+      </div>
     </div>
   </div>
 </div>
@@ -2818,6 +3025,107 @@
   pollsRunAllBtn?.addEventListener('click', () => {
     if (runAllState.active) stopRunAll();
     else                    startRunAll();
+  });
+
+  // ── Upgrade modal ──────────────────────────────────
+  // Pops the pricing UI inline so hosts don't have to bounce out to the
+  // landing page. "Choose [plan]" hands off straight to PayMongo via
+  // the same /api/payments/create endpoint that create.html uses.
+  const upgradeModal     = document.getElementById('upgrade-modal');
+  const upgradeModalClose = document.getElementById('upgrade-modal-close');
+
+  function openUpgradeModal() {
+    if (!upgradeModal) return;
+    // Mark the host's current tier so the modal reads as "you are here".
+    const currentTier = (currentDashEvent && currentDashEvent.plan) || 'tala';
+    upgradeModal.querySelectorAll('.up-card').forEach(card => {
+      const isCurrent = card.dataset.plan === currentTier;
+      card.classList.toggle('current', isCurrent);
+      const cta = card.querySelector('.up-cta');
+      if (!cta) return;
+      // Reset stale state from previous opens.
+      cta.classList.remove('loading', 'is-current');
+      cta.disabled = false;
+      cta.dataset.originalLabel = cta.dataset.originalLabel || cta.textContent;
+      if (isCurrent) {
+        cta.classList.add('is-current');
+        cta.textContent = 'Current plan';
+        cta.disabled = true;
+        if (!card.querySelector('.up-current-badge')) {
+          const badge = document.createElement('span');
+          badge.className = 'up-current-badge';
+          badge.textContent = 'Current';
+          card.appendChild(badge);
+        }
+      } else {
+        cta.textContent = cta.dataset.originalLabel;
+        const badge = card.querySelector('.up-current-badge');
+        if (badge) badge.remove();
+      }
+    });
+    upgradeModal.classList.add('open');
+    upgradeModal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeUpgradeModal() {
+    if (!upgradeModal) return;
+    upgradeModal.classList.remove('open');
+    upgradeModal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  }
+
+  upgradeModalClose?.addEventListener('click', closeUpgradeModal);
+  upgradeModal?.addEventListener('click', (e) => {
+    if (e.target === upgradeModal) closeUpgradeModal();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && upgradeModal?.classList.contains('open')) closeUpgradeModal();
+  });
+
+  // Intercept any "/#pricing" link inside the dashboard — every existing
+  // upgrade CTA (lock banner, polls-locked notice, plan info card, quota
+  // hints) routes through the same modal now.
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest('a[href="/#pricing"], a[href="#pricing"]');
+    if (!a) return;
+    e.preventDefault();
+    openUpgradeModal();
+  });
+
+  // Choose-plan CTAs → kick off PayMongo checkout (or a no-op for Tala
+  // since the host either is already on Tala or would be downgrading).
+  upgradeModal?.querySelectorAll('.up-cta').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (btn.disabled) return;
+      const tier = btn.dataset.plan;
+      if (tier === 'tala') {
+        // Free plan — there's nothing to charge. If they're already on
+        // Tala the button is disabled; otherwise we just dismiss since
+        // we don't support self-serve downgrades from the dashboard.
+        closeUpgradeModal();
+        return;
+      }
+      btn.classList.add('loading');
+      btn.disabled = true;
+      const originalLabel = btn.dataset.originalLabel || btn.textContent;
+      btn.textContent = 'Redirecting…';
+      try {
+        const res = await fetch('/api/payments/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeader() },
+          body: JSON.stringify({ slug, tier }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'Payment gateway error.');
+        if (!data.checkout_url) throw new Error('No checkout URL returned.');
+        location.href = data.checkout_url;
+      } catch (err) {
+        showToast(err.message || 'Could not start payment. Please try again.');
+        btn.classList.remove('loading');
+        btn.disabled = false;
+        btn.textContent = originalLabel;
+      }
+    });
   });
 
   // ── Poll editor modal ───────────────────────────────
