@@ -2601,7 +2601,11 @@
   // poll being run. Stops cleanly if the host taps "Stop" mid-run.
   const pollsRunAllBtn   = document.getElementById('polls-runall-btn');
   const leaderboardEl    = document.getElementById('polls-leaderboard');
-  const RUN_ALL_BUFFER_MS = 12000;  // 10s wall results display + 2s safety
+  // Tight enough that the next /start lands while the wall is still showing
+  // the previous question's results — showPollOverlay then cancels the wall's
+  // pending hide timers, so the overlay never drops back to the photo slides
+  // between questions during Run-all.
+  const RUN_ALL_BUFFER_MS = 6000;
   let runAllState = { active: false, queue: [], index: 0, timer: null };
 
   // Collapse/expand the panel. Auto-expand once when something goes
@@ -2695,25 +2699,10 @@
       return;
     }
     pollsList.innerHTML = polls.map(p => {
-      const tally = new Map((p.tally || []).map(t => [t.key, t.count]));
       const total = p.total_votes || 0;
       const optsLabel = (p.options || []).map(o => o.label).join(' · ');
       const isLive  = p.status === 'live';
-      const isEnded = p.status === 'ended';
       const isDraft = p.status === 'draft';
-
-      const tallyHtml = (isLive || isEnded) ? `
-        <div class="poll-tally">
-          ${(p.options || []).map(o => {
-            const c = tally.get(o.key) || 0;
-            const pct = total ? Math.round((c / total) * 100) : 0;
-            return `
-              <div class="tally-bar">
-                <span class="fill" style="width:${pct}%"></span>
-                <span class="text"><span>${escapeHtml(o.label)}</span><span>${pct}% · ${c}</span></span>
-              </div>`;
-          }).join('')}
-        </div>` : '';
 
       const actions = isLive ? `
         <button class="btn-stop" data-act="stop" data-id="${p.id}">Stop</button>
@@ -2738,7 +2727,6 @@
             <div class="poll-opts">${escapeHtml(optsLabel)}</div>
           </div>
           <div class="poll-actions">${actions}</div>
-          ${tallyHtml}
         </div>`;
     }).join('');
 
