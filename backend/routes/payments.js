@@ -246,6 +246,87 @@ export default async function paymentRoutes(fastify) {
     });
   });
 
+  // POST /api/payments/reconcile — caller-driven reconciliation.
+  // Webhooks can fail to reach the server in local dev, behind certain
+  // firewalls, or if the PayMongo dashboard configuration drifts. When
+  // the host lands back at /dashboard?upgraded=<tier> after checkout,
+  // the frontend posts here so we verify the payment server-to-server
+  // with PayMongo and apply the upgrade if it actually went through —
+  // independently of whatever the webhook did or didn't do.
+  fastify.post('/payments/reconcile', { preHandler: fastify.authenticate }, async (request, reply) => {
+    const userId = request.user.id;
+    if (!process.env.PAYMONGO_SECRET_KEY) {
+      return reply.status(503).send({ error: true, message: 'Payment gateway not configured' });
+    }
+
+    // Pull this user's recent pending payments — newest first. Cap at 5
+    // so a stuck-pending row from weeks ago doesn't drown the call.
+    const { rows: pending } = await fastify.db.query(
+      `SELECT id, paymongo_payment_id, tier, event_id
+         FROM payments
+        WHERE user_id = $1 AND status = 'pending'
+          AND created_at > NOW() - INTERVAL '24 hours'
+        ORDER BY created_at DESC
+        LIMIT 5`,
+      [userId],
+    );
+    if (!pending.length) {
+      return { reconciled: false, reason: 'no_pending_payments' };
+    }
+
+    let appliedTier = null;
+    let appliedSlug = null;
+
+    for (const pmt of pending) {
+      if (!pmt.paymongo_payment_id || !PAID_TIERS[pmt.tier]) continue;
+      let paid = false;
+      try {
+        const res = await fetch(`https://api.paymongo.com/v1/checkout_sessions/${pmt.paymongo_payment_id}`, {
+          headers: { 'Authorization': paymongoAuth() },
+        });
+        if (!res.ok) continue;
+        const body = await res.json();
+        const attr = body?.data?.attributes || {};
+        // PayMongo marks a checkout session paid by populating .payments[]
+        // with a payment whose status === 'paid'. payment_intent.status
+        // can also surface 'succeeded' for the older flow, so we accept
+        // either signal.
+        const sessionPaid = (attr.payments || []).some(p => p?.attributes?.status === 'paid');
+        const intentPaid  = attr.payment_intent?.attributes?.status === 'succeeded';
+        paid = sessionPaid || intentPaid;
+      } catch (err) {
+        request.log.warn({ err: err.message, pmt: pmt.id }, 'Reconcile lookup failed');
+        continue;
+      }
+      if (!paid) continue;
+
+      // Resolve the slug we originally stored against this payment so
+      // the targeted event gets re-stamped with the new plan windows.
+      let slug = null;
+      if (pmt.event_id) {
+        const { rows: evRows } = await fastify.db.query(
+          `SELECT slug FROM events WHERE id = $1`,
+          [pmt.event_id],
+        );
+        slug = evRows[0]?.slug || null;
+      }
+
+      await applyTierUpgrade(fastify.db, { userId, tier: pmt.tier, slug });
+      await fastify.db.query(
+        `UPDATE payments SET status = 'succeeded' WHERE id = $1`,
+        [pmt.id],
+      );
+      appliedTier = pmt.tier;
+      appliedSlug = slug;
+      break; // one upgrade per call — Sinag accumulates per row, but the
+             // host needs to land on the dashboard between checkouts anyway
+    }
+
+    return appliedTier
+      ? { reconciled: true, tier: appliedTier, slug: appliedSlug }
+      : { reconciled: false, reason: 'not_paid_yet' };
+  });
+
   // POST /api/payments/webhook — PayMongo webhook (signature-verified).
   fastify.post('/payments/webhook', async (request, reply) => {
     const secret = process.env.PAYMONGO_WEBHOOK_SECRET;

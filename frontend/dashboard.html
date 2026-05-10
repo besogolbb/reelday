@@ -3550,6 +3550,31 @@
       return;
     }
 
+    // Returning from PayMongo checkout? Reconcile the payment server-to-
+    // server before loading event data so the resolved plan reflects the
+    // upgrade even when the webhook hasn't reached us (local dev, missing
+    // webhook secret, transient network failure, etc.).
+    const upgradedParam = params.get('upgraded');
+    if (upgradedParam) {
+      try {
+        const recRes = await fetch('/api/payments/reconcile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeader() },
+        });
+        const recData = await recRes.json().catch(() => ({}));
+        if (recData?.reconciled) {
+          showToast(`Upgraded to ${upgradedParam[0].toUpperCase()}${upgradedParam.slice(1)} — enjoy!`);
+        } else if (recData?.reason === 'not_paid_yet') {
+          showToast('Payment not confirmed yet — refresh in a moment.');
+        }
+      } catch { /* fall through; loadEvent will surface whatever the DB has */ }
+      // Strip ?upgraded= so a refresh doesn't re-run reconcile against an
+      // already-applied payment.
+      const cleanUrl = new URL(location.href);
+      cleanUrl.searchParams.delete('upgraded');
+      history.replaceState({}, '', cleanUrl);
+    }
+
     try {
       const [eventRes, uploadsRes, qrRes] = await Promise.all([
         fetch(`/api/events/${slug}`),
