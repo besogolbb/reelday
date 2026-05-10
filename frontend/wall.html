@@ -51,16 +51,25 @@
       image-rendering: -webkit-optimize-contrast;
     }
 
-    /* Foreground video — same fitting as the photo layer */
+    /* Foreground video — same fitting as the photo layer.
+       Letterbox bars (esp. on portrait phone clips) get a warm wedding
+       gradient instead of flat black so they read as part of the wall
+       palette rather than dead negative space. */
     .layer .vid {
       position: absolute; inset: 0;
       width: 100%; height: 100%;
       object-fit: contain;
-      background: #000;
+      background:
+        radial-gradient(ellipse at 30% 20%, rgba(216,160,90,.22), transparent 60%),
+        radial-gradient(ellipse at 80% 85%, rgba(196,90,58,.28), transparent 65%),
+        linear-gradient(180deg, #2a1208 0%, #1a0a05 55%, #0f0703 100%);
       display: none;
     }
     .layer.has-video .pic { display: none; }
     .layer.has-video .vid { display: block; }
+    /* Hide the photo backdrop while a video is playing — the gradient on
+       .vid is the canonical letterbox fill, no double-layering. */
+    .layer.has-video .backdrop { display: none; }
 
     /* Ken Burns — very gentle, mostly pan; the image stays fully visible */
     @keyframes kb1 {
