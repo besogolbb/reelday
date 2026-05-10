@@ -128,6 +128,11 @@ export default async function paymentRoutes(fastify) {
 
     const userId = request.user.id;
     const appUrl = buildAppUrl(request);
+    const successUrl = slug
+      ? `${appUrl}/dashboard?slug=${slug}&upgraded=${tier}`
+      : `${appUrl}/my-events?upgraded=${tier}`;
+    const cancelUrl  = `${appUrl}/#pricing`;
+    request.log.info({ appUrl, successUrl, cancelUrl, tier }, 'Creating PayMongo checkout session');
 
     // ── PayMongo checkout session ─────────────────────────
     let checkoutUrl     = null;
@@ -151,10 +156,8 @@ export default async function paymentRoutes(fastify) {
                 quantity: 1,
               }],
               payment_method_types: ['gcash', 'paymaya', 'card', 'qrph'],
-              success_url: slug
-                ? `${appUrl}/dashboard?slug=${slug}&upgraded=${tier}`
-                : `${appUrl}/my-events?upgraded=${tier}`,
-              cancel_url:  `${appUrl}/#pricing`,
+              success_url: successUrl,
+              cancel_url:  cancelUrl,
               description: `Reelday ${tierConfig.label} — account upgrade`,
               metadata:    { user_id: userId, tier, slug: slug ?? '' },
             },
