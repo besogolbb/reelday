@@ -25,6 +25,14 @@ const MIN_OPTIONS    = 2;
 const MIN_DURATION_S = 10;
 const MAX_DURATION_S = 120;
 
+// Run-all final leaderboard reveal. The dashboard pings the trigger
+// endpoint once a Run-all session finishes; the wall then sees a
+// `leaderboard` payload on /polls/active and shows it (with fireworks)
+// for the configured window. In-memory is fine — a process restart just
+// means the host can re-trigger it from the dashboard.
+const leaderboardRevealUntil = new Map(); // event_id → epoch ms
+const LEADERBOARD_REVEAL_MS = 25_000;
+
 export default async function pollRoutes(fastify) {
   const POLL_VOTE_LIMIT = {
     rateLimit: {
@@ -298,6 +306,24 @@ export default async function pollRoutes(fastify) {
     return { total_questions: totalQuestions, leaderboard: rows };
   });
 
+  // Trigger the final-leaderboard reveal on the wall. Dashboard calls
+  // this once Run-all finishes; the wall (which doesn't know whether a
+  // run is happening) only flips into leaderboard mode once the host
+  // explicitly says so.
+  fastify.post('/events/:slug/polls/leaderboard/show', { preHandler: fastify.authenticate }, async (request, reply) => {
+    const ctx = await loadEvent(request.params.slug, request, reply, { requireOwner: true });
+    if (!ctx) return;
+    leaderboardRevealUntil.set(ctx.event.id, Date.now() + LEADERBOARD_REVEAL_MS);
+    return { ok: true, expires_at: leaderboardRevealUntil.get(ctx.event.id) };
+  });
+
+  fastify.post('/events/:slug/polls/leaderboard/hide', { preHandler: fastify.authenticate }, async (request, reply) => {
+    const ctx = await loadEvent(request.params.slug, request, reply, { requireOwner: true });
+    if (!ctx) return;
+    leaderboardRevealUntil.delete(ctx.event.id);
+    return { ok: true };
+  });
+
   fastify.post('/events/:slug/polls/:id/stop', { preHandler: fastify.authenticate }, async (request, reply) => {
     const ctx = await loadEvent(request.params.slug, request, reply, { requireOwner: true });
     if (!ctx) return;
@@ -384,7 +410,47 @@ export default async function pollRoutes(fastify) {
       [eventId],
     );
     reply.header('Cache-Control', 'no-store');
-    return { poll: rows[0] || null };
+
+    // Final-leaderboard reveal: the host triggered it from the dashboard
+    // after a Run-all finished. Compute and embed it inline so the wall
+    // doesn't need a second public endpoint.
+    let leaderboardPayload = null;
+    const reveal = leaderboardRevealUntil.get(eventId);
+    if (reveal && reveal > Date.now()) {
+      const { rows: questionsRows } = await fastify.db.query(
+        `SELECT COUNT(*)::int AS n
+           FROM polls
+          WHERE event_id = $1 AND kind = 'question' AND correct_key IS NOT NULL`,
+        [eventId],
+      );
+      const totalQuestions = questionsRows[0]?.n || 0;
+      const { rows: lbRows } = await fastify.db.query(
+        `SELECT pv.guest_name,
+                COUNT(*) FILTER (WHERE pv.option_key = p.correct_key)::int AS correct_count,
+                ROUND(AVG(EXTRACT(EPOCH FROM (pv.created_at - p.started_at)))
+                  FILTER (WHERE pv.option_key = p.correct_key)::numeric, 1) AS avg_correct_seconds
+           FROM poll_votes pv
+           JOIN polls p ON p.id = pv.poll_id
+          WHERE p.event_id = $1
+            AND p.kind = 'question'
+            AND p.correct_key IS NOT NULL
+            AND pv.guest_name IS NOT NULL
+            AND pv.guest_name <> ''
+          GROUP BY pv.guest_name
+          ORDER BY correct_count DESC, avg_correct_seconds ASC NULLS LAST, pv.guest_name ASC
+          LIMIT 10`,
+        [eventId],
+      );
+      leaderboardPayload = {
+        total_questions: totalQuestions,
+        leaderboard: lbRows,
+        expires_at: reveal,
+      };
+    } else if (reveal) {
+      leaderboardRevealUntil.delete(eventId);
+    }
+
+    return { poll: rows[0] || null, leaderboard: leaderboardPayload };
   });
 
   fastify.post('/events/:slug/polls/:id/vote', { config: POLL_VOTE_LIMIT }, async (request, reply) => {

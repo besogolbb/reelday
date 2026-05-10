@@ -507,44 +507,6 @@
     .polls-runall-btn.running:hover { background: #8a2418; }
     .polls-runall-btn:disabled { opacity: .5; cursor: not-allowed; }
 
-    /* Leaderboard panel — appears after a Run-all session finishes. */
-    .polls-leaderboard {
-      margin: 14px 0;
-      background: linear-gradient(135deg, #fff 0%, #fff7ec 100%);
-      border: 1px solid rgba(216,160,90,.45);
-      border-radius: 14px; padding: 16px 18px;
-    }
-    .polls-leaderboard .lb-title {
-      font-family: var(--mono); font-size: 11px; font-weight: 700;
-      letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft);
-      margin-bottom: 10px;
-    }
-    .polls-leaderboard .lb-row {
-      display: grid; grid-template-columns: 28px 1fr auto;
-      align-items: center; gap: 10px; padding: 8px 0;
-      border-top: 1px solid rgba(216,160,90,.18);
-      font-size: 14px;
-    }
-    .polls-leaderboard .lb-row:first-of-type { border-top: 0; }
-    .polls-leaderboard .lb-rank {
-      font-family: var(--mono); font-weight: 800; color: var(--ink-soft);
-      text-align: center;
-    }
-    .polls-leaderboard .lb-row.top1 .lb-rank { color: #d8a05a; font-size: 18px; }
-    .polls-leaderboard .lb-row.top1 .lb-name { font-weight: 600; }
-    .polls-leaderboard .lb-name { color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .polls-leaderboard .lb-score {
-      font-family: var(--mono); font-weight: 700;
-      color: #1f5e3b; font-variant-numeric: tabular-nums;
-    }
-    .polls-leaderboard .lb-empty { font-size: 13px; color: var(--ink-soft); font-style: italic; }
-    .polls-leaderboard .lb-dismiss {
-      margin-top: 12px; padding: 6px 12px; font-size: 11px;
-      font-family: var(--mono); letter-spacing: .1em; text-transform: uppercase;
-      background: transparent; border: 1px solid var(--line); border-radius: 999px;
-      color: var(--ink-soft); cursor: pointer; font-weight: 600;
-    }
-    .polls-leaderboard .lb-dismiss:hover { background: var(--paper-2); }
     .polls-list { display: flex; flex-direction: column; gap: 10px; }
     .polls-empty { font-size: 13px; color: var(--dash-muted); padding: 18px 0; text-align: center; font-style: italic; }
     .polls-locked { padding: 16px; border-radius: 10px; background: rgba(196,90,58,.08); color: var(--ink-soft); font-size: 13px; text-align: center; border: 1px dashed rgba(196,90,58,.3); }
@@ -1394,8 +1356,6 @@
           <button type="button" class="btn btn-ghost polls-runall-btn" id="polls-runall-btn">▶ Run all</button>
         </div>
 
-        <!-- Cumulative leaderboard rendered after a Run-all session ends -->
-        <div class="polls-leaderboard" id="polls-leaderboard" style="display:none;"></div>
         <div class="polls-locked" id="polls-locked" style="display:none;">
           Live Questions &amp; Poll are unlocked on the Sinag plan. <a href="/#pricing">Upgrade →</a>
         </div>
@@ -2600,7 +2560,6 @@
   // upload page need no special knowledge — each step looks like a new
   // poll being run. Stops cleanly if the host taps "Stop" mid-run.
   const pollsRunAllBtn   = document.getElementById('polls-runall-btn');
-  const leaderboardEl    = document.getElementById('polls-leaderboard');
   // Tight enough that the next /start lands while the wall is still showing
   // the previous question's results — showPollOverlay then cancels the wall's
   // pending hide timers, so the overlay never drops back to the photo slides
@@ -2803,7 +2762,6 @@
     };
     pollsRunAllBtn.classList.add('running');
     pollsRunAllBtn.textContent = '■ Stop run';
-    if (leaderboardEl) leaderboardEl.style.display = 'none';
     runOneAndChain();
   }
   async function runOneAndChain() {
@@ -2834,7 +2792,15 @@
     runAllState = { active: false, queue: [], index: 0, timer: null };
     pollsRunAllBtn.classList.remove('running');
     pollsRunAllBtn.textContent = '▶ Run all';
-    if (completed && wasActive) await renderLeaderboard();
+    // The wall is the canonical surface for the final tally — fire the
+    // trigger so the wall pulls up the leaderboard with fireworks instead
+    // of showing it back here on the host's screen.
+    if (completed && wasActive) {
+      try {
+        await fetch(`/api/events/${slug}/polls/leaderboard/show`, { method: 'POST', headers: authHeader() });
+        showToast('Final tally is on the wall');
+      } catch { /* silent — host can re-trigger if needed */ }
+    }
     refreshPolls();
   }
   async function stopRunAll() {
@@ -2853,37 +2819,6 @@
     if (runAllState.active) stopRunAll();
     else                    startRunAll();
   });
-
-  async function renderLeaderboard() {
-    if (!leaderboardEl || !slug) return;
-    try {
-      const res = await fetch(`/api/events/${slug}/polls/leaderboard`, { headers: authHeader() });
-      if (!res.ok) return;
-      const { leaderboard = [], total_questions = 0 } = await res.json();
-
-      const rowsHtml = leaderboard.length
-        ? leaderboard.slice(0, 10).map((r, i) => {
-            const cls = i === 0 ? 'lb-row top1' : 'lb-row';
-            const rank = i === 0 ? '🏆' : (i + 1);
-            const speed = r.avg_correct_seconds != null ? ` · ${Number(r.avg_correct_seconds).toFixed(1)}s avg` : '';
-            return `<div class="${cls}">
-              <span class="lb-rank">${rank}</span>
-              <span class="lb-name">${escapeHtml(r.guest_name)}<span style="font-size:11px;color:var(--ink-soft);">${speed}</span></span>
-              <span class="lb-score">${r.correct_count} / ${total_questions}</span>
-            </div>`;
-          }).join('')
-        : '<div class="lb-empty">No correct answers recorded across the run.</div>';
-
-      leaderboardEl.innerHTML = `
-        <div class="lb-title">Final tally · ${total_questions} question${total_questions === 1 ? '' : 's'}</div>
-        ${rowsHtml}
-        <button type="button" class="lb-dismiss" id="lb-dismiss">Dismiss</button>`;
-      leaderboardEl.style.display = '';
-      leaderboardEl.querySelector('#lb-dismiss')?.addEventListener('click', () => {
-        leaderboardEl.style.display = 'none';
-      });
-    } catch { /* silent */ }
-  }
 
   // ── Poll editor modal ───────────────────────────────
   function newOptionInput(value = '', isCorrect = false) {

@@ -467,6 +467,136 @@
     body.poll-active .ticker .stats,
     body.poll-active .upcoming { opacity: 0; transition: opacity .4s ease; }
 
+    /* ── Final-leaderboard overlay + fireworks ─────────────
+       Triggered by the host after a Run-all finishes. Shares the dim
+       backdrop pattern of the poll overlay so the transition between
+       results → final tally feels continuous. */
+    .leaderboard-overlay {
+      position: fixed; inset: 0; z-index: 31;
+      background:
+        radial-gradient(circle at 30% 20%, rgba(216,160,90,.28), transparent 60%),
+        radial-gradient(circle at 80% 80%, rgba(196,90,58,.22), transparent 55%),
+        linear-gradient(180deg, rgba(15,7,3,.94), rgba(15,7,3,.97));
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      display: none;
+      flex-direction: column; align-items: center; justify-content: center;
+      padding: 6vh 6vw;
+      color: #fff;
+      animation: pollIn .6s cubic-bezier(.2,.8,.2,1);
+    }
+    .leaderboard-overlay.visible { display: flex; }
+    .leaderboard-overlay.ending  { animation: pollOut .55s ease both; }
+
+    .leaderboard-overlay .leaderboard-eyebrow {
+      font-family: var(--mono); font-size: clamp(11px, 1vw, 14px);
+      letter-spacing: .36em; text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 14px;
+      display: flex; align-items: center; gap: 14px;
+    }
+    .leaderboard-overlay .leaderboard-eyebrow .ring {
+      width: 14px; height: 14px; border-radius: 50%;
+      background: var(--gold);
+      box-shadow: 0 0 0 0 rgba(216,160,90,.55);
+      animation: pollRing 1.6s ease infinite;
+    }
+
+    .leaderboard-overlay .leaderboard-title {
+      font-family: var(--display); font-style: italic; font-weight: 500;
+      font-size: clamp(48px, 7vw, 110px); line-height: 1.05;
+      text-align: center;
+      background: linear-gradient(180deg, #fff 0%, #f5d089 100%);
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 8px 30px rgba(0,0,0,.5);
+      margin-bottom: clamp(20px, 3vh, 40px);
+    }
+
+    .leaderboard-overlay .leaderboard-rows {
+      display: flex; flex-direction: column;
+      gap: clamp(8px, 1.4vh, 16px);
+      width: min(1100px, 90vw);
+    }
+
+    .leaderboard-overlay .lb-row {
+      display: grid;
+      grid-template-columns: clamp(56px, 6vw, 88px) 1fr auto;
+      align-items: center;
+      gap: clamp(14px, 2vw, 28px);
+      padding: clamp(14px, 1.8vh, 24px) clamp(20px, 2.5vw, 36px);
+      background: rgba(255,255,255,.07);
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 18px;
+      font-size: clamp(24px, 3vw, 48px);
+      backdrop-filter: blur(6px);
+      animation: lbRowIn .55s cubic-bezier(.2,.8,.2,1) both;
+    }
+    .leaderboard-overlay .lb-row:nth-child(1) { animation-delay: .05s; }
+    .leaderboard-overlay .lb-row:nth-child(2) { animation-delay: .15s; }
+    .leaderboard-overlay .lb-row:nth-child(3) { animation-delay: .25s; }
+    .leaderboard-overlay .lb-row:nth-child(4) { animation-delay: .35s; }
+    .leaderboard-overlay .lb-row:nth-child(n+5) { animation-delay: .45s; }
+    @keyframes lbRowIn {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .leaderboard-overlay .lb-row.top1 {
+      background: linear-gradient(135deg, rgba(216,160,90,.32), rgba(245,208,137,.16));
+      border-color: rgba(245,208,137,.6);
+      box-shadow: 0 0 0 2px rgba(245,208,137,.3), 0 16px 50px rgba(216,160,90,.25);
+      font-size: clamp(28px, 3.6vw, 60px);
+    }
+    .leaderboard-overlay .lb-rank {
+      font-family: var(--mono); font-weight: 800;
+      color: rgba(255,255,255,.55);
+      text-align: center;
+      font-size: .82em;
+    }
+    .leaderboard-overlay .lb-row.top1 .lb-rank {
+      color: #f5d089; font-size: 1em;
+    }
+    .leaderboard-overlay .lb-name {
+      font-weight: 500; letter-spacing: .01em;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .leaderboard-overlay .lb-name .lb-meta {
+      display: block;
+      font-family: var(--mono); font-size: .42em;
+      letter-spacing: .14em; text-transform: uppercase;
+      color: rgba(255,255,255,.55); margin-top: 4px;
+    }
+    .leaderboard-overlay .lb-score {
+      font-family: var(--mono); font-weight: 800;
+      color: #b6e8c4;
+      font-variant-numeric: tabular-nums;
+    }
+    .leaderboard-overlay .lb-row.top1 .lb-score { color: #f5d089; }
+    .leaderboard-overlay .lb-empty {
+      font-style: italic; opacity: .65; text-align: center;
+      font-size: clamp(20px, 2.4vw, 32px);
+    }
+    .leaderboard-overlay .leaderboard-foot {
+      margin-top: clamp(20px, 3vh, 40px);
+      font-family: var(--mono); font-size: clamp(13px, 1.4vw, 20px);
+      letter-spacing: .26em; text-transform: uppercase;
+      color: rgba(255,255,255,.7); font-weight: 700;
+    }
+
+    /* Fireworks sit between the dim backdrop and the leaderboard content
+       so sparks frame the names rather than washing them out. */
+    .leaderboard-overlay .fireworks-canvas {
+      position: absolute; inset: 0; z-index: 0;
+      pointer-events: none;
+    }
+    .leaderboard-overlay .leaderboard-content {
+      position: relative; z-index: 1;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      width: 100%;
+    }
+
     /* ── Net-error badge (top-left) ─────────────────────────
        Shown when consecutive API calls fail. The slideshow advance is
        gated on netFrozen so the current slide stays put until things
@@ -743,6 +873,17 @@
   <div class="poll-fastest" id="poll-fastest" style="display:none;"></div>
   <div class="poll-foot">
     <span id="poll-foot-status">VOTING ENDS IN <span class="poll-countdown" id="poll-countdown">30s</span></span>
+  </div>
+</div>
+
+<!-- ════ FINAL LEADERBOARD OVERLAY (post Run-all) ═══════════ -->
+<div class="leaderboard-overlay" id="leaderboard-overlay" aria-live="polite" aria-hidden="true">
+  <canvas class="fireworks-canvas" id="fireworks-canvas" aria-hidden="true"></canvas>
+  <div class="leaderboard-content">
+    <div class="leaderboard-eyebrow"><span class="ring"></span><span>Final Tally</span></div>
+    <h1 class="leaderboard-title" id="leaderboard-title">Quiz champions</h1>
+    <div class="leaderboard-rows" id="leaderboard-rows"></div>
+    <div class="leaderboard-foot" id="leaderboard-foot"></div>
   </div>
 </div>
 
@@ -1795,11 +1936,192 @@
   let lastSeenPollStatus = null;
   function pollKey(p) { return p ? (p.id + '|' + (p.started_at || '')) : null; }
 
+  // ── Final leaderboard reveal (post Run-all) ─────────────
+  const leaderboardOverlay = document.getElementById('leaderboard-overlay');
+  const leaderboardRows    = document.getElementById('leaderboard-rows');
+  const leaderboardFoot    = document.getElementById('leaderboard-foot');
+  const fireworksCanvas    = document.getElementById('fireworks-canvas');
+  let leaderboardActive    = false;
+  let leaderboardSignature = '';   // dedupe identical payloads so we don't restart the show every 2s
+
+  function leaderboardKey(payload) {
+    if (!payload) return '';
+    const rows = (payload.leaderboard || [])
+      .map(r => `${r.guest_name}:${r.correct_count}:${r.avg_correct_seconds}`)
+      .join('|');
+    return `${payload.expires_at || 0}#${payload.total_questions || 0}#${rows}`;
+  }
+
+  function showFinalLeaderboard(payload) {
+    const key = leaderboardKey(payload);
+    if (leaderboardActive && key === leaderboardSignature) return;
+    leaderboardSignature = key;
+
+    // Take over from the poll overlay if it's still up — the leaderboard
+    // is the natural follow-on to the last question's results.
+    if (pollOverlay.classList.contains('visible')) {
+      if (pollHideTimer)        { clearTimeout(pollHideTimer);        pollHideTimer = null; }
+      if (pollEndAnimTimer)     { clearTimeout(pollEndAnimTimer);     pollEndAnimTimer = null; }
+      if (pollResultsHideTimer) { clearTimeout(pollResultsHideTimer); pollResultsHideTimer = null; }
+      if (pollCountdownTimer)   { clearInterval(pollCountdownTimer);  pollCountdownTimer = null; }
+      pollOverlay.classList.remove('visible', 'ending', 'live-state', 'results-state');
+      pollOverlay.setAttribute('aria-hidden', 'true');
+      pollBars.innerHTML = '';
+      pollQuestion.textContent = '';
+      activePollId = null;
+      lastSeenPollKey = null; lastSeenPollId = null; lastSeenPollStatus = null;
+    }
+    pausePollSlideshow();
+
+    const total = payload.total_questions || 0;
+    const rows  = payload.leaderboard || [];
+    const rowsHtml = rows.length
+      ? rows.slice(0, 8).map((r, i) => {
+          const cls = i === 0 ? 'lb-row top1' : 'lb-row';
+          const rank = i === 0 ? '🏆' : (i + 1);
+          const speed = r.avg_correct_seconds != null
+            ? `<span class="lb-meta">${Number(r.avg_correct_seconds).toFixed(1)}s avg</span>` : '';
+          return `<div class="${cls}">
+            <span class="lb-rank">${rank}</span>
+            <span class="lb-name">${escapeWallHtml(r.guest_name)}${speed}</span>
+            <span class="lb-score">${r.correct_count} / ${total}</span>
+          </div>`;
+        }).join('')
+      : '<div class="lb-empty">No correct answers recorded — maybe next round.</div>';
+    leaderboardRows.innerHTML = rowsHtml;
+    leaderboardFoot.textContent = total
+      ? `${total} question${total === 1 ? '' : 's'} · thanks for playing`
+      : 'Thanks for playing';
+
+    leaderboardOverlay.classList.add('visible');
+    leaderboardOverlay.classList.remove('ending');
+    leaderboardOverlay.setAttribute('aria-hidden', 'false');
+    leaderboardActive = true;
+
+    startFireworks();
+  }
+
+  function hideFinalLeaderboard() {
+    if (!leaderboardActive) return;
+    leaderboardActive = false;
+    leaderboardSignature = '';
+    leaderboardOverlay.classList.add('ending');
+    setTimeout(() => {
+      leaderboardOverlay.classList.remove('visible', 'ending');
+      leaderboardOverlay.setAttribute('aria-hidden', 'true');
+      leaderboardRows.innerHTML = '';
+      stopFireworks();
+      resumePollSlideshow();
+    }, 550);
+  }
+
+  // ── Fireworks (canvas particles) ────────────────────────
+  // Lightweight particle system — each launch is a rocket that bursts
+  // into ~60 sparks with gravity + drag. Tuned to feel celebratory but
+  // not seizure-inducing on a 1080p wall.
+  const fireworksFx = (() => {
+    const ctx = fireworksCanvas.getContext('2d');
+    let raf = null;
+    let lastLaunch = 0;
+    let particles = [];
+    const PALETTE = ['#f5d089', '#ffb37a', '#ffd2cb', '#fff', '#c45a3a', '#a7d7c5'];
+
+    function resize() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      fireworksCanvas.width  = fireworksCanvas.offsetWidth  * dpr;
+      fireworksCanvas.height = fireworksCanvas.offsetHeight * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function launch() {
+      const w = fireworksCanvas.offsetWidth;
+      const h = fireworksCanvas.offsetHeight;
+      const cx = w * (0.15 + Math.random() * 0.7);
+      const cy = h * (0.15 + Math.random() * 0.4);
+      const color = PALETTE[Math.floor(Math.random() * PALETTE.length)];
+      const count = 50 + Math.floor(Math.random() * 30);
+      for (let i = 0; i < count; i++) {
+        const angle = (Math.PI * 2 * i) / count + Math.random() * 0.2;
+        const speed = 2 + Math.random() * 4;
+        particles.push({
+          x: cx, y: cy,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: 60 + Math.random() * 40,
+          age: 0,
+          color,
+          size: 2 + Math.random() * 2,
+        });
+      }
+    }
+
+    function frame(ts) {
+      raf = requestAnimationFrame(frame);
+      if (!lastLaunch) lastLaunch = ts;
+      // ~2 launches per second, jittered.
+      if (ts - lastLaunch > 350 + Math.random() * 250) {
+        launch();
+        lastLaunch = ts;
+      }
+      ctx.clearRect(0, 0, fireworksCanvas.offsetWidth, fireworksCanvas.offsetHeight);
+      const next = [];
+      for (const p of particles) {
+        p.age += 1;
+        if (p.age >= p.life) continue;
+        p.vy += 0.05;          // gravity
+        p.vx *= 0.985;         // drag
+        p.vy *= 0.985;
+        p.x  += p.vx;
+        p.y  += p.vy;
+        const alpha = 1 - p.age / p.life;
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+        next.push(p);
+      }
+      ctx.globalAlpha = 1;
+      particles = next;
+    }
+
+    return {
+      start() {
+        if (raf) return;
+        resize();
+        window.addEventListener('resize', resize);
+        lastLaunch = 0;
+        particles = [];
+        // Two opening bursts so the show feels immediate.
+        launch(); launch();
+        raf = requestAnimationFrame(frame);
+      },
+      stop() {
+        if (raf) { cancelAnimationFrame(raf); raf = null; }
+        window.removeEventListener('resize', resize);
+        particles = [];
+        ctx.clearRect(0, 0, fireworksCanvas.offsetWidth, fireworksCanvas.offsetHeight);
+      },
+    };
+  })();
+  function startFireworks() { fireworksFx.start(); }
+  function stopFireworks()  { fireworksFx.stop(); }
+
   async function pollPolls() {
     try {
       const res = await fetch(`/api/events/${slug}/polls/active`, { cache: 'no-store' });
       if (!res.ok) return;
-      const { poll } = await res.json();
+      const { poll, leaderboard } = await res.json();
+
+      // Final leaderboard reveal — host triggered it from the dashboard
+      // after a Run-all session completed. Takes precedence over the
+      // per-poll overlay since it's a wrap-up moment.
+      if (leaderboard) {
+        showFinalLeaderboard(leaderboard);
+        return;
+      } else if (leaderboardActive) {
+        hideFinalLeaderboard();
+      }
 
       // No poll on the server side.
       if (!poll) {
