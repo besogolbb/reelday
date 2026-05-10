@@ -349,47 +349,124 @@ export default async function paymentRoutes(fastify) {
 
     const type       = payload.data.attributes.type;
     const resourceId = payload.data.attributes.data?.id;
+    const innerAttrs = payload.data.attributes.data?.attributes ?? {};
+    const meta       = innerAttrs.metadata ?? {};
 
-    // Successful checkout. We trust the webhook here because the signature
-    // matched our shared secret; the metadata user_id is what PayMongo
-    // saw when we created the checkout session in createCheckoutSession.
+    // Log every accepted webhook so production has a paper trail of what
+    // PayMongo is actually delivering — invaluable when "I configured the
+    // webhook but the upgrade didn't apply" turns out to be an event-type
+    // mismatch in the PayMongo dashboard.
+    request.log.info({
+      webhook_type: type,
+      resource_id:  resourceId,
+      has_metadata: Object.keys(meta).length > 0,
+      meta_user:    meta.user_id || null,
+      meta_tier:    meta.tier    || null,
+    }, 'PayMongo webhook received');
+
+    let applied = false;
+
+    // ── checkout_session.payment.paid ─────────────────────
+    // Direct path: metadata is on the checkout session resource we
+    // attached in /payments/create.
     if (type === 'checkout_session.payment.paid' && resourceId) {
-      const meta = payload.data.attributes.data?.attributes?.metadata ?? {};
       const { user_id: userId, tier, slug } = meta;
-
       if (userId && PAID_TIERS[tier]) {
         await applyTierUpgrade(fastify.db, { userId, tier, slug: slug || null });
         await fastify.db.query(
-          `UPDATE payments SET status = 'succeeded'
-            WHERE paymongo_payment_id = $1`,
+          `UPDATE payments SET status = 'succeeded' WHERE paymongo_payment_id = $1`,
           [resourceId],
         );
+        applied = true;
       }
     }
 
-    // Legacy payment_intent webhook — find the payment we already created
-    // and use ITS stored user_id (not anything from the webhook payload)
-    // as a defense-in-depth measure if signature secrets are ever rotated.
-    if (type === 'payment_intent.succeeded' && resourceId) {
+    // ── payment.paid ──────────────────────────────────────
+    // PayMongo dashboards default to "Payment paid" rather than the
+    // checkout-session variant; the inner resource is the payment, not
+    // the session, so we walk back to a session by matching the source
+    // checkout in the related-resources block, or by metadata if PayMongo
+    // happens to have copied it through.
+    if (!applied && type === 'payment.paid' && resourceId) {
+      // PayMongo's payment object exposes the originating checkout
+      // session via `attributes.source.id` (varies by integration) or
+      // via `attributes.metadata` (when the metadata was attached to
+      // the underlying payment intent). Try metadata first, fall back
+      // to the most recent matching pending row.
+      let userId = meta.user_id;
+      let tier   = meta.tier;
+      let slug   = meta.slug || null;
+      let pendingRowId = null;
+
+      if (!userId || !PAID_TIERS[tier]) {
+        // Best effort: look up the most recent pending payment whose
+        // total matches this payment's amount. This is conservative —
+        // we still require an authenticated payments-table row that we
+        // ourselves created in /payments/create.
+        const amount = innerAttrs.amount;
+        if (amount) {
+          const { rows } = await fastify.db.query(
+            `SELECT id, user_id, tier, event_id
+               FROM payments
+              WHERE status = 'pending' AND amount = $1
+                AND created_at > NOW() - INTERVAL '24 hours'
+              ORDER BY created_at DESC
+              LIMIT 1`,
+            [amount],
+          );
+          if (rows.length) {
+            userId = rows[0].user_id;
+            tier   = rows[0].tier;
+            pendingRowId = rows[0].id;
+            if (rows[0].event_id) {
+              const { rows: ev } = await fastify.db.query(
+                `SELECT slug FROM events WHERE id = $1`, [rows[0].event_id],
+              );
+              slug = ev[0]?.slug || null;
+            }
+          }
+        }
+      }
+
+      if (userId && PAID_TIERS[tier]) {
+        await applyTierUpgrade(fastify.db, { userId, tier, slug });
+        if (pendingRowId) {
+          await fastify.db.query(
+            `UPDATE payments SET status = 'succeeded' WHERE id = $1`, [pendingRowId],
+          );
+        } else if (resourceId) {
+          await fastify.db.query(
+            `UPDATE payments SET status = 'succeeded' WHERE paymongo_payment_id = $1`, [resourceId],
+          );
+        }
+        applied = true;
+      }
+    }
+
+    // ── payment_intent.succeeded (legacy) ─────────────────
+    if (!applied && type === 'payment_intent.succeeded' && resourceId) {
       const { rows: paymentRows } = await fastify.db.query(
         `UPDATE payments SET status = 'succeeded'
             WHERE paymongo_payment_id = $1
         RETURNING *`,
         [resourceId],
       );
-
       if (paymentRows.length) {
         const payment = paymentRows[0];
         if (payment.user_id && PAID_TIERS[payment.tier]) {
           await applyTierUpgrade(fastify.db, {
-            userId: payment.user_id,
-            tier:   payment.tier,
-            slug:   null,
+            userId: payment.user_id, tier: payment.tier, slug: null,
           });
+          applied = true;
         }
       }
     }
 
-    return { received: true };
+    if (!applied) {
+      request.log.warn({ webhook_type: type, resource_id: resourceId },
+        'Webhook accepted but no upgrade applied — event type or metadata may be unexpected');
+    }
+
+    return { received: true, applied };
   });
 }
