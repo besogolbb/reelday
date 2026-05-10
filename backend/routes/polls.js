@@ -66,7 +66,7 @@ export default async function pollRoutes(fastify) {
       reply.status(403).send({
         error: true,
         code: 'polls_locked',
-        message: 'Polls need a Sinag plan or higher.',
+        message: 'Live Questions & Poll need a Dalisay plan or higher.',
       });
       return null;
     }

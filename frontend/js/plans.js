@@ -45,7 +45,8 @@ export const PLANS = {
     features: {
       videoMessage: true,
       reactions:    true,
-      polls:        true,
+      // Live Questions & Poll is a Dalisay/Hiraya feature.
+      polls:        false,
       website:      false,
       customDomain: false,
     },
