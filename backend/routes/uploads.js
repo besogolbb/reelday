@@ -1,12 +1,86 @@
 import { extname } from 'path';
 import { randomUUID } from 'crypto';
-import { PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { PutObjectCommand, DeleteObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { resolvePlan } from '../lib/plans.js';
 import { triggerVideoTranscode } from '../lib/awsLambdaService.js';
 import { verifyToken } from '../plugins/auth.js';
 
 export default async function uploadRoutes(fastify) {
+  function publicMediaUrl(key) {
+    const base = (process.env.R2_PUBLIC_URL || 'https://media.reelday.ph').replace(/\/+$/, '');
+    const cleanKey = String(key || '').replace(/^\/+/, '');
+    return `${base}/${cleanKey}`;
+  }
+
+  function derivedVideoKeys(originalKey) {
+    const dot = String(originalKey || '').lastIndexOf('.');
+    const stem = dot > 0 ? originalKey.slice(0, dot) : originalKey;
+    return {
+      webKey: `${stem}_web.mp4`,
+      posterKey: `${stem}_poster.jpg`,
+    };
+  }
+
+  async function storageObjectExists(key) {
+    if (!key || !process.env.R2_BUCKET_NAME) return false;
+    try {
+      await fastify.storage.send(new HeadObjectCommand({
+        Bucket: process.env.R2_BUCKET_NAME,
+        Key: key,
+      }));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async function reconcileVideoUpload(row) {
+    if (!row || row.file_type !== 'video') return row;
+
+    const existingWebKey = row.compressed_key || extractStorageKey(row.web_url);
+    if ((row.video_status === 'ready' || row.web_url) && existingWebKey) {
+      if (row.video_status === 'ready' && row.compressed_key) return row;
+
+      const { rows } = await fastify.db.query(
+        `UPDATE uploads
+            SET video_status   = 'ready',
+                compressed_key = COALESCE(compressed_key, $2)
+          WHERE id = $1
+        RETURNING *`,
+        [row.id, existingWebKey],
+      );
+      return rows[0] || row;
+    }
+
+    if (!row.original_key) return row;
+
+    const { webKey, posterKey } = derivedVideoKeys(row.original_key);
+    const hasWeb = await storageObjectExists(webKey);
+    if (!hasWeb) return row;
+
+    const hasPoster = await storageObjectExists(posterKey);
+    const webUrl = publicMediaUrl(webKey);
+    const posterUrl = hasPoster ? publicMediaUrl(posterKey) : row.poster_url;
+
+    const { rows } = await fastify.db.query(
+      `UPDATE uploads
+          SET video_status   = 'ready',
+              compressed_key = $2,
+              web_url        = $3,
+              poster_url     = COALESCE($4, poster_url)
+        WHERE id = $1
+      RETURNING *`,
+      [row.id, webKey, webUrl, posterUrl],
+    );
+    return rows[0] || row;
+  }
+
+  async function reconcileVideoUploads(rows) {
+    if (!Array.isArray(rows) || !rows.length) return rows;
+    return Promise.all(rows.map(row => reconcileVideoUpload(row)));
+  }
+
   function extractStorageKey(fileUrl) {
     if (!fileUrl) return null;
 
@@ -390,6 +464,7 @@ export default async function uploadRoutes(fastify) {
         ORDER BY created_at DESC`,
       [event.id],
     );
+    const hydratedUploads = await reconcileVideoUploads(uploads);
 
     const now = new Date();
     const locks = {
@@ -397,7 +472,7 @@ export default async function uploadRoutes(fastify) {
       uploads_closed: !!(event.upload_window_ends_at && new Date(event.upload_window_ends_at) < now),
     };
 
-    return { uploads, event, locks };
+    return { uploads: hydratedUploads, event, locks };
   });
 
   // GET /api/uploads/:slug/download — list all file URLs for bulk download
