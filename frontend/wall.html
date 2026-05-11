@@ -67,6 +67,17 @@
     .layer.has-video .vid { display: block; }
     .layer.has-video.video-visible .vid { opacity: 1; }
     .layer.has-video.video-visible .pic { display: none; }
+    .layer.has-video.portrait-video .vid {
+      inset: auto;
+      top: 50%;
+      left: 50%;
+      width: auto;
+      height: 100%;
+      max-width: 100%;
+      max-height: 100%;
+      transform: translate(-50%, -50%);
+      object-fit: fill;
+    }
     /* Warm wedding-palette letterbox — gold + cinnabar radial glows on
        a dark wine base. Replaces the previous flat-black bars on
        portrait videos. */
@@ -1427,6 +1438,7 @@
         outVid.load();
       } catch {}
     }
+    if (!reuseActive) outLayer.classList.remove('portrait-video');
     if (!reuseActive) outLayer.classList.remove('video-visible');
     outLoader?.classList.remove('visible');
     // Make the incoming layer the bandwidth-priority one; the other can
@@ -1453,6 +1465,7 @@
 
       inLayer.classList.add('has-video');
       inLayer.classList.remove('video-visible');
+      inLayer.classList.remove('portrait-video');
       inLoader?.classList.remove('visible');
 
       if (posterUrl) {
@@ -1471,12 +1484,18 @@
       inVid.src = mediaUrl;
       inVid.load();
       try { inVid.currentTime = 0; } catch {}
+      const syncVideoAspect = () => {
+        const isPortraitFrame = (inVid.videoHeight || 0) > (inVid.videoWidth || 0);
+        inLayer.classList.toggle('portrait-video', isPortraitFrame);
+      };
       const revealVideo = () => {
+        syncVideoAspect();
         inLayer.classList.add('video-visible');
         inVid.classList.add('video-visible');
         inLoader?.classList.remove('visible');
       };
       inVid.classList.remove('video-visible');
+      inVid.addEventListener('loadedmetadata', syncVideoAspect, { once: true });
       inVid.addEventListener('loadeddata', revealVideo, { once: true });
       const playPromise = inVid.play();
       if (inVid.readyState >= 2) revealVideo();
@@ -1494,7 +1513,7 @@
         });
       }
     } else if (itemIsProcessingVideo) {
-      inLayer.classList.remove('has-video', 'video-visible');
+      inLayer.classList.remove('has-video', 'video-visible', 'portrait-video');
       try {
         inVid.pause();
         inVid.removeAttribute('src');
@@ -1505,7 +1524,7 @@
       setLoaderPhrase(inLoader, reelMagicPhrase);
       inLoader?.classList.add('visible');
     } else {
-      inLayer.classList.remove('has-video', 'video-visible');
+      inLayer.classList.remove('has-video', 'video-visible', 'portrait-video');
 
       // Restart Ken Burns animation cleanly
       inPic.style.animation = 'none';
