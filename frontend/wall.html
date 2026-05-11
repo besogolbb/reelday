@@ -1040,7 +1040,33 @@
     }
   }
 
-  function makeProcessingPlaceholder(label = 'Video processing') {
+  const VIDEO_PROCESSING_LINES = [
+    'Preparing the magic',
+    'Polishing this moment',
+    'Cueing the main character energy',
+    'Giving this clip its glow-up',
+    'Getting this memory wall-ready',
+    'Almost ready for its big entrance',
+    'Adding the cinematic sparkle',
+    'Framing the good stuff',
+  ];
+
+  function videoProcessingLine(upload) {
+    const seed = String(
+      upload?.id ||
+      upload?.original_key ||
+      upload?.file_url ||
+      upload?.created_at ||
+      'reelday-video'
+    );
+    let hash = 0;
+    for (let i = 0; i < seed.length; i++) {
+      hash = ((hash << 5) - hash + seed.charCodeAt(i)) | 0;
+    }
+    return VIDEO_PROCESSING_LINES[Math.abs(hash) % VIDEO_PROCESSING_LINES.length];
+  }
+
+  function makeProcessingPlaceholder(label = 'Preparing the magic') {
     const svg =
       `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900">` +
       `<defs>` +
@@ -1066,7 +1092,7 @@
 
   function videoPlaceholderUrl(upload, width = 1920) {
     if (upload?.poster_url) return cdnImage(upload.poster_url, width);
-    return makeProcessingPlaceholder('Video processing');
+    return makeProcessingPlaceholder(videoProcessingLine(upload));
   }
 
   function wallMediaUrl(upload) {

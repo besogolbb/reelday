@@ -38,6 +38,7 @@ export default async function uploadRoutes(fastify) {
   async function reconcileVideoUpload(row) {
     if (!row || row.file_type !== 'video') return row;
 
+    const posterOnlyKey = extractStorageKey(row.poster_url);
     const existingWebKey = row.compressed_key || extractStorageKey(row.web_url);
     if ((row.video_status === 'ready' || row.web_url) && existingWebKey) {
       if (row.video_status === 'ready' && row.compressed_key) return row;
@@ -56,12 +57,24 @@ export default async function uploadRoutes(fastify) {
     if (!row.original_key) return row;
 
     const { webKey, posterKey } = derivedVideoKeys(row.original_key);
+    const hasPoster = posterOnlyKey ? true : await storageObjectExists(posterKey);
     const hasWeb = await storageObjectExists(webKey);
-    if (!hasWeb) return row;
+    if (!hasWeb) {
+      if (!hasPoster || row.poster_url) return row;
 
-    const hasPoster = await storageObjectExists(posterKey);
+      const posterUrl = publicMediaUrl(posterKey);
+      const { rows } = await fastify.db.query(
+        `UPDATE uploads
+            SET poster_url = COALESCE(poster_url, $2)
+          WHERE id = $1
+        RETURNING *`,
+        [row.id, posterUrl],
+      );
+      return rows[0] || row;
+    }
+
     const webUrl = publicMediaUrl(webKey);
-    const posterUrl = hasPoster ? publicMediaUrl(posterKey) : row.poster_url;
+    const posterUrl = hasPoster ? (row.poster_url || publicMediaUrl(posterKey)) : row.poster_url;
 
     const { rows } = await fastify.db.query(
       `UPDATE uploads

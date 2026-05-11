@@ -64,27 +64,28 @@ export default async function webhookRoutes(fastify) {
       request.body?.poster_url,
     );
 
-    if (!originalKey || !compressedKey) {
+    if (!originalKey || (!compressedKey && !posterKey)) {
       return reply.status(400).send({
         error: true,
-        message: 'originalKey and compressedKey are required',
+        message: 'originalKey plus compressedKey or posterKey is required',
       });
     }
 
-    const compressedUrl = isAbsoluteUrl(compressedKey) ? compressedKey : buildPublicUrl(compressedKey);
+    const compressedUrl = !compressedKey ? null : (isAbsoluteUrl(compressedKey) ? compressedKey : buildPublicUrl(compressedKey));
     const posterUrl = !posterKey ? null : (isAbsoluteUrl(posterKey) ? posterKey : buildPublicUrl(posterKey));
+    const nextStatus = compressedKey ? 'ready' : 'processing';
 
     const { rows } = await fastify.db.query(
       `UPDATE uploads
-          SET video_status   = 'ready',
-              compressed_key = $2,
-              file_url       = $3,
-              web_url        = $3,
+          SET video_status   = $5,
+              compressed_key = COALESCE($2, compressed_key),
+              file_url       = COALESCE($3, file_url),
+              web_url        = COALESCE($3, web_url),
               poster_url     = COALESCE($4, poster_url)
         WHERE file_type = 'video'
           AND original_key = $1
         RETURNING *`,
-      [originalKey, compressedKey, compressedUrl, posterUrl],
+      [originalKey, compressedKey || null, compressedUrl, posterUrl, nextStatus],
     );
 
     if (!rows.length) {
