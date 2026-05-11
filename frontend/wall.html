@@ -1447,7 +1447,20 @@
       inLayer.classList.add('has-video');
       inLayer.classList.remove('video-visible');
       setLoaderPhrase(inLoader, REEL_MAGIC_PHRASES[0]);
-      inLoader?.classList.add('visible');
+      inLoader?.classList.remove('visible');
+      let readyVideoLoaderTimer = null;
+      const showReadyVideoLoader = () => {
+        readyVideoLoaderTimer = setTimeout(() => {
+          inLoader?.classList.add('visible');
+        }, 180);
+      };
+      const hideReadyVideoLoader = () => {
+        if (readyVideoLoaderTimer) {
+          clearTimeout(readyVideoLoaderTimer);
+          readyVideoLoaderTimer = null;
+        }
+        inLoader?.classList.remove('visible');
+      };
 
       if (posterUrl) {
         inVid.setAttribute('poster', posterUrl);
@@ -1468,10 +1481,11 @@
       const revealVideo = () => {
         inLayer.classList.add('video-visible');
         inVid.classList.add('video-visible');
-        inLoader?.classList.remove('visible');
+        hideReadyVideoLoader();
       };
       inVid.classList.remove('video-visible');
       inVid.addEventListener('loadeddata', revealVideo, { once: true });
+      showReadyVideoLoader();
       const playPromise = inVid.play();
       if (inVid.readyState >= 2) revealVideo();
       if (playPromise && typeof playPromise.catch === 'function') {
