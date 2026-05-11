@@ -1133,6 +1133,10 @@
     }
   }
 
+  function isVideoUrl(url) {
+    return typeof url === 'string' && /\.(mp4|webm|mov|m4v|ogg)(\?|$)/i.test(url);
+  }
+
   const REEL_MAGIC_PHRASES = [
     'Developing the magic... ✨',
     'Polishing your memory for the big screen... 🎬',
@@ -1242,6 +1246,51 @@
     if (!raw) return wallFallbackUrl(upload, 'Loading moment');
     // 1920 covers any reasonable TV; format=auto picks AVIF/WebP per browser.
     return cdnImage(raw, 1920);
+  }
+
+  const videoBackdropCanvas = document.createElement('canvas');
+  const videoBackdropCtx = videoBackdropCanvas.getContext('2d', { alpha: false });
+
+  function paintBackdropFromVideoFrame(videoEl, backdropEl) {
+    if (!videoEl || !backdropEl || !videoBackdropCtx) return false;
+    const vw = videoEl.videoWidth || 0;
+    const vh = videoEl.videoHeight || 0;
+    if (!vw || !vh) return false;
+
+    const targetW = 1280;
+    const targetH = 720;
+    videoBackdropCanvas.width = targetW;
+    videoBackdropCanvas.height = targetH;
+
+    const scale = Math.max(targetW / vw, targetH / vh);
+    const drawW = vw * scale;
+    const drawH = vh * scale;
+    const dx = (targetW - drawW) / 2;
+    const dy = (targetH - drawH) / 2;
+
+    videoBackdropCtx.clearRect(0, 0, targetW, targetH);
+    videoBackdropCtx.drawImage(videoEl, dx, dy, drawW, drawH);
+    backdropEl.style.backgroundImage = `url("${videoBackdropCanvas.toDataURL('image/jpeg', 0.82)}")`;
+    backdropEl.style.display = 'block';
+    backdropEl.style.opacity = '1';
+    return true;
+  }
+
+  function stopVideoBackdropSampling(videoEl) {
+    if (!videoEl) return;
+    if (videoEl.__backdropTimer) {
+      clearInterval(videoEl.__backdropTimer);
+      videoEl.__backdropTimer = null;
+    }
+  }
+
+  function startVideoBackdropSampling(videoEl, backdropEl) {
+    if (!videoEl || !backdropEl) return;
+    stopVideoBackdropSampling(videoEl);
+    const sample = () => paintBackdropFromVideoFrame(videoEl, backdropEl);
+    sample();
+    videoEl.addEventListener('loadeddata', sample, { once: true });
+    videoEl.__backdropTimer = setInterval(sample, 700);
   }
 
   let items      = [];
@@ -1437,6 +1486,7 @@
     // and stop streaming bytes for a clip nobody is watching anymore. This
     // is the single biggest contributor to wall lag during video playback.
     if (!reuseActive && outVid) {
+      stopVideoBackdropSampling(outVid);
       try {
         outVid.pause();
         outVid.removeAttribute('src');
@@ -1468,14 +1518,18 @@
     if (itemIsVideo) {
       inPic.style.animation            = 'none';
       const videoBackdropUrl = item.poster_url || item.thumb || item.file_url;
-      const finalUrl = cdnImage(videoBackdropUrl, 1280);
+      const finalUrl = videoBackdropUrl ? cdnImage(absoluteMediaUrl(videoBackdropUrl), 1280) : '';
 
       inLayer.classList.add('has-video');
       inLayer.classList.remove('video-visible');
       inLoader?.classList.remove('visible');
       inBackdrop.style.display = 'block';
       inBackdrop.style.opacity = '1';
-      inBackdrop.style.backgroundImage = `url("${finalUrl}")`;
+      if (finalUrl && !isVideoUrl(finalUrl)) {
+        inBackdrop.style.backgroundImage = `url("${finalUrl}")`;
+      } else {
+        inBackdrop.style.backgroundImage = `url("${wallFallbackUrl(item, 'Loading moment')}")`;
+      }
 
       if (posterUrl) {
         inVid.setAttribute('poster', posterUrl);
@@ -1489,11 +1543,15 @@
       inVid.muted    = !wallSoundOn;
       inVid.playsInline = true;
       inVid.autoplay = true;
+      stopVideoBackdropSampling(inVid);
       try { inVid.pause(); } catch {}
       inVid.src = mediaUrl;
       inVid.load();
       try { inVid.currentTime = 0; } catch {}
       const revealVideo = () => {
+        if (!finalUrl || isVideoUrl(finalUrl)) {
+          startVideoBackdropSampling(inVid, inBackdrop);
+        }
         inLayer.classList.add('video-visible');
         inVid.classList.add('video-visible');
         inLoader?.classList.remove('visible');
@@ -1517,6 +1575,7 @@
       }
     } else if (itemIsProcessingVideo) {
       inLayer.classList.remove('has-video', 'video-visible');
+      stopVideoBackdropSampling(inVid);
       try {
         inVid.pause();
         inVid.removeAttribute('src');
@@ -1528,6 +1587,7 @@
       inLoader?.classList.add('visible');
     } else {
       inLayer.classList.remove('has-video', 'video-visible');
+      stopVideoBackdropSampling(inVid);
 
       // Restart Ken Burns animation cleanly
       inPic.style.animation = 'none';
