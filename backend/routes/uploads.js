@@ -1,4 +1,4 @@
-import { extname } from 'path';
+import { extname, posix as pathPosix } from 'path';
 import { randomUUID } from 'crypto';
 import { PutObjectCommand, DeleteObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
@@ -14,11 +14,21 @@ export default async function uploadRoutes(fastify) {
   }
 
   function derivedVideoKeys(originalKey) {
-    const dot = String(originalKey || '').lastIndexOf('.');
-    const stem = dot > 0 ? originalKey.slice(0, dot) : originalKey;
+    const key = String(originalKey || '').replace(/^\/+/, '');
+    const dir = pathPosix.dirname(key);
+    const ext = pathPosix.extname(key);
+    const base = pathPosix.basename(key, ext);
+    const joinKey = name => (dir && dir !== '.' ? `${dir}/${name}` : name);
+
     return {
-      webKey: `${stem}_web.mp4`,
-      posterKey: `${stem}_poster.jpg`,
+      webKeys: [
+        `${key.slice(0, key.length - ext.length)}_web.mp4`,
+        joinKey(`compressed_${base}.mp4`),
+      ],
+      posterKeys: [
+        `${key.slice(0, key.length - ext.length)}_poster.jpg`,
+        joinKey(`poster_${base}.jpg`),
+      ],
     };
   }
 
@@ -56,9 +66,21 @@ export default async function uploadRoutes(fastify) {
 
     if (!row.original_key) return row;
 
-    const { webKey, posterKey } = derivedVideoKeys(row.original_key);
-    const hasPoster = posterOnlyKey ? true : await storageObjectExists(posterKey);
-    const hasWeb = await storageObjectExists(webKey);
+    const { webKeys, posterKeys } = derivedVideoKeys(row.original_key);
+    const webKey = existingWebKey || (await (async () => {
+      for (const candidate of webKeys) {
+        if (await storageObjectExists(candidate)) return candidate;
+      }
+      return null;
+    })());
+    const posterKey = posterOnlyKey || (await (async () => {
+      for (const candidate of posterKeys) {
+        if (await storageObjectExists(candidate)) return candidate;
+      }
+      return null;
+    })());
+    const hasPoster = !!posterKey;
+    const hasWeb = !!webKey;
     if (!hasWeb) {
       if (!hasPoster || row.poster_url) return row;
 

@@ -12,7 +12,10 @@ if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
 const lambdaClient = new LambdaClient(lambdaClientConfig);
 
 export async function triggerVideoTranscode(filePath) {
-  const payload = { fileName: filePath };
+  const payload = {
+    originalKey: filePath,
+    fileName: filePath,
+  };
 
   await lambdaClient.send(new InvokeCommand({
     FunctionName: 'reelday-transcoder-v2',

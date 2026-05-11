@@ -61,9 +61,12 @@
       object-fit: contain;
       background: transparent !important;
       display: none;
+      opacity: 0;
+      transition: opacity .7s ease;
     }
-    .layer.has-video .pic { display: none; }
     .layer.has-video .vid { display: block; }
+    .layer.has-video.video-visible .vid { opacity: 1; }
+    .layer.has-video.video-visible .pic { display: none; }
     /* Warm wedding-palette letterbox — gold + cinnabar radial glows on
        a dark wine base. Replaces the previous flat-black bars on
        portrait videos. */
@@ -72,6 +75,39 @@
         radial-gradient(ellipse at 30% 20%, rgba(216,160,90,.28), transparent 60%),
         radial-gradient(ellipse at 80% 85%, rgba(196,90,58,.32), transparent 65%),
         linear-gradient(180deg, #2a1208 0%, #1a0a05 55%, #0f0703 100%) !important;
+    }
+    .layer .video-loader {
+      position: absolute;
+      left: 50%;
+      bottom: 12vh;
+      transform: translateX(-50%);
+      z-index: 4;
+      display: none;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 20px;
+      border-radius: 999px;
+      background: rgba(20,10,7,.72);
+      border: 1px solid rgba(255,255,255,.14);
+      box-shadow: 0 10px 30px rgba(0,0,0,.24);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      font-family: var(--mono);
+      font-size: 13px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.92);
+      opacity: 0;
+      transition: opacity .35s ease;
+      pointer-events: none;
+    }
+    .layer .video-loader.visible {
+      display: inline-flex;
+      opacity: 1;
+    }
+    .layer .video-loader .emoji {
+      font-size: 18px;
+      letter-spacing: 0;
     }
     /* The blurred backdrop is a photo-only effect; videos use the
        gradient instead so the vid element doesn't get a static photo
@@ -827,12 +863,14 @@
   <div class="backdrop" id="backdrop-a"></div>
   <div class="pic" id="pic-a"></div>
   <video class="vid" id="vid-a" muted playsinline preload="auto"></video>
+  <div class="video-loader" id="loader-a"><span class="emoji">🎬</span><span>Processing Reel...</span></div>
   <div class="vignette"></div>
 </div>
 <div class="layer out" id="layer-b">
   <div class="backdrop" id="backdrop-b"></div>
   <div class="pic" id="pic-b"></div>
   <video class="vid" id="vid-b" muted playsinline preload="metadata"></video>
+  <div class="video-loader" id="loader-b"><span class="emoji">🎬</span><span>Processing Reel...</span></div>
   <div class="vignette"></div>
 </div>
 
@@ -1090,6 +1128,14 @@
     );
   }
 
+  function hasPosterVideo(upload) {
+    return isVideoItem(upload) && !!upload?.poster_url;
+  }
+
+  function isProcessingVideo(upload) {
+    return isVideoItem(upload) && !isReadyVideo(upload);
+  }
+
   function videoPlaceholderUrl(upload, width = 1920) {
     if (upload?.poster_url) return cdnImage(upload.poster_url, width);
     return makeProcessingPlaceholder(videoProcessingLine(upload));
@@ -1208,6 +1254,8 @@
   const backdropB   = document.getElementById('backdrop-b');
   const vidA        = document.getElementById('vid-a');
   const vidB        = document.getElementById('vid-b');
+  const loaderA     = document.getElementById('loader-a');
+  const loaderB     = document.getElementById('loader-b');
   const soundBtn    = document.getElementById('sound-btn');
   const soundIcon   = document.getElementById('sound-icon');
   const soundLabel  = document.getElementById('sound-label');
@@ -1292,6 +1340,8 @@
     const inBackdrop = activeLayer === 'A' ? backdropB : backdropA;
     const inVid      = activeLayer === 'A' ? vidB    : vidA;
     const outVid     = activeLayer === 'A' ? vidA    : vidB;
+    const inLoader   = activeLayer === 'A' ? loaderB : loaderA;
+    const outLoader  = activeLayer === 'A' ? loaderA : loaderB;
 
     // Fully release the outgoing video so the browser can free its decoder
     // and stop streaming bytes for a clip nobody is watching anymore. This
@@ -1300,9 +1350,12 @@
       try {
         outVid.pause();
         outVid.removeAttribute('src');
+        outVid.classList.remove('video-visible');
         outVid.load();
       } catch {}
     }
+    outLayer.classList.remove('video-visible');
+    outLoader?.classList.remove('visible');
     // Make the incoming layer the bandwidth-priority one; the other can
     // stay on metadata-only until it becomes active again.
     if (inVid)  inVid.preload  = 'auto';
@@ -1310,21 +1363,19 @@
 
     const mediaUrl = wallMediaUrl(item);
     const itemIsVideo = isReadyVideo(item) && !!mediaUrl;
+    const itemIsProcessingVideo = isProcessingVideo(item);
 
     if (itemIsVideo) {
-      // Backdrop falls back to a flat dark wash for videos
-      inBackdrop.style.backgroundImage = 'none';
-      inPic.style.backgroundImage      = 'none';
+      const posterUrl = item.poster_url ? cdnImage(item.poster_url, 1280) : null;
+      inBackdrop.style.backgroundImage = posterUrl ? `url('${posterUrl}')` : 'none';
+      inPic.style.backgroundImage      = posterUrl ? `url('${posterUrl}')` : 'none';
       inPic.style.animation            = 'none';
 
       inLayer.classList.add('has-video');
+      inLayer.classList.remove('video-visible');
+      inLoader?.classList.remove('visible');
 
-      // Show the server-generated poster (first frame of the clip) on the
-      // backdrop while the MP4 streams in. The wall paints something the
-      // moment the slide enters instead of a black rectangle for ~1s.
-      if (item.poster_url) {
-        const posterUrl = cdnImage(item.poster_url, 1280);
-        inBackdrop.style.backgroundImage = `url('${posterUrl}')`;
+      if (posterUrl) {
         inVid.setAttribute('poster', posterUrl);
       } else {
         inVid.removeAttribute('poster');
@@ -1343,6 +1394,12 @@
         inVid.load();
       }
       try { inVid.currentTime = 0; } catch {}
+      const revealVideo = () => {
+        inLayer.classList.add('video-visible');
+        inVid.classList.add('video-visible');
+      };
+      inVid.classList.remove('video-visible');
+      inVid.addEventListener('loadeddata', revealVideo, { once: true });
       const playPromise = inVid.play();
       if (playPromise && typeof playPromise.catch === 'function') {
         playPromise.catch(err => {
@@ -1357,8 +1414,15 @@
           }
         });
       }
+    } else if (itemIsProcessingVideo) {
+      inLayer.classList.remove('has-video', 'video-visible');
+      const url = mediaUrl ? `url('${mediaUrl}')` : 'none';
+      inPic.style.backgroundImage      = url;
+      inBackdrop.style.backgroundImage = url;
+      inPic.style.animation = 'none';
+      inLoader?.classList.toggle('visible', hasPosterVideo(item));
     } else {
-      inLayer.classList.remove('has-video');
+      inLayer.classList.remove('has-video', 'video-visible');
       // Load photo into both layers — pic shows whole image, backdrop fills letterbox
       const url = mediaUrl ? `url('${mediaUrl}')` : 'none';
       inPic.style.backgroundImage      = url;
@@ -1368,6 +1432,7 @@
       inPic.style.animation = 'none';
       void inPic.offsetWidth; // force reflow
       inPic.style.animation = `${kbAnim} ${KB_DURATION}s ease-out forwards`;
+      inLoader?.classList.remove('visible');
     }
 
     // Stash so advance()/goTo() know whether this slide is a video.
@@ -2329,6 +2394,7 @@
     } catch { /* fall through to local-only */ }
 
     const merged = mergeUploads(apiUploads);
+    const previousCurrent = items[currentIdx] || null;
     allUploads = merged;
 
     const slideable = merged;
@@ -2353,6 +2419,22 @@
       // Not running yet, or empty — replace the deck wholesale.
       items = slideable;
       slideable.forEach(u => knownIds.add(u.id));
+    }
+
+    if (isRunning && previousCurrent?.id) {
+      const refreshedCurrent = items.find(u => u.id === previousCurrent.id);
+      const becameReady = refreshedCurrent && !isReadyVideo(previousCurrent) && isReadyVideo(refreshedCurrent);
+      const gainedPoster = refreshedCurrent && !previousCurrent.poster_url && !!refreshedCurrent.poster_url;
+      if (refreshedCurrent && (becameReady || gainedPoster)) {
+        const newIdx = items.findIndex(u => u.id === refreshedCurrent.id);
+        if (newIdx >= 0) {
+          currentIdx = newIdx;
+          showSlide(currentIdx);
+          startProgress();
+          prewarmNext();
+          if (!isPaused && items.length > 1) scheduleAdvance();
+        }
+      }
     }
 
     if (!isRunning && slideable.length > 0) {
