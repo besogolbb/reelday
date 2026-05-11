@@ -106,8 +106,20 @@
       opacity: 1;
     }
     .layer .video-loader .emoji {
-      font-size: 18px;
-      letter-spacing: 0;
+      display: none;
+    }
+    .layer .video-loader .smooth-spinner {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 2.5px solid rgba(240,163,122,.24);
+      border-top-color: var(--gold);
+      border-right-color: rgba(240,163,122,.68);
+      animation: smoothSpin 900ms linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes smoothSpin {
+      to { transform: rotate(360deg); }
     }
     /* The blurred backdrop is a photo-only effect; videos use the
        gradient instead so the vid element doesn't get a static photo
@@ -863,14 +875,14 @@
   <div class="backdrop" id="backdrop-a"></div>
   <div class="pic" id="pic-a"></div>
   <video class="vid" id="vid-a" muted playsinline preload="auto"></video>
-  <div class="video-loader" id="loader-a"><span class="emoji">🎬</span><span>Processing Reel...</span></div>
+  <div class="video-loader" id="loader-a"><span class="smooth-spinner" aria-hidden="true"></span><span class="emoji">🎬</span><span>Processing Reel...</span></div>
   <div class="vignette"></div>
 </div>
 <div class="layer out" id="layer-b">
   <div class="backdrop" id="backdrop-b"></div>
   <div class="pic" id="pic-b"></div>
   <video class="vid" id="vid-b" muted playsinline preload="metadata"></video>
-  <div class="video-loader" id="loader-b"><span class="emoji">🎬</span><span>Processing Reel...</span></div>
+  <div class="video-loader" id="loader-b"><span class="smooth-spinner" aria-hidden="true"></span><span class="emoji">🎬</span><span>Processing Reel...</span></div>
   <div class="vignette"></div>
 </div>
 
@@ -1173,6 +1185,15 @@
     return thumbUrl || wallFallbackUrl(upload, videoProcessingLine(upload));
   }
 
+  function immediateVisualUrl(upload, width = 1280) {
+    return (
+      videoPosterUrl(upload, width) ||
+      absoluteMediaUrl(upload?.thumb) ||
+      absoluteMediaUrl(upload?.file_url) ||
+      wallFallbackUrl(upload, videoProcessingLine(upload))
+    );
+  }
+
   function wallMediaUrl(upload) {
     if (!upload) return makeProcessingPlaceholder('Loading moment');
     if (isReadyVideo(upload)) {
@@ -1395,9 +1416,8 @@
     if (outVid) outVid.preload = 'metadata';
 
     const mediaUrl = wallMediaUrl(item);
-    const posterUrl = isVideoItem(item)
-      ? (videoPosterUrl(item, 1280) || absoluteMediaUrl(item?.thumb) || wallFallbackUrl(item, videoProcessingLine(item)))
-      : mediaUrl;
+    const immediateVisual = immediateVisualUrl(item, 1280);
+    const posterUrl = isVideoItem(item) ? immediateVisual : mediaUrl;
     const itemIsVideo = isReadyVideo(item) && !!mediaUrl;
     const itemIsProcessingVideo = isProcessingVideo(item);
     const posterBackground = posterUrl ? `url('${posterUrl}')` : `url('${wallFallbackUrl(item, 'Loading moment')}')`;
@@ -1428,11 +1448,8 @@
       inVid.playsInline = true;
       inVid.autoplay = true;
       try { inVid.pause(); } catch {}
-      const absoluteUrl = new URL(mediaUrl, location.href).toString();
-      if (inVid.src !== absoluteUrl) {
-        inVid.src = mediaUrl;
-        inVid.load();
-      }
+      inVid.src = mediaUrl;
+      inVid.load();
       try { inVid.currentTime = 0; } catch {}
       const revealVideo = () => {
         inLayer.classList.add('video-visible');
@@ -2468,10 +2485,11 @@
 
     if (isRunning && previousCurrent?.id) {
       const refreshedCurrent = items.find(u => u.id === previousCurrent.id);
-      const becameReady = refreshedCurrent && !isReadyVideo(previousCurrent) && isReadyVideo(refreshedCurrent);
-      const gainedPoster = refreshedCurrent && !previousCurrent.poster_url && !!refreshedCurrent.poster_url;
-      const mediaChanged = refreshedCurrent && wallMediaUrl(refreshedCurrent) !== wallMediaUrl(previousCurrent);
-      if (refreshedCurrent && (becameReady || gainedPoster || mediaChanged)) {
+      const statusBecameReady =
+        refreshedCurrent &&
+        previousCurrent.video_status === 'processing' &&
+        refreshedCurrent.video_status === 'ready';
+      if (refreshedCurrent && statusBecameReady) {
         const newIdx = items.findIndex(u => u.id === refreshedCurrent.id);
         if (newIdx >= 0) {
           currentIdx = newIdx;
