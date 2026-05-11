@@ -1120,12 +1120,23 @@
     return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
   }
 
+  const MEDIA_PUBLIC_BASE = 'https://media.reelday.ph';
+
+  function absoluteMediaUrl(urlOrKey) {
+    if (!urlOrKey) return null;
+    const value = String(urlOrKey).trim();
+    if (!value) return null;
+    if (value.startsWith('data:') || value.startsWith('blob:')) return value;
+    if (/^https?:\/\//i.test(value)) return value;
+    return `${MEDIA_PUBLIC_BASE}/${value.replace(/^\/+/, '')}`;
+  }
+
+  function wallFallbackUrl(upload, label = 'Preparing the magic') {
+    return upload?.thumb || makeProcessingPlaceholder(label);
+  }
+
   function isReadyVideo(upload) {
-    return isVideoItem(upload) && (
-      upload?.video_status === 'ready' ||
-      !!upload?.web_url ||
-      !!upload?.compressed_key
-    );
+    return isVideoItem(upload) && upload?.video_status === 'ready';
   }
 
   function hasPosterVideo(upload) {
@@ -1136,21 +1147,37 @@
     return isVideoItem(upload) && !isReadyVideo(upload);
   }
 
-  function videoPlaceholderUrl(upload, width = 1920) {
-    if (upload?.poster_url) return cdnImage(upload.poster_url, width);
-    return makeProcessingPlaceholder(videoProcessingLine(upload));
+  function videoPosterUrl(upload, width = 1920) {
+    const posterUrl = absoluteMediaUrl(upload?.poster_url);
+    return posterUrl ? cdnImage(posterUrl, width) : null;
+  }
+
+  function readyVideoUrl(upload) {
+    const compressedUrl = absoluteMediaUrl(upload?.compressed_key);
+    if (compressedUrl) return compressedUrl;
+    const webUrl = absoluteMediaUrl(upload?.web_url);
+    if (webUrl) return webUrl;
+    const fileUrl = absoluteMediaUrl(upload?.file_url);
+    return fileUrl || wallFallbackUrl(upload, videoProcessingLine(upload));
+  }
+
+  function processingVideoUrl(upload, width = 1920) {
+    const posterUrl = videoPosterUrl(upload, width);
+    if (posterUrl) return posterUrl;
+    const thumbUrl = absoluteMediaUrl(upload?.thumb);
+    return thumbUrl || wallFallbackUrl(upload, videoProcessingLine(upload));
   }
 
   function wallMediaUrl(upload) {
-    if (!upload) return null;
+    if (!upload) return makeProcessingPlaceholder('Loading moment');
     if (isReadyVideo(upload)) {
-      return upload.web_url || upload.file_url || upload.thumb || null;
+      return readyVideoUrl(upload);
     }
     if (isVideoItem(upload)) {
-      return videoPlaceholderUrl(upload, 1920);
+      return processingVideoUrl(upload, 1920);
     }
-    const raw = upload.file_url || upload.thumb || null;
-    if (!raw) return null;
+    const raw = absoluteMediaUrl(upload.file_url || upload.thumb || null);
+    if (!raw) return wallFallbackUrl(upload, 'Loading moment');
     // 1920 covers any reasonable TV; format=auto picks AVIF/WebP per browser.
     return cdnImage(raw, 1920);
   }
@@ -1362,18 +1389,24 @@
     if (outVid) outVid.preload = 'metadata';
 
     const mediaUrl = wallMediaUrl(item);
+    const posterUrl = isVideoItem(item)
+      ? (videoPosterUrl(item, 1280) || absoluteMediaUrl(item?.thumb) || wallFallbackUrl(item, videoProcessingLine(item)))
+      : mediaUrl;
     const itemIsVideo = isReadyVideo(item) && !!mediaUrl;
     const itemIsProcessingVideo = isProcessingVideo(item);
+    const posterBackground = posterUrl ? `url('${posterUrl}')` : `url('${wallFallbackUrl(item, 'Loading moment')}')`;
+
+    // Always paint something on the incoming layer first so there is
+    // never a blank frame while a poster or video stream is loading.
+    inBackdrop.style.backgroundImage = posterBackground;
+    inPic.style.backgroundImage      = posterBackground;
 
     if (itemIsVideo) {
-      const posterUrl = item.poster_url ? cdnImage(item.poster_url, 1280) : null;
-      inBackdrop.style.backgroundImage = posterUrl ? `url('${posterUrl}')` : 'none';
-      inPic.style.backgroundImage      = posterUrl ? `url('${posterUrl}')` : 'none';
       inPic.style.animation            = 'none';
 
       inLayer.classList.add('has-video');
       inLayer.classList.remove('video-visible');
-      inLoader?.classList.remove('visible');
+      inLoader?.classList.add('visible');
 
       if (posterUrl) {
         inVid.setAttribute('poster', posterUrl);
@@ -1397,6 +1430,7 @@
       const revealVideo = () => {
         inLayer.classList.add('video-visible');
         inVid.classList.add('video-visible');
+        inLoader?.classList.remove('visible');
       };
       inVid.classList.remove('video-visible');
       inVid.addEventListener('loadeddata', revealVideo, { once: true });
@@ -1416,17 +1450,16 @@
       }
     } else if (itemIsProcessingVideo) {
       inLayer.classList.remove('has-video', 'video-visible');
-      const url = mediaUrl ? `url('${mediaUrl}')` : 'none';
-      inPic.style.backgroundImage      = url;
-      inBackdrop.style.backgroundImage = url;
+      try {
+        inVid.pause();
+        inVid.removeAttribute('src');
+        inVid.classList.remove('video-visible');
+        inVid.load();
+      } catch {}
       inPic.style.animation = 'none';
-      inLoader?.classList.toggle('visible', hasPosterVideo(item));
+      inLoader?.classList.add('visible');
     } else {
       inLayer.classList.remove('has-video', 'video-visible');
-      // Load photo into both layers — pic shows whole image, backdrop fills letterbox
-      const url = mediaUrl ? `url('${mediaUrl}')` : 'none';
-      inPic.style.backgroundImage      = url;
-      inBackdrop.style.backgroundImage = url;
 
       // Restart Ken Burns animation cleanly
       inPic.style.animation = 'none';
@@ -2425,7 +2458,8 @@
       const refreshedCurrent = items.find(u => u.id === previousCurrent.id);
       const becameReady = refreshedCurrent && !isReadyVideo(previousCurrent) && isReadyVideo(refreshedCurrent);
       const gainedPoster = refreshedCurrent && !previousCurrent.poster_url && !!refreshedCurrent.poster_url;
-      if (refreshedCurrent && (becameReady || gainedPoster)) {
+      const mediaChanged = refreshedCurrent && wallMediaUrl(refreshedCurrent) !== wallMediaUrl(previousCurrent);
+      if (refreshedCurrent && (becameReady || gainedPoster || mediaChanged)) {
         const newIdx = items.findIndex(u => u.id === refreshedCurrent.id);
         if (newIdx >= 0) {
           currentIdx = newIdx;
