@@ -37,6 +37,9 @@
     /* Blurred backdrop — fills letterbox area with a soft, scaled copy */
     .layer .backdrop {
       position: absolute; inset: 0;
+      z-index: -1 !important;
+      display: block !important;
+      opacity: 1 !important;
       background-size: cover; background-position: center;
       background-repeat: no-repeat;
       filter: blur(40px) brightness(.55) saturate(1.2);
@@ -136,8 +139,9 @@
       50% { opacity: 1; }
     }
     .layer.has-video .backdrop {
-      display: block;
-      opacity: 1;
+      z-index: -1 !important;
+      display: block !important;
+      opacity: 1 !important;
       filter: blur(60px) brightness(0.5);
       transform: scale(1.5);
     }
@@ -1445,15 +1449,12 @@
 
     if (itemIsVideo) {
       inPic.style.animation            = 'none';
-      const videoBackdropUrl =
-        videoPosterUrl(item, 1280) ||
-        absoluteMediaUrl(item?.thumb) ||
-        wallFallbackUrl(item, 'Loading moment');
+      const videoBackdropUrl = item.poster_url || item.thumb || item.file_url;
 
       inLayer.classList.add('has-video');
       inLayer.classList.remove('video-visible');
       inLoader?.classList.remove('visible');
-      inBackdrop.style.backgroundImage = `url('${videoBackdropUrl}')`;
+      inBackdrop.style.backgroundImage = "url('" + cdnImage(videoBackdropUrl, 1280) + "')";
 
       if (posterUrl) {
         inVid.setAttribute('poster', posterUrl);
