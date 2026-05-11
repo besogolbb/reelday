@@ -1112,10 +1112,15 @@
       `<stop offset="0%" stop-color="#24120d"/>` +
       `<stop offset="100%" stop-color="#0f0703"/>` +
       `</linearGradient>` +
+      `<radialGradient id="glow" cx="50%" cy="42%" r="48%">` +
+      `<stop offset="0%" stop-color="rgba(240,163,122,.28)"/>` +
+      `<stop offset="100%" stop-color="rgba(240,163,122,0)"/>` +
+      `</radialGradient>` +
       `</defs>` +
       `<rect width="1600" height="900" fill="url(#bg)"/>` +
-      `<circle cx="800" cy="380" r="72" fill="none" stroke="#f0a37a" stroke-width="18" stroke-linecap="round" stroke-dasharray="220 120" opacity="0.88"/>` +
-      `<text x="800" y="560" fill="white" font-family="Arial, sans-serif" font-size="56" text-anchor="middle">${label}</text>` +
+      `<rect width="1600" height="900" fill="url(#glow)" opacity="0.9"/>` +
+      `<rect x="520" y="390" width="560" height="120" rx="60" fill="rgba(255,255,255,.05)" stroke="rgba(255,255,255,.08)"/>` +
+      `<text x="800" y="466" fill="rgba(255,255,255,.92)" font-family="Arial, sans-serif" font-size="42" text-anchor="middle">${label}</text>` +
       `</svg>`;
     return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
   }
@@ -1355,25 +1360,26 @@
   /* ══════════════════════════════════════════════════════════
      SLIDE ENGINE
   ══════════════════════════════════════════════════════════ */
-  function showSlide(idx) {
+  function showSlide(idx, options = {}) {
     if (items.length === 0) return;
+    const reuseActive = options.reuseActive === true;
     const item  = items[idx % items.length];
     const kbAnim = KB_ANIMS[idx % KB_ANIMS.length];
 
     // Determine in/out layers
-    const inLayer    = activeLayer === 'A' ? layerB : layerA;
-    const outLayer   = activeLayer === 'A' ? layerA : layerB;
-    const inPic      = activeLayer === 'A' ? picB   : picA;
-    const inBackdrop = activeLayer === 'A' ? backdropB : backdropA;
-    const inVid      = activeLayer === 'A' ? vidB    : vidA;
-    const outVid     = activeLayer === 'A' ? vidA    : vidB;
-    const inLoader   = activeLayer === 'A' ? loaderB : loaderA;
-    const outLoader  = activeLayer === 'A' ? loaderA : loaderB;
+    const inLayer    = reuseActive ? (activeLayer === 'A' ? layerA : layerB) : (activeLayer === 'A' ? layerB : layerA);
+    const outLayer   = reuseActive ? (activeLayer === 'A' ? layerB : layerA) : (activeLayer === 'A' ? layerA : layerB);
+    const inPic      = reuseActive ? (activeLayer === 'A' ? picA : picB) : (activeLayer === 'A' ? picB   : picA);
+    const inBackdrop = reuseActive ? (activeLayer === 'A' ? backdropA : backdropB) : (activeLayer === 'A' ? backdropB : backdropA);
+    const inVid      = reuseActive ? (activeLayer === 'A' ? vidA : vidB) : (activeLayer === 'A' ? vidB    : vidA);
+    const outVid     = reuseActive ? (activeLayer === 'A' ? vidB : vidA) : (activeLayer === 'A' ? vidA    : vidB);
+    const inLoader   = reuseActive ? (activeLayer === 'A' ? loaderA : loaderB) : (activeLayer === 'A' ? loaderB : loaderA);
+    const outLoader  = reuseActive ? (activeLayer === 'A' ? loaderB : loaderA) : (activeLayer === 'A' ? loaderA : loaderB);
 
     // Fully release the outgoing video so the browser can free its decoder
     // and stop streaming bytes for a clip nobody is watching anymore. This
     // is the single biggest contributor to wall lag during video playback.
-    if (outVid) {
+    if (!reuseActive && outVid) {
       try {
         outVid.pause();
         outVid.removeAttribute('src');
@@ -1381,7 +1387,7 @@
         outVid.load();
       } catch {}
     }
-    outLayer.classList.remove('video-visible');
+    if (!reuseActive) outLayer.classList.remove('video-visible');
     outLoader?.classList.remove('visible');
     // Make the incoming layer the bandwidth-priority one; the other can
     // stay on metadata-only until it becomes active again.
@@ -1400,6 +1406,7 @@
     // never a blank frame while a poster or video stream is loading.
     inBackdrop.style.backgroundImage = posterBackground;
     inPic.style.backgroundImage      = posterBackground;
+    inLayer.classList.remove('out');
 
     if (itemIsVideo) {
       inPic.style.animation            = 'none';
@@ -1435,6 +1442,7 @@
       inVid.classList.remove('video-visible');
       inVid.addEventListener('loadeddata', revealVideo, { once: true });
       const playPromise = inVid.play();
+      if (inVid.readyState >= 2) revealVideo();
       if (playPromise && typeof playPromise.catch === 'function') {
         playPromise.catch(err => {
           // If unmuted autoplay was blocked (no user gesture yet), retry muted
@@ -1478,9 +1486,13 @@
     soundBtn?.classList.toggle('attention', itemIsVideo && !wallSoundOn);
 
     // Crossfade layers
-    inLayer.classList.remove('out');
-    outLayer.classList.add('out');
-    activeLayer = activeLayer === 'A' ? 'B' : 'A';
+    if (!reuseActive) {
+      inLayer.classList.remove('out');
+      outLayer.classList.add('out');
+      activeLayer = activeLayer === 'A' ? 'B' : 'A';
+    } else {
+      outLayer.classList.add('out');
+    }
 
     // Fade caption out, swap text, fade in
     caption.classList.add('fade');
@@ -2463,7 +2475,7 @@
         const newIdx = items.findIndex(u => u.id === refreshedCurrent.id);
         if (newIdx >= 0) {
           currentIdx = newIdx;
-          showSlide(currentIdx);
+          showSlide(currentIdx, { reuseActive: true });
           startProgress();
           prewarmNext();
           if (!isPaused && items.length > 1) scheduleAdvance();
