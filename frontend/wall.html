@@ -79,14 +79,16 @@
     .layer .video-loader {
       position: absolute;
       left: 50%;
-      bottom: 12vh;
-      transform: translateX(-50%);
+      top: 42%;
+      transform: translate(-50%, -50%);
       z-index: 4;
       display: none;
+      flex-direction: column;
       align-items: center;
-      gap: 12px;
-      padding: 14px 20px;
-      border-radius: 999px;
+      gap: 14px;
+      min-width: min(78vw, 520px);
+      padding: 22px 28px;
+      border-radius: 28px;
       background: rgba(20,10,7,.72);
       border: 1px solid rgba(255,255,255,.14);
       box-shadow: 0 10px 30px rgba(0,0,0,.24);
@@ -118,8 +120,25 @@
       animation: smoothSpin 900ms linear infinite;
       flex-shrink: 0;
     }
+    .layer .video-loader .copy {
+      font-family: var(--display);
+      font-size: clamp(24px, 2.8vw, 40px);
+      font-style: italic;
+      font-weight: 400;
+      letter-spacing: -.01em;
+      line-height: 1.18;
+      text-transform: none;
+      text-align: center;
+      color: rgba(255,255,255,.96);
+      text-shadow: 0 8px 22px rgba(0,0,0,.28);
+      animation: reelBreath 2.4s ease-in-out infinite;
+    }
     @keyframes smoothSpin {
       to { transform: rotate(360deg); }
+    }
+    @keyframes reelBreath {
+      0%, 100% { opacity: .7; }
+      50% { opacity: 1; }
     }
     /* The blurred backdrop is a photo-only effect; videos use the
        gradient instead so the vid element doesn't get a static photo
@@ -875,14 +894,14 @@
   <div class="backdrop" id="backdrop-a"></div>
   <div class="pic" id="pic-a"></div>
   <video class="vid" id="vid-a" muted playsinline preload="auto"></video>
-  <div class="video-loader" id="loader-a"><span class="smooth-spinner" aria-hidden="true"></span><span class="emoji">🎬</span><span>Processing Reel...</span></div>
+  <div class="video-loader" id="loader-a"><span class="smooth-spinner" aria-hidden="true"></span><span class="emoji">🎬</span><span class="copy">Developing the magic... ✨</span></div>
   <div class="vignette"></div>
 </div>
 <div class="layer out" id="layer-b">
   <div class="backdrop" id="backdrop-b"></div>
   <div class="pic" id="pic-b"></div>
   <video class="vid" id="vid-b" muted playsinline preload="metadata"></video>
-  <div class="video-loader" id="loader-b"><span class="smooth-spinner" aria-hidden="true"></span><span class="emoji">🎬</span><span>Processing Reel...</span></div>
+  <div class="video-loader" id="loader-b"><span class="smooth-spinner" aria-hidden="true"></span><span class="emoji">🎬</span><span class="copy">Developing the magic... ✨</span></div>
   <div class="vignette"></div>
 </div>
 
@@ -1090,30 +1109,23 @@
     }
   }
 
-  const VIDEO_PROCESSING_LINES = [
-    'Preparing the magic',
-    'Polishing this moment',
-    'Cueing the main character energy',
-    'Giving this clip its glow-up',
-    'Getting this memory wall-ready',
-    'Almost ready for its big entrance',
-    'Adding the cinematic sparkle',
-    'Framing the good stuff',
+  const REEL_MAGIC_PHRASES = [
+    'Developing the magic... ✨',
+    'Polishing your memory for the big screen... 🎬',
+    'Adding the cinematic sparkle... 💎',
+    'Giving this moment its glow-up... 💅',
+    'Almost ready for its grand entrance... 🥂',
+    'Framing the good stuff... 🎞️',
+    'Developing your Reel... 💖',
   ];
 
-  function videoProcessingLine(upload) {
-    const seed = String(
-      upload?.id ||
-      upload?.original_key ||
-      upload?.file_url ||
-      upload?.created_at ||
-      'reelday-video'
-    );
-    let hash = 0;
-    for (let i = 0; i < seed.length; i++) {
-      hash = ((hash << 5) - hash + seed.charCodeAt(i)) | 0;
-    }
-    return VIDEO_PROCESSING_LINES[Math.abs(hash) % VIDEO_PROCESSING_LINES.length];
+  function randomReelMagicPhrase() {
+    return REEL_MAGIC_PHRASES[Math.floor(Math.random() * REEL_MAGIC_PHRASES.length)];
+  }
+
+  function setLoaderPhrase(loaderEl, phrase) {
+    const copy = loaderEl?.querySelector('.copy');
+    if (copy) copy.textContent = phrase || REEL_MAGIC_PHRASES[0];
   }
 
   function makeProcessingPlaceholder(label = 'Preparing the magic') {
@@ -1175,14 +1187,14 @@
     const webUrl = absoluteMediaUrl(upload?.web_url);
     if (webUrl) return webUrl;
     const fileUrl = absoluteMediaUrl(upload?.file_url);
-    return fileUrl || wallFallbackUrl(upload, videoProcessingLine(upload));
+    return fileUrl || wallFallbackUrl(upload, REEL_MAGIC_PHRASES[0]);
   }
 
   function processingVideoUrl(upload, width = 1920) {
     const posterUrl = videoPosterUrl(upload, width);
     if (posterUrl) return posterUrl;
     const thumbUrl = absoluteMediaUrl(upload?.thumb);
-    return thumbUrl || wallFallbackUrl(upload, videoProcessingLine(upload));
+    return thumbUrl || wallFallbackUrl(upload, REEL_MAGIC_PHRASES[0]);
   }
 
   function immediateVisualUrl(upload, width = 1280) {
@@ -1190,7 +1202,7 @@
       videoPosterUrl(upload, width) ||
       absoluteMediaUrl(upload?.thumb) ||
       absoluteMediaUrl(upload?.file_url) ||
-      wallFallbackUrl(upload, videoProcessingLine(upload))
+      wallFallbackUrl(upload, REEL_MAGIC_PHRASES[0])
     );
   }
 
@@ -1420,6 +1432,7 @@
     const posterUrl = isVideoItem(item) ? immediateVisual : mediaUrl;
     const itemIsVideo = isReadyVideo(item) && !!mediaUrl;
     const itemIsProcessingVideo = isProcessingVideo(item);
+    const reelMagicPhrase = randomReelMagicPhrase();
     const posterBackground = posterUrl ? `url('${posterUrl}')` : `url('${wallFallbackUrl(item, 'Loading moment')}')`;
 
     // Always paint something on the incoming layer first so there is
@@ -1433,6 +1446,7 @@
 
       inLayer.classList.add('has-video');
       inLayer.classList.remove('video-visible');
+      setLoaderPhrase(inLoader, REEL_MAGIC_PHRASES[0]);
       inLoader?.classList.add('visible');
 
       if (posterUrl) {
@@ -1482,6 +1496,7 @@
         inVid.load();
       } catch {}
       inPic.style.animation = 'none';
+      setLoaderPhrase(inLoader, reelMagicPhrase);
       inLoader?.classList.add('visible');
     } else {
       inLayer.classList.remove('has-video', 'video-visible');
