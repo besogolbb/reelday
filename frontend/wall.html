@@ -37,7 +37,7 @@
     /* Blurred backdrop — fills letterbox area with a soft, scaled copy */
     .layer .backdrop {
       position: absolute; inset: 0;
-      z-index: -1 !important;
+      z-index: 1 !important;
       display: block !important;
       opacity: 1 !important;
       background-size: cover; background-position: center;
@@ -51,6 +51,7 @@
     /* Foreground photo — full image visible, no cropping */
     .layer .pic {
       position: absolute; inset: 0;
+      z-index: 2 !important;
       background-size: contain; background-position: center;
       background-repeat: no-repeat;
       will-change: transform;
@@ -63,6 +64,7 @@
        default that overrides CSS `background` on the element itself. */
     .layer .vid {
       position: absolute; inset: 0;
+      z-index: 2 !important;
       width: 100%; height: 100%;
       object-fit: contain;
       background: transparent !important;
@@ -141,7 +143,7 @@
       50% { opacity: 1; }
     }
     .layer.has-video .backdrop {
-      z-index: -1 !important;
+      z-index: 1 !important;
       display: block !important;
       opacity: 1 !important;
       /* Bokeh-style blur: brighter and more vibrant to contrast the centered video */
@@ -1466,11 +1468,14 @@
     if (itemIsVideo) {
       inPic.style.animation            = 'none';
       const videoBackdropUrl = item.poster_url || item.thumb || item.file_url;
+      const finalUrl = cdnImage(videoBackdropUrl, 1280);
 
       inLayer.classList.add('has-video');
       inLayer.classList.remove('video-visible');
       inLoader?.classList.remove('visible');
-      inBackdrop.style.backgroundImage = "url('" + cdnImage(videoBackdropUrl, 1280) + "')";
+      inBackdrop.style.display = 'block';
+      inBackdrop.style.opacity = '1';
+      inBackdrop.style.backgroundImage = `url("${finalUrl}")`;
 
       if (posterUrl) {
         inVid.setAttribute('poster', posterUrl);
