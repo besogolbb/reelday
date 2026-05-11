@@ -1057,7 +1057,11 @@
   }
 
   function isReadyVideo(upload) {
-    return isVideoItem(upload) && upload?.video_status === 'ready';
+    return isVideoItem(upload) && (
+      upload?.video_status === 'ready' ||
+      !!upload?.web_url ||
+      !!upload?.compressed_key
+    );
   }
 
   function videoPlaceholderUrl(upload, width = 1920) {

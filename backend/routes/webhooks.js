@@ -4,6 +4,17 @@ function buildPublicUrl(storageKey) {
   return `${base}/${key}`;
 }
 
+function readString(...values) {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return '';
+}
+
+function isAbsoluteUrl(value) {
+  return /^https?:\/\//i.test(String(value || ''));
+}
+
 function readWebhookSecret(request) {
   const headerSecret = request.headers['x-webhook-secret'];
   if (typeof headerSecret === 'string' && headerSecret) return headerSecret;
@@ -28,9 +39,30 @@ export default async function webhookRoutes(fastify) {
       return reply.status(401).send({ error: true, message: 'Invalid webhook secret' });
     }
 
-    const originalKey = String(request.body?.originalKey || '').trim();
-    const compressedKey = String(request.body?.compressedKey || '').trim();
-    const posterKey = String(request.body?.posterKey || '').trim();
+    const originalKey = readString(
+      request.body?.originalKey,
+      request.body?.original_key,
+      request.body?.fileName,
+      request.body?.file_name,
+    );
+    const compressedKey = readString(
+      request.body?.compressedKey,
+      request.body?.compressed_key,
+      request.body?.outputKey,
+      request.body?.output_key,
+      request.body?.webKey,
+      request.body?.web_key,
+      request.body?.compressedUrl,
+      request.body?.compressed_url,
+    );
+    const posterKey = readString(
+      request.body?.posterKey,
+      request.body?.poster_key,
+      request.body?.thumbnailKey,
+      request.body?.thumbnail_key,
+      request.body?.posterUrl,
+      request.body?.poster_url,
+    );
 
     if (!originalKey || !compressedKey) {
       return reply.status(400).send({
@@ -39,8 +71,8 @@ export default async function webhookRoutes(fastify) {
       });
     }
 
-    const compressedUrl = buildPublicUrl(compressedKey);
-    const posterUrl = posterKey ? buildPublicUrl(posterKey) : null;
+    const compressedUrl = isAbsoluteUrl(compressedKey) ? compressedKey : buildPublicUrl(compressedKey);
+    const posterUrl = !posterKey ? null : (isAbsoluteUrl(posterKey) ? posterKey : buildPublicUrl(posterKey));
 
     const { rows } = await fastify.db.query(
       `UPDATE uploads
