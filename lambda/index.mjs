@@ -111,13 +111,26 @@ export const handler = async (event) => {
     await runFfmpeg([
       '-y',
       '-i', inputPath,
-      '-vf', 'scale=-2:720',
+      '-filter_complex',
+      '[0:v]split=2[src_main][src_poster];' +
+      '[src_main]split=2[v1][v2];' +
+      '[v1]scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,boxblur=50:10[bg];' +
+      '[v2]scale=1280:720:force_original_aspect_ratio=decrease[fg];' +
+      '[bg][fg]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2[wall];' +
+      '[src_poster]split=2[p1][p2];' +
+      '[p1]scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,boxblur=50:10[poster_bg];' +
+      '[p2]scale=1280:720:force_original_aspect_ratio=decrease[poster_fg];' +
+      '[poster_bg][poster_fg]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2[poster_wall]',
+      '-map', '[wall]',
       '-c:v', 'libx264',
       '-crf', '28',
       '-preset', 'ultrafast',
       '-movflags', '+faststart',
+      '-pix_fmt', 'yuv420p',
+      '-s', '1280x720',
       outputPath,
       '-ss', '00:00:01',
+      '-map', '[poster_wall]',
       '-vframes', '1',
       '-q:v', '2',
       posterPath,

@@ -1192,6 +1192,11 @@
     return upload?.thumb || makeProcessingPlaceholder(label);
   }
 
+  function preThumbUrl(upload, width = 1280) {
+    const raw = absoluteMediaUrl(upload?.pre_thumb_url);
+    return raw ? cdnImage(raw, width) : null;
+  }
+
   function isReadyVideo(upload) {
     return isVideoItem(upload) && upload?.video_status === 'ready';
   }
@@ -1219,6 +1224,8 @@
   }
 
   function processingVideoUrl(upload, width = 1920) {
+    const preThumb = preThumbUrl(upload, width);
+    if (preThumb) return preThumb;
     const posterUrl = videoPosterUrl(upload, width);
     if (posterUrl) return posterUrl;
     const thumbUrl = absoluteMediaUrl(upload?.thumb);
@@ -1227,6 +1234,7 @@
 
   function immediateVisualUrl(upload, width = 1280) {
     return (
+      preThumbUrl(upload, width) ||
       videoPosterUrl(upload, width) ||
       absoluteMediaUrl(upload?.thumb) ||
       absoluteMediaUrl(upload?.file_url) ||
@@ -1506,25 +1514,33 @@
     const posterUrl = isVideoItem(item) ? immediateVisual : mediaUrl;
     const itemIsVideo = isReadyVideo(item) && !!mediaUrl;
     const itemIsProcessingVideo = isProcessingVideo(item);
-    const reelMagicPhrase = randomReelMagicPhrase();
     const posterBackground = posterUrl ? `url('${posterUrl}')` : `url('${wallFallbackUrl(item, 'Loading moment')}')`;
+    const videoPreThumb = preThumbUrl(item, 1280);
+    const photoBackdropFilter = 'blur(40px) brightness(0.6)';
+    const photoBackdropTransform = 'scale(1.2)';
 
     // Always paint something on the incoming layer first so there is
     // never a blank frame while a poster or video stream is loading.
     inBackdrop.style.backgroundImage = posterBackground;
+    inBackdrop.style.display = 'block';
+    inBackdrop.style.opacity = '1';
+    inBackdrop.style.filter = photoBackdropFilter;
+    inBackdrop.style.transform = photoBackdropTransform;
     inPic.style.backgroundImage      = posterBackground;
     inLayer.classList.remove('out');
 
     if (itemIsVideo) {
       inPic.style.animation            = 'none';
-      const videoBackdropUrl = item.poster_url || item.thumb || item.file_url;
-      const finalUrl = videoBackdropUrl ? cdnImage(absoluteMediaUrl(videoBackdropUrl), 1280) : '';
+      const videoBackdropUrl = videoPreThumb || videoPosterUrl(item, 1280) || immediateVisual;
+      const finalUrl = videoBackdropUrl || '';
 
       inLayer.classList.add('has-video');
       inLayer.classList.remove('video-visible');
       inLoader?.classList.remove('visible');
       inBackdrop.style.display = 'block';
       inBackdrop.style.opacity = '1';
+      inBackdrop.style.filter = photoBackdropFilter;
+      inBackdrop.style.transform = photoBackdropTransform;
       if (finalUrl && !isVideoUrl(finalUrl)) {
         inBackdrop.style.backgroundImage = `url("${finalUrl}")`;
       } else {
@@ -1549,7 +1565,7 @@
       inVid.load();
       try { inVid.currentTime = 0; } catch {}
       const revealVideo = () => {
-        if (!finalUrl || isVideoUrl(finalUrl)) {
+        if (!videoPreThumb && (!finalUrl || isVideoUrl(finalUrl))) {
           startVideoBackdropSampling(inVid, inBackdrop);
         }
         inLayer.classList.add('video-visible');
@@ -1583,7 +1599,12 @@
         inVid.load();
       } catch {}
       inPic.style.animation = 'none';
-      setLoaderPhrase(inLoader, reelMagicPhrase);
+      const processingThumb = videoPreThumb || immediateVisual;
+      inBackdrop.style.backgroundImage = `url("${processingThumb || wallFallbackUrl(item, 'Polishing...')}")`;
+      inBackdrop.style.filter = photoBackdropFilter;
+      inBackdrop.style.transform = photoBackdropTransform;
+      inPic.style.backgroundImage = `url("${processingThumb || wallFallbackUrl(item, 'Polishing...')}")`;
+      setLoaderPhrase(inLoader, 'Polishing...');
       inLoader?.classList.add('visible');
     } else {
       inLayer.classList.remove('has-video', 'video-visible');
