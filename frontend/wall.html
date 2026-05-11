@@ -141,10 +141,16 @@
       0%, 100% { opacity: .7; }
       50% { opacity: 1; }
     }
-    /* The blurred backdrop is a photo-only effect; videos use the
-       gradient instead so the vid element doesn't get a static photo
-       behind it. */
-    .layer.has-video .backdrop { display: none; }
+    /* Keep a very soft poster-derived wash behind portrait videos so
+       the letterbox area doesn't collapse to plain black once playback
+       starts. The blur + low opacity keeps it atmospheric rather than
+       competing with the clip itself. */
+    .layer.has-video .backdrop {
+      display: block;
+      opacity: .42;
+      filter: blur(68px) brightness(.42) saturate(.82);
+      transform: scale(1.26);
+    }
 
     /* Ken Burns — very gentle, mostly pan; the image stays fully visible */
     @keyframes kb1 {
