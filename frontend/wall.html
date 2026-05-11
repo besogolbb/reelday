@@ -38,6 +38,7 @@
     .layer .backdrop {
       position: absolute; inset: 0;
       background-size: cover; background-position: center;
+      background-repeat: no-repeat;
       filter: blur(40px) brightness(.55) saturate(1.2);
       transform: scale(1.15);
     }
@@ -67,26 +68,8 @@
     .layer.has-video .vid { display: block; }
     .layer.has-video.video-visible .vid { opacity: 1; }
     .layer.has-video.video-visible .pic { display: none; }
-    .layer.has-video.portrait-video .vid {
-      inset: auto;
-      top: 50%;
-      left: 50%;
-      width: auto;
-      height: 100%;
-      max-width: 100%;
-      max-height: 100%;
-      transform: translate(-50%, -50%);
-      object-fit: fill;
-    }
-    /* Warm wedding-palette letterbox — gold + cinnabar radial glows on
-       a dark wine base. Replaces the previous flat-black bars on
-       portrait videos. */
     .layer.has-video {
-      background:
-        radial-gradient(ellipse at 18% 22%, rgba(232,177,132,.16), transparent 52%),
-        radial-gradient(ellipse at 82% 78%, rgba(196,90,58,.14), transparent 56%),
-        radial-gradient(ellipse at 50% 50%, rgba(255,255,255,.04), transparent 62%),
-        linear-gradient(135deg, #24140d 0%, #1a100b 38%, #130d0a 100%) !important;
+      background: transparent !important;
     }
     .layer .video-loader {
       position: absolute;
@@ -152,15 +135,11 @@
       0%, 100% { opacity: .7; }
       50% { opacity: 1; }
     }
-    /* Keep a very soft poster-derived wash behind portrait videos so
-       the letterbox area doesn't collapse to plain black once playback
-       starts. The blur + low opacity keeps it atmospheric rather than
-       competing with the clip itself. */
     .layer.has-video .backdrop {
       display: block;
-      opacity: .42;
-      filter: blur(68px) brightness(.42) saturate(.82);
-      transform: scale(1.26);
+      opacity: 1;
+      filter: blur(50px) brightness(0.6) saturate(1.4);
+      transform: scale(1.3);
     }
 
     /* Ken Burns — very gentle, mostly pan; the image stays fully visible */
@@ -189,8 +168,8 @@
     }
     .layer.has-video .vignette {
       background:
-        radial-gradient(ellipse at center, transparent 38%, rgba(12,6,4,.18) 100%),
-        linear-gradient(180deg, rgba(20,10,7,.18) 0%, transparent 22%, transparent 72%, rgba(12,6,4,.32) 100%);
+        radial-gradient(ellipse at center, transparent 40%, rgba(12,6,4,.1) 100%),
+        linear-gradient(180deg, rgba(20,10,7,.12) 0%, transparent 22%, transparent 74%, rgba(12,6,4,.18) 100%);
     }
 
     /* ── Top ticker ─────────────────────────────────────────── */
@@ -1443,7 +1422,6 @@
         outVid.load();
       } catch {}
     }
-    if (!reuseActive) outLayer.classList.remove('portrait-video');
     if (!reuseActive) outLayer.classList.remove('video-visible');
     outLoader?.classList.remove('visible');
     // Make the incoming layer the bandwidth-priority one; the other can
@@ -1470,7 +1448,6 @@
 
       inLayer.classList.add('has-video');
       inLayer.classList.remove('video-visible');
-      inLayer.classList.remove('portrait-video');
       inLoader?.classList.remove('visible');
 
       if (posterUrl) {
@@ -1489,18 +1466,12 @@
       inVid.src = mediaUrl;
       inVid.load();
       try { inVid.currentTime = 0; } catch {}
-      const syncVideoAspect = () => {
-        const isPortraitFrame = (inVid.videoHeight || 0) > (inVid.videoWidth || 0);
-        inLayer.classList.toggle('portrait-video', isPortraitFrame);
-      };
       const revealVideo = () => {
-        syncVideoAspect();
         inLayer.classList.add('video-visible');
         inVid.classList.add('video-visible');
         inLoader?.classList.remove('visible');
       };
       inVid.classList.remove('video-visible');
-      inVid.addEventListener('loadedmetadata', syncVideoAspect, { once: true });
       inVid.addEventListener('loadeddata', revealVideo, { once: true });
       const playPromise = inVid.play();
       if (inVid.readyState >= 2) revealVideo();
@@ -1518,7 +1489,7 @@
         });
       }
     } else if (itemIsProcessingVideo) {
-      inLayer.classList.remove('has-video', 'video-visible', 'portrait-video');
+      inLayer.classList.remove('has-video', 'video-visible');
       try {
         inVid.pause();
         inVid.removeAttribute('src');
@@ -1529,7 +1500,7 @@
       setLoaderPhrase(inLoader, reelMagicPhrase);
       inLoader?.classList.add('visible');
     } else {
-      inLayer.classList.remove('has-video', 'video-visible', 'portrait-video');
+      inLayer.classList.remove('has-video', 'video-visible');
 
       // Restart Ken Burns animation cleanly
       inPic.style.animation = 'none';
