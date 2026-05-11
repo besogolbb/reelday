@@ -3,7 +3,7 @@ import { randomUUID } from 'crypto';
 import { PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { resolvePlan } from '../lib/plans.js';
-import { transcodeUploadInBackground } from '../lib/videoTranscode.js';
+import { triggerVideoTranscode } from '../lib/awsLambdaService.js';
 import { verifyToken } from '../plugins/auth.js';
 
 export default async function uploadRoutes(fastify) {
@@ -183,8 +183,16 @@ export default async function uploadRoutes(fastify) {
     );
 
     if (isVideo) {
-      transcodeUploadInBackground(fastify, rows[0])
-        .catch(err => fastify.log.warn({ err: err.message, upload_id: rows[0].id }, 'transcode kickoff failed'));
+      try {
+        const filePath = extractStorageKey(fileUrl);
+        if (filePath) {
+          await triggerVideoTranscode(filePath);
+        } else {
+          fastify.log.warn({ upload_id: rows[0].id, fileUrl }, 'lambda kickoff skipped: could not derive storage key');
+        }
+      } catch (err) {
+        fastify.log.warn({ err: err.message, upload_id: rows[0].id }, 'transcode kickoff failed');
+      }
     }
 
     return reply.status(201).send({
@@ -280,9 +288,16 @@ export default async function uploadRoutes(fastify) {
     // Photos are skipped inside transcodeUploadInBackground. The guest's
     // POST returns immediately; web_url + poster_url get filled in 5–15s
     // later and the wall picks them up on its next /uploads/:slug poll.
+    // Fire-and-forget the wall-friendly transcode for video uploads.
+    // The guest's POST returns immediately; Lambda can finish the video
+    // work later and the wall picks it up on its next /uploads/:slug poll.
     if (isVideo) {
-      transcodeUploadInBackground(fastify, rows[0])
-        .catch(err => fastify.log.warn({ err: err.message, upload_id: rows[0].id }, 'transcode kickoff failed'));
+      try {
+        const filePath = fileKey;
+        await triggerVideoTranscode(filePath);
+      } catch (err) {
+        fastify.log.warn({ err: err.message, upload_id: rows[0].id }, 'transcode kickoff failed');
+      }
     }
 
     return reply.status(201).send({ upload: rows[0] });
