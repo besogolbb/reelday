@@ -1326,7 +1326,11 @@ body { background: var(--paper); min-height: 100dvh; }
 
   /* ── Gallery ───────────────────────────────────────── */
   const itemDataUrls = {};
+  const itemPosterDataUrls = {};
+  const itemPosterJobs = {};
   const itemFiles    = {}; // keep the original File objects for the actual API upload
+  let recordedPosterDataUrl = null;
+  let recordedPosterJob = null;
 
   // Probe a video file's duration AND dimensions without uploading.
   // Returns { duration, width, height }; zeroes if the file is unreadable.
@@ -1347,6 +1351,62 @@ body { background: var(--paper); min-height: 100dvh; }
         cleanup();
       };
       v.onerror = () => { cleanup(); resolve({ duration: 0, width: 0, height: 0 }); };
+      v.src = url;
+    });
+  }
+
+  function captureVideoThumbnail(file, opts = {}) {
+    const { seekSeconds = 0.2, maxDim = 960, quality = 0.8 } = opts;
+    return new Promise(resolve => {
+      const v = document.createElement('video');
+      v.preload = 'metadata';
+      v.muted = true;
+      v.playsInline = true;
+      const url = URL.createObjectURL(file);
+      let settled = false;
+
+      const cleanup = () => {
+        try { URL.revokeObjectURL(url); } catch {}
+      };
+      const done = (value) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        resolve(value || null);
+      };
+      const drawFrame = () => {
+        try {
+          const width = v.videoWidth || 0;
+          const height = v.videoHeight || 0;
+          if (!width || !height) return done(null);
+          const ratio = Math.min(maxDim / width, maxDim / height, 1);
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(width * ratio));
+          canvas.height = Math.max(1, Math.round(height * ratio));
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return done(null);
+          ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+          done(canvas.toDataURL('image/jpeg', quality));
+        } catch {
+          done(null);
+        }
+      };
+
+      v.onerror = () => done(null);
+      v.onloadedmetadata = () => {
+        const duration = Number.isFinite(v.duration) ? v.duration : 0;
+        const target = duration > 0 ? Math.min(Math.max(seekSeconds, 0), Math.max(duration - 0.05, 0)) : 0;
+        if (target <= 0) return;
+        const onSeeked = () => drawFrame();
+        v.addEventListener('seeked', onSeeked, { once: true });
+        try {
+          v.currentTime = target;
+        } catch {
+          v.removeEventListener('seeked', onSeeked);
+          drawFrame();
+        }
+      };
+      v.onloadeddata = () => drawFrame();
       v.src = url;
     });
   }
@@ -1412,7 +1472,6 @@ body { background: var(--paper); min-height: 100dvh; }
     }
 
     files.forEach((f, i) => {
-      const reader = new FileReader();
       const id = 'qi' + Date.now() + Math.random().toString(36).slice(2,6);
       const item = document.createElement('div');
       item.className = 'queue-item'; item.id = id;
@@ -1423,18 +1482,33 @@ body { background: var(--paper); min-height: 100dvh; }
         <div class="q-status" id="s${id}">Queued</div>
         <button class="q-remove" onclick="removeItem('${id}')" title="Remove">✕</button>`;
       queue.appendChild(item);
-      reader.onload = ev => {
-        const th = document.getElementById(thumbId);
-        if (th) {
-          th.style.backgroundImage = `url(${ev.target.result})`;
-          th.style.backgroundSize = 'cover';
-          th.style.backgroundPosition = 'center';
-        }
-        itemDataUrls[id] = ev.target.result;
-        itemFiles[id]    = f;
-        updateWallPreview();
-      };
-      reader.readAsDataURL(f);
+      itemFiles[id] = f;
+      const th = document.getElementById(thumbId);
+      if ((f.type || '').startsWith('video/')) {
+        itemPosterJobs[id] = captureVideoThumbnail(f).then(poster => {
+          if (poster && th) {
+            th.style.backgroundImage = `url(${poster})`;
+            th.style.backgroundSize = 'cover';
+            th.style.backgroundPosition = 'center';
+          }
+          itemPosterDataUrls[id] = poster;
+          itemDataUrls[id] = poster;
+          updateWallPreview();
+          return poster;
+        });
+      } else {
+        const reader = new FileReader();
+        reader.onload = ev => {
+          if (th) {
+            th.style.backgroundImage = `url(${ev.target.result})`;
+            th.style.backgroundSize = 'cover';
+            th.style.backgroundPosition = 'center';
+          }
+          itemDataUrls[id] = ev.target.result;
+          updateWallPreview();
+        };
+        reader.readAsDataURL(f);
+      }
       const s = document.getElementById('s' + id);
       if (s) s.textContent = 'Ready to share';
     });
@@ -1464,6 +1538,8 @@ body { background: var(--paper); min-height: 100dvh; }
     const item = document.getElementById(id);
     if (item) item.remove();
     delete itemDataUrls[id];
+    delete itemPosterDataUrls[id];
+    delete itemPosterJobs[id];
     delete itemFiles[id];
     updateWallPreview();
     updateSendBtn();
@@ -1563,6 +1639,10 @@ body { background: var(--paper); min-height: 100dvh; }
     mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
     mediaRecorder.onstop = () => {
       recordedBlob = new Blob(recordedChunks, { type: mediaRecorder.mimeType });
+      recordedPosterJob = captureVideoThumbnail(recordedBlob).then(poster => {
+        recordedPosterDataUrl = poster;
+        return poster;
+      });
       showClipPreview(recordedBlob);
     };
     mediaRecorder.start(250);
@@ -1625,6 +1705,8 @@ body { background: var(--paper); min-height: 100dvh; }
     document.getElementById('recTimer').textContent = '00:00';
     document.getElementById('recStatus').textContent = 'Tap to record · 30-second video message';
     document.querySelector('.clip-thumb').innerHTML = '';
+    recordedPosterDataUrl = null;
+    recordedPosterJob = null;
     recordedBlob = null; recordedChunks = []; recSecs = 0;
   }
 
@@ -1688,7 +1770,7 @@ body { background: var(--paper); min-height: 100dvh; }
           id:            now + i,
           uploader_name: name,
           message:       i === 0 ? msg : '',   // message only on first
-          thumb:         null,
+          thumb:         file.type.startsWith('video/') ? (itemPosterDataUrls[qId] || null) : null,
           timestamp:     new Date().toISOString(),
           status:        'pending',
           featured:      false,
@@ -1698,7 +1780,7 @@ body { background: var(--paper); min-height: 100dvh; }
           id:               now,
           uploader_name:    name,
           message:          msg,
-          thumb:            null,
+          thumb:            recordedPosterDataUrl,
           timestamp:        new Date().toISOString(),
           status:           'pending',
           featured:         false,
@@ -1711,7 +1793,10 @@ body { background: var(--paper); min-height: 100dvh; }
     entries.forEach(e => saveEntry(localKey, e));
 
     /* ── Step 2: Resize each image (large enough for wall) and patch its saved entry ── */
-    allUrls.forEach((fullUrl, i) => {
+    fileEntries.forEach(([qId, file], i) => {
+      if ((file.type || '').startsWith('video/')) return;
+      const fullUrl = itemDataUrls[qId];
+      if (!fullUrl) return;
       const entryId = now + i;
       const img = new Image();
       img.onload = () => {
@@ -1808,6 +1893,13 @@ body { background: var(--paper); min-height: 100dvh; }
       const entryId = now + i;
       const isVideo = file.type.startsWith('video/');
       const msgToSend = (i === 0 && msg) ? msg : '';
+      const browserPoster = isVideo
+        ? (
+            queueId === 'record'
+              ? (recordedPosterDataUrl || await recordedPosterJob?.catch(() => null))
+              : (itemPosterDataUrls[queueId] || await itemPosterJobs[queueId]?.catch(() => null))
+          )
+        : null;
       const token = localStorage.getItem('reelday_token');
       const fileSize = fileSizes[queueId] || file.size || 0;
       loadedBytes[queueId] = 0;
@@ -1874,7 +1966,15 @@ body { background: var(--paper); min-height: 100dvh; }
             'X-Guest-Id': GUEST_ID,
             ...(token ? { 'Authorization': `Bearer ${token}` } : {})
           },
-          body: JSON.stringify({ slug: currentEvent.slug, fileKey, uploader_name: name, message: msgToSend, file_type: isVideo ? 'video' : 'photo', is_video_message: isVidMsg })
+          body: JSON.stringify({
+            slug: currentEvent.slug,
+            fileKey,
+            uploader_name: name,
+            message: msgToSend,
+            file_type: isVideo ? 'video' : 'photo',
+            is_video_message: isVidMsg,
+            poster_data_url: browserPoster || null,
+          })
         });
         if (!compRes.ok) {
           const errData = await compRes.json().catch(() => ({}));
@@ -1891,6 +1991,7 @@ body { background: var(--paper); min-height: 100dvh; }
           found.id = upload.id;
           found.file_url = upload.file_url;
           found.file_type = upload.file_type;
+          if (upload.poster_url) found.thumb = upload.poster_url;
           found.synced = true;
           localStorage.setItem(localKey, JSON.stringify(stored));
         }
@@ -1942,7 +2043,7 @@ body { background: var(--paper); min-height: 100dvh; }
       return;
     }
 
-    showThankYou(name, msg, allUrls[0] || null);
+    showThankYou(name, msg, allUrls[0] || recordedPosterDataUrl || null);
   }
 
   function saveEntry(localKey, entry) {
@@ -2006,6 +2107,8 @@ body { background: var(--paper); min-height: 100dvh; }
       gBtn.disabled = false;
     }
     Object.keys(itemDataUrls).forEach(k => delete itemDataUrls[k]);
+    Object.keys(itemPosterDataUrls).forEach(k => delete itemPosterDataUrls[k]);
+    Object.keys(itemPosterJobs).forEach(k => delete itemPosterJobs[k]);
     Object.keys(itemFiles).forEach(k => delete itemFiles[k]);
 
     // ── Record panel reset ─────────────────────────────

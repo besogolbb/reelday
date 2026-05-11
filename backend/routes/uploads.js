@@ -341,7 +341,7 @@ export default async function uploadRoutes(fastify) {
 
   // POST /api/uploads/complete — confirm R2 upload and save to DB
   fastify.post('/uploads/complete', { config: UPLOAD_WRITE_LIMIT }, async (request, reply) => {
-    const { slug, fileKey, uploader_name, message, file_type, is_video_message } = request.body;
+    const { slug, fileKey, uploader_name, message, file_type, is_video_message, poster_data_url } = request.body;
 
     // Optionally authenticate the user if a token is present
     request.user = tryGetUser(request);
@@ -359,6 +359,12 @@ export default async function uploadRoutes(fastify) {
     const isVidMsg = isVideo && is_video_message === true;
     const originalKey = isVideo ? fileKey : null;
     const videoStatus = isVideo ? 'processing' : null;
+    const initialPosterUrl =
+      isVideo &&
+      typeof poster_data_url === 'string' &&
+      /^data:image\/(?:jpeg|jpg|png|webp);base64,/i.test(poster_data_url)
+        ? poster_data_url
+        : null;
 
     // Gate on the EFFECTIVE plan (computed from users.subscription_tier
     // inside getValidatedEvent), not event.plan — that column gets stale
@@ -385,8 +391,8 @@ export default async function uploadRoutes(fastify) {
 
     const { rows } = await fastify.db.query(
       `INSERT INTO uploads
-         (event_id, file_url, file_type, uploader_name, message, is_video_message, is_approved, original_key, video_status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         (event_id, file_url, file_type, uploader_name, message, is_video_message, is_approved, original_key, video_status, poster_url)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING *`,
       [
         event.id,
@@ -398,6 +404,7 @@ export default async function uploadRoutes(fastify) {
         isApproved,
         originalKey,
         videoStatus,
+        initialPosterUrl,
       ],
     );
 
