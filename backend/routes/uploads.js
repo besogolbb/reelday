@@ -152,6 +152,8 @@ export default async function uploadRoutes(fastify) {
     }
     const filename       = `${randomUUID()}${fileExt}`;
     const fileUrl        = await fastify.uploadFile(fileBuffer, filename, fileMime);
+    const originalKey    = isVideo ? extractStorageKey(fileUrl) : null;
+    const videoStatus    = isVideo ? 'processing' : null;
 
     // Approval defaults by upload kind:
     //  - photo:         auto-approve unless the host turned it off (legacy)
@@ -168,8 +170,8 @@ export default async function uploadRoutes(fastify) {
 
     const { rows } = await fastify.db.query(
       `INSERT INTO uploads
-         (event_id, file_url, file_type, uploader_name, message, is_video_message, is_approved)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+         (event_id, file_url, file_type, uploader_name, message, is_video_message, is_approved, original_key, video_status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
       [
         event.id,
@@ -179,6 +181,8 @@ export default async function uploadRoutes(fastify) {
         fields.message       || null,
         isVideoMessage,
         isApproved,
+        originalKey,
+        videoStatus,
       ],
     );
 
@@ -244,6 +248,8 @@ export default async function uploadRoutes(fastify) {
     const fileUrl = `${publicBase}/${fileKey}`;
     const isVideo = file_type === 'video' || (file_type !== 'photo' && fileKey.match(/\.(mp4|webm|mov|m4v|ogg)$/i));
     const isVidMsg = isVideo && is_video_message === true;
+    const originalKey = isVideo ? fileKey : null;
+    const videoStatus = isVideo ? 'processing' : null;
 
     // Gate on the EFFECTIVE plan (computed from users.subscription_tier
     // inside getValidatedEvent), not event.plan — that column gets stale
@@ -270,8 +276,8 @@ export default async function uploadRoutes(fastify) {
 
     const { rows } = await fastify.db.query(
       `INSERT INTO uploads
-         (event_id, file_url, file_type, uploader_name, message, is_video_message, is_approved)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+         (event_id, file_url, file_type, uploader_name, message, is_video_message, is_approved, original_key, video_status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
       [
         event.id,
@@ -281,6 +287,8 @@ export default async function uploadRoutes(fastify) {
         message       || null,
         isVidMsg,
         isApproved,
+        originalKey,
+        videoStatus,
       ],
     );
 
@@ -288,6 +296,9 @@ export default async function uploadRoutes(fastify) {
     // Photos are skipped inside transcodeUploadInBackground. The guest's
     // POST returns immediately; web_url + poster_url get filled in 5–15s
     // later and the wall picks them up on its next /uploads/:slug poll.
+    // Fire-and-forget the wall-friendly transcode for video uploads.
+    // The guest's POST returns immediately; Lambda can finish the video
+    // work later and the wall picks it up on its next /uploads/:slug poll.
     // Fire-and-forget the wall-friendly transcode for video uploads.
     // The guest's POST returns immediately; Lambda can finish the video
     // work later and the wall picks it up on its next /uploads/:slug poll.
@@ -440,6 +451,7 @@ export default async function uploadRoutes(fastify) {
     }
     const { rows } = await fastify.db.query(
       `SELECT u.id, u.file_url, u.web_url, u.poster_url, u.event_id, e.user_id
+              , u.original_key, u.compressed_key
          FROM uploads u
          JOIN events  e ON e.id = u.event_id
         WHERE u.id = $1`,
@@ -466,6 +478,8 @@ export default async function uploadRoutes(fastify) {
     // Build the full set of R2 keys to drop: original + transcode
     // derivatives (_web.mp4, _poster.jpg) when present.
     const keys = [
+      row.original_key,
+      row.compressed_key,
       extractStorageKey(row.file_url),
       extractStorageKey(row.web_url),
       extractStorageKey(row.poster_url),

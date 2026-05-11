@@ -18,6 +18,7 @@ import reactionRoutes from './routes/reactions.js';
 import pollRoutes from './routes/polls.js';
 import wallErrorsRoutes from './routes/wall-errors.js';
 import paymentRoutes from './routes/payments.js';
+import webhookRoutes from './routes/webhooks.js';
 import authRoutes from './routes/auth.js';
 import adminRoutes from './routes/admin.js';
 import { reconcilePendingTranscodes } from './lib/videoTranscode.js';
@@ -136,6 +137,7 @@ await fastify.register(reactionRoutes,{ prefix: '/api' });
 await fastify.register(pollRoutes,    { prefix: '/api' });
 await fastify.register(wallErrorsRoutes, { prefix: '/api' });
 await fastify.register(paymentRoutes, { prefix: '/api' });
+await fastify.register(webhookRoutes, { prefix: '/api' });
 await fastify.register(authRoutes,    { prefix: '/api' });
 await fastify.register(adminRoutes,   { prefix: '/api' });
 

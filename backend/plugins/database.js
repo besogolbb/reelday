@@ -48,6 +48,22 @@ const MIGRATIONS = `
   -- frontend falls back to file_url while the transcode is in flight.
   ALTER TABLE uploads ADD COLUMN IF NOT EXISTS web_url    TEXT;
   ALTER TABLE uploads ADD COLUMN IF NOT EXISTS poster_url TEXT;
+  ALTER TABLE uploads ADD COLUMN IF NOT EXISTS original_key   TEXT;
+  ALTER TABLE uploads ADD COLUMN IF NOT EXISTS compressed_key TEXT;
+  ALTER TABLE uploads ADD COLUMN IF NOT EXISTS video_status   VARCHAR(20);
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_uploads_original_key
+    ON uploads(original_key) WHERE original_key IS NOT NULL;
+
+  -- Backfill legacy rows so already-compressed videos remain playable on
+  -- the wall, while videos still lacking a compressed derivative stay in
+  -- processing mode until a webhook marks them ready.
+  UPDATE uploads
+     SET video_status = CASE
+       WHEN web_url IS NOT NULL THEN 'ready'
+       ELSE 'processing'
+     END
+   WHERE file_type = 'video'
+     AND video_status IS NULL;
 
   -- Wall reactions: guests tap an emoji on the upload page, the wall
   -- floats it up over the current slide. guest_id is the X-Guest-Id
