@@ -1860,7 +1860,10 @@
       const mediaUrl = upcomingThumbUrl(item, 320);
       div.style.backgroundImage = mediaUrl ? `url('${mediaUrl}')` : 'none';
       const target = idx + 1 + i;
-      div.onclick = () => goTo(target);
+      div.onclick = (e) => {
+        e.stopPropagation();
+        goTo(target);
+      };
       upcomingCol.appendChild(div);
     }
   }
