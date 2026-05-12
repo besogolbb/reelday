@@ -109,18 +109,37 @@
       display: inline-flex;
       opacity: 1;
     }
-    .layer .video-loader .emoji {
-      display: none;
-    }
-    .layer .video-loader .smooth-spinner {
-      width: 18px;
-      height: 18px;
+    .layer .video-loader .reel-spinner {
+      position: relative;
+      width: 58px;
+      height: 58px;
       border-radius: 50%;
-      border: 2.5px solid rgba(240,163,122,.24);
-      border-top-color: var(--gold);
-      border-right-color: rgba(240,163,122,.68);
-      animation: smoothSpin 900ms linear infinite;
       flex-shrink: 0;
+      background:
+        radial-gradient(circle at center, rgba(19,10,7,.96) 0 11px, rgba(240,163,122,.95) 11px 13px, rgba(47,24,17,.96) 13px 100%);
+      border: 1px solid rgba(255,255,255,.16);
+      box-shadow: inset 0 0 0 2px rgba(255,255,255,.05), 0 10px 22px rgba(0,0,0,.26);
+      animation: reelSpin 2.8s linear infinite;
+    }
+    .layer .video-loader .reel-spinner::before {
+      content: '';
+      position: absolute;
+      inset: 10px;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 50% 50%, rgba(13,7,5,.98) 0 4px, transparent 4px),
+        radial-gradient(circle at 50% 20%, rgba(255,255,255,.94) 0 4px, transparent 4px),
+        radial-gradient(circle at 78% 33%, rgba(255,255,255,.94) 0 4px, transparent 4px),
+        radial-gradient(circle at 78% 67%, rgba(255,255,255,.94) 0 4px, transparent 4px),
+        radial-gradient(circle at 50% 80%, rgba(255,255,255,.94) 0 4px, transparent 4px),
+        radial-gradient(circle at 22% 67%, rgba(255,255,255,.94) 0 4px, transparent 4px),
+        radial-gradient(circle at 22% 33%, rgba(255,255,255,.94) 0 4px, transparent 4px);
+    }
+    .layer .video-loader .copy-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
     }
     .layer .video-loader .copy {
       font-family: var(--display);
@@ -135,7 +154,17 @@
       text-shadow: 0 8px 22px rgba(0,0,0,.28);
       animation: reelBreath 2.4s ease-in-out infinite;
     }
-    @keyframes smoothSpin {
+    .layer .video-loader .subcopy {
+      font-family: var(--mono);
+      font-size: clamp(10px, 1vw, 12px);
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      text-align: center;
+      color: rgba(255,255,255,.7);
+      max-width: 34ch;
+      line-height: 1.45;
+    }
+    @keyframes reelSpin {
       to { transform: rotate(360deg); }
     }
     @keyframes reelBreath {
@@ -918,14 +947,14 @@
   <div class="backdrop" id="backdrop-a"></div>
   <div class="pic" id="pic-a"></div>
   <video class="vid" id="vid-a" muted playsinline preload="auto"></video>
-  <div class="video-loader" id="loader-a"><span class="smooth-spinner" aria-hidden="true"></span><span class="emoji">🎬</span><span class="copy">Developing the magic... ✨</span></div>
+  <div class="video-loader" id="loader-a"><span class="reel-spinner" aria-hidden="true"></span><div class="copy-wrap"><span class="copy">✨ Preparing your cinematic moment...</span><span class="subcopy">Your Reel will play in just a few moments!</span></div></div>
   <div class="vignette"></div>
 </div>
 <div class="layer out" id="layer-b">
   <div class="backdrop" id="backdrop-b"></div>
   <div class="pic" id="pic-b"></div>
   <video class="vid" id="vid-b" muted playsinline preload="metadata"></video>
-  <div class="video-loader" id="loader-b"><span class="smooth-spinner" aria-hidden="true"></span><span class="emoji">🎬</span><span class="copy">Developing the magic... ✨</span></div>
+  <div class="video-loader" id="loader-b"><span class="reel-spinner" aria-hidden="true"></span><div class="copy-wrap"><span class="copy">✨ Preparing your cinematic moment...</span><span class="subcopy">Your Reel will play in just a few moments!</span></div></div>
   <div class="vignette"></div>
 </div>
 
@@ -1138,13 +1167,12 @@
   }
 
   const REEL_MAGIC_PHRASES = [
-    'Developing the magic... ✨',
-    'Polishing your memory for the big screen... 🎬',
-    'Adding the cinematic sparkle... 💎',
-    'Giving this moment its glow-up... 💅',
-    'Almost ready for its grand entrance... 🥂',
-    'Framing the good stuff... 🎞️',
-    'Developing your Reel... 💖',
+    '✨ Preparing your cinematic moment...',
+    '🎬 Cueing the main character energy...',
+    '💍 Polishing your Reel for the big screen...',
+    '🥂 Almost ready for its grand entrance!',
+    '💎 Adding the cinematic sparkle...',
+    '🎞️ Developing your memory...',
   ];
 
   function randomReelMagicPhrase() {
@@ -1153,7 +1181,9 @@
 
   function setLoaderPhrase(loaderEl, phrase) {
     const copy = loaderEl?.querySelector('.copy');
+    const subcopy = loaderEl?.querySelector('.subcopy');
     if (copy) copy.textContent = phrase || REEL_MAGIC_PHRASES[0];
+    if (subcopy) subcopy.textContent = 'Your Reel will play in just a few moments!';
   }
 
   function makeProcessingPlaceholder(label = 'Preparing the magic') {
@@ -1604,7 +1634,7 @@
       inBackdrop.style.filter = photoBackdropFilter;
       inBackdrop.style.transform = photoBackdropTransform;
       inPic.style.backgroundImage = `url("${processingThumb || wallFallbackUrl(item, 'Polishing...')}")`;
-      setLoaderPhrase(inLoader, 'Polishing...');
+      setLoaderPhrase(inLoader, randomReelMagicPhrase());
       inLoader?.classList.add('visible');
     } else {
       inLayer.classList.remove('has-video', 'video-visible');
