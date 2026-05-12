@@ -102,15 +102,12 @@ export const handler = async (event, context) => {
   if (!originalKey) throw new Error('Missing originalKey');
   const { compressedKey, posterKey } = derivedKeys(originalKey);
 
-  // Idempotency: skip work if compressed output already exists.
-  const existing = await r2Head(compressedKey);
+  // Idempotency + size guard in parallel — one round trip instead of two.
+  const [existing, srcHead] = await Promise.all([r2Head(compressedKey), r2Head(originalKey)]);
   if (existing) {
     await notifyWebhook({ status: 'video_ready', originalKey, compressedKey, posterKey, cached: true });
     return { statusCode: 200, body: JSON.stringify({ ok: true, compressedKey, cached: true }) };
   }
-
-  // Size guard before download to avoid blowing /tmp or burning time on oversized inputs.
-  const srcHead = await r2Head(originalKey);
   if (!srcHead) throw new Error(`Source not found: ${originalKey}`);
   if (typeof srcHead.ContentLength === 'number' && srcHead.ContentLength > MAX_BYTES) {
     const msg = `Input too large: ${srcHead.ContentLength} > ${MAX_BYTES}`;
@@ -136,16 +133,22 @@ export const handler = async (event, context) => {
     if (hasPreThumb) {
       const base64 = preThumbDataUrl.replace(/^data:image\/(?:jpeg|jpg|png|webp);base64,/i, '');
       await writeFile(bgImgPath, Buffer.from(base64, 'base64'));
-    } else {
-      // Extract a single background frame. Done as its own short call because merging it into
-      // the encode graph via split+trim+loop on a shared decoder starves the foreground branch.
-      await runFfmpeg(['-y', '-nostdin', '-ss', '0', '-i', inputPath, '-vframes', '1', bgImgPath]);
     }
 
-    // One FFmpeg call covers: blurred-bg overlay encode + poster extraction.
-    // Foreground stream [1:v] is referenced twice (fg + poster) so we explicitly split it.
+    // Single FFmpeg call: bg derivation + encode + poster.
+    // When no pre-thumb, we feed the same video file through TWO -i flags so the bg branch
+    // (trim+loop frame 0) and the fg branch get independent decoders. A single decoder shared
+    // via `split` would EOF the bg side and starve fg, producing a static-image output.
+    const inputs = hasPreThumb
+      ? ['-loop', '1', '-i', bgImgPath, '-i', inputPath]
+      : ['-i', inputPath, '-i', inputPath];
+
+    const bgChain = hasPreThumb
+      ? '[0:v]fps=24,scale=192:-2,boxblur=8:1,scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,setsar=1[bg]'
+      : '[0:v]trim=end_frame=1,setpts=PTS-STARTPTS,loop=loop=-1:size=1:start=0,fps=24,scale=192:-2,boxblur=8:1,scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,setsar=1[bg]';
+
     const filterComplex = [
-      '[0:v]fps=24,scale=192:-2,boxblur=8:1,scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,setsar=1[bg]',
+      bgChain,
       '[1:v]split=2[vfg][vposter]',
       "[vfg]fps=24,scale=1280:720:force_original_aspect_ratio=decrease,scale='trunc(iw/2)*2':'trunc(ih/2)*2',setsar=1[fg]",
       '[bg][fg]overlay=(W-w)/2:(H-h)/2:shortest=1[outv]',
@@ -154,13 +157,13 @@ export const handler = async (event, context) => {
 
     await runFfmpeg([
       '-y', '-nostdin', '-threads', '0', '-ignore_unknown', '-sn', '-dn',
-      '-loop', '1', '-i', bgImgPath,
-      '-i', inputPath,
+      '-sws_flags', 'fast_bilinear',
+      ...inputs,
       '-filter_complex', filterComplex,
       // Main mp4 output
       '-map', '[outv]', '-map', '1:a:0?',
       '-c:v', 'libx264',
-      '-preset', 'veryfast',
+      '-preset', 'superfast',
       '-crf', '24',
       '-pix_fmt', 'yuv420p',
       '-movflags', '+faststart',
