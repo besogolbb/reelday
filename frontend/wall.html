@@ -67,7 +67,7 @@
       z-index: 2 !important;
       width: 100%; height: 100%;
       object-fit: contain;
-      background: transparent !important;
+      background: black;
       display: none;
       opacity: 0;
       transition: opacity .7s ease;
@@ -170,27 +170,6 @@
     @keyframes reelBreath {
       0%, 100% { opacity: .7; }
       50% { opacity: 1; }
-    }
-    .layer.has-video .backdrop {
-      z-index: 1 !important;
-      display: block !important;
-      opacity: 1 !important;
-      /* Bokeh-style blur: brighter and more vibrant to contrast the centered video */
-      filter: blur(50px) brightness(0.9) saturate(1.6);
-      transform: scale(1.4);
-    }
-    /* Subtle bokeh light spots overlay */
-    .layer.has-video .backdrop::after {
-      content: '';
-      position: absolute; inset: 0;
-      background-image: 
-        radial-gradient(circle at 20% 30%, rgba(255,255,255,0.08) 0%, transparent 15%),
-        radial-gradient(circle at 80% 20%, rgba(255,255,255,0.05) 0%, transparent 10%),
-        radial-gradient(circle at 40% 70%, rgba(255,255,255,0.06) 0%, transparent 20%),
-        radial-gradient(circle at 70% 80%, rgba(255,255,255,0.04) 0%, transparent 12%),
-        radial-gradient(circle at 50% 50%, rgba(255,255,255,0.03) 0%, transparent 40%);
-      mix-blend-mode: overlay;
-      pointer-events: none;
     }
 
     /* Ken Burns — very gentle, mostly pan; the image stays fully visible */
@@ -1286,51 +1265,6 @@
     return cdnImage(raw, 1920);
   }
 
-  const videoBackdropCanvas = document.createElement('canvas');
-  const videoBackdropCtx = videoBackdropCanvas.getContext('2d', { alpha: false });
-
-  function paintBackdropFromVideoFrame(videoEl, backdropEl) {
-    if (!videoEl || !backdropEl || !videoBackdropCtx) return false;
-    const vw = videoEl.videoWidth || 0;
-    const vh = videoEl.videoHeight || 0;
-    if (!vw || !vh) return false;
-
-    const targetW = 1280;
-    const targetH = 720;
-    videoBackdropCanvas.width = targetW;
-    videoBackdropCanvas.height = targetH;
-
-    const scale = Math.max(targetW / vw, targetH / vh);
-    const drawW = vw * scale;
-    const drawH = vh * scale;
-    const dx = (targetW - drawW) / 2;
-    const dy = (targetH - drawH) / 2;
-
-    videoBackdropCtx.clearRect(0, 0, targetW, targetH);
-    videoBackdropCtx.drawImage(videoEl, dx, dy, drawW, drawH);
-    backdropEl.style.backgroundImage = `url("${videoBackdropCanvas.toDataURL('image/jpeg', 0.82)}")`;
-    backdropEl.style.display = 'block';
-    backdropEl.style.opacity = '1';
-    return true;
-  }
-
-  function stopVideoBackdropSampling(videoEl) {
-    if (!videoEl) return;
-    if (videoEl.__backdropTimer) {
-      clearInterval(videoEl.__backdropTimer);
-      videoEl.__backdropTimer = null;
-    }
-  }
-
-  function startVideoBackdropSampling(videoEl, backdropEl) {
-    if (!videoEl || !backdropEl) return;
-    stopVideoBackdropSampling(videoEl);
-    const sample = () => paintBackdropFromVideoFrame(videoEl, backdropEl);
-    sample();
-    videoEl.addEventListener('loadeddata', sample, { once: true });
-    videoEl.__backdropTimer = setInterval(sample, 700);
-  }
-
   let items      = [];
   let allUploads = [];
   let knownIds   = new Set();
@@ -1524,7 +1458,6 @@
     // and stop streaming bytes for a clip nobody is watching anymore. This
     // is the single biggest contributor to wall lag during video playback.
     if (!reuseActive && outVid) {
-      stopVideoBackdropSampling(outVid);
       try {
         outVid.pause();
         outVid.removeAttribute('src');
@@ -1561,21 +1494,12 @@
 
     if (itemIsVideo) {
       inPic.style.animation            = 'none';
-      const videoBackdropUrl = videoPreThumb || videoPosterUrl(item, 1280) || immediateVisual;
-      const finalUrl = videoBackdropUrl || '';
 
       inLayer.classList.add('has-video');
       inLayer.classList.remove('video-visible');
       inLoader?.classList.remove('visible');
-      inBackdrop.style.display = 'block';
-      inBackdrop.style.opacity = '1';
-      inBackdrop.style.filter = photoBackdropFilter;
-      inBackdrop.style.transform = photoBackdropTransform;
-      if (finalUrl && !isVideoUrl(finalUrl)) {
-        inBackdrop.style.backgroundImage = `url("${finalUrl}")`;
-      } else {
-        inBackdrop.style.backgroundImage = `url("${wallFallbackUrl(item, 'Loading moment')}")`;
-      }
+      inBackdrop.style.backgroundImage = '';
+      inBackdrop.style.display = 'none';
 
       if (posterUrl) {
         inVid.setAttribute('poster', posterUrl);
@@ -1589,15 +1513,11 @@
       inVid.muted    = !wallSoundOn;
       inVid.playsInline = true;
       inVid.autoplay = true;
-      stopVideoBackdropSampling(inVid);
       try { inVid.pause(); } catch {}
       inVid.src = mediaUrl;
       inVid.load();
       try { inVid.currentTime = 0; } catch {}
       const revealVideo = () => {
-        if (!videoPreThumb && (!finalUrl || isVideoUrl(finalUrl))) {
-          startVideoBackdropSampling(inVid, inBackdrop);
-        }
         inLayer.classList.add('video-visible');
         inVid.classList.add('video-visible');
         inLoader?.classList.remove('visible');
@@ -1621,7 +1541,6 @@
       }
     } else if (itemIsProcessingVideo) {
       inLayer.classList.remove('has-video', 'video-visible');
-      stopVideoBackdropSampling(inVid);
       try {
         inVid.pause();
         inVid.removeAttribute('src');
@@ -1638,7 +1557,6 @@
       inLoader?.classList.add('visible');
     } else {
       inLayer.classList.remove('has-video', 'video-visible');
-      stopVideoBackdropSampling(inVid);
 
       // Restart Ken Burns animation cleanly
       inPic.style.animation = 'none';
