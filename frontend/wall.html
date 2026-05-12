@@ -1251,6 +1251,21 @@
     );
   }
 
+  function upcomingThumbUrl(upload, width = 320) {
+    if (!upload) return wallFallbackUrl(upload, 'Loading moment');
+    if (isVideoItem(upload)) {
+      return (
+        preThumbUrl(upload, width) ||
+        videoPosterUrl(upload, width) ||
+        absoluteMediaUrl(upload?.thumb) ||
+        wallFallbackUrl(upload, REEL_MAGIC_PHRASES[0])
+      );
+    }
+    const raw = absoluteMediaUrl(upload.file_url || upload.thumb || null);
+    if (!raw) return wallFallbackUrl(upload, 'Loading moment');
+    return cdnImage(raw, width);
+  }
+
   function wallMediaUrl(upload) {
     if (!upload) return makeProcessingPlaceholder('Loading moment');
     if (isReadyVideo(upload)) {
@@ -1842,7 +1857,7 @@
       const item = items[(idx + 1 + i) % items.length];
       const div  = document.createElement('div');
       div.className = 'upcoming-thumb' + (i === 0 ? ' next' : '');
-      const mediaUrl = wallMediaUrl(item);
+      const mediaUrl = upcomingThumbUrl(item, 320);
       div.style.backgroundImage = mediaUrl ? `url('${mediaUrl}')` : 'none';
       const target = idx + 1 + i;
       div.onclick = () => goTo(target);
