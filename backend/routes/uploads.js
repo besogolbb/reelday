@@ -299,7 +299,7 @@ export default async function uploadRoutes(fastify) {
       try {
         const filePath = extractStorageKey(fileUrl);
         if (filePath) {
-          await triggerVideoTranscode(filePath);
+          await triggerVideoTranscode(filePath, { preThumbDataUrl: rows[0].poster_url || null });
         } else {
           fastify.log.warn({ upload_id: rows[0].id, fileUrl }, 'lambda kickoff skipped: could not derive storage key');
         }
@@ -421,7 +421,7 @@ export default async function uploadRoutes(fastify) {
     if (isVideo) {
       try {
         const filePath = fileKey;
-        await triggerVideoTranscode(filePath);
+        await triggerVideoTranscode(filePath, { preThumbDataUrl: rows[0].poster_url || null });
       } catch (err) {
         fastify.log.warn({ err: err.message, upload_id: rows[0].id }, 'transcode kickoff failed');
       }

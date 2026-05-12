@@ -1,21 +1,16 @@
 import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import { tmpdir } from 'os';
 import { join, posix as pathPosix } from 'path';
-import { mkdtemp, rm } from 'fs/promises';
+import { mkdtemp, rm, writeFile } from 'fs/promises';
 import { createReadStream, createWriteStream } from 'fs';
-import { spawn } from 'child_process';
+import { spawn, execSync } from 'child_process';
 import { pipeline } from 'stream/promises';
-
-// Deploy this Lambda with MemorySize = 3000 MB. The handler streams files
-// between R2 and /tmp so ffmpeg gets the RAM headroom instead of buffering
-// full videos in Node.
 
 const {
   R2_BUCKET_NAME,
   R2_ACCOUNT_ID,
   R2_ACCESS_KEY_ID,
   R2_SECRET_ACCESS_KEY,
-  R2_PUBLIC_URL = 'https://media.reelday.ph',
   WEBHOOK_URL,
   WEBHOOK_SECRET,
   FFMPEG_PATH = '/opt/bin/ffmpeg',
@@ -24,10 +19,7 @@ const {
 const s3 = new S3Client({
   region: 'auto',
   endpoint: `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-  credentials: {
-    accessKeyId: R2_ACCESS_KEY_ID,
-    secretAccessKey: R2_SECRET_ACCESS_KEY,
-  },
+  credentials: { accessKeyId: R2_ACCESS_KEY_ID, secretAccessKey: R2_SECRET_ACCESS_KEY },
 });
 
 function derivedKeys(originalKey) {
@@ -43,10 +35,7 @@ function derivedKeys(originalKey) {
 }
 
 async function r2DownloadToFile(key, destinationPath) {
-  const res = await s3.send(new GetObjectCommand({
-    Bucket: R2_BUCKET_NAME,
-    Key: key,
-  }));
+  const res = await s3.send(new GetObjectCommand({ Bucket: R2_BUCKET_NAME, Key: key }));
   await pipeline(res.Body, createWriteStream(destinationPath));
 }
 
@@ -64,91 +53,87 @@ function runFfmpeg(args) {
   return new Promise((resolve, reject) => {
     const proc = spawn(FFMPEG_PATH, args, { stdio: ['ignore', 'ignore', 'pipe'] });
     let stderr = '';
-
-    proc.stderr.on('data', chunk => {
-      stderr += chunk.toString();
-    });
-
+    proc.stderr.on('data', chunk => { stderr += chunk.toString(); });
     proc.on('error', reject);
     proc.on('close', code => {
       if (code === 0) resolve();
-      else reject(new Error(`ffmpeg exited ${code}: ${stderr.split('\n').slice(-8).join('\n')}`));
+      else reject(new Error(`ffmpeg exited ${code}: ${stderr.split('\n').slice(-10).join('\n')}`));
     });
   });
 }
 
 async function notifyWebhook(payload) {
-  const res = await fetch(WEBHOOK_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Webhook-Secret': WEBHOOK_SECRET,
-    },
-    body: JSON.stringify(payload),
-  });
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(`Webhook failed: ${res.status} ${text}`);
+  if (!WEBHOOK_URL) return;
+  try {
+    await fetch(WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Webhook-Secret': WEBHOOK_SECRET },
+      body: JSON.stringify(payload),
+    });
+  } catch (err) {
+    console.warn('Webhook failed', err.message);
   }
 }
 
 export const handler = async (event) => {
-  const originalKey = String(event?.originalKey || event?.fileName || '').trim();
-  if (!originalKey) throw new Error('Missing event.fileName');
+  const originalKey = (event.fileName || event.originalKey || '').trim();
+  const preThumbKey = event.preThumbKey || null;
+  const preThumbDataUrl = typeof event.preThumbDataUrl === 'string' ? event.preThumbDataUrl.trim() : null;
 
+  if (!originalKey) throw new Error('Missing originalKey');
   const { compressedKey, posterKey } = derivedKeys(originalKey);
   let workdir = null;
 
   try {
+    try { execSync(`chmod +x ${FFMPEG_PATH}`); } catch {}
     workdir = await mkdtemp(join(tmpdir(), 'reelday-tx-'));
     const inputPath = join(workdir, 'input');
+    const bgImgPath = join(workdir, 'bg.jpg');
     const outputPath = join(workdir, 'output.mp4');
     const posterPath = join(workdir, 'poster.jpg');
 
     await r2DownloadToFile(originalKey, inputPath);
 
+    if (preThumbDataUrl && /^data:image\/(?:jpeg|jpg|png|webp);base64,/i.test(preThumbDataUrl)) {
+      console.log('Step 1: Using provided guest pre-thumb as static background...');
+      const base64 = preThumbDataUrl.replace(/^data:image\/(?:jpeg|jpg|png|webp);base64,/i, '');
+      await writeFile(bgImgPath, Buffer.from(base64, 'base64'));
+    } else {
+      console.log('Step 1: Extracting static background frame...');
+      await runFfmpeg(['-y', '-ss', '00:00:00', '-i', inputPath, '-vframes', '1', bgImgPath]);
+    }
+
+    console.log('Step 2: Encoding with static blurred background...');
     await runFfmpeg([
-      '-y',
+      '-y', '-nostdin', '-threads', '0', '-ignore_unknown', '-sn', '-dn',
+      '-loop', '1', '-i', bgImgPath,
       '-i', inputPath,
       '-filter_complex',
-      '[0:v]split=2[src_main][src_poster];' +
-      '[src_main]split=2[v1][v2];' +
-      '[v1]scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,boxblur=50:10[bg];' +
-      '[v2]scale=1280:720:force_original_aspect_ratio=decrease[fg];' +
-      '[bg][fg]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2[wall];' +
-      '[src_poster]split=2[p1][p2];' +
-      '[p1]scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,boxblur=50:10[poster_bg];' +
-      '[p2]scale=1280:720:force_original_aspect_ratio=decrease[poster_fg];' +
-      '[poster_bg][poster_fg]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2[poster_wall]',
-      '-map', '[wall]',
-      '-c:v', 'libx264',
-      '-crf', '28',
-      '-preset', 'ultrafast',
-      '-movflags', '+faststart',
-      '-pix_fmt', 'yuv420p',
-      '-s', '1280x720',
-      outputPath,
-      '-ss', '00:00:01',
-      '-map', '[poster_wall]',
-      '-vframes', '1',
-      '-q:v', '2',
-      posterPath,
+      '[0:v]scale=256:-2,boxblur=12:2,scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,setsar=1[bg];' +
+      "[1:v]scale=1280:720:force_original_aspect_ratio=decrease,scale='trunc(iw/2)*2':'trunc(ih/2)*2',setsar=1[fg];" +
+      '[bg][fg]overlay=(W-w)/2:(H-h)/2:shortest=1[outv]',
+      '-map', '[outv]', '-map', '1:a:0?',
+      '-c:v', 'libx264', '-crf', '28', '-preset', 'ultrafast', '-movflags', '+faststart', '-pix_fmt', 'yuv420p', '-map_metadata', '-1',
+      outputPath
     ]);
 
-    await r2UploadFile(posterKey, posterPath, 'image/jpeg');
-    await notifyWebhook({ status: 'poster_ready', originalKey, posterKey });
+    await runFfmpeg(['-y', '-ss', '00:00:01', '-i', outputPath, '-vframes', '1', '-q:v', '4', posterPath]);
+
+    await Promise.all([
+      r2UploadFile(posterKey, posterPath, 'image/jpeg'),
+      notifyWebhook({ status: 'poster_ready', originalKey, posterKey })
+    ]);
 
     await r2UploadFile(compressedKey, outputPath, 'video/mp4');
     await notifyWebhook({ status: 'video_ready', originalKey, compressedKey, posterKey });
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ ok: true, originalKey, compressedKey, posterKey }),
-    };
+    return { statusCode: 200, body: JSON.stringify({ ok: true, compressedKey }) };
+
+  } catch (error) {
+    console.error('FAILED:', error.message);
+    await notifyWebhook({ status: 'error', originalKey, message: error.message, preThumbKey });
+    throw error;
   } finally {
-    if (workdir) {
-      try { await rm(workdir, { recursive: true, force: true }); } catch {}
-    }
+    if (workdir) { try { await rm(workdir, { recursive: true, force: true }); } catch {} }
   }
 };
