@@ -1474,21 +1474,26 @@
 
     const mediaUrl = wallMediaUrl(item);
     const immediateVisual = immediateVisualUrl(item, 1280);
-    const posterUrl = isVideoItem(item) ? immediateVisual : mediaUrl;
+    const videoPreThumb = preThumbUrl(item, 1280);
+    const posterUrl = isVideoItem(item) ? (videoPosterUrl(item, 1280) || videoPreThumb || immediateVisual) : mediaUrl;
     const itemIsVideo = isReadyVideo(item) && !!mediaUrl;
     const itemIsProcessingVideo = isProcessingVideo(item);
     const posterBackground = posterUrl ? `url('${posterUrl}')` : `url('${wallFallbackUrl(item, 'Loading moment')}')`;
-    const videoPreThumb = preThumbUrl(item, 1280);
     const photoBackdropFilter = 'blur(40px) brightness(0.6)';
     const photoBackdropTransform = 'scale(1.2)';
 
     // Always paint something on the incoming layer first so there is
     // never a blank frame while a poster or video stream is loading.
-    inBackdrop.style.backgroundImage = posterBackground;
-    inBackdrop.style.display = 'block';
-    inBackdrop.style.opacity = '1';
-    inBackdrop.style.filter = photoBackdropFilter;
-    inBackdrop.style.transform = photoBackdropTransform;
+    if (itemIsVideo) {
+      inBackdrop.style.backgroundImage = '';
+      inBackdrop.style.display = 'none';
+    } else {
+      inBackdrop.style.backgroundImage = posterBackground;
+      inBackdrop.style.display = 'block';
+      inBackdrop.style.opacity = '1';
+      inBackdrop.style.filter = photoBackdropFilter;
+      inBackdrop.style.transform = photoBackdropTransform;
+    }
     inPic.style.backgroundImage      = posterBackground;
     inLayer.classList.remove('out');
 
