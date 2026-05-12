@@ -92,9 +92,21 @@ async function notifyWebhook(payload, { timeoutMs = 5000 } = {}) {
   }
 }
 
-export const handler = async (event, context) => {
+// Accept both direct-invoke payloads and SQS-triggered events.
+// SQS event source delivers { Records: [{ body: "<json>" }, ...] }; configure batchSize: 1
+// so each Lambda invocation handles exactly one video.
+function unwrapEvent(event) {
+  if (event && Array.isArray(event.Records) && event.Records.length > 0) {
+    const body = event.Records[0].body;
+    return typeof body === 'string' ? JSON.parse(body) : body;
+  }
+  return event || {};
+}
+
+export const handler = async (rawEvent, context) => {
   if (context) context.callbackWaitsForEmptyEventLoop = false;
 
+  const event = unwrapEvent(rawEvent);
   const originalKey = (event.fileName || event.originalKey || '').trim();
   const preThumbKey = event.preThumbKey || null;
   const preThumbDataUrl = typeof event.preThumbDataUrl === 'string' ? event.preThumbDataUrl.trim() : null;
