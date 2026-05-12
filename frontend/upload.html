@@ -545,8 +545,8 @@ body { background: var(--paper); min-height: 100dvh; }
   <div class="ty-vignette"></div>
   <div class="ty-body">
     <div class="ty-star">★</div>
-    <div class="ty-heading">Salamat!</div>
-    <div class="ty-sub">Your moment is on the wall</div>
+    <div class="ty-heading" id="tyHeading">Salamat!</div>
+    <div class="ty-sub" id="tySub">Your moment is on the wall</div>
     <div class="ty-card">
       <div class="ty-thumb" id="tyThumb"></div>
       <div>
@@ -2043,7 +2043,7 @@ body { background: var(--paper); min-height: 100dvh; }
       return;
     }
 
-    showThankYou(name, msg, allUrls[0] || recordedPosterDataUrl || null);
+    showThankYou(mode, name, msg, allUrls[0] || recordedPosterDataUrl || null);
   }
 
   function saveEntry(localKey, entry) {
@@ -2071,7 +2071,7 @@ body { background: var(--paper); min-height: 100dvh; }
     } catch {}
   }
 
-  function showThankYou(name, msg, thumbUrl) {
+  function showThankYou(mode, name, msg, thumbUrl) {
     dismissKeyboard();
     const bg = document.getElementById('tyBg');
     if (thumbUrl) bg.style.backgroundImage = `url(${thumbUrl})`;
@@ -2080,6 +2080,18 @@ body { background: var(--paper); min-height: 100dvh; }
 
     const thumb = document.getElementById('tyThumb');
     if (thumbUrl) thumb.style.backgroundImage = `url(${thumbUrl})`;
+
+    const isVideoReel = mode === 'record';
+    const heading = document.getElementById('tyHeading');
+    const sub = document.getElementById('tySub');
+    if (heading) {
+      heading.textContent = isVideoReel ? 'Your Reel is in the works!' : 'Salamat!';
+    }
+    if (sub) {
+      sub.textContent = isVideoReel
+        ? "We're giving your video a cinematic glow-up. Look at the Big Screen in a few seconds—your moment is about to make its grand entrance! ✨"
+        : 'Your moment is on the wall';
+    }
 
     document.getElementById('tyCardName').textContent = name;
     document.getElementById('tyCardMsg').textContent  = msg || 'No message added.';
