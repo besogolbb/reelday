@@ -136,31 +136,29 @@ export const handler = async (event, context) => {
     if (hasPreThumb) {
       const base64 = preThumbDataUrl.replace(/^data:image\/(?:jpeg|jpg|png|webp);base64,/i, '');
       await writeFile(bgImgPath, Buffer.from(base64, 'base64'));
+    } else {
+      // Extract a single background frame. Done as its own short call because merging it into
+      // the encode graph via split+trim+loop on a shared decoder starves the foreground branch.
+      await runFfmpeg(['-y', '-nostdin', '-ss', '0', '-i', inputPath, '-vframes', '1', bgImgPath]);
     }
 
-    // Single FFmpeg invocation: derive blurred background, overlay foreground, emit mp4 + poster jpg.
-    // Background source = pre-thumb image (input 0) if present, else freeze-frame-0 of the video.
-    // Stream reuse requires explicit `split`.
-    const inputs = hasPreThumb ? ['-i', bgImgPath, '-i', inputPath] : ['-i', inputPath];
-    const videoIdx = hasPreThumb ? 1 : 0;
-
-    const videoSplit = `[${videoIdx}:v]split=${hasPreThumb ? 2 : 3}${hasPreThumb ? '[vfg][vposter]' : '[vbg][vfg][vposter]'}`;
-    const bgChain = hasPreThumb
-      ? '[0:v]fps=24,scale=192:-2,boxblur=8:1,scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,setsar=1[bg]'
-      : '[vbg]trim=end_frame=1,setpts=PTS-STARTPTS,loop=loop=-1:size=1:start=0,fps=24,scale=192:-2,boxblur=8:1,scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,setsar=1[bg]';
-    const fgChain = "[vfg]fps=24,scale=1280:720:force_original_aspect_ratio=decrease,scale='trunc(iw/2)*2':'trunc(ih/2)*2',setsar=1[fg]";
-    const overlayChain = '[bg][fg]overlay=(W-w)/2:(H-h)/2:shortest=1[outv]';
-    const posterChain = '[vposter]select=gte(t\\,1)[poster]';
-
-    const filterComplex = [videoSplit, bgChain, fgChain, overlayChain, posterChain].join(';');
-    const audioMap = ['-map', `${videoIdx}:a:0?`];
+    // One FFmpeg call covers: blurred-bg overlay encode + poster extraction.
+    // Foreground stream [1:v] is referenced twice (fg + poster) so we explicitly split it.
+    const filterComplex = [
+      '[0:v]fps=24,scale=192:-2,boxblur=8:1,scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,setsar=1[bg]',
+      '[1:v]split=2[vfg][vposter]',
+      "[vfg]fps=24,scale=1280:720:force_original_aspect_ratio=decrease,scale='trunc(iw/2)*2':'trunc(ih/2)*2',setsar=1[fg]",
+      '[bg][fg]overlay=(W-w)/2:(H-h)/2:shortest=1[outv]',
+      '[vposter]select=gte(t\\,1)[poster]',
+    ].join(';');
 
     await runFfmpeg([
       '-y', '-nostdin', '-threads', '0', '-ignore_unknown', '-sn', '-dn',
-      ...inputs,
+      '-loop', '1', '-i', bgImgPath,
+      '-i', inputPath,
       '-filter_complex', filterComplex,
       // Main mp4 output
-      '-map', '[outv]', ...audioMap,
+      '-map', '[outv]', '-map', '1:a:0?',
       '-c:v', 'libx264',
       '-preset', 'veryfast',
       '-crf', '24',
