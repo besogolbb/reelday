@@ -123,6 +123,8 @@ async function dbPlugin(fastify) {
     ssl: process.env.NODE_ENV === 'production'
       ? { rejectUnauthorized: false }
       : false,
+    max: 30,                    // default 10 was the wall-poll bottleneck under load
+    idleTimeoutMillis: 30_000,  // prune dead connections so we don't hold them forever
   });
 
   const client = await pool.connect();
