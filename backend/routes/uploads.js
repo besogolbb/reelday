@@ -506,7 +506,11 @@ export default async function uploadRoutes(fastify) {
         ORDER BY created_at DESC`,
       [event.id],
     );
-    const hydratedUploads = await reconcileVideoUploads(uploads);
+    // Reconcile is the slow self-healing fallback for missed transcode webhooks —
+    // it does up to 4 R2 HeadObject calls per video row. Off by default; pass
+    // ?reconcile=1 to force it for manual refresh.
+    const wantReconcile = request.query?.reconcile === '1' || request.query?.reconcile === 'true';
+    const hydratedUploads = wantReconcile ? await reconcileVideoUploads(uploads) : uploads;
 
     const now = new Date();
     const locks = {
