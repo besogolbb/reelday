@@ -426,17 +426,6 @@
            halo above is grazing the portrait's leading edge. */
         inset 0 1px 0 rgba(255,235,210,.09);
     }
-    /* Force cover-fit in portrait mode so the rounded card has no
-       letterbox gaps even when the source aspect doesn't match 9:16.
-       Overrides the JS-driven fitPicByAspect / fitVideoByAspect that
-       would otherwise switch to contain for tall/non-landscape media. */
-    body.is-portrait .layer .pic {
-      background-size: cover !important;
-      background-position: center !important;
-    }
-    body.is-portrait .layer .vid {
-      object-fit: cover !important;
-    }
     /* Motion language — breathing scale + floating drift on the
        whole layer. Numbers are intentionally small: 4px of drift,
        0.6% of scale, 7s cycle. Reads as alive, not animated.
@@ -455,16 +444,6 @@
     body.is-portrait .layer .vignette {
       background:
         radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.45) 100%);
-    }
-    /* Align the caption to the portrait card's left edge so the
-       uploader name + message reads as a broadcast lower-third tied
-       to the media, not pinned to the screen edge. Mirrors the same
-       offset on the right so the wordmark/corner block stays
-       balanced. The min() matches the portrait card's width formula
-       above; max() keeps a 24px minimum on narrow viewports. */
-    body.is-portrait .frame {
-      padding-left:  max(24px, calc((100vw - min(49.5vh, 90vw)) / 2));
-      padding-right: max(24px, calc((100vw - min(49.5vh, 90vw)) / 2));
     }
 
     .upcoming-thumb {
