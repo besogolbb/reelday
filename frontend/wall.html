@@ -500,17 +500,25 @@
     .caption { flex: 1 1 auto; min-width: 0; max-width: none; padding-right: 24px; }
 
     .caption .uploader {
-      font-family: var(--mono); font-size: clamp(16px, 1.4vw, 22px);
-      font-weight: 600;
-      letter-spacing: .22em; text-transform: uppercase;
-      color: #fff; margin-bottom: 14px;
-      /* Layered shadows so the name reads on bright pool / sky shots.
-         A tight near-black drop gives the hard edge; a wider, softer
-         halo darkens the area immediately behind the glyphs. */
-      text-shadow:
-        0 1px 2px rgba(0,0,0,.95),
-        2px 2px 6px rgba(0,0,0,.85),
-        0 0 18px rgba(0,0,0,.6);
+      font-family: var(--mono); font-size: clamp(20px, 1.9vw, 30px);
+      font-weight: 700;
+      letter-spacing: .18em; text-transform: uppercase;
+      color: #fff; margin-bottom: 16px;
+      /* Glass name plate — the guest's name is the moment, so it gets
+         a translucent dark pill with a backdrop blur and a subtle
+         warm-gold inner edge. Reads on bright pool / sky shots and
+         feels broadcast-grade rather than a floating text label. */
+      display: inline-block;
+      padding: 10px 20px;
+      border-radius: 999px;
+      background: rgba(20,12,8,.42);
+      -webkit-backdrop-filter: blur(14px) saturate(140%);
+      backdrop-filter:         blur(14px) saturate(140%);
+      box-shadow:
+        inset 0 1px 0 rgba(255,235,210,.18),
+        inset 0 0 0 1px rgba(255,255,255,.08),
+        0 6px 22px rgba(0,0,0,.45);
+      text-shadow: 0 1px 2px rgba(0,0,0,.7);
       transition: opacity .5s ease;
     }
 
@@ -2171,8 +2179,7 @@
 
   function updateCaption(item) {
     const name = item.uploader_name || 'Panauhin';
-    const time = formatTime(item.created_at);
-    capUploader.textContent = `— ${name}${time ? ' · ' + time : ''}`;
+    capUploader.textContent = name;
     capQuote.textContent    = item.message || '';
   }
 
