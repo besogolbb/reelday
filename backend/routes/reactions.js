@@ -112,33 +112,53 @@ export default async function reactionsRoutes(fastify) {
     const { slug } = request.params;
     const since = request.query?.since;
 
-    const { rows: eventRows } = await fastify.db.query(
-      'SELECT id FROM events WHERE slug = $1 AND is_active = true',
-      [slug],
-    );
-    if (!eventRows.length) {
-      return reply.status(404).send({ error: true, message: 'Event not found' });
-    }
-    const eventId = eventRows[0].id;
-
-    let sinceTs;
     try {
-      sinceTs = since ? new Date(since) : new Date(Date.now() - 5 * 60 * 1000);
-    } catch {
-      sinceTs = new Date(Date.now() - 5 * 60 * 1000);
-    }
-    if (Number.isNaN(sinceTs.getTime())) {
-      sinceTs = new Date(Date.now() - 5 * 60 * 1000);
-    }
+      const { rows: eventRows } = await fastify.db.query(
+        'SELECT id FROM events WHERE slug = $1 AND is_active = true',
+        [slug],
+      );
+      if (!eventRows.length) {
+        return reply.status(404).send({ error: true, message: 'Event not found' });
+      }
+      const eventId = eventRows[0].id;
 
-    const { rows } = await fastify.db.query(
-      `SELECT id, emoji, guest_name, upload_id, created_at
-         FROM reactions
-        WHERE event_id = $1 AND created_at > $2
-        ORDER BY created_at ASC
-        LIMIT 200`,
-      [eventId, sinceTs],
-    );
+      let sinceTs;
+      try {
+        sinceTs = since ? new Date(since) : new Date(Date.now() - 5 * 60 * 1000);
+      } catch {
+        sinceTs = new Date(Date.now() - 5 * 60 * 1000);
+      }
+      if (Number.isNaN(sinceTs.getTime())) {
+        sinceTs = new Date(Date.now() - 5 * 60 * 1000);
+      }
+
+      const { rows } = await fastify.db.query(
+        `SELECT id, emoji, guest_name, upload_id, created_at
+           FROM reactions
+          WHERE event_id = $1 AND created_at > $2
+          ORDER BY created_at ASC
+          LIMIT 200`,
+        [eventId, sinceTs],
+      );
+
+      // Continue with the rest of the original handler — old code path picks up below.
+      // (Wrapping the body in try/catch lets us log the *exact* error instead of letting
+      //  the global handler swallow it as a generic "Internal server error".)
+      reply.__reactions_rows = rows;
+    } catch (err) {
+      request.log.error({
+        where: 'GET /api/reactions/:slug',
+        slug,
+        since,
+        errName: err?.name,
+        errMessage: err?.message,
+        errCode: err?.code,
+        errDetail: err?.detail,
+        stack: err?.stack,
+      }, 'reactions.get failed');
+      return reply.status(500).send({ error: true, message: 'reactions read failed' });
+    }
+    const rows = reply.__reactions_rows;
 
     reply.header('Cache-Control', 'no-store');
     return { reactions: rows, server_time: new Date().toISOString() };
