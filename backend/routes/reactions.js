@@ -33,12 +33,32 @@ export default async function reactionsRoutes(fastify) {
     },
   };
 
-  /**
-   * Resolve the event by slug, confirm reactions are allowed under the
-   * owner's CURRENT subscription tier (not whatever the event row was
-   * created on), and 404/403 cleanly when not.
-   */
+  // Slug → { id, plan-allows-reactions } memo. Reaction bursts hammered
+  // this lookup once per write (events JOIN users); during a storm the
+  // pool drained and other events' wall GETs queued behind it. Cache
+  // for a few seconds so plan/tier changes still propagate quickly.
+  const EVENT_CACHE_TTL_MS = 5_000;
+  const eventCache = new Map(); // slug -> { expires, event | null }
+
   async function loadEventForReactions(slug, reply) {
+    const now = Date.now();
+    const hit = eventCache.get(slug);
+    if (hit && hit.expires > now) {
+      if (!hit.event) {
+        reply.status(404).send({ error: true, message: 'Event not found' });
+        return null;
+      }
+      if (!hit.allowed) {
+        reply.status(403).send({
+          error: true,
+          code: 'reactions_locked',
+          message: 'Reactions need a Sinag plan or higher.',
+        });
+        return null;
+      }
+      return hit.event;
+    }
+
     const { rows } = await fastify.db.query(
       `SELECT e.id, e.is_active, e.user_id, u.subscription_tier
          FROM events e
@@ -47,12 +67,15 @@ export default async function reactionsRoutes(fastify) {
       [slug],
     );
     if (!rows.length || rows[0].is_active === false) {
+      eventCache.set(slug, { expires: now + EVENT_CACHE_TTL_MS, event: null });
       reply.status(404).send({ error: true, message: 'Event not found' });
       return null;
     }
     const event = rows[0];
     const plan  = resolvePlan(event.subscription_tier || 'tala');
-    if (!plan.features?.reactions) {
+    const allowed = !!plan.features?.reactions;
+    eventCache.set(slug, { expires: now + EVENT_CACHE_TTL_MS, event, allowed });
+    if (!allowed) {
       reply.status(403).send({
         error: true,
         code: 'reactions_locked',
@@ -84,22 +107,19 @@ export default async function reactionsRoutes(fastify) {
 
     const guestId = String(request.headers['x-guest-id'] || request.ip).slice(0, 64);
 
-    // upload_id is optional; if provided, verify it belongs to this
-    // event so we don't accept reactions tagged to other events.
-    let scopedUploadId = null;
-    if (upload_id) {
-      const { rows } = await fastify.db.query(
-        'SELECT id FROM uploads WHERE id = $1 AND event_id = $2',
-        [upload_id, event.id],
-      );
-      if (rows.length) scopedUploadId = upload_id;
-    }
-
+    // upload_id is optional; verify it belongs to this event inline so
+    // the whole write is a single round-trip — under reaction bursts the
+    // old SELECT+INSERT pattern was draining the pool and freezing other
+    // events' wall GETs.
     const { rows: inserted } = await fastify.db.query(
       `INSERT INTO reactions (event_id, upload_id, guest_id, guest_name, emoji)
-       VALUES ($1, $2, $3, $4, $5)
+       VALUES (
+         $1,
+         (SELECT id FROM uploads WHERE id = $2::uuid AND event_id = $1),
+         $3, $4, $5
+       )
        RETURNING id, created_at`,
-      [event.id, scopedUploadId, guestId, name, emoji],
+      [event.id, upload_id || null, guestId, name, emoji],
     );
     return reply.status(201).send({ id: inserted[0].id, created_at: inserted[0].created_at });
   });

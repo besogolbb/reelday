@@ -123,7 +123,7 @@ async function dbPlugin(fastify) {
     ssl: process.env.NODE_ENV === 'production'
       ? { rejectUnauthorized: false }
       : false,
-    max: 30,                    // default 10 caused 500s when 2 walls + reactions polled together
+    max: 50,                    // bumped from 30: reaction bursts on event A were saturating the pool and freezing wall GETs for event B
     idleTimeoutMillis: 30_000,
   });
 
