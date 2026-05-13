@@ -68,7 +68,7 @@ const limiterKey = req =>
 
 await fastify.register(rateLimit, {
   global: true,
-  max: 600,                   // generous cap — host running 2 walls + reactions can hit ~260/min
+  max: 1000,                  // generous cap — supports 1,000 guest burst + multiple walls
   timeWindow: '1 minute',
   ban: 0,
   // Skip rate-limiting for:
@@ -193,7 +193,7 @@ function pushRecentError(entry) {
 
 fastify.setErrorHandler((error, request, reply) => {
   const statusCode = error.statusCode ?? 500;
-  if (statusCode >= 500) {
+  if (statusCode >= 500 && error.code !== 'FST_RATE_LIMIT') {
     const entry = {
       tag: 'REELDAY_500',
       method: request.method,
