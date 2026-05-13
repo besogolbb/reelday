@@ -22,10 +22,13 @@ function deriveGroupId(filePath, explicitEventId) {
 }
 
 export async function triggerVideoTranscode(filePath, options = {}) {
+  // Pass the pre-thumb as an R2 key, not inline. SQS messages cap at
+  // 256 KiB and a single 960px JPEG data URL can blow past that, which
+  // used to silently kill the transcode for some uploads.
   const payload = {
     originalKey: filePath,
     fileName: filePath,
-    preThumbDataUrl: options.preThumbDataUrl || null,
+    preThumbKey: options.preThumbKey || null,
   };
 
   // Preferred path: enqueue to SQS FIFO. Lambda is wired to the queue as event source,

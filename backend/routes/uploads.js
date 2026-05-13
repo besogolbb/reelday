@@ -299,7 +299,9 @@ export default async function uploadRoutes(fastify) {
       try {
         const filePath = extractStorageKey(fileUrl);
         if (filePath) {
-          await triggerVideoTranscode(filePath, { preThumbDataUrl: rows[0].poster_url || null, eventId: rows[0].event_id });
+          // Legacy multipart path doesn't collect a guest thumbnail, so
+          // the lambda will fall back to the first video frame for bg.
+          await triggerVideoTranscode(filePath, { preThumbKey: null, eventId: rows[0].event_id });
         } else {
           fastify.log.warn({ upload_id: rows[0].id, fileUrl }, 'lambda kickoff skipped: could not derive storage key');
         }
@@ -359,12 +361,39 @@ export default async function uploadRoutes(fastify) {
     const isVidMsg = isVideo && is_video_message === true;
     const originalKey = isVideo ? fileKey : null;
     const videoStatus = isVideo ? 'processing' : null;
-    const initialPosterUrl =
+
+    // Persist the guest-browser thumbnail as a sibling R2 object instead
+    // of inlining the data URL anywhere. Two reasons:
+    //   1) SQS messages have a 256 KiB hard limit; a 960px JPEG data URL
+    //      can blow past it, silently failing the transcode kickoff.
+    //   2) The lambda webhook overwrites poster_url with the final poster,
+    //      losing the guest's choice. Storing it under its own key lets
+    //      the wall surface the guest thumb during the processing window.
+    let preThumbUrl = null;
+    let preThumbKey = null;
+    if (
       isVideo &&
       typeof poster_data_url === 'string' &&
       /^data:image\/(?:jpeg|jpg|png|webp);base64,/i.test(poster_data_url)
-        ? poster_data_url
-        : null;
+    ) {
+      try {
+        const match = poster_data_url.match(/^data:image\/(jpeg|jpg|png|webp);base64,(.+)$/i);
+        if (match) {
+          const ext = match[1].toLowerCase() === 'jpg' ? 'jpeg' : match[1].toLowerCase();
+          const contentType = `image/${ext}`;
+          const buffer = Buffer.from(match[2], 'base64');
+          const dir = fileKey.includes('/') ? fileKey.slice(0, fileKey.lastIndexOf('/')) : '';
+          const base = fileKey.includes('/') ? fileKey.slice(fileKey.lastIndexOf('/') + 1) : fileKey;
+          const baseNoExt = base.replace(/\.[^.]+$/, '');
+          preThumbKey = `${dir ? dir + '/' : ''}prethumb_${baseNoExt}.${ext === 'jpeg' ? 'jpg' : ext}`;
+          preThumbUrl = await fastify.putFile(preThumbKey, buffer, contentType);
+        }
+      } catch (err) {
+        fastify.log.warn({ err: err.message }, 'pre-thumb upload failed');
+        preThumbUrl = null;
+        preThumbKey = null;
+      }
+    }
 
     // Gate on the EFFECTIVE plan (computed from users.subscription_tier
     // inside getValidatedEvent), not event.plan — that column gets stale
@@ -391,7 +420,7 @@ export default async function uploadRoutes(fastify) {
 
     const { rows } = await fastify.db.query(
       `INSERT INTO uploads
-         (event_id, file_url, file_type, uploader_name, message, is_video_message, is_approved, original_key, video_status, poster_url)
+         (event_id, file_url, file_type, uploader_name, message, is_video_message, is_approved, original_key, video_status, pre_thumb_url)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING *`,
       [
@@ -404,24 +433,19 @@ export default async function uploadRoutes(fastify) {
         isApproved,
         originalKey,
         videoStatus,
-        initialPosterUrl,
+        preThumbUrl,
       ],
     );
 
-    // Fire-and-forget the wall-friendly transcode for video uploads.
-    // Photos are skipped inside transcodeUploadInBackground. The guest's
-    // POST returns immediately; web_url + poster_url get filled in 5–15s
-    // later and the wall picks them up on its next /uploads/:slug poll.
-    // Fire-and-forget the wall-friendly transcode for video uploads.
-    // The guest's POST returns immediately; Lambda can finish the video
-    // work later and the wall picks it up on its next /uploads/:slug poll.
-    // Fire-and-forget the wall-friendly transcode for video uploads.
-    // The guest's POST returns immediately; Lambda can finish the video
-    // work later and the wall picks it up on its next /uploads/:slug poll.
+    // Fire-and-forget the wall-friendly transcode for video uploads. The
+    // lambda fetches the pre-thumb from R2 by key (kept tiny so the SQS
+    // payload always fits) rather than receiving the raw data URL inline.
     if (isVideo) {
       try {
-        const filePath = fileKey;
-        await triggerVideoTranscode(filePath, { preThumbDataUrl: rows[0].poster_url || null, eventId: rows[0].event_id });
+        await triggerVideoTranscode(fileKey, {
+          preThumbKey,
+          eventId: rows[0].event_id,
+        });
       } catch (err) {
         fastify.log.warn({ err: err.message, upload_id: rows[0].id }, 'transcode kickoff failed');
       }

@@ -51,6 +51,11 @@ const MIGRATIONS = `
   ALTER TABLE uploads ADD COLUMN IF NOT EXISTS original_key   TEXT;
   ALTER TABLE uploads ADD COLUMN IF NOT EXISTS compressed_key TEXT;
   ALTER TABLE uploads ADD COLUMN IF NOT EXISTS video_status   VARCHAR(20);
+  -- Guest-browser thumbnail captured at upload time. Persisted as a
+  -- real R2 object (not a giant data URL in the row) so it survives
+  -- the lambda webhook overwriting poster_url with the final poster.
+  -- The wall reads this while the video is still transcoding.
+  ALTER TABLE uploads ADD COLUMN IF NOT EXISTS pre_thumb_url TEXT;
   CREATE UNIQUE INDEX IF NOT EXISTS idx_uploads_original_key
     ON uploads(original_key) WHERE original_key IS NOT NULL;
 

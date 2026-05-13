@@ -135,17 +135,28 @@ export const handler = async (rawEvent, context) => {
     const outputPath = join(workdir, 'output.mp4');
     const posterPath = join(workdir, 'poster.jpg');
 
-    await r2DownloadToFile(originalKey, inputPath);
+    // Fetch the video and (if provided) the guest's pre-thumb in parallel.
+    // Pre-thumb is referenced by R2 key now — passing the data URL through
+    // SQS used to blow the 256 KiB message limit for larger thumbnails and
+    // silently dropped the transcode.
+    let hasPreThumb = false;
+    const downloads = [r2DownloadToFile(originalKey, inputPath)];
+    if (preThumbKey) {
+      downloads.push(
+        r2DownloadToFile(preThumbKey, bgImgPath)
+          .then(() => { hasPreThumb = true; })
+          .catch(err => { console.warn('pre-thumb fetch failed, falling back to video frame:', err.message); })
+      );
+    } else if (preThumbDataUrl && /^data:image\/(?:jpeg|jpg|png|webp);base64,/i.test(preThumbDataUrl)) {
+      // Legacy inline path — kept so older callers still work during rollout.
+      const base64 = preThumbDataUrl.replace(/^data:image\/(?:jpeg|jpg|png|webp);base64,/i, '');
+      downloads.push(writeFile(bgImgPath, Buffer.from(base64, 'base64')).then(() => { hasPreThumb = true; }));
+    }
+    await Promise.all(downloads);
 
     // Defensive: re-check size on disk in case ContentLength was missing/wrong.
     const st = await stat(inputPath);
     if (st.size > MAX_BYTES) throw new Error(`Input too large on disk: ${st.size}`);
-
-    const hasPreThumb = preThumbDataUrl && /^data:image\/(?:jpeg|jpg|png|webp);base64,/i.test(preThumbDataUrl);
-    if (hasPreThumb) {
-      const base64 = preThumbDataUrl.replace(/^data:image\/(?:jpeg|jpg|png|webp);base64,/i, '');
-      await writeFile(bgImgPath, Buffer.from(base64, 'base64'));
-    }
 
     // Single FFmpeg call: bg derivation + encode + poster.
     // When no pre-thumb, we feed the same video file through TWO -i flags so the bg branch

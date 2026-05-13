@@ -25,6 +25,22 @@ async function storagePlugin(fastify) {
     return `${publicBase}/${key}`;
   }
 
+  // Upload a buffer at an exact key (no auto-prefix/timestamp). Used for
+  // sibling objects we want to address deterministically — e.g. the
+  // pre-thumb that lives next to a video upload so the transcode lambda
+  // can fetch it by key instead of receiving the whole image inline.
+  async function putFile(key, buffer, contentType) {
+    await s3.send(new PutObjectCommand({
+      Bucket:      process.env.R2_BUCKET_NAME,
+      Key:         key,
+      Body:        buffer,
+      ContentType: contentType,
+      CacheControl: 'public, max-age=31536000, immutable',
+    }));
+    const publicBase = (process.env.R2_PUBLIC_URL || '').replace(/\/+$/, '');
+    return `${publicBase}/${key}`;
+  }
+
   async function getFile(key, range) {
     return s3.send(new GetObjectCommand({
       Bucket: process.env.R2_BUCKET_NAME,
@@ -35,6 +51,7 @@ async function storagePlugin(fastify) {
 
   fastify.decorate('storage', s3);
   fastify.decorate('uploadFile', uploadFile);
+  fastify.decorate('putFile', putFile);
   fastify.decorate('getFile', getFile);
 }
 
