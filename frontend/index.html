@@ -27,14 +27,26 @@
     height: 84px; width: auto !important; max-width: none !important;
     display: block; flex-shrink: 0;
   }
-  /* Smaller on mobile so the "+ New event" button doesn't get cut off. */
-  @media (max-width: 760px) { .brand-img { height: 48px; } }
+  /* Smaller on mobile so the action button doesn't get cut off. */
+  @media (max-width: 760px) { .brand-img { height: 44px; } }
   /* Footer can show it bigger */
   footer .brand-img { height: 110px; }
 
   /* Match the header inner max-width to the hero (1240px) so the brand
      left-aligns with the "Every shot. Every guest." hero text. */
   .site-header-inner { max-width: 1240px !important; }
+
+  /* Mobile: tighten header padding and drop the redundant "My events" button
+     next to the user-menu chip — same destination is already in the dropdown,
+     and showing both makes the right side overflow on narrow screens. */
+  @media (max-width: 760px) {
+    .site-header-inner { padding-left: 16px; padding-right: 16px; gap: 12px; }
+    .user-menu + .btn-accent { display: none; }
+  }
+
+  /* Kill any horizontal scrollbar caused by hero polaroids or other
+     decorative elements briefly extending past the viewport. */
+  html, body { overflow-x: hidden; }
 
   /* ════════════════════════════════════════════════════════
      HERO
