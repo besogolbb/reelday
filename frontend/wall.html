@@ -57,7 +57,20 @@
       background-repeat: no-repeat;
       will-change: transform;
       image-rendering: -webkit-optimize-contrast;
+      transform-origin: center center;
     }
+
+    /* Subtle Ken Burns zoom — 5% over the slide duration. Conservative so
+       subjects near the frame edge don't get clipped. Triggers each time a
+       layer becomes visible (.out class toggles drive the animation reset). */
+    @keyframes kenburns-zoom {
+      from { transform: scale(1.000); }
+      to   { transform: scale(1.050); }
+    }
+    .layer:not(.out) .pic {
+      animation: kenburns-zoom 9000ms ease-out forwards;
+    }
+    .layer.has-video:not(.out) .pic { animation: none; }
 
     /* Foreground video — same fitting as the photo layer. The letterbox
        gradient lives on the parent .layer (and a transparent <video>)
