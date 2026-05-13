@@ -777,16 +777,23 @@
       to   { opacity: 1; transform: translate(-50%, 0); }
     }
 
-    /* ── Floating emojis ────────────────────────────────────── */
+    /* ── Floating emojis ──────────────────────────────────────
+       `contain: strict` + own stacking context tells the browser to keep
+       layout/paint/style of the emoji layer separate from the rest of the
+       page. Repaints from animating emojis no longer invalidate the whole
+       wall — meaningful on weaker phones and when 2 wall tabs share GPU. */
     #emoji-container {
       position: fixed; inset: 0; z-index: 60;
       pointer-events: none; overflow: hidden;
+      contain: strict;
+      will-change: transform;
     }
 
     .float-emoji {
       position: absolute; bottom: 0; line-height: 1;
       animation: floatUp linear forwards;
       pointer-events: none; user-select: none;
+      will-change: transform, opacity;
     }
 
     @keyframes floatUp {
@@ -1910,8 +1917,13 @@
      floating emoji on the wall now corresponds to a real tap from
      a real guest via /api/reactions/:slug.
   ══════════════════════════════════════════════════════════ */
+  // Hard cap on concurrent floating emojis. Without this, sustained reactions
+  // accumulate dozens of GPU-animated DOM nodes — and when two wall tabs share
+  // the same browser process, both walls lag together as compositor saturates.
+  const MAX_FLOATING_EMOJIS = 18;
   function spawnEmoji(emoji) {
     if (!emoji) return;
+    if (emojiBox.childElementCount >= MAX_FLOATING_EMOJIS) return;
     const el = document.createElement('div');
     el.className  = 'float-emoji';
     el.textContent = emoji;
