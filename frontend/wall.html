@@ -2695,23 +2695,37 @@
     const slideable = merged;
     const prevCount = items.length;
     const newOnes   = slideable.filter(u => !knownIds.has(u.id));
+    const apiById   = new Map(slideable.map(u => [u.id, u]));
 
-    if (newOnes.length > 0 && isRunning && prevCount > 0 && !inBurst) {
-      // Slideshow is running — splice new approvals in right after the
-      // current slide and jump straight to the first new one so the host
-      // sees their approval reach the wall immediately. Older items keep
-      // their relative order so the cycle resumes naturally afterwards.
-      newOnes.forEach(u => knownIds.add(u.id));
-      const safeIdx = Math.min(currentIdx, items.length - 1);
-      const head    = items.slice(0, safeIdx + 1);
-      const tail    = items.slice(safeIdx + 1).filter(u => !newOnes.some(n => n.id === u.id));
-      items = [...head, ...newOnes, ...tail];
-      const name = newOnes[0].uploader_name || 'Panauhin';
-      showToast(`✨ ${name} just shared a moment!`);
-      // Jump now — clears the pending slideTimer and shows the new one.
-      goTo(safeIdx + 1);
+    if (isRunning && prevCount > 0 && !inBurst) {
+      // Steady-state: PRESERVE the deck's current order (which may have
+      // been shaped by prior new-upload splices or just-ready promotions)
+      // and only refresh each row's fields from the API. Dropping the
+      // order on every tick would wipe out promotions before they ever
+      // got to play.
+      items = items.filter(u => apiById.has(u.id)).map(u => apiById.get(u.id));
+      // Re-anchor currentIdx in case items were removed.
+      if (previousCurrent?.id) {
+        const reanchored = items.findIndex(u => u.id === previousCurrent.id);
+        if (reanchored >= 0) currentIdx = reanchored;
+      }
+
+      if (newOnes.length > 0) {
+        // Splice new approvals in right after the current slide and jump
+        // to the first one so the host sees their approval reach the
+        // wall immediately. Older items keep their relative order.
+        newOnes.forEach(u => knownIds.add(u.id));
+        const safeIdx = Math.min(currentIdx, items.length - 1);
+        const head    = items.slice(0, safeIdx + 1);
+        const tail    = items.slice(safeIdx + 1).filter(u => !newOnes.some(n => n.id === u.id));
+        items = [...head, ...newOnes, ...tail];
+        const name = newOnes[0].uploader_name || 'Panauhin';
+        showToast(`✨ ${name} just shared a moment!`);
+        goTo(safeIdx + 1);
+      }
     } else {
-      // Not running yet, or empty — replace the deck wholesale.
+      // Cold start / empty deck / mid-burst — adopt the API order
+      // wholesale. There's no custom deck order yet to protect.
       items = slideable;
       slideable.forEach(u => knownIds.add(u.id));
     }
