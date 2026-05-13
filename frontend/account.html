@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#fbf5ec" />
+  <title>Reelday — Account</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=5" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=5" />
+  <link rel="shortcut icon" href="/favicon.ico?v=5" />
+  <link rel="stylesheet" href="/css/shared.css" />
+  <style>
+    body { min-height: 100dvh; }
+
+    .page-header {
+      background: #fff;
+      border-bottom: 1px solid var(--line);
+      padding: 2.5rem 1.5rem;
+    }
+    .page-header-inner { max-width: 900px; margin-inline: auto; }
+    .page-title {
+      font-family: var(--display);
+      font-size: clamp(1.6rem, 4vw, 2.2rem);
+      color: var(--ink);
+      margin-bottom: .3rem;
+    }
+    .page-sub { color: var(--ink-faint); font-size: .9rem; }
+
+    .main { max-width: 900px; margin-inline: auto; padding: 2rem 1.5rem 4rem; display: grid; gap: 1.5rem; }
+
+    .card {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: var(--r-lg);
+      padding: 1.75rem;
+      box-shadow: var(--shadow-soft);
+    }
+    .card-title {
+      font-family: var(--display);
+      font-size: 1.2rem;
+      color: var(--ink);
+      margin-bottom: 1rem;
+    }
+
+    .kv { display: grid; grid-template-columns: 1fr auto; gap: .5rem 1.5rem; font-size: .9rem; }
+    .kv .k { color: var(--ink-faint); }
+    .kv .v { color: var(--ink); font-weight: 500; }
+
+    /* Plan summary card — gradient backdrop so the current plan reads as
+       the centerpiece of this page. */
+    .plan-card {
+      background: linear-gradient(135deg, #fff7ee 0%, #fceadc 100%);
+      border-color: rgba(196,90,58,.18);
+    }
+    .plan-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+    .plan-name {
+      font-family: var(--display);
+      font-size: 1.8rem;
+      color: var(--accent-deep);
+      line-height: 1.1;
+    }
+    .plan-tag {
+      display: inline-block;
+      margin-top: .25rem;
+      font-family: var(--mono);
+      font-size: .7rem;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--ink-soft);
+    }
+    .plan-price {
+      font-family: var(--mono);
+      font-size: 1rem;
+      color: var(--accent-deep);
+      background: rgba(255,255,255,.7);
+      padding: .35rem .75rem;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    .limits {
+      margin-top: 1.25rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: .75rem;
+    }
+    .limit {
+      background: rgba(255,255,255,.65);
+      border-radius: var(--r);
+      padding: .85rem 1rem;
+    }
+    .limit .label {
+      font-family: var(--mono); font-size: .65rem; letter-spacing: .1em;
+      text-transform: uppercase; color: var(--ink-faint); margin-bottom: .25rem;
+    }
+    .limit .value {
+      font-family: var(--display); font-size: 1.3rem; color: var(--ink);
+      line-height: 1.1;
+    }
+    .limit .value small {
+      font-family: var(--mono); font-size: .65rem; color: var(--ink-faint);
+      font-weight: 400; letter-spacing: .08em;
+    }
+
+    /* Usage bar — only renders when the plan has a finite event limit. */
+    .usage { margin-top: 1.25rem; }
+    .usage-row { display: flex; justify-content: space-between; font-size: .85rem; margin-bottom: .35rem; }
+    .usage-row .lbl { color: var(--ink-faint); }
+    .usage-row .num { color: var(--ink); font-weight: 600; }
+    .usage-bar { height: 8px; background: rgba(196,90,58,.12); border-radius: 999px; overflow: hidden; }
+    .usage-bar .fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent-deep));
+      border-radius: 999px;
+      transition: width .4s ease;
+    }
+    .usage-warn { background: rgba(225,80,40,.15) !important; }
+    .usage-warn .fill { background: linear-gradient(90deg, #e15028, #b03515); }
+
+    .features { margin-top: 1.25rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: .5rem; }
+    .feat {
+      display: flex; align-items: center; gap: .5rem;
+      font-size: .85rem; color: var(--ink-soft);
+    }
+    .feat .check { width: 16px; height: 16px; flex-shrink: 0; }
+    .feat.on { color: var(--ink); }
+    .feat.off { color: var(--ink-faint); opacity: .7; }
+    .feat.off .check { opacity: .35; }
+
+    .upgrade {
+      margin-top: 1.5rem;
+      padding: 1.25rem 1.5rem;
+      background: #fff;
+      border: 1px dashed rgba(196,90,58,.35);
+      border-radius: var(--r);
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 1rem; flex-wrap: wrap;
+    }
+    .upgrade-copy { flex: 1; min-width: 220px; }
+    .upgrade-title { font-family: var(--display); font-size: 1.05rem; color: var(--ink); margin-bottom: .15rem; }
+    .upgrade-sub { font-size: .85rem; color: var(--ink-faint); }
+    .upgrade-cta {
+      background: var(--accent);
+      color: #fff;
+      padding: .65rem 1.25rem;
+      border-radius: var(--r);
+      font-weight: 600;
+      text-decoration: none;
+      white-space: nowrap;
+      transition: background .15s;
+    }
+    .upgrade-cta:hover { background: var(--accent-deep); }
+
+    .loading { display: flex; justify-content: center; padding: 3rem; }
+
+    @media (max-width: 700px) {
+      .main { padding: 1.25rem 1rem 3rem; }
+      .card { padding: 1.25rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="site-header-inner">
+    <a class="brand brand-lockup" href="/" aria-label="Reelday.ph — home"><img src="/images/LOGO.png?v=2" alt="Reelday.ph" class="brand-img" /></a>
+    <div class="site-actions">
+      <span style="font-size:.85rem;color:var(--ink-soft)" id="nav-user"></span>
+      <button class="btn btn-ghost" id="btn-logout" style="padding:10px 16px;font-size:.85rem">Logout</button>
+    </div>
+  </div>
+</header>
+
+<div class="page-header">
+  <div class="page-header-inner">
+    <h1 class="page-title">Account</h1>
+    <p class="page-sub">Your plan, limits, and usage at a glance.</p>
+  </div>
+</div>
+
+<main class="main">
+  <div class="loading" id="loading"><div class="spinner"></div></div>
+  <div id="content" style="display:none; display:grid; gap: 1.5rem;"></div>
+</main>
+
+<script type="module">
+  import { getToken, getUser, authHeaders, requireAuth, logout } from '/js/auth.js';
+  import { PLANS, PLAN_ORDER, resolvePlan, nextTier } from '/js/plans.js';
+
+  if (!requireAuth()) throw new Error('redirect');
+
+  document.getElementById('btn-logout').onclick = logout;
+
+  // Pull fresh data from the server — the cached user in localStorage
+  // doesn't include events or the latest subscription_tier after an
+  // upgrade purchase has gone through.
+  async function loadAccount() {
+    const res = await fetch('/api/auth/me', { headers: authHeaders() });
+    if (!res.ok) {
+      if (res.status === 401) { logout(); return null; }
+      throw new Error('Failed to load account');
+    }
+    return res.json();
+  }
+
+  function escapeHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[c]));
+  }
+
+  function formatLimit(n, unit) {
+    if (n === null || n === undefined) return `∞ <small>${unit}</small>`;
+    return `${n} <small>${unit}</small>`;
+  }
+
+  function featureRow(label, on) {
+    const checkOn  = `<svg class="check" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#c45a3a"/><path d="M4.5 8.2l2.3 2.3 4.7-4.7" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    const checkOff = `<svg class="check" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="#c8b8a8" stroke-width="1.5"/></svg>`;
+    return `<div class="feat ${on ? 'on' : 'off'}">${on ? checkOn : checkOff}<span>${label}</span></div>`;
+  }
+
+  function render({ user, events }) {
+    const tier = user.subscription_tier || 'tala';
+    const plan = resolvePlan(tier);
+    const ownedEvents = (events || []).filter(e => e.is_active !== false).length;
+    const eventLimit  = plan.eventLimit;
+    const usagePct    = Math.min(100, Math.round((ownedEvents / Math.max(1, eventLimit)) * 100));
+    const nearLimit   = ownedEvents >= eventLimit;
+
+    const upTier = nextTier(tier);
+    const upPlan = upTier ? PLANS[upTier] : null;
+
+    const content = document.getElementById('content');
+    content.style.display = 'grid';
+    document.getElementById('loading').style.display = 'none';
+
+    content.innerHTML = `
+      <!-- Account details -->
+      <section class="card">
+        <h2 class="card-title">Profile</h2>
+        <div class="kv">
+          <div class="k">Name</div><div class="v">${escapeHtml(user.full_name || '—')}</div>
+          <div class="k">Email</div><div class="v">${escapeHtml(user.email)}</div>
+          ${user.phone ? `<div class="k">Phone</div><div class="v">${escapeHtml(user.phone)}</div>` : ''}
+          <div class="k">Verified</div><div class="v">${user.is_verified ? 'Yes' : 'Not yet'}</div>
+          <div class="k">Member since</div><div class="v">${new Date(user.created_at).toLocaleDateString()}</div>
+        </div>
+      </section>
+
+      <!-- Plan summary -->
+      <section class="card plan-card">
+        <div class="plan-row">
+          <div>
+            <div class="plan-name">${escapeHtml(plan.name)}</div>
+            <div class="plan-tag">${escapeHtml(plan.tagline || 'Current plan')}</div>
+          </div>
+          <div class="plan-price">${escapeHtml(plan.priceLabel || (plan.price ? `₱${plan.price}` : 'Free'))}</div>
+        </div>
+
+        <div class="limits">
+          <div class="limit">
+            <div class="label">Events</div>
+            <div class="value">${formatLimit(plan.eventLimit, plan.eventLimit === 1 ? 'event' : 'events')}</div>
+          </div>
+          <div class="limit">
+            <div class="label">Uploads per event</div>
+            <div class="value">${formatLimit(plan.uploadLimit, 'moments')}</div>
+          </div>
+          <div class="limit">
+            <div class="label">Gallery lifespan</div>
+            <div class="value">${plan.galleryDays} <small>${plan.galleryDays === 1 ? 'day' : 'days'}</small></div>
+          </div>
+          <div class="limit">
+            <div class="label">Upload window</div>
+            <div class="value">${plan.uploadWindowDays} <small>${plan.uploadWindowDays === 1 ? 'day' : 'days'}</small></div>
+          </div>
+        </div>
+
+        <div class="usage">
+          <div class="usage-row">
+            <span class="lbl">Events used</span>
+            <span class="num">${ownedEvents} of ${eventLimit}</span>
+          </div>
+          <div class="usage-bar ${nearLimit ? 'usage-warn' : ''}">
+            <div class="fill" style="width:${usagePct}%"></div>
+          </div>
+        </div>
+
+        <div class="features">
+          ${featureRow('Video messages', plan.features.videoMessage)}
+          ${featureRow('Live reactions', plan.features.reactions)}
+          ${featureRow('Live polls & questions', plan.features.polls)}
+          ${featureRow('Event website', plan.features.website)}
+          ${featureRow('Custom domain', plan.features.customDomain)}
+        </div>
+
+        ${upPlan ? `
+          <div class="upgrade">
+            <div class="upgrade-copy">
+              <div class="upgrade-title">${nearLimit ? "You're at the limit on " + escapeHtml(plan.name) + '.' : 'Unlock more with ' + escapeHtml(upPlan.name) + '.'}</div>
+              <div class="upgrade-sub">${escapeHtml(buildUpgradeBlurb(plan, upPlan))}</div>
+            </div>
+            <a class="upgrade-cta" href="/#pricing">Upgrade to ${escapeHtml(upPlan.name)} →</a>
+          </div>
+        ` : `
+          <div class="upgrade" style="border-style:solid; border-color: rgba(196,90,58,.18);">
+            <div class="upgrade-copy">
+              <div class="upgrade-title">You're on our top tier — thank you 🙏</div>
+              <div class="upgrade-sub">${escapeHtml(plan.name)} unlocks every feature. Reach out if you need anything custom.</div>
+            </div>
+          </div>
+        `}
+      </section>
+    `;
+  }
+
+  // Build a one-line "here's what you get by upgrading" blurb by diffing
+  // the two tiers' headline limits.
+  function buildUpgradeBlurb(cur, next) {
+    const wins = [];
+    if (next.eventLimit > cur.eventLimit) {
+      wins.push(`${next.eventLimit} events`);
+    }
+    if (cur.uploadLimit !== null && next.uploadLimit === null) {
+      wins.push('unlimited uploads');
+    }
+    if (next.galleryDays > cur.galleryDays) {
+      wins.push(`${next.galleryDays}-day gallery`);
+    }
+    const featGains = [];
+    if (!cur.features.videoMessage && next.features.videoMessage) featGains.push('video messages');
+    if (!cur.features.reactions    && next.features.reactions)    featGains.push('reactions');
+    if (!cur.features.polls        && next.features.polls)        featGains.push('live polls');
+    if (!cur.features.website      && next.features.website)      featGains.push('event website');
+    if (!cur.features.customDomain && next.features.customDomain) featGains.push('custom domain');
+    const all = [...wins, ...featGains];
+    if (!all.length) return `Step up to ${next.name} for more headroom.`;
+    return `Get ${all.slice(0, 3).join(', ')}${all.length > 3 ? ', and more' : ''}.`;
+  }
+
+  loadAccount()
+    .then(data => {
+      if (!data) return;
+      document.getElementById('nav-user').textContent = data.user?.full_name ?? '';
+      render(data);
+    })
+    .catch(err => {
+      console.error(err);
+      document.getElementById('loading').innerHTML = '<p style="color:var(--ink-faint)">Could not load your account. Please refresh.</p>';
+    });
+</script>
+
+</body>
+</html>

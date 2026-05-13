@@ -185,6 +185,7 @@ fastify.get('/verify',           (_r, reply) => reply.sendFile('verify.html'));
 fastify.get('/forgot-password',  (_r, reply) => reply.sendFile('forgot-password.html'));
 fastify.get('/reset-password',   (_r, reply) => reply.sendFile('reset-password.html'));
 fastify.get('/my-events',        (_r, reply) => reply.sendFile('my-events.html'));
+fastify.get('/account',          (_r, reply) => reply.sendFile('account.html'));
 
 // In-memory ring buffer of recent 5xx errors so we can fetch them via HTTP
 // without scrolling through Easypanel logs. GET /api/_errors?key=<DEBUG_KEY>
