@@ -235,6 +235,16 @@ input, textarea, select { font-family: inherit; font-size: inherit; color: inher
   position: relative;
   top: -2px;
 }
+
+/* Logo lockup — image-based brand. Override the global img max-width:100% so
+   the fixed-height logo keeps its native aspect ratio at any viewport size. */
+.brand-lockup { display: inline-flex; align-items: center; text-decoration: none; flex-shrink: 0; }
+.brand-img    {
+  height: 56px; width: auto !important; max-width: none !important;
+  display: block; flex-shrink: 0;
+}
+@media (max-width: 760px) { .brand-img { height: 44px; } }
+footer .brand-img { height: 80px; }
 .site-nav {
   display: flex; gap: 28px;
   font-size: 14px;
