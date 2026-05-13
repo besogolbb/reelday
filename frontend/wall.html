@@ -259,9 +259,10 @@
     }
 
     .ticker .live {
-      display: flex; align-items: center; gap: 10px;
-      font-family: var(--mono); font-size: 12px;
+      display: flex; align-items: center; gap: 12px;
+      font-family: var(--mono); font-size: 16px;
       letter-spacing: .2em; text-transform: uppercase;
+      text-shadow: 0 2px 6px rgba(0,0,0,.6);
     }
 
     /* Broadcast-red live dot. Solid red core with a pulsing outer
@@ -280,17 +281,17 @@
     }
 
     .ticker .stats {
-      font-family: var(--mono); font-size: 10px;
+      font-family: var(--mono); font-size: 12px;
       letter-spacing: .14em; text-transform: uppercase;
-      opacity: .9; display: flex; gap: 22px; align-items: center;
+      opacity: .95; display: flex; gap: 26px; align-items: center;
     }
-    /* Icons sit next to the count pill, sized just enough to read
-       at room distance without competing with the hero numerals. */
+    /* Icons sit next to the count pill — sized to match the larger
+       hero numerals so the pair reads at room distance. */
     .ticker .stats .stat-ico {
-      width: 18px; height: 18px;
+      width: 26px; height: 26px;
       vertical-align: middle;
-      margin-left: 2px;
-      color: rgba(255,255,255,.85);
+      margin-left: 4px;
+      color: rgba(255,255,255,.9);
     }
     .ticker .stats span { display: inline-flex; align-items: center; }
 
@@ -303,10 +304,10 @@
       color: #fff;
       font-style: normal;
       font-weight: 700;
-      font-size: 14px;
+      font-size: 20px;
       letter-spacing: .04em;
-      padding: 3px 10px;
-      margin-right: 6px;
+      padding: 5px 14px;
+      margin-right: 8px;
       border-radius: 999px;
       background: linear-gradient(135deg, rgba(240,163,122,.95), rgba(196,90,58,.95));
       box-shadow: 0 2px 8px rgba(196,90,58,.35);
@@ -503,9 +504,13 @@
       font-weight: 600;
       letter-spacing: .22em; text-transform: uppercase;
       color: #fff; margin-bottom: 14px;
-      /* No pill — rely on a hard drop-shadow so the name reads on
-         bright backgrounds. */
-      text-shadow: 2px 2px 4px rgba(0,0,0,.5);
+      /* Layered shadows so the name reads on bright pool / sky shots.
+         A tight near-black drop gives the hard edge; a wider, softer
+         halo darkens the area immediately behind the glyphs. */
+      text-shadow:
+        0 1px 2px rgba(0,0,0,.95),
+        2px 2px 6px rgba(0,0,0,.85),
+        0 0 18px rgba(0,0,0,.6);
       transition: opacity .5s ease;
     }
 
@@ -513,7 +518,10 @@
       font-family: var(--display); font-style: italic; font-weight: 400;
       font-size: clamp(40px, 5vw, 72px); line-height: 1.25;
       letter-spacing: -.02em;
-      text-shadow: 0 4px 24px rgba(0,0,0,.55);
+      text-shadow:
+        0 2px 4px rgba(0,0,0,.85),
+        0 6px 28px rgba(0,0,0,.7),
+        0 0 40px rgba(0,0,0,.45);
       margin: 0; padding-bottom: .15em;
       transition: opacity .5s ease;
       display: -webkit-box;
