@@ -62,11 +62,14 @@
         linear-gradient(90deg, rgba(0,0,0,.2) 0%, rgba(0,0,0,0) 12%, rgba(0,0,0,0) 88%, rgba(0,0,0,.2) 100%);
     }
 
-    /* Foreground photo — full image visible, no cropping */
+    /* Foreground photo — fills the 16:9 frame edge-to-edge, center-cropping
+       whatever doesn't fit. Trade-off: portrait phone shots lose the very
+       top/bottom of the frame. Acceptable for an event wall where the
+       priority is "no bars" over "show every pixel". */
     .layer .pic {
       position: absolute; inset: 0;
       z-index: 2 !important;
-      background-size: contain; background-position: center;
+      background-size: cover; background-position: center;
       background-repeat: no-repeat;
       will-change: transform;
       image-rendering: -webkit-optimize-contrast;
@@ -78,15 +81,17 @@
        they get overridden by the inline style. Tune the kb1-4 keyframes
        instead. */
 
-    /* Foreground video — same fitting as the photo layer. We keep the
-       <video> transparent so the blurred-poster .backdrop layer behind
-       it fills any letterbox area (portrait phone clip on a landscape
-       TV would otherwise show hard black bars on the sides). */
+    /* Foreground video — same edge-to-edge fill as the photo layer. The
+       <video> element center-crops the source to 16:9 (object-fit: cover)
+       so portrait phone clips fill the wall instead of being letterboxed.
+       Background kept transparent because the cover crop leaves no
+       empty area inside the element — the .backdrop layer behind is
+       only visible during the brief frames before the video paints. */
     .layer .vid {
       position: absolute; inset: 0;
       z-index: 2 !important;
       width: 100%; height: 100%;
-      object-fit: contain;
+      object-fit: cover;
       background: transparent;
       display: none;
       opacity: 0;
