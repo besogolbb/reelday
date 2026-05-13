@@ -445,6 +445,17 @@
       background:
         radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.45) 100%);
     }
+    /* Force cover-fit in portrait mode so the rounded card has no
+       letterbox gaps even when the source aspect doesn't match 9:16.
+       Overrides the JS-driven fitPicByAspect / fitVideoByAspect that
+       would otherwise switch to contain for tall/non-landscape media. */
+    body.is-portrait .layer .pic {
+      background-size: cover !important;
+      background-position: center !important;
+    }
+    body.is-portrait .layer .vid {
+      object-fit: cover !important;
+    }
     /* Ken Burns on <video> is set inline by JS but only makes sense
        in the contained 9:16 portrait card. Landscape videos fill the
        wall edge-to-edge, so the scale would just crop visibly. */
