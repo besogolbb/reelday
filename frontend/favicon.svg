@@ -2,8 +2,8 @@
   <!-- Rounded coral tile, brand warm palette -->
   <defs>
     <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#E89A6A"/>
-      <stop offset="1" stop-color="#C9663F"/>
+      <stop offset="0" stop-color="#5C2B6E"/>
+      <stop offset="1" stop-color="#2E1238"/>
     </linearGradient>
   </defs>
   <rect width="64" height="64" rx="14" ry="14" fill="url(#g)"/>
@@ -28,5 +28,5 @@
     Z
   "/>
   <!-- Tiny play-triangle accent in the bowl of the R, ties to "video reel" identity -->
-  <path fill="#C9663F" d="M 30.5 24.2 L 30.5 28.6 L 34.4 26.4 Z"/>
+  <path fill="#2E1238" d="M 30.5 24.2 L 30.5 28.6 L 34.4 26.4 Z"/>
 </svg>
