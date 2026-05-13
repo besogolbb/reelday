@@ -18,6 +18,19 @@
   ════════════════════════════════════════════════════════ */
   .site-header { background: rgba(253,250,245,.9); }
 
+  /* Brand lockup — camera-reel mark + two-tone Reelday.ph wordmark. */
+  .brand-lockup {
+    display: inline-flex; align-items: center; gap: 8px;
+    text-decoration: none;
+    font-family: 'Inter', system-ui, sans-serif;
+    line-height: 1;
+  }
+  .brand-mark { width: 30px; height: 30px; flex-shrink: 0; display: block; }
+  .brand-word { font-weight: 700; font-size: 22px; letter-spacing: -0.01em; }
+  .brand-word-a   { color: #2A1A14; }
+  .brand-word-b   { color: #C9663F; }
+  .brand-word-tld { color: #C9663F; font-weight: 600; font-size: 0.78em; margin-left: 2px; }
+
   /* ════════════════════════════════════════════════════════
      HERO
   ════════════════════════════════════════════════════════ */
@@ -851,7 +864,23 @@
 <!-- ════ HEADER ════════════════════════════════════════════ -->
 <header class="site-header">
   <div class="site-header-inner">
-    <a class="brand" href="/">REELDAY<sup>★</sup></a>
+    <a class="brand brand-lockup" href="/" aria-label="Reelday.ph — home">
+      <svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true">
+        <!-- Camera body with viewfinder bump on top -->
+        <path d="M 18 18 L 26 18 L 28 12 L 36 12 L 38 18 L 54 18 Q 58 18 58 22 L 58 50 Q 58 54 54 54 L 14 54 Q 10 54 10 50 L 10 22 Q 10 18 14 18 Z"
+              fill="none" stroke="#4A2E1E" stroke-width="3.5" stroke-linejoin="round"/>
+        <!-- Outer reel ring -->
+        <circle cx="34" cy="36" r="13" fill="none" stroke="#C9663F" stroke-width="3.5"/>
+        <!-- Inner reel disc -->
+        <circle cx="34" cy="36" r="8" fill="#E89A6A"/>
+        <!-- Play triangle -->
+        <path d="M 31 32 L 31 40 L 38 36 Z" fill="#fff"/>
+        <!-- Film-strip curl on the right -->
+        <path d="M 47 36 Q 56 36 56 44 Q 56 52 48 52"
+              fill="none" stroke="#C9663F" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+      <span class="brand-word"><span class="brand-word-a">Reel</span><span class="brand-word-b">day</span><span class="brand-word-tld">.ph</span></span>
+    </a>
     <nav class="site-nav">
       <a href="#how" data-i18n="nav-how">How it works</a>
       <a href="#demo">Live demo</a>
@@ -1330,7 +1359,16 @@
 <footer class="site-footer">
   <div class="site-footer-inner">
     <div>
-      <div class="brand" style="margin-bottom:14px;">REELDAY<sup>★</sup></div>
+      <div class="brand brand-lockup" style="margin-bottom:14px;">
+        <svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true">
+          <path d="M 18 18 L 26 18 L 28 12 L 36 12 L 38 18 L 54 18 Q 58 18 58 22 L 58 50 Q 58 54 54 54 L 14 54 Q 10 54 10 50 L 10 22 Q 10 18 14 18 Z" fill="none" stroke="#4A2E1E" stroke-width="3.5" stroke-linejoin="round"/>
+          <circle cx="34" cy="36" r="13" fill="none" stroke="#C9663F" stroke-width="3.5"/>
+          <circle cx="34" cy="36" r="8" fill="#E89A6A"/>
+          <path d="M 31 32 L 31 40 L 38 36 Z" fill="#fff"/>
+          <path d="M 47 36 Q 56 36 56 44 Q 56 52 48 52" fill="none" stroke="#C9663F" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+        <span class="brand-word"><span class="brand-word-a">Reel</span><span class="brand-word-b">day</span><span class="brand-word-tld">.ph</span></span>
+      </div>
       <p style="color:var(--ink-soft);font-size:14px;max-width:32ch;" data-i18n="footer-desc">The live photo wall for Filipino celebrations. Made in Manila.</p>
     </div>
     <div>
