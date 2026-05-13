@@ -36,9 +36,9 @@
     .layer.out { opacity: 0; }
 
     /* Blurred backdrop — fills letterbox area with a soft, scaled copy.
-       Heavy blur + desaturate + dark so portrait media on a 16:9 TV
-       reads as ambient color, not a stretched/seamy second copy of
-       the source. */
+       Tuned so the bars clearly read as derived from the source image
+       (recognizable skin/clothing/scene color), with enough blur to
+       dissolve hard seams (sky-vs-floor type contrasts). */
     .layer .backdrop {
       position: absolute; inset: 0;
       z-index: 1 !important;
@@ -46,21 +46,20 @@
       opacity: 1 !important;
       background-size: cover; background-position: center;
       background-repeat: no-repeat;
-      filter: blur(120px) brightness(.45) saturate(.7);
-      transform: scale(1.35);
+      filter: blur(70px) brightness(.7) saturate(.95);
+      transform: scale(1.2);
       background-image: radial-gradient(circle at center, #2a1a14, #1a0f0a);
     }
-    /* Vignette over the backdrop only — softens the pillarbox edges so
-       the letterbox bar fades into the surrounding frame instead of
-       butting up against it with a hard line. Sits between backdrop
-       (z:1) and foreground media (z:2). */
+    /* Light vignette over the backdrop — only softens the very edges so
+       the pillarbox doesn't end with a hard line against the frame.
+       Kept gentle so the bars don't read as black. */
     .layer .backdrop-veil {
       position: absolute; inset: 0;
       z-index: 1 !important;
       pointer-events: none;
       background:
-        radial-gradient(ellipse at center, rgba(0,0,0,0) 45%, rgba(0,0,0,.55) 100%),
-        linear-gradient(90deg, rgba(0,0,0,.35) 0%, rgba(0,0,0,0) 18%, rgba(0,0,0,0) 82%, rgba(0,0,0,.35) 100%);
+        radial-gradient(ellipse at center, rgba(0,0,0,0) 55%, rgba(0,0,0,.3) 100%),
+        linear-gradient(90deg, rgba(0,0,0,.2) 0%, rgba(0,0,0,0) 12%, rgba(0,0,0,0) 88%, rgba(0,0,0,.2) 100%);
     }
 
     /* Foreground photo — full image visible, no cropping */
@@ -1560,8 +1559,8 @@
     const itemIsVideo = isReadyVideo(item) && !!mediaUrl;
     const itemIsProcessingVideo = isProcessingVideo(item);
     const posterBackground = posterUrl ? `url('${posterUrl}')` : `url('${wallFallbackUrl(item, 'Loading moment')}')`;
-    const photoBackdropFilter = 'blur(120px) brightness(0.45) saturate(0.7)';
-    const photoBackdropTransform = 'scale(1.35)';
+    const photoBackdropFilter = 'blur(70px) brightness(0.7) saturate(0.95)';
+    const photoBackdropTransform = 'scale(1.2)';
 
     // Always paint a blurred poster on the backdrop so the letterbox
     // area around portrait media (photo OR video) is filled with a soft
