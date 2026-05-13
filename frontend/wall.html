@@ -1644,7 +1644,7 @@
      pillarboxed portrait case). Token is generation-guarded so a slow
      probe from a previous slide can't clobber a newer slide's class. */
   let orientationToken = 0;
-  function applyOrientationClass(item) {
+  function applyOrientationClass(item, activeVidEl) {
     const token = ++orientationToken;
     const setClass = (w, h) => {
       if (token !== orientationToken) return;
@@ -1653,21 +1653,26 @@
       document.body.classList.toggle('is-landscape', isLandscape);
       document.body.classList.toggle('is-portrait',  !isLandscape);
     };
-    const mediaUrl = wallMediaUrl(item);
-    if (isReadyVideo(item) && mediaUrl) {
-      const probe = document.createElement('video');
-      probe.preload = 'metadata';
-      probe.muted = true;
-      probe.addEventListener('loadedmetadata', () => {
-        setClass(probe.videoWidth, probe.videoHeight);
-      }, { once: true });
-      probe.src = mediaUrl;
-    } else {
-      const url = immediateVisualUrl(item, 1280) || mediaUrl;
-      if (!url) return;
-      const probe = new Image();
-      probe.onload = () => setClass(probe.naturalWidth, probe.naturalHeight);
-      probe.src = url;
+
+    // Always seed from the poster/immediate image first so we set *some*
+    // orientation immediately. The video metadata check below upgrades
+    // the call when the real video dimensions arrive.
+    const posterUrl = (isReadyVideo(item) ? videoPosterUrl(item, 1280) : null)
+                    || immediateVisualUrl(item, 1280)
+                    || wallMediaUrl(item);
+    if (posterUrl) {
+      const img = new Image();
+      img.onload = () => setClass(img.naturalWidth, img.naturalHeight);
+      img.src = posterUrl;
+    }
+
+    // For videos, reuse the live <video> element that's already loading
+    // the stream — an off-DOM probe video often never fires metadata for
+    // ranged/streamed sources.
+    if (isReadyVideo(item) && activeVidEl) {
+      const apply = () => setClass(activeVidEl.videoWidth, activeVidEl.videoHeight);
+      if (activeVidEl.videoWidth && activeVidEl.videoHeight) apply();
+      else activeVidEl.addEventListener('loadedmetadata', apply, { once: true });
     }
   }
 
@@ -1803,7 +1808,7 @@
     items.__currentIsVideo = itemIsVideo;
 
     // Tag <body> with is-landscape / is-portrait for the current slide.
-    applyOrientationClass(item);
+    applyOrientationClass(item, itemIsVideo ? inVid : null);
 
     // Show the unmute toggle only when there's a video on screen.
     // Pulse it (the .attention class) whenever the video is muted so
