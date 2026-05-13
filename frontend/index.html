@@ -27,16 +27,14 @@
     height: 84px; width: auto !important; max-width: none !important;
     display: block; flex-shrink: 0;
   }
-  @media (max-width: 760px) { .brand-img { height: 60px; } }
+  /* Smaller on mobile so the "+ New event" button doesn't get cut off. */
+  @media (max-width: 760px) { .brand-img { height: 48px; } }
   /* Footer can show it bigger */
   footer .brand-img { height: 110px; }
 
-  /* Pull the header brand toward the left edge of the viewport on desktop
-     so the lockup feels anchored, not floating in the middle of the page. */
-  .site-header-inner { max-width: none !important; padding-left: 24px !important; padding-right: 24px !important; }
-  @media (min-width: 1280px) {
-    .site-header-inner { padding-left: 40px !important; padding-right: 40px !important; }
-  }
+  /* Match the header inner max-width to the hero (1240px) so the brand
+     left-aligns with the "Every shot. Every guest." hero text. */
+  .site-header-inner { max-width: 1240px !important; }
 
   /* ════════════════════════════════════════════════════════
      HERO
@@ -1645,7 +1643,7 @@ function setLang(lang, btn) {
             <button type="button" id="user-menu-logout" role="menuitem" class="user-menu-link">Log out</button>
           </div>
         </div>
-        <a class="btn btn-accent" href="/start">+ New event</a>
+        <a class="btn btn-accent" href="/my-events">My events</a>
       `;
 
       // Style menu links
