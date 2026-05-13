@@ -379,31 +379,27 @@
     body.is-landscape .upcoming { opacity: 0; pointer-events: none; }
     body.is-portrait .upcoming { opacity: 1; }
 
-    /* Layer 2 — ambient glow behind the portrait. Large, very soft,
-       low-opacity wash so the portrait reads as embedded in light
-       rather than sitting on a card. */
+    /* Layer 2 — ambient glow behind the portrait media. Sits above
+       the blurred backdrop (z:1) and below the foreground (z:2). */
     body.is-portrait .layer::after {
       content: '';
       position: absolute;
       left: 50%; top: 50%;
-      width: min(120vh, 1400px);
-      height: min(140vh, 1600px);
+      width: min(70vh, 720px);
+      height: min(110vh, 1200px);
       transform: translate(-50%, -50%);
       z-index: 1;
       pointer-events: none;
       background: radial-gradient(ellipse at center,
-        rgba(240,163,122,.18) 0%,
-        rgba(240,163,122,.10) 22%,
-        rgba(240,163,122,.04) 45%,
-        rgba(0,0,0,0) 72%);
-      filter: blur(60px);
+        rgba(240,163,122,.32) 0%,
+        rgba(240,163,122,.14) 30%,
+        rgba(0,0,0,0) 65%);
+      filter: blur(28px);
     }
 
-    /* Layer 3 — portrait media: contained, atmospheric. No hard
-       card edge — minimal radius, a diffuse halo of shadow (no
-       offset = feels like ambient occlusion, not a drop shadow),
-       and a faint top edge highlight so the portrait catches a
-       little light from above. */
+    /* Layer 3 — contained portrait media: 9:16 box, centered via
+       margin auto + inset 0, with depth and a slow float. Aspect
+       Ken Burns animations still apply on top via inline style. */
     body.is-portrait .layer .pic,
     body.is-portrait .layer .vid {
       inset: 0;
@@ -413,15 +409,12 @@
          never exceeds 90vw on narrow viewports. */
       height: min(88vh, calc(90vw * 16 / 9));
       aspect-ratio: 9 / 16;
-      border-radius: 4px;
+      border-radius: 18px;
       overflow: hidden;
       box-shadow:
-        /* Diffuse atmospheric shadow — no offset, large spread. */
-        0 0 120px rgba(0,0,0,.35),
-        0 0 40px rgba(0,0,0,.25),
-        /* Gentle edge light along the top, faint vignette at base. */
-        inset 0 1px 0 rgba(255,255,255,.10),
-        inset 0 -40px 60px rgba(0,0,0,.10);
+        0 30px 80px rgba(0,0,0,.55),
+        0 12px 28px rgba(0,0,0,.4),
+        0 0 0 1px rgba(255,255,255,.06);
     }
     /* Floating animation wraps the layer (transform on .pic is
        owned by Ken Burns). Subtle vertical drift only. */
