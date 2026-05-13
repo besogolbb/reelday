@@ -280,10 +280,19 @@
     }
 
     .ticker .stats {
-      font-family: var(--mono); font-size: 12px;
-      letter-spacing: .16em; text-transform: uppercase;
+      font-family: var(--mono); font-size: 10px;
+      letter-spacing: .14em; text-transform: uppercase;
       opacity: .9; display: flex; gap: 22px; align-items: center;
     }
+    /* Icons sit next to the count pill, sized just enough to read
+       at room distance without competing with the hero numerals. */
+    .ticker .stats .stat-ico {
+      width: 18px; height: 18px;
+      vertical-align: middle;
+      margin-left: 2px;
+      color: rgba(255,255,255,.85);
+    }
+    .ticker .stats span { display: inline-flex; align-items: center; }
 
     /* Highlighted counts — pill-wrapped, larger bold numerals so the
        moment / guest counts pop against the wall imagery instead of
@@ -2054,22 +2063,18 @@
     // Live segment: event name
     if (eventData) tickerName.textContent = eventData.couple_names || '';
 
-    // Stats: moments · guests · date
-    const guestSet   = new Set(uploads.map(u => u.uploader_name).filter(Boolean));
-    let dateStr = '';
-    if (eventData && eventData.event_date) {
-      try {
-        const d  = new Date(eventData.event_date);
-        const dd = String(d.getDate()).padStart(2, '0');
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        dateStr  = `${dd}·${mm}·${d.getFullYear()}`;
-      } catch { /* skip */ }
-    }
+    // Stats: moments + guests. Date intentionally hidden — the
+    // numbers are the hero, the date lives elsewhere in the chrome.
+    const guestSet = new Set(uploads.map(u => u.uploader_name).filter(Boolean));
+
+    // Inline SVGs so the icons inherit currentColor and need no
+    // external font/asset load.
+    const heartIcon = `<svg class="stat-ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 21s-7.5-4.6-10-9.3C.4 8.4 2.2 4.5 6 4.5c2 0 3.4 1 4 2.3.6-1.3 2-2.3 4-2.3 3.8 0 5.6 3.9 4 7.2C19.5 16.4 12 21 12 21z"/></svg>`;
+    const usersIcon = `<svg class="stat-ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 11a4 4 0 1 0-4-4 4 4 0 0 0 4 4zm8 0a3 3 0 1 0-3-3 3 3 0 0 0 3 3zm-8 2c-3 0-8 1.5-8 4.5V20h11v-2.5c0-1 .3-1.9.8-2.7A12 12 0 0 0 8 13zm8 .5c-.7 0-1.4.1-2 .2A5 5 0 0 1 17 17.5V20h7v-2.5c0-2.5-4-4-8-4z"/></svg>`;
 
     tickerStats.innerHTML =
-      `<span><em>${uploads.length}</em> moments</span>` +
-      `<span><em>${guestSet.size}</em> guests sharing</span>` +
-      (dateStr ? `<span>${dateStr}</span>` : '');
+      `<span><em>${uploads.length}</em> ${heartIcon}</span>` +
+      `<span><em>${guestSet.size}</em> ${usersIcon}</span>`;
   }
 
   /* ══════════════════════════════════════════════════════════
