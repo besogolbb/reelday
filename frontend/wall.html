@@ -320,34 +320,46 @@
       }
     }
 
-    /* ── QR badge ────────────────────────────────────────────── */
+    /* ── QR badge ────────────────────────────────────────────
+       Glassmorphism: translucent dark fill + backdrop blur so the
+       wall imagery still shows through. Pinned to the top-left
+       beneath the ticker. The QR tile keeps a small white plate so
+       phone cameras can still resolve the code against any
+       background. */
     .qr-badge {
-      position: fixed; top: 76px; right: 32px; z-index: 10;
-      background: rgba(255,255,255,.96); color: var(--ink);
+      position: fixed; top: 76px; left: 32px; z-index: 10;
+      background: rgba(20,12,8,.32);
+      -webkit-backdrop-filter: blur(18px) saturate(140%);
+      backdrop-filter: blur(18px) saturate(140%);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,.18);
       border-radius: 14px; padding: 14px;
       display: none; gap: 12px; align-items: center;
-      box-shadow: 0 8px 32px rgba(0,0,0,.5);
+      box-shadow: 0 8px 32px rgba(0,0,0,.45);
       transition: opacity .4s ease;
     }
 
     .qr-badge .qr {
       width: 60px; height: 60px; flex-shrink: 0;
       border-radius: 6px; overflow: hidden;
-      background: repeating-conic-gradient(var(--ink) 0% 25%, #fff 0% 50%) 0 0 / 8px 8px;
+      /* White plate behind the QR so the modules stay scannable
+         regardless of the translucent badge backdrop. */
+      background: #fff;
+      padding: 4px;
     }
 
     .qr-badge .qr img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
     .qr-badge .text {
       font-family: var(--mono); font-size: 10px;
-      letter-spacing: .12em; text-transform: uppercase; color: var(--ink);
+      letter-spacing: .12em; text-transform: uppercase; color: rgba(255,255,255,.78);
     }
 
     .qr-badge .text b {
       font-family: var(--display); font-style: italic;
       font-size: 14px; font-weight: 500;
       text-transform: none; letter-spacing: 0;
-      display: block; margin-bottom: 2px; color: var(--ink);
+      display: block; margin-bottom: 2px; color: #fff;
     }
 
     /* ── Upcoming thumbnails ────────────────────────────────── */
@@ -1004,7 +1016,7 @@
       .ticker .stats { gap: 14px; font-size: 10px; letter-spacing: .1em; }
       .ticker .live { font-size: 10px; letter-spacing: .14em; }
       .qr-badge {
-        right: 14px !important;
+        left: 14px !important;
         max-width: calc(100vw - 28px);
         padding: 10px 12px;
       }
@@ -1073,7 +1085,7 @@
 <div class="qr-badge" id="qr-badge">
   <div class="qr" id="qr-img-wrap"></div>
   <div class="text">
-    Add yours
+    Share your moment
     <b id="qr-url">reelday.ph/upload/…</b>
   </div>
 </div>
@@ -1227,7 +1239,8 @@
   const KB_DURATION      = 14;    // seconds for Ken Burns
   const KB_ANIMS         = ['kb1', 'kb2', 'kb3', 'kb4'];
   const POLL_INTERVAL    = 2000;  // ms between upload polls — short so host approvals jump to the wall fast
-  const QR_HIDE_AFTER    = 20000; // ms before QR badge auto-hides
+  const QR_HIDE_AFTER    = 10000; // ms badge stays visible before auto-hiding
+  const QR_CYCLE         = 30000; // ms between successive show cycles
 
   const THEME_META = {
     wedding:          { emoji: ['💗','🎉','✨','🥂','💍','🌸','💒'], cornerSuffix: '' },
@@ -2123,10 +2136,19 @@
     } catch { /* checkerboard fallback stays */ }
   }
 
+  // QR visibility cycle: show for QR_HIDE_AFTER, hide until the next
+  // QR_CYCLE tick, then re-reveal. Recursive setTimeout (not setInterval)
+  // so resetQrTimer() can preempt the cycle cleanly on user interaction.
   function resetQrTimer() {
     clearTimeout(qrTimer);
-    qrBadge.style.opacity = '1';
-    qrTimer = setTimeout(() => { qrBadge.style.opacity = '0'; }, QR_HIDE_AFTER);
+    const show = () => {
+      qrBadge.style.opacity = '1';
+      qrTimer = setTimeout(() => {
+        qrBadge.style.opacity = '0';
+        qrTimer = setTimeout(show, QR_CYCLE - QR_HIDE_AFTER);
+      }, QR_HIDE_AFTER);
+    };
+    show();
   }
 
   /* ══════════════════════════════════════════════════════════
