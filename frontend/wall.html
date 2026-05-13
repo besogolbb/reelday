@@ -1521,6 +1521,49 @@
   }
 
   /* ══════════════════════════════════════════════════════════
+     ASPECT-AWARE FIT
+     ──────────────────────────────────────────────────────────
+     The TV is 16:9. Stretching every source to cover() looked
+     great for 16:9 and 4:3 sources but turned a 9:16 phone clip
+     into an aggressive head-zoom (only the middle ~30% visible).
+     So we pick per-slide: cover for landscape-ish sources where
+     the crop is small, contain for portrait where the crop would
+     be obvious. The .backdrop layer behind .pic/.vid catches the
+     pillarbox for portrait. Square-ish (within 5%) counts as
+     portrait so we don't aggressively crop a 1:1 photo either.
+  ══════════════════════════════════════════════════════════ */
+  function isPortraitishAspect(w, h) {
+    if (!w || !h) return false;
+    return (h / w) > 1.05;
+  }
+  function fitPicByAspect(picEl, url) {
+    if (!picEl) return;
+    // Default to cover; downgrade to contain once we know the source is
+    // portrait. Setting cover synchronously prevents a one-frame flash
+    // of letterboxed contain on landscape sources.
+    picEl.style.backgroundSize = 'cover';
+    if (!url) return;
+    const probe = new Image();
+    probe.onload = () => {
+      if (isPortraitishAspect(probe.naturalWidth, probe.naturalHeight)) {
+        picEl.style.backgroundSize = 'contain';
+      }
+    };
+    probe.src = url;
+  }
+  function fitVideoByAspect(vidEl) {
+    if (!vidEl) return;
+    vidEl.style.objectFit = 'cover';
+    const apply = () => {
+      if (isPortraitishAspect(vidEl.videoWidth, vidEl.videoHeight)) {
+        vidEl.style.objectFit = 'contain';
+      }
+    };
+    if (vidEl.videoWidth && vidEl.videoHeight) { apply(); return; }
+    vidEl.addEventListener('loadedmetadata', apply, { once: true });
+  }
+
+  /* ══════════════════════════════════════════════════════════
      SLIDE ENGINE
   ══════════════════════════════════════════════════════════ */
   function showSlide(idx, options = {}) {
@@ -1576,6 +1619,7 @@
     inBackdrop.style.filter = photoBackdropFilter;
     inBackdrop.style.transform = photoBackdropTransform;
     inPic.style.backgroundImage      = posterBackground;
+    fitPicByAspect(inPic, posterUrl || mediaUrl);
     inLayer.classList.remove('out');
 
     if (itemIsVideo) {
@@ -1600,6 +1644,7 @@
       try { inVid.pause(); } catch {}
       inVid.src = mediaUrl;
       inVid.load();
+      fitVideoByAspect(inVid);
       try { inVid.currentTime = 0; } catch {}
       const revealVideo = () => {
         inLayer.classList.add('video-visible');
@@ -1633,10 +1678,13 @@
       } catch {}
       inPic.style.animation = 'none';
       const processingThumb = videoPreThumb || immediateVisual;
-      inBackdrop.style.backgroundImage = `url("${processingThumb || wallFallbackUrl(item, 'Polishing...')}")`;
+      const fallbackThumb = wallFallbackUrl(item, 'Polishing...');
+      const processingThumbUrl = processingThumb || fallbackThumb;
+      inBackdrop.style.backgroundImage = `url("${processingThumbUrl}")`;
       inBackdrop.style.filter = photoBackdropFilter;
       inBackdrop.style.transform = photoBackdropTransform;
-      inPic.style.backgroundImage = `url("${processingThumb || wallFallbackUrl(item, 'Polishing...')}")`;
+      inPic.style.backgroundImage = `url("${processingThumbUrl}")`;
+      fitPicByAspect(inPic, processingThumbUrl);
       setLoaderPhrase(inLoader, randomReelMagicPhrase());
       inLoader?.classList.add('visible');
     } else {
