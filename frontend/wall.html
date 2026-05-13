@@ -3086,7 +3086,8 @@
 
     updateCorner();
     updateTicker(merged);
-    await initQrBadge(slug);
+    // QR badge is no longer shown during playback — the empty-state
+    // overlay carries its own large QR for the pre-upload phase.
 
     // Include every approved upload — photos, picked videos, and recorded
     // video messages. The slide engine knows how to play videos.
