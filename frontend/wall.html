@@ -60,17 +60,10 @@
       transform-origin: center center;
     }
 
-    /* Subtle Ken Burns zoom — 5% over the slide duration. Conservative so
-       subjects near the frame edge don't get clipped. Triggers each time a
-       layer becomes visible (.out class toggles drive the animation reset). */
-    @keyframes kenburns-zoom {
-      from { transform: scale(1.000); }
-      to   { transform: scale(1.180); }
-    }
-    .layer:not(.out) .pic {
-      animation: kenburns-zoom 8000ms linear forwards;
-    }
-    .layer.has-video:not(.out) .pic { animation: none; }
+    /* Note: per-slide Ken Burns animation is set inline by JS at line ~1598
+       using one of kb1..kb4 below. Don't add competing CSS animations here —
+       they get overridden by the inline style. Tune the kb1-4 keyframes
+       instead. */
 
     /* Foreground video — same fitting as the photo layer. The letterbox
        gradient lives on the parent .layer (and a transparent <video>)
@@ -186,22 +179,24 @@
       50% { opacity: 1; }
     }
 
-    /* Ken Burns — very gentle, mostly pan; the image stays fully visible */
+    /* Ken Burns — clearly visible cinematic motion across the slide.
+       Four variants so consecutive slides feel different. Scale stays under
+       1.20 so subjects near the frame edge don't get clipped. */
     @keyframes kb1 {
-      from { transform: scale(1)    translate(0, 0); }
-      to   { transform: scale(1.02) translate(-0.5%, -0.4%); }
+      from { transform: scale(1.00) translate(0,        0);     }
+      to   { transform: scale(1.18) translate(-1.5%,   -1%);    }
     }
     @keyframes kb2 {
-      from { transform: scale(1)    translate(-0.4%, 0); }
-      to   { transform: scale(1.02) translate(0.4%, 0.5%); }
+      from { transform: scale(1.18) translate(1%,       1%);    }
+      to   { transform: scale(1.00) translate(0,        0);     }
     }
     @keyframes kb3 {
-      from { transform: scale(1.01) translate(0.5%, 0.5%); }
-      to   { transform: scale(1.03) translate(-0.5%, -0.5%); }
+      from { transform: scale(1.00) translate(-1%,      0.5%);  }
+      to   { transform: scale(1.18) translate(1.5%,     1.5%);  }
     }
     @keyframes kb4 {
-      from { transform: scale(1)    translate(0.4%, -0.4%); }
-      to   { transform: scale(1.02) translate(-0.5%, 0.5%); }
+      from { transform: scale(1.18) translate(-1%,     -1.5%);  }
+      to   { transform: scale(1.00) translate(1%,       0);     }
     }
 
     .layer .vignette {
