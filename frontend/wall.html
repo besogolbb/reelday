@@ -65,16 +65,16 @@
        they get overridden by the inline style. Tune the kb1-4 keyframes
        instead. */
 
-    /* Foreground video — same fitting as the photo layer. The letterbox
-       gradient lives on the parent .layer (and a transparent <video>)
-       because some browsers paint a black background on <video> by
-       default that overrides CSS `background` on the element itself. */
+    /* Foreground video — same fitting as the photo layer. We keep the
+       <video> transparent so the blurred-poster .backdrop layer behind
+       it fills any letterbox area (portrait phone clip on a landscape
+       TV would otherwise show hard black bars on the sides). */
     .layer .vid {
       position: absolute; inset: 0;
       z-index: 2 !important;
       width: 100%; height: 100%;
       object-fit: contain;
-      background: black;
+      background: transparent;
       display: none;
       opacity: 0;
       transition: opacity .7s ease;
@@ -1547,18 +1547,14 @@
     const photoBackdropFilter = 'blur(40px) brightness(0.6)';
     const photoBackdropTransform = 'scale(1.2)';
 
-    // Always paint something on the incoming layer first so there is
-    // never a blank frame while a poster or video stream is loading.
-    if (itemIsVideo) {
-      inBackdrop.style.backgroundImage = '';
-      inBackdrop.style.display = 'none';
-    } else {
-      inBackdrop.style.backgroundImage = posterBackground;
-      inBackdrop.style.display = 'block';
-      inBackdrop.style.opacity = '1';
-      inBackdrop.style.filter = photoBackdropFilter;
-      inBackdrop.style.transform = photoBackdropTransform;
-    }
+    // Always paint a blurred poster on the backdrop so the letterbox
+    // area around portrait media (photo OR video) is filled with a soft
+    // scaled copy instead of hard black bars on a 16:9 TV.
+    inBackdrop.style.backgroundImage = posterBackground;
+    inBackdrop.style.display = 'block';
+    inBackdrop.style.opacity = '1';
+    inBackdrop.style.filter = photoBackdropFilter;
+    inBackdrop.style.transform = photoBackdropTransform;
     inPic.style.backgroundImage      = posterBackground;
     inLayer.classList.remove('out');
 
@@ -1568,8 +1564,6 @@
       inLayer.classList.add('has-video');
       inLayer.classList.remove('video-visible');
       inLoader?.classList.remove('visible');
-      inBackdrop.style.backgroundImage = '';
-      inBackdrop.style.display = 'none';
 
       if (posterUrl) {
         inVid.setAttribute('poster', posterUrl);
