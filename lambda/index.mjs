@@ -155,9 +155,15 @@ export const handler = async (rawEvent, context) => {
       ? ['-loop', '1', '-i', bgImgPath, '-i', inputPath]
       : ['-i', inputPath, '-i', inputPath];
 
+    // Letterbox fill for portrait sources. Heavy low-pass: scale way down
+    // (kills detail almost entirely), multi-pass boxblur, then upscale.
+    // eq darkens + desaturates so the bars read as ambient color instead
+    // of a recognizable stretched copy of the source (the old 8:1 blur at
+    // 192 wide left visible sky/floor banding on the side bars).
+    const bgCore = 'scale=80:-2,boxblur=24:3,scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,eq=brightness=-0.18:saturation=0.7,setsar=1[bg]';
     const bgChain = hasPreThumb
-      ? '[0:v]fps=24,scale=192:-2,boxblur=8:1,scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,setsar=1[bg]'
-      : '[0:v]trim=end_frame=1,setpts=PTS-STARTPTS,loop=loop=-1:size=1:start=0,fps=24,scale=192:-2,boxblur=8:1,scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,setsar=1[bg]';
+      ? `[0:v]fps=24,${bgCore}`
+      : `[0:v]trim=end_frame=1,setpts=PTS-STARTPTS,loop=loop=-1:size=1:start=0,fps=24,${bgCore}`;
 
     const filterComplex = [
       bgChain,
