@@ -1844,22 +1844,55 @@
         });
       }
     } else if (itemIsProcessingVideo) {
-      inLayer.classList.remove('has-video', 'video-visible');
-      try {
-        inVid.pause();
-        inVid.removeAttribute('src');
-        inVid.classList.remove('video-visible');
-        inVid.load();
-      } catch {}
       inPic.style.animation = 'none';
-      const processingThumb = videoPreThumb || immediateVisual;
-      const fallbackThumb = wallFallbackUrl(item, 'Polishing...');
-      const processingThumbUrl = processingThumb || fallbackThumb;
-      inBackdrop.style.setProperty('--poster-img', `url("${processingThumbUrl}")`);
-      inPic.style.backgroundImage = `url("${processingThumbUrl}")`;
-      fitPicByAspect(inPic, processingThumbUrl);
       setLoaderPhrase(inLoader, randomReelMagicPhrase());
       inLoader?.classList.add('visible');
+
+      // Only treat preThumb / poster / explicit thumb as a "real" thumbnail.
+      // immediateVisualUrl falls through to a dark SVG placeholder, which
+      // would otherwise short-circuit the live-preview path below.
+      const realThumb = videoPreThumb
+        || videoPosterUrl(item, 1280)
+        || absoluteMediaUrl(item?.thumb);
+      const originalUrl = absoluteMediaUrl(item?.file_url);
+
+      if (!realThumb && originalUrl) {
+        // Fresh upload, server hasn't generated pre_thumb_url yet (or the
+        // guest browser couldn't capture a poster). Show the original
+        // upload's first frame in the <video> element as a live preview
+        // so the centered area isn't a black box while transcoding runs.
+        inLayer.classList.add('has-video', 'video-visible');
+        inVid.muted = true;
+        inVid.playsInline = true;
+        inVid.autoplay = false;
+        inVid.preload = 'metadata';
+        try { inVid.pause(); } catch {}
+        inVid.src = originalUrl;
+        inVid.load();
+        inVid.classList.add('video-visible');
+        const seekFirstFrame = () => {
+          try { inVid.currentTime = 0.05; } catch {}
+        };
+        inVid.addEventListener('loadedmetadata', seekFirstFrame, { once: true });
+        if (inVid.readyState >= 1) seekFirstFrame();
+        fitVideoByAspect(inVid);
+        // Backdrop still needs a static image — fall back to the placeholder
+        // SVG so the blurred edges have something to sample.
+        const backdropFallback = wallFallbackUrl(item, 'Polishing...');
+        inBackdrop.style.setProperty('--poster-img', `url("${backdropFallback}")`);
+      } else {
+        inLayer.classList.remove('has-video', 'video-visible');
+        try {
+          inVid.pause();
+          inVid.removeAttribute('src');
+          inVid.classList.remove('video-visible');
+          inVid.load();
+        } catch {}
+        const processingThumbUrl = realThumb || wallFallbackUrl(item, 'Polishing...');
+        inBackdrop.style.setProperty('--poster-img', `url("${processingThumbUrl}")`);
+        inPic.style.backgroundImage = `url("${processingThumbUrl}")`;
+        fitPicByAspect(inPic, processingThumbUrl);
+      }
     } else {
       inLayer.classList.remove('has-video', 'video-visible');
 
