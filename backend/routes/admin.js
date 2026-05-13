@@ -129,4 +129,76 @@ export default async function adminRoutes(fastify) {
 
     return { success: true };
   });
+
+  // ── Users ───────────────────────────────────────────────
+  // Valid subscription tiers we'll accept for plan overrides. Kept in
+  // step with backend/lib/plans.js — the actual feature gating still
+  // reads from that file via resolvePlan().
+  const VALID_TIERS = new Set(['tala', 'sinag', 'dalisay', 'hiraya']);
+
+  // GET /api/admin/users — list every registered user with their event
+  // count, plan tier, verified / active flags. Single query joins events
+  // so the admin table loads in one round-trip.
+  fastify.get('/admin/users', async () => {
+    const { rows } = await fastify.db.query(
+      `SELECT u.id, u.email, u.full_name, u.phone,
+              u.is_verified, u.is_active,
+              u.subscription_tier, u.subscription_expires_at,
+              u.created_at,
+              COUNT(e.id) FILTER (WHERE e.is_active IS NOT FALSE)::int AS active_event_count,
+              COUNT(e.id)::int AS total_event_count
+         FROM users u
+    LEFT JOIN events e ON e.user_id = u.id
+     GROUP BY u.id
+     ORDER BY u.created_at DESC`,
+    );
+    return { users: rows };
+  });
+
+  // POST /api/admin/users/:id/plan — manually set a user's subscription
+  // tier. Useful for refunds, comped events, or fixing payments that came
+  // in outside the normal PayMongo flow. Does NOT touch any payments row;
+  // pair with a manual payment entry if you want the audit trail.
+  fastify.post('/admin/users/:id/plan', async (request, reply) => {
+    const { id } = request.params;
+    const tier = String(request.body?.tier || '').toLowerCase();
+    if (!VALID_TIERS.has(tier)) {
+      return reply.status(400).send({ error: true, message: `Invalid tier. Allowed: ${[...VALID_TIERS].join(', ')}` });
+    }
+    const { rowCount } = await fastify.db.query(
+      'UPDATE users SET subscription_tier = $2 WHERE id = $1',
+      [id, tier],
+    );
+    if (!rowCount) return reply.status(404).send({ error: true, message: 'User not found' });
+    return { success: true, tier };
+  });
+
+  // POST /api/admin/users/:id/verify — toggle the verified flag without
+  // sending an email. Useful when a guest can't receive verification
+  // mail (typo, deliverability issue) and you can confirm identity
+  // out-of-band.
+  fastify.post('/admin/users/:id/verify', async (request, reply) => {
+    const { id } = request.params;
+    const verified = request.body?.is_verified !== false; // default true
+    const { rowCount } = await fastify.db.query(
+      'UPDATE users SET is_verified = $2 WHERE id = $1',
+      [id, verified],
+    );
+    if (!rowCount) return reply.status(404).send({ error: true, message: 'User not found' });
+    return { success: true, is_verified: verified };
+  });
+
+  // POST /api/admin/users/:id/active — toggle the soft-deactivate flag.
+  // Inactive users are blocked at login (see auth.js). Their data stays
+  // intact so reactivation is a one-click reversal.
+  fastify.post('/admin/users/:id/active', async (request, reply) => {
+    const { id } = request.params;
+    const active = request.body?.is_active !== false; // default true
+    const { rowCount } = await fastify.db.query(
+      'UPDATE users SET is_active = $2 WHERE id = $1',
+      [id, active],
+    );
+    if (!rowCount) return reply.status(404).send({ error: true, message: 'User not found' });
+    return { success: true, is_active: active };
+  });
 }

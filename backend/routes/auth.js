@@ -105,13 +105,17 @@ export default async function authRoutes(fastify) {
     }
 
     const { rows } = await fastify.db.query(
-      'SELECT id, email, full_name, phone, is_verified, password_hash FROM users WHERE email = $1',
+      'SELECT id, email, full_name, phone, is_verified, is_active, password_hash FROM users WHERE email = $1',
       [email.toLowerCase()],
     );
 
     const user = rows[0];
     if (!user || !user.password_hash || !(await bcrypt.compare(password, user.password_hash))) {
       return reply.status(401).send({ error: true, message: 'Invalid email or password' });
+    }
+    // Admin can soft-deactivate a user from /admin. Treat as account-locked.
+    if (user.is_active === false) {
+      return reply.status(403).send({ error: true, message: 'This account has been deactivated. Contact support.' });
     }
 
     const token = signToken({ id: user.id, email: user.email, full_name: user.full_name });

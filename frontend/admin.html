@@ -101,15 +101,37 @@
     .pill-paid      { background: rgba(45,106,74,.12);   color: #2d6a4a; }
     .pill-unpaid    { background: rgba(216,160,90,.15);  color: #7a5a20; }
 
-    .btn-verify, .btn-reject, .btn-deactivate {
+    .btn-verify, .btn-reject, .btn-deactivate, .btn-activate, .btn-ghost-sm {
       padding: .35rem .8rem; border: none; border-radius: var(--r-sm);
       font-family: inherit; font-size: .8rem; font-weight: 600;
       cursor: pointer; transition: opacity .15s; white-space: nowrap;
     }
-    .btn-verify     { background: rgba(45,106,74,.12);  color: #2d6a4a; border: 1px solid rgba(45,106,74,.25); }
+    .btn-verify     { background: rgba(45,106,74,.12);  color: #2d6a4a;        border: 1px solid rgba(45,106,74,.25); }
     .btn-reject     { background: rgba(196,90,58,.10);  color: var(--accent-deep); border: 1px solid rgba(196,90,58,.25); }
     .btn-deactivate { background: rgba(196,90,58,.10);  color: var(--accent-deep); border: 1px solid rgba(196,90,58,.25); }
-    .btn-verify:hover, .btn-reject:hover, .btn-deactivate:hover { opacity: .75; }
+    .btn-activate   { background: rgba(45,106,74,.12);  color: #2d6a4a;        border: 1px solid rgba(45,106,74,.25); }
+    .btn-ghost-sm   { background: transparent;          color: var(--ink-soft);   border: 1px solid var(--line-2); }
+    .btn-verify:hover, .btn-reject:hover, .btn-deactivate:hover,
+    .btn-activate:hover, .btn-ghost-sm:hover { opacity: .75; }
+
+    /* Inline tier selector inside a user row. Looks like a pill so it
+       blends with the rest of the table at rest, but is fully clickable. */
+    .tier-select {
+      padding: .3rem .55rem;
+      border-radius: 999px;
+      border: 1px solid var(--line-2);
+      background: #fff;
+      font-family: var(--mono);
+      font-size: .72rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .06em;
+      color: var(--ink-soft);
+      cursor: pointer;
+    }
+    .tier-select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(196,90,58,.12); }
+    .tier-tala     { background: var(--paper-2);            color: var(--ink-soft); }
+    .tier-sinag    { background: rgba(216,160,90,.18);      color: #7a5a20; }
+    .tier-dalisay  { background: rgba(196,90,58,.12);       color: var(--accent-deep); }
+    .tier-hiraya   { background: rgba(78,52,128,.14);       color: #4e3480; }
 
     .action-btns { display: flex; gap: .5rem; }
 
@@ -174,6 +196,36 @@
           </thead>
           <tbody id="pending-tbody">
             <tr><td colspan="6" class="empty-state">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Users -->
+    <div class="section">
+      <div class="section-title">
+        👥 Users
+        <span class="count-badge" id="users-badge">0</span>
+      </div>
+      <div style="display:flex; gap:.5rem; margin-bottom:.75rem; flex-wrap:wrap;">
+        <input type="text" id="users-search" placeholder="Search by name or email…"
+               style="flex:1; min-width:220px; padding:.55rem .85rem; border:1px solid var(--line-2); border-radius:var(--r); font-family:inherit; font-size:.875rem; background:#fff; outline:none;" />
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Name / Email</th>
+              <th>Plan</th>
+              <th>Events</th>
+              <th>Verified</th>
+              <th>Status</th>
+              <th>Joined</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="users-tbody">
+            <tr><td colspan="7" class="empty-state">Loading…</td></tr>
           </tbody>
         </table>
       </div>
@@ -279,7 +331,134 @@
 
   // ── Data ─────────────────────────────────────────────
   async function loadAll() {
-    await Promise.all([loadStats(), loadPending(), loadEvents()]);
+    await Promise.all([loadStats(), loadPending(), loadUsers(), loadEvents()]);
+  }
+
+  // Cached user list so filtering by the search box doesn't refetch.
+  let allUsers = [];
+
+  const TIERS = ['tala', 'sinag', 'dalisay', 'hiraya'];
+  const TIER_LABELS = { tala: 'Tala (Free)', sinag: 'Sinag', dalisay: 'Dalisay', hiraya: 'Hiraya' };
+
+  function renderUserRow(u) {
+    const tier = (u.subscription_tier || 'tala').toLowerCase();
+    const tierClass = TIERS.includes(tier) ? `tier-${tier}` : 'tier-tala';
+    const verifiedPill = u.is_verified
+      ? '<span class="pill pill-succeeded">Verified</span>'
+      : '<span class="pill pill-pending">Not verified</span>';
+    const statusPill = u.is_active === false
+      ? '<span class="pill pill-rejected">Inactive</span>'
+      : '<span class="pill pill-paid">Active</span>';
+    const verifyBtn = u.is_verified
+      ? `<button class="btn-ghost-sm" onclick="setVerified('${esc(u.id)}', false)" title="Mark unverified">Unverify</button>`
+      : `<button class="btn-verify" onclick="setVerified('${esc(u.id)}', true)">✅ Verify</button>`;
+    const activeBtn = u.is_active === false
+      ? `<button class="btn-activate"   onclick="setActive('${esc(u.id)}', true)">↺ Reactivate</button>`
+      : `<button class="btn-deactivate" onclick="setActive('${esc(u.id)}', false)">🔒 Deactivate</button>`;
+    const tierOptions = TIERS.map(t =>
+      `<option value="${t}"${t === tier ? ' selected' : ''}>${esc(TIER_LABELS[t])}</option>`
+    ).join('');
+    return `
+      <tr id="urow-${esc(u.id)}">
+        <td>
+          <strong>${esc(u.full_name || '—')}</strong><br>
+          <span style="color:var(--ink-faint);font-size:.82rem">${esc(u.email)}</span>
+        </td>
+        <td>
+          <select class="tier-select ${tierClass}" onchange="setPlan('${esc(u.id)}', this.value, this)" title="Manual plan override">
+            ${tierOptions}
+          </select>
+        </td>
+        <td>${u.active_event_count}${u.total_event_count !== u.active_event_count ? ` <span style="color:var(--ink-faint);font-size:.78rem">(${u.total_event_count})</span>` : ''}</td>
+        <td>${verifiedPill}</td>
+        <td>${statusPill}</td>
+        <td style="font-size:.8rem;color:var(--ink-faint)">${fmtDate(u.created_at)}</td>
+        <td>
+          <div class="action-btns">
+            ${verifyBtn}
+            ${activeBtn}
+          </div>
+        </td>
+      </tr>`;
+  }
+
+  function renderUsers(list) {
+    const tbody = document.getElementById('users-tbody');
+    document.getElementById('users-badge').textContent = list.length;
+    if (!list.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No users match.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = list.map(renderUserRow).join('');
+  }
+
+  async function loadUsers() {
+    try {
+      const r = await adminFetch('/api/admin/users');
+      const { users } = await r.json();
+      allUsers = users || [];
+      renderUsers(allUsers);
+    } catch {
+      document.getElementById('users-tbody').innerHTML = '<tr><td colspan="7" class="empty-state">Error loading users.</td></tr>';
+    }
+  }
+
+  document.getElementById('users-search').addEventListener('input', (e) => {
+    const q = e.target.value.trim().toLowerCase();
+    if (!q) return renderUsers(allUsers);
+    renderUsers(allUsers.filter(u =>
+      (u.email || '').toLowerCase().includes(q) ||
+      (u.full_name || '').toLowerCase().includes(q)
+    ));
+  });
+
+  // Inline plan change — sends to the server and updates the cached
+  // user list so the dropdown reflects the new value without a full reload.
+  async function setPlan(id, tier, selectEl) {
+    const prev = selectEl.dataset.prev || allUsers.find(u => u.id === id)?.subscription_tier || 'tala';
+    selectEl.dataset.prev = tier;
+    try {
+      const r = await adminFetch(`/api/admin/users/${id}/plan`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tier }),
+      });
+      if (!r.ok) throw new Error();
+      const u = allUsers.find(u => u.id === id);
+      if (u) u.subscription_tier = tier;
+      selectEl.className = `tier-select tier-${tier}`;
+    } catch {
+      selectEl.value = prev;
+      alert('Failed to change plan.');
+    }
+  }
+
+  async function setVerified(id, verified) {
+    try {
+      const r = await adminFetch(`/api/admin/users/${id}/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_verified: verified }),
+      });
+      if (!r.ok) throw new Error();
+      const u = allUsers.find(u => u.id === id);
+      if (u) { u.is_verified = verified; renderUsers(allUsers); }
+    } catch { alert('Failed to update verification.'); }
+  }
+
+  async function setActive(id, active) {
+    const verb = active ? 'reactivate' : 'deactivate';
+    if (!confirm(`Are you sure you want to ${verb} this user?${active ? '' : ' They will be blocked from logging in.'}`)) return;
+    try {
+      const r = await adminFetch(`/api/admin/users/${id}/active`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_active: active }),
+      });
+      if (!r.ok) throw new Error();
+      const u = allUsers.find(u => u.id === id);
+      if (u) { u.is_active = active; renderUsers(allUsers); }
+    } catch { alert(`Failed to ${verb} user.`); }
   }
 
   async function loadStats() {

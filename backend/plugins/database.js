@@ -25,6 +25,11 @@ const MIGRATIONS = `
   ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;
   CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id) WHERE google_id IS NOT NULL;
 
+  -- Admin-toggleable soft-deactivate flag for users. Distinct from
+  -- is_verified (email-verified) — an active-but-unverified user can
+  -- still log in; an inactive user cannot.
+  ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+
   -- Optional event details surfaced on the upload page
   ALTER TABLE events ADD COLUMN IF NOT EXISTS venue           VARCHAR(200);
   ALTER TABLE events ADD COLUMN IF NOT EXISTS event_time      VARCHAR(60);
