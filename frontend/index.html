@@ -36,17 +36,43 @@
      left-aligns with the "Every shot. Every guest." hero text. */
   .site-header-inner { max-width: 1240px !important; }
 
-  /* Mobile: tighten header padding and drop the redundant "My events" button
-     next to the user-menu chip — same destination is already in the dropdown,
-     and showing both makes the right side overflow on narrow screens. */
+  /* ── Mobile header compaction ──────────────────────────────
+     Goal: brand + compact user chip + tiny icon CTA, all inside the viewport
+     with no horizontal overflow. Each piece is rewritten via CSS overrides
+     because the underlying HTML is shared with desktop. */
   @media (max-width: 760px) {
-    .site-header-inner { padding-left: 16px; padding-right: 16px; gap: 12px; }
-    .user-menu + .btn-accent { display: none; }
+    .site-header-inner {
+      padding-left: 12px !important; padding-right: 12px !important;
+      gap: 8px !important; max-width: 100vw !important;
+    }
+
+    /* User-menu chip: show only the first letter in a tight pill, drop the
+       name and the dropdown-arrow text (still keyboard/screen-reader accessible). */
+    .user-menu-btn {
+      padding: 6px 10px !important; min-width: 0 !important;
+      max-width: 64px;
+    }
+    .user-menu-btn > span:first-child {
+      max-width: 38px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      display: inline-block; vertical-align: middle;
+    }
+
+    /* "My events" CTA: icon-only on mobile (text hidden via 0px font, replaced
+       by an arrow). Stays one-tap, doesn't wrap onto a second line. */
+    .user-menu + .btn-accent {
+      font-size: 0 !important; padding: 0 !important;
+      width: 36px; height: 36px; border-radius: 50%;
+      display: inline-flex !important; align-items: center; justify-content: center;
+    }
+    .user-menu + .btn-accent::after {
+      content: '→'; font-size: 18px; line-height: 1; color: #fff;
+    }
   }
 
-  /* Kill any horizontal scrollbar caused by hero polaroids or other
-     decorative elements briefly extending past the viewport. */
-  html, body { overflow-x: hidden; }
+  /* Kill any horizontal scrollbar caused by hero polaroids, the header chip,
+     or other decorative elements that extend past the viewport on narrow screens. */
+  html, body { overflow-x: hidden !important; max-width: 100vw; }
+  body { position: relative; }
 
   /* ════════════════════════════════════════════════════════
      HERO
