@@ -126,7 +126,7 @@ input, textarea, select { font-family: inherit; font-size: inherit; color: inher
 
 /* ── Page layout ─────────────────────────────────────── */
 body { background: var(--paper); min-height: 100dvh; }
-.upload-shell { max-width: 480px; margin: 0 auto; padding: 20px 20px 96px; }
+.upload-shell { max-width: 480px; margin: 0 auto; padding: 20px 20px 120px; }
 
 /* ── Top bar ─────────────────────────────────────────── */
 .upload-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
@@ -193,17 +193,249 @@ body { background: var(--paper); min-height: 100dvh; }
 .tab-label { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-soft); line-height: 1.2; }
 .share-tab.active .tab-label { color: var(--accent-deep); font-weight: 500; }
 
+/* ── Glassmorphism layer ─────────────────────────────────
+   Translucent fill + light blur sit slightly above the warm paper
+   background. Reused across cards, tiles and the sticky CTA bar. */
+.glass {
+  background: rgba(255,255,255,.62);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  backdrop-filter:         blur(18px) saturate(140%);
+  border: 1px solid rgba(255,255,255,.55);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.6),
+    0 14px 36px rgba(42,26,20,.10),
+    0 2px 6px rgba(42,26,20,.05);
+  border-radius: var(--r-lg);
+}
+
+/* ── Centered top bar (small logo) ─────────────────────── */
+.upload-top.upload-top--centered {
+  position: relative;
+  justify-content: center;
+  padding: 4px 0 8px;
+  margin-bottom: 14px;
+}
+.upload-top--centered .brand-img { height: 28px; width: auto; opacity: .92; }
+.upload-top--centered .lang-switch {
+  position: absolute; right: 0; top: 50%; transform: translateY(-50%);
+  font-size: 10px;
+}
+
+/* ── Profile section (event identity + guest avatar) ──── */
+.profile-section {
+  display: flex; align-items: center; gap: 14px;
+  padding: 16px 18px;
+  margin-bottom: 14px;
+}
+.profile-section .pf-info { flex: 1; min-width: 0; }
+.profile-section h1.pf-event {
+  font-family: var(--display); font-weight: 400;
+  font-size: clamp(24px, 6vw, 34px);
+  letter-spacing: -.018em;
+  line-height: 1.05;
+  color: var(--ink);
+  margin: 0 0 4px;
+}
+.profile-section h1.pf-event em { font-style: italic; color: var(--accent); }
+.profile-section .pf-meta {
+  font-family: var(--mono); font-size: 10px; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--ink-soft);
+}
+.profile-section .pf-avatar {
+  width: 48px; height: 48px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--display); font-weight: 600; font-style: italic;
+  font-size: 22px; color: #fff;
+  background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.25),
+    0 6px 18px rgba(196,90,58,.35);
+  flex-shrink: 0;
+  user-select: none;
+}
+
+/* ── Welcome line (under profile section) ──────────────── */
+.upload-hero--minimal {
+  text-align: center;
+  padding: 8px 0 18px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 22px;
+}
+.upload-hero--minimal .welcome {
+  font-family: var(--display); font-style: italic;
+  font-size: 15px; color: var(--ink-soft);
+  max-width: 32ch; margin: 0 auto; line-height: 1.5;
+}
+
+/* ── Action tiles: prominent Camera + 3 mini secondaries ─ */
+.share-tabs--hero {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: auto auto;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.share-tabs--hero .share-tab--camera {
+  grid-column: 1 / -1;
+  flex-direction: row;
+  justify-content: center;
+  gap: 14px;
+  padding: 20px 18px;
+  border-radius: var(--r-lg);
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.7), rgba(255,255,255,.45));
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  backdrop-filter:         blur(18px) saturate(150%);
+  border: 1.5px solid rgba(255,255,255,.65);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.75),
+    0 14px 38px rgba(196,90,58,.22),
+    0 2px 8px rgba(42,26,20,.06);
+  position: relative;
+  overflow: hidden;
+}
+.share-tabs--hero .share-tab--camera::before {
+  /* Gradient glow halo behind the icon — pulses slowly to draw the eye. */
+  content: '';
+  position: absolute;
+  left: -10%; top: -40%;
+  width: 120%; height: 180%;
+  background: radial-gradient(ellipse at 28% 50%,
+    rgba(240,163,122,.45) 0%,
+    rgba(196,90,58,.28) 30%,
+    rgba(196,90,58,0) 65%);
+  filter: blur(20px);
+  pointer-events: none;
+  animation: cameraHaloBreathe 4.5s ease-in-out infinite;
+}
+@keyframes cameraHaloBreathe {
+  0%, 100% { opacity: .85; transform: scale(1); }
+  50%      { opacity: 1;   transform: scale(1.06); }
+}
+.share-tabs--hero .share-tab--camera .tab-icon {
+  width: 60px; height: 60px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+  color: #fff;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.28),
+    0 10px 22px rgba(196,90,58,.45);
+  position: relative; z-index: 1;
+}
+.share-tabs--hero .share-tab--camera .tab-icon svg { width: 28px; height: 28px; }
+.share-tabs--hero .share-tab--camera .tab-label {
+  font-family: var(--display); font-size: 22px;
+  letter-spacing: -.005em; text-transform: none;
+  color: var(--ink); font-weight: 500;
+  text-align: left; line-height: 1.1;
+  position: relative; z-index: 1;
+}
+.share-tabs--hero .share-tab--camera .tab-label small {
+  display: block; font-family: var(--mono); font-size: 10px;
+  letter-spacing: .14em; text-transform: uppercase;
+  color: var(--ink-soft); margin-top: 4px; font-weight: 400;
+}
+.share-tabs--hero .share-tab--mini {
+  padding: 12px 6px 10px;
+  border-radius: var(--r);
+  background: rgba(255,255,255,.55);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  backdrop-filter:         blur(14px) saturate(140%);
+  border: 1px solid rgba(255,255,255,.5);
+  gap: 6px;
+}
+.share-tabs--hero .share-tab--mini .tab-icon { width: 36px; height: 36px; background: var(--paper-3); color: var(--ink); }
+.share-tabs--hero .share-tab--mini .tab-icon svg { width: 16px; height: 16px; }
+.share-tabs--hero .share-tab--mini .tab-label { font-size: 10px; }
+.share-tabs--hero .share-tab.active.share-tab--camera {
+  border-color: var(--accent);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.75),
+    0 16px 44px rgba(196,90,58,.32),
+    0 2px 8px rgba(42,26,20,.06);
+}
+.share-tabs--hero .share-tab.active.share-tab--mini {
+  border-color: var(--accent);
+  background: rgba(255,235,225,.7);
+}
+.share-tabs--hero .share-tab.active.share-tab--mini .tab-icon { background: var(--accent); color: #fff; }
+
+/* ── Sticky bottom CTA bar ──────────────────────────────
+   Single button whose label + action mirrors the active panel.
+   Hidden on React/Poll panels (those have their own send paths). */
+.cta-bar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  background:
+    linear-gradient(180deg, rgba(251,245,236,0), rgba(251,245,236,.78) 30%, rgba(251,245,236,.94) 70%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  backdrop-filter:         blur(16px) saturate(140%);
+  display: flex; justify-content: center;
+  pointer-events: none;
+  transition: transform .25s ease, opacity .25s ease;
+}
+.cta-bar.hidden { transform: translateY(110%); opacity: 0; pointer-events: none; }
+.cta-bar .cta-btn {
+  pointer-events: auto;
+  width: 100%; max-width: 460px;
+  padding: 16px 22px;
+  border-radius: 999px;
+  font-family: var(--sans);
+  font-size: 17px; font-weight: 600;
+  letter-spacing: .01em;
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-deep) 60%, #4a1a2c 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.22),
+    0 10px 28px rgba(196,90,58,.45),
+    0 2px 6px rgba(42,26,20,.18);
+  cursor: pointer; border: none;
+  transition: transform .15s ease, box-shadow .2s ease, filter .2s ease;
+}
+.cta-bar .cta-btn:hover  { transform: translateY(-1px); filter: brightness(1.06); }
+.cta-bar .cta-btn:active { transform: translateY(0);    filter: brightness(.96);  }
+.cta-bar .cta-btn:disabled {
+  filter: grayscale(.3) brightness(.95); opacity: .65; cursor: not-allowed;
+  box-shadow: none;
+}
+.cta-bar .cta-btn.staged { animation: ctaPulse 1.6s ease-in-out infinite; }
+@keyframes ctaPulse {
+  0%, 100% {
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.22),
+      0 10px 28px rgba(196,90,58,.45),
+      0 2px 6px rgba(42,26,20,.18),
+      0 0 0 0 rgba(196,90,58,.4);
+  }
+  50% {
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.22),
+      0 16px 40px rgba(196,90,58,.7),
+      0 2px 6px rgba(42,26,20,.18),
+      0 0 0 8px rgba(196,90,58,.0);
+  }
+}
+
+/* The original in-panel send buttons are replaced by the sticky bar.
+   Keep them in DOM (existing onclick wiring) but hide them. */
+.send-btn { display: none !important; }
+
 /* ── Share panels ────────────────────────────────────── */
 .share-panel { display: none; }
 .share-panel.active { display: block; }
 
 /* ── Panel 1: Gallery upload ────────────────────────── */
 .drop {
-  background: #fff; border: 2px dashed var(--line-2);
+  background: rgba(255,255,255,.62);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  backdrop-filter:         blur(18px) saturate(140%);
+  border: 2px dashed rgba(196,90,58,.3);
   border-radius: var(--r-lg); padding: 36px 20px;
   text-align: center; cursor: pointer;
   transition: border-color .2s, background .2s, transform .15s;
   position: relative;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.7),
+    0 14px 36px rgba(42,26,20,.08);
 }
 .drop:hover { border-color: var(--accent); background: var(--paper-2); transform: scale(1.01); }
 .drop input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
@@ -213,7 +445,16 @@ body { background: var(--paper); min-height: 100dvh; }
 .drop .choose-btn { display: inline-block; background: var(--accent); color: #fff; border-radius: 999px; padding: 11px 22px; font-size: 14px; font-weight: 500; pointer-events: none; }
 
 /* ── Panel 2: Record video ───────────────────────────── */
-.record-panel { background: #fff; border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; }
+.record-panel {
+  background: rgba(255,255,255,.62);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  backdrop-filter:         blur(18px) saturate(140%);
+  border: 1px solid rgba(255,255,255,.55);
+  border-radius: var(--r-lg); overflow: hidden;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.6),
+    0 14px 36px rgba(42,26,20,.10);
+}
 .record-viewfinder {
   background: #1a0f0a; aspect-ratio: 16/10; position: relative;
   display: flex; align-items: center; justify-content: center;
@@ -313,7 +554,16 @@ body { background: var(--paper); min-height: 100dvh; }
 .upload-card .uo-pct { margin-top: 10px; font-size: 13px; color: var(--ink); font-variant-numeric: tabular-nums; }
 
 /* ── React panel (wall reactions + future poll slot) ─────── */
-.react-panel { background: #fff; border: 1px solid var(--line); border-radius: var(--r-lg); padding: 22px 18px 24px; }
+.react-panel {
+  background: rgba(255,255,255,.62);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  backdrop-filter:         blur(18px) saturate(140%);
+  border: 1px solid rgba(255,255,255,.55);
+  border-radius: var(--r-lg); padding: 22px 18px 24px;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.6),
+    0 14px 36px rgba(42,26,20,.08);
+}
 .react-panel h2 { font-family: var(--display); font-size: 22px; font-weight: 500; margin-bottom: 6px; color: var(--ink); }
 .react-panel .react-sub { font-size: 14px; color: var(--ink-soft); margin-bottom: 20px; line-height: 1.5; }
 .react-panel .react-name-hint { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-faint); margin-top: 18px; text-align: center; }
@@ -577,8 +827,8 @@ body { background: var(--paper); min-height: 100dvh; }
 
 <div class="upload-shell">
 
-  <!-- Top bar -->
-  <div class="upload-top">
+  <!-- Top bar — small centered logo + lang switch parked on the right -->
+  <div class="upload-top upload-top--centered">
     <a class="brand brand-lockup" href="/" aria-label="Reelday.ph — home"><img src="/images/LOGO.png?v=2" alt="Reelday.ph" class="brand-img" /></a>
     <div class="lang-switch" id="langSwitch">
       <button class="active" onclick="setLang('EN',this)">EN</button>
@@ -586,10 +836,17 @@ body { background: var(--paper); min-height: 100dvh; }
     </div>
   </div>
 
-  <!-- Event hero — populated from URL params / API -->
-  <div class="upload-hero hero-loading" id="uploadHero">
-    <h1 id="heroName">&nbsp;</h1>
-    <div class="meta" id="heroMeta">&nbsp;</div>
+  <!-- Profile section — event identity (Serif) + guest initial avatar -->
+  <div class="profile-section glass hero-loading" id="profileSection">
+    <div class="pf-info">
+      <h1 class="pf-event" id="heroName">&nbsp;</h1>
+      <div class="pf-meta" id="heroMeta">&nbsp;</div>
+    </div>
+    <div class="pf-avatar" id="profileAvatar" aria-hidden="true">?</div>
+  </div>
+
+  <!-- Welcome line (host's message to guests) -->
+  <div class="upload-hero upload-hero--minimal hero-loading" id="uploadHero">
     <div class="welcome" id="heroWelcome">&nbsp;</div>
   </div>
 
@@ -601,31 +858,38 @@ body { background: var(--paper); min-height: 100dvh; }
     <a class="closed-link" id="closedWallLink" href="#">View the live wall →</a>
   </div>
 
-  <!-- ── Share mode tabs ────────────────────────────────── -->
-  <div class="share-tabs">
-    <div class="share-tab active" onclick="switchTab('gallery',this)">
+  <!-- ── Share mode tabs ────────────────────────────────────
+       Prominent Camera tile (the primary share action) sits on top
+       spanning the full row. Record / React / Poll sit as smaller
+       secondary tiles below to keep the hierarchy clear. -->
+  <div class="share-tabs share-tabs--hero">
+    <div class="share-tab share-tab--camera active" onclick="switchTab('gallery',this)">
       <div class="tab-icon">
-        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="6.5" width="18" height="13" rx="2.5"/>
+          <circle cx="12" cy="13" r="3.6"/>
+          <path d="M9 6.5l1.2-2h3.6L15 6.5"/>
+        </svg>
       </div>
-      <div class="tab-label">Photos<br/>&amp; Videos</div>
+      <div class="tab-label">Camera<small>Share a moment</small></div>
     </div>
-    <div class="share-tab" onclick="switchTab('record',this)">
+    <div class="share-tab share-tab--mini" onclick="switchTab('record',this)">
       <div class="tab-icon">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="9" stroke-dasharray="3 2"/></svg>
       </div>
-      <div class="tab-label">Record<br/>Video</div>
+      <div class="tab-label">Record</div>
     </div>
-    <div class="share-tab" onclick="switchTab('react',this)">
+    <div class="share-tab share-tab--mini" onclick="switchTab('react',this)">
       <div class="tab-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
       </div>
-      <div class="tab-label">Wall<br/>React</div>
+      <div class="tab-label">React</div>
     </div>
-    <div class="share-tab" onclick="switchTab('poll',this)">
+    <div class="share-tab share-tab--mini" onclick="switchTab('poll',this)">
       <div class="tab-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="4" height="9" rx="1"/><rect x="10" y="6" width="4" height="14" rx="1"/><rect x="17" y="14" width="4" height="6" rx="1"/></svg>
       </div>
-      <div class="tab-label">Live<br/>Poll</div>
+      <div class="tab-label">Poll</div>
     </div>
   </div>
 
@@ -764,6 +1028,12 @@ body { background: var(--paper); min-height: 100dvh; }
   </div>
 
   <div class="footer-note">★ Powered by Reelday · reelday.ph</div>
+</div>
+
+<!-- Sticky bottom CTA bar — label + action mirror the active panel.
+     Hidden on React/Poll (those flows submit inline). -->
+<div class="cta-bar hidden" id="ctaBar" aria-hidden="true">
+  <button class="cta-btn" id="ctaBtn" type="button" onclick="ctaBarClick(event)">Share moments →</button>
 </div>
 
 <script>
@@ -915,6 +1185,7 @@ body { background: var(--paper); min-height: 100dvh; }
     document.getElementById('heroWelcome').textContent = `"${ev.welcome}"`;
 
     document.getElementById('uploadHero').classList.remove('hero-loading');
+    document.getElementById('profileSection')?.classList.remove('hero-loading');
 
     // Phase 4: if the upload window has closed, hide the share UI and
     // show a friendly "thanks for sharing" panel pointing to the wall.
@@ -956,7 +1227,76 @@ body { background: var(--paper); min-height: 100dvh; }
       else   localStorage.removeItem(GUEST_NAME_KEY);
     } catch {}
     refreshReactGate();
+    refreshProfileAvatar();
   }
+
+  /* ── Profile avatar (guest's initial) + sticky CTA bar ──────
+     The avatar pulls the first alphanumeric character of the guest
+     name from localStorage. The CTA bar mirrors whichever panel is
+     active; pulses when there is something to send. */
+  function refreshProfileAvatar() {
+    let v = '';
+    try { v = (localStorage.getItem(GUEST_NAME_KEY) || '').trim(); } catch {}
+    let ch = null;
+    if (v) {
+      const stripped = v.replace(/^[^\p{L}\p{N}]+/u, '');
+      ch = stripped ? stripped[0].toUpperCase() : null;
+    }
+    const el = document.getElementById('profileAvatar');
+    if (el) el.textContent = ch || '?';
+  }
+
+  function activePanelId() {
+    const active = document.querySelector('.share-tab.active');
+    if (!active) return 'gallery';
+    const m = (active.getAttribute('onclick') || '').match(/switchTab\('([^']+)'/);
+    return m ? m[1] : 'gallery';
+  }
+  function hasStagedItems(panel) {
+    if (panel === 'gallery') {
+      return document.querySelectorAll('#galleryQueue .queue-item').length > 0;
+    }
+    if (panel === 'record') {
+      return typeof recordedBlob !== 'undefined' && !!recordedBlob;
+    }
+    return false;
+  }
+  function refreshCtaBar() {
+    const bar = document.getElementById('ctaBar');
+    const btn = document.getElementById('ctaBtn');
+    if (!bar || !btn) return;
+    const panel = activePanelId();
+    if (panel === 'gallery') {
+      bar.classList.remove('hidden');
+      bar.setAttribute('aria-hidden', 'false');
+      btn.textContent = 'Share moments  →';
+      btn.dataset.target = 'gallery';
+    } else if (panel === 'record') {
+      bar.classList.remove('hidden');
+      bar.setAttribute('aria-hidden', 'false');
+      btn.textContent = 'Send video  →';
+      btn.dataset.target = 'record';
+    } else {
+      bar.classList.add('hidden');
+      bar.setAttribute('aria-hidden', 'true');
+      btn.dataset.target = '';
+      return;
+    }
+    const staged = hasStagedItems(panel);
+    btn.classList.toggle('staged', staged);
+    btn.disabled = !staged;
+  }
+  function ctaBarClick(e) {
+    const btn = document.getElementById('ctaBtn');
+    const target = btn?.dataset.target;
+    if (!target || btn.disabled) return;
+    handleSend(target, e);
+  }
+  // Initial paint once the DOM has been parsed.
+  document.addEventListener('DOMContentLoaded', () => {
+    refreshProfileAvatar();
+    refreshCtaBar();
+  });
   function onNameInput(input) {
     document.getElementById('nameField').classList.remove('error');
     broadcastGuestName(input.value);
@@ -979,6 +1319,7 @@ body { background: var(--paper); min-height: 100dvh; }
       releaseCamera();
     }
     if (id === 'react') refreshReactGate();
+    refreshCtaBar();
   }
 
   function setLang(lang, btn) {
@@ -1514,6 +1855,7 @@ body { background: var(--paper); min-height: 100dvh; }
       if (s) s.textContent = 'Ready to share';
     });
     updateSendBtn();
+    refreshCtaBar();
 
     // The drop zone is huge and dominates the screen — without an explicit
     // confirmation guests can't tell whether the pick worked. Show a toast
@@ -1544,6 +1886,7 @@ body { background: var(--paper); min-height: 100dvh; }
     delete itemFiles[id];
     updateWallPreview();
     updateSendBtn();
+    refreshCtaBar();
   }
 
   // The wall preview was removed from the upload page; this is now a no-op
@@ -1553,9 +1896,14 @@ body { background: var(--paper); min-height: 100dvh; }
   function updateSendBtn() {
     const total = document.querySelectorAll('#galleryQueue .queue-item').length;
     const btn = document.querySelector('#panel-gallery .send-btn');
-    btn.textContent = total > 0
-      ? `Send ${total} moment${total>1?'s':''} →`
-      : 'Share moments →';
+    const label = total > 0
+      ? `Send ${total} moment${total>1?'s':''}  →`
+      : 'Share moments  →';
+    if (btn) btn.textContent = label;
+    // Mirror the count label onto the sticky CTA bar so guests see
+    // the same "Send N moments" affordance everywhere.
+    const cta = document.getElementById('ctaBtn');
+    if (cta && cta.dataset.target === 'gallery') cta.textContent = label;
   }
 
   /* ── Record Video — real camera + MediaRecorder ────── */
@@ -1695,6 +2043,7 @@ body { background: var(--paper); min-height: 100dvh; }
     document.getElementById('clipPreview').classList.add('visible');
     document.getElementById('recordSendBtn').style.display = 'block';
     document.getElementById('recordSendBtn').dataset.blobUrl = url;
+    refreshCtaBar();
   }
 
   function discardClip() {
@@ -1709,6 +2058,7 @@ body { background: var(--paper); min-height: 100dvh; }
     recordedPosterDataUrl = null;
     recordedPosterJob = null;
     recordedBlob = null; recordedChunks = []; recSecs = 0;
+    refreshCtaBar();
   }
 
   function fmt(s) {
@@ -2123,6 +2473,7 @@ body { background: var(--paper); min-height: 100dvh; }
     Object.keys(itemPosterDataUrls).forEach(k => delete itemPosterDataUrls[k]);
     Object.keys(itemPosterJobs).forEach(k => delete itemPosterJobs[k]);
     Object.keys(itemFiles).forEach(k => delete itemFiles[k]);
+    refreshCtaBar();
 
     // ── Record panel reset ─────────────────────────────
     // Drop the previous clip, hide the preview, reset the timer + status
