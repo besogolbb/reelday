@@ -215,26 +215,30 @@ body { background: var(--paper); min-height: 100dvh; }
   padding: 4px 0 8px;
   margin-bottom: 14px;
 }
-.upload-top--centered .brand-img { height: 28px; width: auto; opacity: .92; }
+.upload-top--centered .brand-img { height: 42px; width: auto; opacity: .95; }
 .upload-top--centered .lang-switch {
   position: absolute; right: 0; top: 50%; transform: translateY(-50%);
   font-size: 10px;
 }
 
-/* ── Profile section (event identity + guest avatar) ──── */
+/* ── Profile section (event identity + guest avatar) ────
+   Stacked + centered: avatar sits above the event name so the
+   Serif "CXZV" reads as the centerpiece of the card. */
 .profile-section {
-  display: flex; align-items: center; gap: 14px;
-  padding: 16px 18px;
+  display: flex; flex-direction: column; align-items: center;
+  text-align: center;
+  gap: 12px;
+  padding: 22px 18px 20px;
   margin-bottom: 14px;
 }
-.profile-section .pf-info { flex: 1; min-width: 0; }
+.profile-section .pf-info { width: 100%; min-width: 0; }
 .profile-section h1.pf-event {
   font-family: var(--display); font-weight: 400;
-  font-size: clamp(24px, 6vw, 34px);
+  font-size: clamp(28px, 7.4vw, 40px);
   letter-spacing: -.018em;
   line-height: 1.05;
   color: var(--ink);
-  margin: 0 0 4px;
+  margin: 0 0 6px;
 }
 .profile-section h1.pf-event em { font-style: italic; color: var(--accent); }
 .profile-section .pf-meta {
@@ -242,16 +246,17 @@ body { background: var(--paper); min-height: 100dvh; }
   text-transform: uppercase; color: var(--ink-soft);
 }
 .profile-section .pf-avatar {
-  width: 48px; height: 48px; border-radius: 50%;
+  width: 56px; height: 56px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   font-family: var(--display); font-weight: 600; font-style: italic;
-  font-size: 22px; color: #fff;
+  font-size: 26px; color: #fff;
   background: linear-gradient(135deg, var(--accent), var(--accent-deep));
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.25),
-    0 6px 18px rgba(196,90,58,.35);
+    inset 0 1px 0 rgba(255,255,255,.3),
+    0 8px 22px rgba(196,90,58,.4);
   flex-shrink: 0;
   user-select: none;
+  order: -1;
 }
 
 /* ── Welcome line (under profile section) ──────────────── */
@@ -335,17 +340,53 @@ body { background: var(--paper); min-height: 100dvh; }
   color: var(--ink-soft); margin-top: 4px; font-weight: 400;
 }
 .share-tabs--hero .share-tab--mini {
-  padding: 12px 6px 10px;
-  border-radius: var(--r);
-  background: rgba(255,255,255,.55);
-  -webkit-backdrop-filter: blur(14px) saturate(140%);
-  backdrop-filter:         blur(14px) saturate(140%);
-  border: 1px solid rgba(255,255,255,.5);
-  gap: 6px;
+  padding: 14px 6px 12px;
+  border-radius: var(--r-lg);
+  /* Same rose-tinted glass as the Camera tile, scaled down so the
+     hierarchy still reads: prominent Camera + three matched siblings. */
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.7), rgba(255,255,255,.45));
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  backdrop-filter:         blur(16px) saturate(150%);
+  border: 1px solid rgba(255,255,255,.65);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.7),
+    0 10px 24px rgba(196,90,58,.15),
+    0 2px 6px rgba(42,26,20,.05);
+  gap: 8px;
+  position: relative;
+  overflow: hidden;
 }
-.share-tabs--hero .share-tab--mini .tab-icon { width: 36px; height: 36px; background: var(--paper-3); color: var(--ink); }
+.share-tabs--hero .share-tab--mini::before {
+  /* Soft warm halo behind the icon, no animation so only the Camera
+     tile breathes — secondary tiles stay calm. */
+  content: '';
+  position: absolute;
+  left: 50%; top: 14px;
+  width: 80px; height: 80px;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at center,
+    rgba(240,163,122,.32) 0%,
+    rgba(196,90,58,.14) 40%,
+    rgba(196,90,58,0) 75%);
+  filter: blur(14px);
+  pointer-events: none;
+}
+.share-tabs--hero .share-tab--mini .tab-icon {
+  width: 38px; height: 38px;
+  background: linear-gradient(135deg, var(--accent-soft), var(--accent));
+  color: #fff;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.3),
+    0 4px 10px rgba(196,90,58,.3);
+  position: relative; z-index: 1;
+}
 .share-tabs--hero .share-tab--mini .tab-icon svg { width: 16px; height: 16px; }
-.share-tabs--hero .share-tab--mini .tab-label { font-size: 10px; }
+.share-tabs--hero .share-tab--mini .tab-label {
+  font-size: 10px;
+  color: var(--ink);
+  position: relative; z-index: 1;
+}
 .share-tabs--hero .share-tab.active.share-tab--camera {
   border-color: var(--accent);
   box-shadow:
