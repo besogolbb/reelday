@@ -59,11 +59,13 @@ const FRIENDLY_RATE_LIMIT = {
 // At a real event every guest shares one WiFi (= one public IP). Keying
 // the limiter on IP would lump them all into a single bucket — 6 guests
 // would already eat a 20/min cap. We instead key on an opaque per-device
-// token (sent as `X-Guest-Id`, generated and persisted client-side in
-// localStorage). Falls back to the source IP for clients that don't send
-// the header so the limit can never be fully bypassed.
+// token (sent as `X-Guest-Id` for guests or `X-Wall-Id` for wall TVs,
+// generated and persisted client-side in localStorage). Falls back to
+// the source IP for clients that don't send the header so the limit
+// can never be fully bypassed.
 const limiterKey = req =>
   (typeof req.headers['x-guest-id'] === 'string' && req.headers['x-guest-id'].slice(0, 64)) ||
+  (typeof req.headers['x-wall-id']  === 'string' && req.headers['x-wall-id'].slice(0, 64))  ||
   req.ip;
 
 await fastify.register(rateLimit, {
@@ -96,7 +98,7 @@ fastify.decorate('friendlyRateLimit',   FRIENDLY_RATE_LIMIT);
 await fastify.register(cors, {
   origin: ['https://reelday.ph', 'http://localhost:3000'], // Allow specific origins for production and local development
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'], // Allow necessary methods
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Guest-Id'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Guest-Id', 'X-Wall-Id'],
 });
 
 await fastify.register(multipart, {

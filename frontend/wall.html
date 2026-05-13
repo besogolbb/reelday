@@ -1079,6 +1079,40 @@
   });
 
   /* ══════════════════════════════════════════════════════════
+     PER-WALL IDENTITY (rate-limiter bucket)
+     ──────────────────────────────────────────────────────────
+     Without a stable per-device token every wall on the venue
+     WiFi collapses onto one IP-keyed bucket. Two walls + a few
+     init bursts is enough to trip the global cap and start
+     showing "Easy lang po…" on a completely different event's
+     wall. We persist a UUID per browser and stamp it on every
+     same-origin /api/ fetch so each wall TV gets its own bucket.
+  ══════════════════════════════════════════════════════════ */
+  const WALL_ID = (() => {
+    try {
+      let id = localStorage.getItem('reelday_wall_id');
+      if (!id) {
+        id = (crypto.randomUUID && crypto.randomUUID()) ||
+             (Date.now().toString(36) + Math.random().toString(36).slice(2, 10));
+        localStorage.setItem('reelday_wall_id', id);
+      }
+      return id;
+    } catch {
+      return Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+    }
+  })();
+  (() => {
+    const origFetch = window.fetch.bind(window);
+    window.fetch = (input, init = {}) => {
+      const url = typeof input === 'string' ? input : (input && input.url) || '';
+      if (!url.startsWith('/api/')) return origFetch(input, init);
+      const headers = new Headers(init.headers || (typeof input !== 'string' ? input.headers : undefined) || {});
+      if (!headers.has('X-Wall-Id')) headers.set('X-Wall-Id', WALL_ID);
+      return origFetch(input, { ...init, headers });
+    };
+  })();
+
+  /* ══════════════════════════════════════════════════════════
      CONFIG
   ══════════════════════════════════════════════════════════ */
   const SLIDE_DURATION   = 8000;  // ms per slide
