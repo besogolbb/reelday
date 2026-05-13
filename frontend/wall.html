@@ -287,7 +287,9 @@
 
     /* Highlighted counts — pill-wrapped, larger bold numerals so the
        moment / guest counts pop against the wall imagery instead of
-       blending into the rest of the ticker text. */
+       blending into the rest of the ticker text. A gentle breathing
+       pulse on the glow makes the wall feel actively live rather than
+       a static stat readout. */
     .ticker .stats em {
       color: #fff;
       font-style: normal;
@@ -301,6 +303,21 @@
       box-shadow: 0 2px 8px rgba(196,90,58,.35);
       display: inline-block;
       line-height: 1.1;
+      animation: statPulse 2.4s ease-in-out infinite;
+    }
+    /* Offset the guests pulse so the two pills aren't perfectly in
+       sync — staggered breathing feels more "alive", less metronome. */
+    .ticker .stats span:nth-child(2) em { animation-delay: 1.2s; }
+
+    @keyframes statPulse {
+      0%, 100% {
+        box-shadow: 0 2px 8px rgba(196,90,58,.35);
+        transform: scale(1);
+      }
+      50% {
+        box-shadow: 0 2px 14px rgba(240,163,122,.75), 0 0 22px rgba(240,163,122,.35);
+        transform: scale(1.06);
+      }
     }
 
     /* ── QR badge ────────────────────────────────────────────── */
