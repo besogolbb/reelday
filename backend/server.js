@@ -68,7 +68,7 @@ const limiterKey = req =>
 
 await fastify.register(rateLimit, {
   global: true,
-  max: 1000,                  // generous cap — supports 1,000 guest burst + multiple walls
+  max: 1200,                  // generous cap — supports 1,000 guest burst + multiple walls, bumped slightly for more headroom
   timeWindow: '1 minute',
   ban: 0,
   // Skip rate-limiting for:
@@ -76,7 +76,9 @@ await fastify.register(rateLimit, {
   //   2. Non-API routes (HTML pages, JS, CSS, images) — these are never abusive
   //      and previously a wall page just loading triggered the limiter on the host
   allowList: req =>
-    Boolean(req.headers.authorization) || !req.url.startsWith('/api/'),
+    Boolean(req.headers.authorization) ||
+    !req.url.startsWith('/api/') ||
+    /\.(html|css|js|png|jpg|jpeg|gif|svg|ico)$/i.test(req.url),
   keyGenerator: limiterKey,
   errorResponseBuilder: () => FRIENDLY_RATE_LIMIT,
   addHeaders: {
