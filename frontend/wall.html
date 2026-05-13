@@ -1523,31 +1523,32 @@
   /* ══════════════════════════════════════════════════════════
      ASPECT-AWARE FIT
      ──────────────────────────────────────────────────────────
-     The TV is 16:9. Stretching every source to cover() looked
-     great for 16:9 and 4:3 sources but turned a 9:16 phone clip
-     into an aggressive head-zoom (only the middle ~30% visible).
-     So we pick per-slide: cover for landscape-ish sources where
-     the crop is small, contain for portrait where the crop would
-     be obvious. The .backdrop layer behind .pic/.vid catches the
-     pillarbox for portrait. Square-ish (within 5%) counts as
-     portrait so we don't aggressively crop a 1:1 photo either.
+     The TV is 16:9 (~1.78). We only cover-fit sources that are
+     already close to that aspect, so the crop is tiny. Anything
+     narrower — 4:3 / 3:2 phone landscape photos, square shots,
+     and all portrait — uses contain and lets the CSS blurred
+     backdrop fill the pillarbox. This stops phone landscape
+     photos from looking aggressively zoomed (the cover crop was
+     eating ~20% off each side for a 4:3 source).
   ══════════════════════════════════════════════════════════ */
-  function isPortraitishAspect(w, h) {
-    if (!w || !h) return false;
-    return (h / w) > 1.05;
+  const TV_ASPECT = 16 / 9;
+  // Only cover when the source aspect is within ~10% of 16:9. Wider
+  // (ultrawide) is fine to crop slightly; narrower (4:3 / portrait)
+  // gets contained so nothing important is sliced off.
+  const COVER_MIN_ASPECT = TV_ASPECT * 0.9; // ≈ 1.60
+  function shouldCoverFit(w, h) {
+    if (!w || !h) return true; // unknown → default cover to avoid bar flash
+    return (w / h) >= COVER_MIN_ASPECT;
   }
   function fitPicByAspect(picEl, url) {
     if (!picEl) return;
-    // Default to cover; downgrade to contain once we know the source is
-    // portrait. Setting cover synchronously prevents a one-frame flash
-    // of letterboxed contain on landscape sources.
     picEl.style.backgroundSize = 'cover';
     if (!url) return;
     const probe = new Image();
     probe.onload = () => {
-      if (isPortraitishAspect(probe.naturalWidth, probe.naturalHeight)) {
-        picEl.style.backgroundSize = 'contain';
-      }
+      picEl.style.backgroundSize = shouldCoverFit(probe.naturalWidth, probe.naturalHeight)
+        ? 'cover'
+        : 'contain';
     };
     probe.src = url;
   }
@@ -1555,9 +1556,9 @@
     if (!vidEl) return;
     vidEl.style.objectFit = 'cover';
     const apply = () => {
-      if (isPortraitishAspect(vidEl.videoWidth, vidEl.videoHeight)) {
-        vidEl.style.objectFit = 'contain';
-      }
+      vidEl.style.objectFit = shouldCoverFit(vidEl.videoWidth, vidEl.videoHeight)
+        ? 'cover'
+        : 'contain';
     };
     if (vidEl.videoWidth && vidEl.videoHeight) { apply(); return; }
     vidEl.addEventListener('loadedmetadata', apply, { once: true });
