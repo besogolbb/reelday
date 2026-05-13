@@ -2684,6 +2684,12 @@
 
     const merged = mergeUploads(apiUploads);
     const previousCurrent = items[currentIdx] || null;
+    // Snapshot of statuses BEFORE the deck is reassigned, so we can spot
+    // videos that transitioned processing -> ready between polls and
+    // promote them to play right after the current slide. Has to live
+    // up here because `items` gets rewritten by the new-uploads splice
+    // below.
+    const prevStatusById = new Map(items.map(u => [u.id, u.video_status]));
     allUploads = merged;
 
     const slideable = merged;
@@ -2724,6 +2730,37 @@
           startProgress();
           prewarmNext();
           if (!isPaused && items.length > 1) scheduleAdvance();
+        }
+      }
+    }
+
+    // Promote any OTHER video (not the current slide) that just finished
+    // transcoding to play right after the current slide. Keeps the live
+    // feel without cutting the current display short — guests see fresh
+    // reels within one slide instead of waiting a full rotation.
+    if (isRunning && !inBurst && items.length > 1 && previousCurrent?.id) {
+      const justReadyIds = new Set(
+        items
+          .filter(u => u.id !== previousCurrent.id
+                    && prevStatusById.get(u.id) === 'processing'
+                    && u.video_status === 'ready')
+          .map(u => u.id),
+      );
+      if (justReadyIds.size) {
+        const justReady = items.filter(u => justReadyIds.has(u.id));
+        const rest     = items.filter(u => !justReadyIds.has(u.id));
+        const anchorIdx = rest.findIndex(u => u.id === previousCurrent.id);
+        if (anchorIdx >= 0) {
+          items = [
+            ...rest.slice(0, anchorIdx + 1),
+            ...justReady,
+            ...rest.slice(anchorIdx + 1),
+          ];
+          currentIdx = anchorIdx; // we didn't move the current slide
+          const name = justReady[0].uploader_name || 'Panauhin';
+          const more = justReady.length > 1 ? ` (+${justReady.length - 1} more)` : '';
+          showToast(`✨ ${name}'s Reel is ready — playing next!${more}`);
+          prewarmNext();
         }
       }
     }
