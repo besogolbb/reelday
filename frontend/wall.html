@@ -429,17 +429,21 @@
       /* Feathered edge — opaque through the body of the portrait, alpha
          softens through the outer ~15% so the image dissolves into the
          ambient glow instead of terminating at a hard card edge.
-         Reads as "illuminated, not boxed". */
+         White (not black) so both alpha-mode and luminance-mode mask
+         engines treat the centre as fully visible — earlier #000 stops
+         hid the whole .pic under WebKit's default luminance mode. */
       -webkit-mask-image: radial-gradient(ellipse 100% 100% at center,
-        #000 0%,
-        #000 82%,
-        rgba(0,0,0,.6) 93%,
-        rgba(0,0,0,0)  100%);
+        #fff 0%,
+        #fff 82%,
+        rgba(255,255,255,.6) 93%,
+        rgba(255,255,255,0)  100%);
       mask-image:         radial-gradient(ellipse 100% 100% at center,
-        #000 0%,
-        #000 82%,
-        rgba(0,0,0,.6) 93%,
-        rgba(0,0,0,0)  100%);
+        #fff 0%,
+        #fff 82%,
+        rgba(255,255,255,.6) 93%,
+        rgba(255,255,255,0)  100%);
+      -webkit-mask-mode: alpha;
+      mask-mode: alpha;
     }
     /* Motion language — breathing scale + floating drift on the
        whole layer. Numbers are intentionally small: 4px of drift,
