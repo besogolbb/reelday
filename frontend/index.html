@@ -18,12 +18,25 @@
   ════════════════════════════════════════════════════════ */
   .site-header { background: rgba(253,250,245,.9); }
 
-  /* Brand lockup — uses the LOGO.png asset (camera + Reelday.ph wordmark). */
-  .brand-lockup { display: inline-flex; align-items: center; text-decoration: none; }
-  .brand-img    { height: 84px; width: auto; display: block; }
+  /* Brand lockup — uses the LOGO.png asset (camera + Reelday.ph wordmark).
+     The `width: auto !important` + `max-width: none !important` overrides the
+     global img { max-width: 100% } rule from shared.css so the image keeps
+     its native aspect ratio at the explicit height (otherwise mobile squishes). */
+  .brand-lockup { display: inline-flex; align-items: center; text-decoration: none; flex-shrink: 0; }
+  .brand-img    {
+    height: 84px; width: auto !important; max-width: none !important;
+    display: block; flex-shrink: 0;
+  }
   @media (max-width: 760px) { .brand-img { height: 60px; } }
   /* Footer can show it bigger */
   footer .brand-img { height: 110px; }
+
+  /* Pull the header brand toward the left edge of the viewport on desktop
+     so the lockup feels anchored, not floating in the middle of the page. */
+  .site-header-inner { max-width: none !important; padding-left: 24px !important; padding-right: 24px !important; }
+  @media (min-width: 1280px) {
+    .site-header-inner { padding-left: 40px !important; padding-right: 40px !important; }
+  }
 
   /* ════════════════════════════════════════════════════════
      HERO
