@@ -327,13 +327,14 @@
        phone cameras can still resolve the code against any
        background. */
     .qr-badge {
-      position: fixed; bottom: 32px; right: 32px; z-index: 10;
+      position: fixed; top: 76px; left: 32px; z-index: 10;
       background: rgba(20,12,8,.32);
       -webkit-backdrop-filter: blur(18px) saturate(140%);
       backdrop-filter: blur(18px) saturate(140%);
+      color: #fff;
       border: 1px solid rgba(255,255,255,.18);
-      border-radius: 14px;
-      display: none; align-items: center; justify-content: center;
+      border-radius: 14px; padding: 14px;
+      display: none; gap: 12px; align-items: center;
       box-shadow: 0 8px 32px rgba(0,0,0,.45);
       transition: opacity .4s ease;
     }
@@ -341,18 +342,13 @@
     .qr-badge .qr {
       width: 200px; height: 200px; flex-shrink: 0;
       border-radius: 6px; overflow: hidden;
-      /* Solid white quiet-zone plate (5px on every side) so phone
-         cameras can lock focus against the blurred backdrop. */
+      /* White plate behind the QR so the modules stay scannable
+         regardless of the translucent badge backdrop. */
       background: #fff;
-      padding: 5px;
-      box-sizing: content-box;
+      padding: 4px;
     }
 
     .qr-badge .qr img { width: 100%; height: 100%; object-fit: cover; display: block; }
-
-    /* Less distracting over landscape media — still large enough to
-       scan from across the room, just dialled back on intensity. */
-    body.is-landscape .qr-badge { opacity: .8; }
 
     /* ── Upcoming thumbnails ────────────────────────────────── */
     .upcoming {
@@ -1008,8 +1004,8 @@
       .ticker .stats { gap: 14px; font-size: 10px; letter-spacing: .1em; }
       .ticker .live { font-size: 10px; letter-spacing: .14em; }
       .qr-badge {
-        right: 14px !important;
-        bottom: 14px !important;
+        left: 14px !important;
+        padding: 10px;
       }
       .qr-badge .qr { width: 120px; height: 120px; }
 
