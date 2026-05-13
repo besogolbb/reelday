@@ -359,25 +359,77 @@
 
     .qr-badge .qr img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-    /* ── Upcoming thumbnails ────────────────────────────────── */
+    /* ── Upcoming thumbnails ──────────────────────────────────
+       Absolute-positioned overlay so the media layer below stays
+       centered in the viewport regardless of whether the sidebar
+       is visible. */
     .upcoming {
-      position: fixed; right: 36px; top: 50%; transform: translateY(-50%);
+      position: absolute; right: 20px; top: 50%; transform: translateY(-50%);
       z-index: 10; display: flex; flex-direction: column; gap: 8px;
       transition: opacity .5s ease;
     }
 
     /* ── Orientation-driven layout ───────────────────────────
-       Landscape sources fill the wall edge-to-edge; the sidebar
-       thumbnails are hidden so nothing crops into the frame.
-       Portrait sources keep the sidebar visible and the media
-       layers shrink to occupy the remaining width. */
+       Media layer always fills the viewport — the sidebar overlays
+       on top instead of pushing the media off-center. Landscape
+       still hides the sidebar so nothing competes with the frame.
+       Portrait is treated as an intentional composition: blurred
+       backdrop (layer 1), ambient glow (layer 2), and the contained
+       portrait media floating over them (layer 3). */
     body.is-landscape .upcoming { opacity: 0; pointer-events: none; }
-    body.is-landscape .layer { right: 0; width: 100vw; }
-
     body.is-portrait .upcoming { opacity: 1; }
+
+    /* Layer 2 — ambient glow behind the portrait media. Sits above
+       the blurred backdrop (z:1) and below the foreground (z:2). */
+    body.is-portrait .layer::after {
+      content: '';
+      position: absolute;
+      left: 50%; top: 50%;
+      width: min(70vh, 720px);
+      height: min(110vh, 1200px);
+      transform: translate(-50%, -50%);
+      z-index: 1;
+      pointer-events: none;
+      background: radial-gradient(ellipse at center,
+        rgba(240,163,122,.32) 0%,
+        rgba(240,163,122,.14) 30%,
+        rgba(0,0,0,0) 65%);
+      filter: blur(28px);
+    }
+
+    /* Layer 3 — contained portrait media: 9:16 box, centered via
+       margin auto + inset 0, with depth and a slow float. Aspect
+       Ken Burns animations still apply on top via inline style. */
+    body.is-portrait .layer .pic,
+    body.is-portrait .layer .vid {
+      inset: 0;
+      margin: auto;
+      width: auto;
+      /* min() caps height so the derived width (= height * 9/16)
+         never exceeds 90vw on narrow viewports. */
+      height: min(88vh, calc(90vw * 16 / 9));
+      aspect-ratio: 9 / 16;
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow:
+        0 30px 80px rgba(0,0,0,.55),
+        0 12px 28px rgba(0,0,0,.4),
+        0 0 0 1px rgba(255,255,255,.06);
+    }
+    /* Floating animation wraps the layer (transform on .pic is
+       owned by Ken Burns). Subtle vertical drift only. */
     body.is-portrait .layer {
-      right: var(--sidebar-w, 160px);
-      width: calc(100vw - var(--sidebar-w, 160px));
+      animation: portraitFloat 6s ease-in-out infinite;
+    }
+    @keyframes portraitFloat {
+      0%, 100% { transform: translateY(-3px); }
+      50%      { transform: translateY(3px); }
+    }
+    /* In portrait mode the heavy vignette competes with the new
+       composition — soften it to just an edge fade. */
+    body.is-portrait .layer .vignette {
+      background:
+        radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.45) 100%);
     }
 
     .upcoming-thumb {
