@@ -37,38 +37,53 @@
   .site-header-inner { max-width: 1240px !important; }
 
   /* ── Mobile header compaction ──────────────────────────────
-     Goal: brand + compact user chip, all inside the viewport with no overflow.
-     Drops the standalone "My events" CTA on mobile (still in dropdown menu). */
+     Goal: brand on the left, user chip + icon-CTA hugging the right edge,
+     no big middle gap, no horizontal overflow. */
   @media (max-width: 760px) {
     .site-header-inner {
-      padding: 10px 12px !important;
-      gap: 8px !important;
+      padding: 8px 12px !important;
+      gap: 6px !important;
       max-width: 100vw !important;
       box-sizing: border-box;
+      justify-content: flex-start !important;
     }
 
-    /* Actions block must shrink to fit, not push past viewport edge. */
+    /* Brand stays left; actions auto-margin to the right edge — same visual as
+       space-between but lets us shrink the gap if content is wider than expected. */
+    .brand-lockup { margin-right: auto !important; }
+
     .site-actions {
       min-width: 0 !important;
       flex-shrink: 1 !important;
       gap: 6px !important;
+      align-items: center !important;
     }
 
-    /* User-menu chip: tight pill, name truncates to ~5 chars. */
+    /* User-menu chip: tight pill, name truncates. */
     .user-menu-btn {
-      padding: 8px 12px !important;
+      padding: 7px 11px !important;
       font-size: 12px !important;
       min-width: 0 !important;
-      max-width: 90px !important;
+      max-width: 84px !important;
     }
     .user-menu-btn > span:first-child {
-      max-width: 56px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      max-width: 50px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
       display: inline-block; vertical-align: middle;
     }
 
-    /* Hide the standalone "My events" / "Start free" button on mobile —
-       same destination is already in the dropdown menu. Prevents overflow. */
-    .site-actions .btn-accent { display: none !important; }
+    /* CTA: round 36px icon-only button (→). Logged-in users see it after the
+       chip; logged-out flow uses the same selector to compact "Start free →". */
+    .site-actions .btn-accent {
+      display: inline-flex !important;
+      align-items: center; justify-content: center;
+      width: 36px; height: 36px; padding: 0 !important;
+      border-radius: 50%;
+      font-size: 0 !important;
+      flex-shrink: 0;
+    }
+    .site-actions .btn-accent::after {
+      content: '→'; font-size: 18px; line-height: 1; color: #fff;
+    }
   }
 
   /* Kill any horizontal scrollbar caused by hero polaroids, the header chip,
