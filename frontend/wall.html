@@ -1624,6 +1624,38 @@
     vidEl.addEventListener('loadedmetadata', apply, { once: true });
   }
 
+  /* Orientation class on <body>. Updated every slide change so CSS can
+     react to landscape vs. portrait media (e.g. layout tweaks for the
+     pillarboxed portrait case). Token is generation-guarded so a slow
+     probe from a previous slide can't clobber a newer slide's class. */
+  let orientationToken = 0;
+  function applyOrientationClass(item) {
+    const token = ++orientationToken;
+    const setClass = (w, h) => {
+      if (token !== orientationToken) return;
+      if (!w || !h) return;
+      const isLandscape = w > h;
+      document.body.classList.toggle('is-landscape', isLandscape);
+      document.body.classList.toggle('is-portrait',  !isLandscape);
+    };
+    const mediaUrl = wallMediaUrl(item);
+    if (isReadyVideo(item) && mediaUrl) {
+      const probe = document.createElement('video');
+      probe.preload = 'metadata';
+      probe.muted = true;
+      probe.addEventListener('loadedmetadata', () => {
+        setClass(probe.videoWidth, probe.videoHeight);
+      }, { once: true });
+      probe.src = mediaUrl;
+    } else {
+      const url = immediateVisualUrl(item, 1280) || mediaUrl;
+      if (!url) return;
+      const probe = new Image();
+      probe.onload = () => setClass(probe.naturalWidth, probe.naturalHeight);
+      probe.src = url;
+    }
+  }
+
   /* ══════════════════════════════════════════════════════════
      SLIDE ENGINE
   ══════════════════════════════════════════════════════════ */
@@ -1754,6 +1786,9 @@
 
     // Stash so advance()/goTo() know whether this slide is a video.
     items.__currentIsVideo = itemIsVideo;
+
+    // Tag <body> with is-landscape / is-portrait for the current slide.
+    applyOrientationClass(item);
 
     // Show the unmute toggle only when there's a video on screen.
     // Pulse it (the .attention class) whenever the video is muted so
