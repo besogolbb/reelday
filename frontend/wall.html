@@ -354,6 +354,21 @@
     .upcoming {
       position: fixed; right: 36px; top: 50%; transform: translateY(-50%);
       z-index: 10; display: flex; flex-direction: column; gap: 8px;
+      transition: opacity .5s ease;
+    }
+
+    /* ── Orientation-driven layout ───────────────────────────
+       Landscape sources fill the wall edge-to-edge; the sidebar
+       thumbnails are hidden so nothing crops into the frame.
+       Portrait sources keep the sidebar visible and the media
+       layers shrink to occupy the remaining width. */
+    body.is-landscape .upcoming { opacity: 0; pointer-events: none; }
+    body.is-landscape .layer { right: 0; width: 100vw; }
+
+    body.is-portrait .upcoming { opacity: 1; }
+    body.is-portrait .layer {
+      right: var(--sidebar-w, 160px);
+      width: calc(100vw - var(--sidebar-w, 160px));
     }
 
     .upcoming-thumb {
