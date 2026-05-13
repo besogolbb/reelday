@@ -35,20 +35,41 @@
     }
     .layer.out { opacity: 0; }
 
-    /* Blurred backdrop — fills letterbox area with a soft, scaled copy.
-       Light blur on purpose: enough to be a "soft" version of the
-       source, not so much that it becomes a uniform color wash. Source
-       texture and palette should be clearly recognizable in the bars. */
+    /* Backdrop container — only paints a dark fallback. The actual
+       blurred fill happens in two ::before / ::after edge samples that
+       read the source URL from a CSS custom property set by JS. */
     .layer .backdrop {
       position: absolute; inset: 0;
       z-index: 1 !important;
       display: block !important;
       opacity: 1 !important;
-      background-size: cover; background-position: center;
-      background-repeat: no-repeat;
-      filter: blur(28px) brightness(.85) saturate(1.05);
-      transform: scale(1.1);
       background-image: radial-gradient(circle at center, #2a1a14, #1a0f0a);
+    }
+    /* Edge samples — each pseudo zooms the source horizontally and
+       anchors to its respective edge, so the bars show only the very
+       left or very right slice of the source (scene/background around
+       the subject), never the centred subject's face. The foreground
+       covers the middle, so the slight overlap between the two halves
+       is hidden. */
+    .layer .backdrop::before,
+    .layer .backdrop::after {
+      content: '';
+      position: absolute;
+      top: 0; bottom: 0;
+      width: 55%;
+      background-image: var(--poster-img);
+      background-size: 300% 100%;
+      background-repeat: no-repeat;
+      filter: blur(24px) brightness(.9) saturate(1.05);
+      transform: scale(1.08);
+    }
+    .layer .backdrop::before {
+      left: 0;
+      background-position: 0% 50%;
+    }
+    .layer .backdrop::after {
+      right: 0;
+      background-position: 100% 50%;
     }
     /* Very light vignette — only the outermost edge gets a touch of
        darkening so the bars don't butt against the frame with a hard
@@ -58,7 +79,7 @@
       z-index: 1 !important;
       pointer-events: none;
       background:
-        radial-gradient(ellipse at center, rgba(0,0,0,0) 70%, rgba(0,0,0,.18) 100%);
+        radial-gradient(ellipse at center, rgba(0,0,0,0) 75%, rgba(0,0,0,.15) 100%);
     }
 
     /* Foreground photo — fills the 16:9 frame edge-to-edge, center-cropping
@@ -1607,17 +1628,13 @@
     const itemIsVideo = isReadyVideo(item) && !!mediaUrl;
     const itemIsProcessingVideo = isProcessingVideo(item);
     const posterBackground = posterUrl ? `url('${posterUrl}')` : `url('${wallFallbackUrl(item, 'Loading moment')}')`;
-    const photoBackdropFilter = 'blur(28px) brightness(0.85) saturate(1.05)';
-    const photoBackdropTransform = 'scale(1.1)';
 
-    // Always paint a blurred poster on the backdrop so the letterbox
-    // area around portrait media (photo OR video) is filled with a soft
-    // scaled copy instead of hard black bars on a 16:9 TV.
-    inBackdrop.style.backgroundImage = posterBackground;
+    // Drive the backdrop edge-samples (defined in CSS via ::before /
+    // ::after) by setting a custom property. Filter/transform live in
+    // CSS so we don't have to keep two sources of truth in sync.
+    inBackdrop.style.setProperty('--poster-img', posterBackground);
     inBackdrop.style.display = 'block';
     inBackdrop.style.opacity = '1';
-    inBackdrop.style.filter = photoBackdropFilter;
-    inBackdrop.style.transform = photoBackdropTransform;
     inPic.style.backgroundImage      = posterBackground;
     fitPicByAspect(inPic, posterUrl || mediaUrl);
     inLayer.classList.remove('out');
@@ -1680,9 +1697,7 @@
       const processingThumb = videoPreThumb || immediateVisual;
       const fallbackThumb = wallFallbackUrl(item, 'Polishing...');
       const processingThumbUrl = processingThumb || fallbackThumb;
-      inBackdrop.style.backgroundImage = `url("${processingThumbUrl}")`;
-      inBackdrop.style.filter = photoBackdropFilter;
-      inBackdrop.style.transform = photoBackdropTransform;
+      inBackdrop.style.setProperty('--poster-img', `url("${processingThumbUrl}")`);
       inPic.style.backgroundImage = `url("${processingThumbUrl}")`;
       fitPicByAspect(inPic, processingThumbUrl);
       setLoaderPhrase(inLoader, randomReelMagicPhrase());
