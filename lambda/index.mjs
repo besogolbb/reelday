@@ -1,7 +1,7 @@
 import { S3Client, GetObjectCommand, PutObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { tmpdir } from 'os';
 import { join, posix as pathPosix } from 'path';
-import { mkdtemp, rm, writeFile, stat } from 'fs/promises';
+import { mkdtemp, rm, stat } from 'fs/promises';
 import { createReadStream, createWriteStream } from 'fs';
 import { spawn } from 'child_process';
 import { pipeline } from 'stream/promises';
@@ -108,8 +108,9 @@ export const handler = async (rawEvent, context) => {
 
   const event = unwrapEvent(rawEvent);
   const originalKey = (event.fileName || event.originalKey || '').trim();
-  const preThumbKey = event.preThumbKey || null;
-  const preThumbDataUrl = typeof event.preThumbDataUrl === 'string' ? event.preThumbDataUrl.trim() : null;
+  // preThumbKey is still accepted in the payload (backend stores the
+  // guest thumbnail in R2 for the wall to surface during processing),
+  // but ffmpeg no longer reads it — the bg fill is done in wall CSS.
 
   if (!originalKey) throw new Error('Missing originalKey');
   const { compressedKey, posterKey } = derivedKeys(originalKey);
@@ -123,7 +124,7 @@ export const handler = async (rawEvent, context) => {
   if (!srcHead) throw new Error(`Source not found: ${originalKey}`);
   if (typeof srcHead.ContentLength === 'number' && srcHead.ContentLength > MAX_BYTES) {
     const msg = `Input too large: ${srcHead.ContentLength} > ${MAX_BYTES}`;
-    await notifyWebhook({ status: 'error', originalKey, message: msg, preThumbKey });
+    await notifyWebhook({ status: 'error', originalKey, message: msg });
     throw new Error(msg);
   }
 
@@ -131,60 +132,34 @@ export const handler = async (rawEvent, context) => {
   try {
     workdir = await mkdtemp(join(tmpdir(), 'reelday-tx-'));
     const inputPath = join(workdir, 'input');
-    const bgImgPath = join(workdir, 'bg.jpg');
     const outputPath = join(workdir, 'output.mp4');
     const posterPath = join(workdir, 'poster.jpg');
 
-    // Fetch the video and (if provided) the guest's pre-thumb in parallel.
-    // Pre-thumb is referenced by R2 key now — passing the data URL through
-    // SQS used to blow the 256 KiB message limit for larger thumbnails and
-    // silently dropped the transcode.
-    let hasPreThumb = false;
-    const downloads = [r2DownloadToFile(originalKey, inputPath)];
-    if (preThumbKey) {
-      downloads.push(
-        r2DownloadToFile(preThumbKey, bgImgPath)
-          .then(() => { hasPreThumb = true; })
-          .catch(err => { console.warn('pre-thumb fetch failed, falling back to video frame:', err.message); })
-      );
-    } else if (preThumbDataUrl && /^data:image\/(?:jpeg|jpg|png|webp);base64,/i.test(preThumbDataUrl)) {
-      // Legacy inline path — kept so older callers still work during rollout.
-      const base64 = preThumbDataUrl.replace(/^data:image\/(?:jpeg|jpg|png|webp);base64,/i, '');
-      downloads.push(writeFile(bgImgPath, Buffer.from(base64, 'base64')).then(() => { hasPreThumb = true; }));
-    }
-    await Promise.all(downloads);
+    await r2DownloadToFile(originalKey, inputPath);
 
     // Defensive: re-check size on disk in case ContentLength was missing/wrong.
     const st = await stat(inputPath);
     if (st.size > MAX_BYTES) throw new Error(`Input too large on disk: ${st.size}`);
 
-    // Single FFmpeg call: bg derivation + encode + poster.
-    // When no pre-thumb, we feed the same video file through TWO -i flags so the bg branch
-    // (trim+loop frame 0) and the fg branch get independent decoders. A single decoder shared
-    // via `split` would EOF the bg side and starve fg, producing a static-image output.
-    const inputs = hasPreThumb
-      ? ['-loop', '1', '-i', bgImgPath, '-i', inputPath]
-      : ['-i', inputPath, '-i', inputPath];
-
-    const bgChain = hasPreThumb
-      ? '[0:v]fps=24,scale=192:-2,boxblur=8:1,scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,setsar=1[bg]'
-      : '[0:v]trim=end_frame=1,setpts=PTS-STARTPTS,loop=loop=-1:size=1:start=0,fps=24,scale=192:-2,boxblur=8:1,scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,setsar=1[bg]';
-
+    // Output the video at its NATIVE aspect ratio, fit inside a 1280x720
+    // bounding box. We used to bake a blurred-source backdrop inside the
+    // file so portrait clips became a 16:9 deliverable, but the wall
+    // already does that treatment in CSS (heavier, prettier blur tied to
+    // the poster image). Doing it twice meant the wall's blur sat on top
+    // of a weakly-blurred copy that was visible as banding inside the
+    // playing video. Now the file is just the source, downscaled.
     const filterComplex = [
-      bgChain,
-      '[1:v]split=2[vfg][vposter]',
-      "[vfg]fps=24,scale=1280:720:force_original_aspect_ratio=decrease,scale='trunc(iw/2)*2':'trunc(ih/2)*2',setsar=1[fg]",
-      '[bg][fg]overlay=(W-w)/2:(H-h)/2:shortest=1[outv]',
+      "[0:v]fps=24,scale=1280:720:force_original_aspect_ratio=decrease,scale='trunc(iw/2)*2':'trunc(ih/2)*2',setsar=1,split=2[outv][vposter]",
       '[vposter]select=gte(t\\,1)[poster]',
     ].join(';');
 
     await runFfmpeg([
       '-y', '-nostdin', '-threads', '0', '-ignore_unknown', '-sn', '-dn',
       '-sws_flags', 'fast_bilinear',
-      ...inputs,
+      '-i', inputPath,
       '-filter_complex', filterComplex,
       // Main mp4 output
-      '-map', '[outv]', '-map', '1:a:0?',
+      '-map', '[outv]', '-map', '0:a:0?',
       '-c:v', 'libx264',
       '-preset', 'superfast',
       '-crf', '24',
@@ -212,7 +187,7 @@ export const handler = async (rawEvent, context) => {
     return { statusCode: 200, body: JSON.stringify({ ok: true, compressedKey }) };
   } catch (error) {
     console.error('FAILED:', error.message);
-    await notifyWebhook({ status: 'error', originalKey, message: error.message, preThumbKey });
+    await notifyWebhook({ status: 'error', originalKey, message: error.message });
     throw error;
   } finally {
     if (workdir) { try { await rm(workdir, { recursive: true, force: true }); } catch {} }
