@@ -264,21 +264,44 @@
       letter-spacing: .2em; text-transform: uppercase;
     }
 
+    /* Broadcast-red live dot. Solid red core with a pulsing outer
+       halo so it reads as "we're live right now" rather than the old
+       warm orange that blended into the warm wall palette. */
     .ticker .live .dot {
       width: 10px; height: 10px; border-radius: 50%;
-      background: var(--gold); box-shadow: 0 0 0 4px rgba(240,163,122,.3);
+      background: #ef3b3b;
+      box-shadow: 0 0 0 4px rgba(239,59,59,.35), 0 0 12px rgba(239,59,59,.5);
       animation: pulse 1.5s ease infinite; flex-shrink: 0;
     }
 
-    @keyframes pulse { 50% { box-shadow: 0 0 0 8px rgba(240,163,122,0); } }
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 4px rgba(239,59,59,.35), 0 0 12px rgba(239,59,59,.5); }
+      50%      { box-shadow: 0 0 0 9px rgba(239,59,59,0),   0 0 18px rgba(239,59,59,.8); }
+    }
 
     .ticker .stats {
       font-family: var(--mono); font-size: 12px;
       letter-spacing: .16em; text-transform: uppercase;
-      opacity: .85; display: flex; gap: 28px;
+      opacity: .9; display: flex; gap: 22px; align-items: center;
     }
 
-    .ticker .stats em { color: var(--gold); font-style: normal; font-weight: 600; }
+    /* Highlighted counts — pill-wrapped, larger bold numerals so the
+       moment / guest counts pop against the wall imagery instead of
+       blending into the rest of the ticker text. */
+    .ticker .stats em {
+      color: #fff;
+      font-style: normal;
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: .04em;
+      padding: 3px 10px;
+      margin-right: 6px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, rgba(240,163,122,.95), rgba(196,90,58,.95));
+      box-shadow: 0 2px 8px rgba(196,90,58,.35);
+      display: inline-block;
+      line-height: 1.1;
+    }
 
     /* ── QR badge ────────────────────────────────────────────── */
     .qr-badge {
