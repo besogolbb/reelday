@@ -68,12 +68,15 @@ const limiterKey = req =>
 
 await fastify.register(rateLimit, {
   global: true,
-  max: 240,                   // generous global cap per device-token / IP
+  max: 600,                   // generous cap — host running 2 walls + reactions can hit ~260/min
   timeWindow: '1 minute',
   ban: 0,
-  // Logged-in hosts shouldn't get throttled by guest-facing limits while
-  // they're triaging uploads in the dashboard.
-  allowList: req => Boolean(req.headers.authorization),
+  // Skip rate-limiting for:
+  //   1. Logged-in hosts (auth header present) — they're triaging uploads
+  //   2. Non-API routes (HTML pages, JS, CSS, images) — these are never abusive
+  //      and previously a wall page just loading triggered the limiter on the host
+  allowList: req =>
+    Boolean(req.headers.authorization) || !req.url.startsWith('/api/'),
   keyGenerator: limiterKey,
   errorResponseBuilder: () => FRIENDLY_RATE_LIMIT,
   addHeaders: {
