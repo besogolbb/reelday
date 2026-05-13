@@ -386,6 +386,16 @@
       box-shadow: 0 0 0 4px rgba(240,163,122,.25);
     }
 
+    /* Reusable scrim — darkens the bottom of a label so white text
+       stays readable on bright/busy media. Bottom-to-top gradient so
+       the top edge fades cleanly into the photo without a hard line. */
+    .text-scrim {
+      background: linear-gradient(to top, rgba(0,0,0,.75), rgba(0,0,0,0));
+      padding: 14px 18px 10px;
+      border-radius: 6px;
+      display: inline-block;
+    }
+
     /* ── Caption frame ──────────────────────────────────────── */
     .frame {
       position: fixed; bottom: 0; left: 0; right: 0; z-index: 10;
@@ -400,8 +410,10 @@
       font-family: var(--mono); font-size: clamp(16px, 1.4vw, 22px);
       font-weight: 600;
       letter-spacing: .22em; text-transform: uppercase;
-      color: #fff; margin-bottom: 22px;
-      text-shadow: 0 4px 24px rgba(0,0,0,.55);
+      color: #fff !important; margin-bottom: 22px;
+      /* Subtle dual-shadow keeps the uploader name legible on bright
+         backgrounds even when the scrim gradient fades at the top. */
+      text-shadow: 0 1px 2px rgba(0,0,0,.65), 0 0 8px rgba(0,0,0,.35);
       transition: opacity .5s ease;
     }
 
@@ -1072,11 +1084,11 @@
 <!-- ════ CAPTION FRAME ════════════════════════════════════ -->
 <div class="frame" id="frame">
   <div class="caption" id="caption">
-    <div class="uploader" id="caption-uploader"></div>
+    <div class="uploader text-scrim" id="caption-uploader"></div>
     <blockquote id="caption-quote"></blockquote>
   </div>
   <div class="corner">
-    <div class="names" id="corner-names"></div>
+    <div class="names text-scrim" id="corner-names"></div>
     <div>&#9733; Powered by Reelday</div>
   </div>
 </div>
