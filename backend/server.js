@@ -179,13 +179,48 @@ fastify.get('/forgot-password',  (_r, reply) => reply.sendFile('forgot-password.
 fastify.get('/reset-password',   (_r, reply) => reply.sendFile('reset-password.html'));
 fastify.get('/my-events',        (_r, reply) => reply.sendFile('my-events.html'));
 
-fastify.setErrorHandler((error, _request, reply) => {
-  fastify.log.error(error);
+fastify.setErrorHandler((error, request, reply) => {
   const statusCode = error.statusCode ?? 500;
+  // Tag every 5xx with a unique grep-able string so it's easy to find in
+  // Easypanel logs. Search the log panel for: REELDAY_500
+  if (statusCode >= 500) {
+    request.log.error({
+      tag: 'REELDAY_500',
+      method: request.method,
+      url: request.url,
+      hostname: request.hostname,
+      ip: request.ip,
+      errName: error?.name,
+      errMessage: error?.message,
+      errCode: error?.code,
+      errDetail: error?.detail,
+      stack: error?.stack,
+    }, `REELDAY_500 ${request.method} ${request.url}`);
+  } else {
+    request.log.error(error);
+  }
   reply.status(statusCode).send({
     error: true,
     message: statusCode === 500 ? 'Internal server error' : error.message,
   });
+});
+
+// Last-resort safety net: if any async work throws and isn't caught, this
+// keeps the process alive and logs it. Without this, a single unhandled
+// rejection can wedge the event loop and turn the whole site into 500s.
+process.on('unhandledRejection', (reason, promise) => {
+  fastify.log.error({
+    tag: 'REELDAY_UNHANDLED_REJECTION',
+    reason: reason instanceof Error
+      ? { name: reason.name, message: reason.message, stack: reason.stack }
+      : reason,
+  }, 'REELDAY_UNHANDLED_REJECTION');
+});
+process.on('uncaughtException', (err) => {
+  fastify.log.error({
+    tag: 'REELDAY_UNCAUGHT_EXCEPTION',
+    name: err.name, message: err.message, stack: err.stack,
+  }, 'REELDAY_UNCAUGHT_EXCEPTION');
 });
 
 const port = Number(process.env.PORT) || 3000;
