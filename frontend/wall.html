@@ -426,6 +426,20 @@
         /* edge light: a faint catch along the top rim, as if the
            halo above is grazing the portrait's leading edge. */
         inset 0 1px 0 rgba(255,235,210,.09);
+      /* Feathered edge — opaque through the body of the portrait, alpha
+         softens through the outer ~15% so the image dissolves into the
+         ambient glow instead of terminating at a hard card edge.
+         Reads as "illuminated, not boxed". */
+      -webkit-mask-image: radial-gradient(ellipse 100% 100% at center,
+        #000 0%,
+        #000 82%,
+        rgba(0,0,0,.6) 93%,
+        rgba(0,0,0,0)  100%);
+      mask-image:         radial-gradient(ellipse 100% 100% at center,
+        #000 0%,
+        #000 82%,
+        rgba(0,0,0,.6) 93%,
+        rgba(0,0,0,0)  100%);
     }
     /* Motion language — breathing scale + floating drift on the
        whole layer. Numbers are intentionally small: 4px of drift,
