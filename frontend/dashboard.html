@@ -43,6 +43,24 @@
       margin-bottom: 42px; flex-wrap: wrap; gap: 1rem;
     }
     .event-header .brand { color: var(--paper); font-size: 18px; letter-spacing: .02em; }
+
+    /* Logo lockup on the dark dashboard header — wrap the image in a warm
+       cream pill so the dark wordmark stays legible against the dark bg.
+       Subtle shadow + border keeps it premium, not card-stickered. */
+    .event-header .brand-lockup {
+      background: #FBF3E5;
+      border: 1px solid rgba(255,255,255,0.08);
+      padding: 8px 16px;
+      border-radius: 14px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.4);
+      transition: transform .2s ease, box-shadow .2s ease;
+    }
+    .event-header .brand-lockup:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 22px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.5);
+    }
+    .event-header .brand-img { height: 44px; }
+    @media (max-width: 760px) { .event-header .brand-img { height: 36px; } }
     .event-header .nav {
       display: inline-flex; gap: 8px; align-items: center;
       padding: 6px;
