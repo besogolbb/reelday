@@ -2938,10 +2938,40 @@
         const newIdx = items.findIndex(u => u.id === refreshedCurrent.id);
         if (newIdx >= 0) {
           currentIdx = newIdx;
-          showSlide(currentIdx, { reuseActive: true });
-          startProgress();
-          prewarmNext();
-          if (!isPaused && items.length > 1) scheduleAdvance();
+
+          const proceed = () => {
+            showSlide(currentIdx, { reuseActive: true });
+            startProgress();
+            prewarmNext();
+            if (!isPaused && items.length > 1) scheduleAdvance();
+          };
+
+          // The currently-active layer is showing a live first-frame
+          // preview off the original upload. Swapping inVid.src inside
+          // showSlide will clear that frame and leave a blank box until
+          // the transcoded video decodes. Preload it via a throwaway
+          // <video> first so the byte stream is in the HTTP cache before
+          // the visible swap fires — loadeddata then resolves almost
+          // immediately.
+          const readyMediaUrl = wallMediaUrl(refreshedCurrent);
+          if (readyMediaUrl) {
+            let done = false;
+            const fire = () => { if (done) return; done = true; proceed(); };
+            const probe = document.createElement('video');
+            probe.muted = true;
+            probe.playsInline = true;
+            probe.preload = 'auto';
+            probe.addEventListener('loadeddata', fire, { once: true });
+            probe.addEventListener('canplay',    fire, { once: true });
+            probe.addEventListener('error',      fire, { once: true });
+            // Safety: never block the swap longer than 2.5s if the probe
+            // stalls behind a slow CDN warm-up.
+            setTimeout(fire, 2500);
+            probe.src = readyMediaUrl;
+            probe.load();
+          } else {
+            proceed();
+          }
         }
       }
     }
