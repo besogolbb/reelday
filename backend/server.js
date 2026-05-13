@@ -179,23 +179,31 @@ fastify.get('/forgot-password',  (_r, reply) => reply.sendFile('forgot-password.
 fastify.get('/reset-password',   (_r, reply) => reply.sendFile('reset-password.html'));
 fastify.get('/my-events',        (_r, reply) => reply.sendFile('my-events.html'));
 
+// In-memory ring buffer of recent 5xx errors so we can fetch them via HTTP
+// without scrolling through Easypanel logs. GET /api/_errors?key=<DEBUG_KEY>
+const recentErrors = [];
+const MAX_ERRORS_BUFFERED = 100;
+function pushRecentError(entry) {
+  recentErrors.push({ ...entry, at: new Date().toISOString() });
+  if (recentErrors.length > MAX_ERRORS_BUFFERED) recentErrors.shift();
+}
+
 fastify.setErrorHandler((error, request, reply) => {
   const statusCode = error.statusCode ?? 500;
-  // Tag every 5xx with a unique grep-able string so it's easy to find in
-  // Easypanel logs. Search the log panel for: REELDAY_500
   if (statusCode >= 500) {
-    request.log.error({
+    const entry = {
       tag: 'REELDAY_500',
       method: request.method,
       url: request.url,
-      hostname: request.hostname,
       ip: request.ip,
       errName: error?.name,
       errMessage: error?.message,
       errCode: error?.code,
       errDetail: error?.detail,
       stack: error?.stack,
-    }, `REELDAY_500 ${request.method} ${request.url}`);
+    };
+    request.log.error(entry, `REELDAY_500 ${request.method} ${request.url}`);
+    pushRecentError(entry);
   } else {
     request.log.error(error);
   }
@@ -203,6 +211,17 @@ fastify.setErrorHandler((error, request, reply) => {
     error: true,
     message: statusCode === 500 ? 'Internal server error' : error.message,
   });
+});
+
+// Debug endpoint — returns the last N 500s as JSON. Gated by DEBUG_KEY env
+// var so it's not public. Set DEBUG_KEY in Easypanel to enable; without it,
+// the endpoint returns 404 (no information leak).
+fastify.get('/api/_errors', async (request, reply) => {
+  const key = process.env.DEBUG_KEY;
+  if (!key || request.query?.key !== key) {
+    return reply.status(404).send({ error: true, message: 'Not found' });
+  }
+  return { count: recentErrors.length, errors: recentErrors.slice().reverse() };
 });
 
 // Last-resort safety net: if any async work throws and isn't caught, this
