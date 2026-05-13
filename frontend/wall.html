@@ -379,27 +379,34 @@
     body.is-landscape .upcoming { opacity: 0; pointer-events: none; }
     body.is-portrait .upcoming { opacity: 1; }
 
-    /* Layer 2 — ambient glow behind the portrait media. Sits above
-       the blurred backdrop (z:1) and below the foreground (z:2). */
+    /* Layer 2 — environmental lighting: a wide warm halo biased
+       slightly above center (reads as light cast from above) plus
+       a cooler luminance wash. Both very low opacity so the effect
+       is felt, not seen. VisionOS-style: the portrait sits *in* a
+       lit space rather than on a flat wall. */
     body.is-portrait .layer::after {
       content: '';
       position: absolute;
-      left: 50%; top: 50%;
-      width: min(70vh, 720px);
-      height: min(110vh, 1200px);
+      left: 50%; top: 46%;
+      width: min(100vh, 1200px);
+      height: min(100vh, 1200px);
       transform: translate(-50%, -50%);
       z-index: 1;
       pointer-events: none;
-      background: radial-gradient(ellipse at center,
-        rgba(240,163,122,.32) 0%,
-        rgba(240,163,122,.14) 30%,
-        rgba(0,0,0,0) 65%);
-      filter: blur(28px);
+      background:
+        radial-gradient(ellipse 58% 48% at 50% 38%,
+          rgba(240,163,122,.16) 0%,
+          rgba(240,163,122,.07) 38%,
+          rgba(240,163,122,0)   72%),
+        radial-gradient(ellipse at center,
+          rgba(255,235,210,.05) 0%,
+          rgba(0,0,0,0)         62%);
+      filter: blur(38px);
     }
 
     /* Layer 3 — contained portrait media: 9:16 box, centered via
-       margin auto + inset 0, with depth and a slow float. Aspect
-       Ken Burns animations still apply on top via inline style. */
+       margin auto + inset 0. Stacked shadows give depth; a faint
+       top inset catches the warm halo above as edge light. */
     body.is-portrait .layer .pic,
     body.is-portrait .layer .vid {
       inset: 0;
@@ -414,16 +421,23 @@
       box-shadow:
         0 30px 80px rgba(0,0,0,.55),
         0 12px 28px rgba(0,0,0,.4),
-        0 0 0 1px rgba(255,255,255,.06);
+        0 0 0 1px rgba(255,255,255,.06),
+        /* edge light: a faint catch along the top rim, as if the
+           halo above is grazing the portrait's leading edge. */
+        inset 0 1px 0 rgba(255,235,210,.09);
     }
-    /* Floating animation wraps the layer (transform on .pic is
-       owned by Ken Burns). Subtle vertical drift only. */
+    /* Motion language — breathing scale + floating drift on the
+       whole layer. Numbers are intentionally small: 4px of drift,
+       0.6% of scale, 7s cycle. Reads as alive, not animated.
+       Ken Burns on .pic composes on top (inline style sets that). */
     body.is-portrait .layer {
-      animation: portraitFloat 6s ease-in-out infinite;
+      animation: portraitBreathe 7s ease-in-out infinite;
+      transform-origin: center center;
+      will-change: transform;
     }
-    @keyframes portraitFloat {
-      0%, 100% { transform: translateY(-3px); }
-      50%      { transform: translateY(3px); }
+    @keyframes portraitBreathe {
+      0%, 100% { transform: translateY(-2px) scale(1.000); }
+      50%      { transform: translateY( 2px) scale(1.006); }
     }
     /* In portrait mode the heavy vignette competes with the new
        composition — soften it to just an edge fade. */
