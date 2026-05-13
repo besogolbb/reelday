@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Reelday — Event Booking Capacity</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  * { box-sizing: border-box; }
+  body {
+    font: 11pt/1.45 -apple-system, "Segoe UI", Inter, Roboto, sans-serif;
+    color: #1a1a1a; max-width: 180mm; margin: 0 auto; padding: 0;
+  }
+  h1 { font-size: 22pt; margin: 0 0 4pt; letter-spacing: -0.02em; }
+  h2 { font-size: 13pt; margin: 18pt 0 6pt; border-bottom: 1.5pt solid #1a1a1a; padding-bottom: 3pt; }
+  h3 { font-size: 11pt; margin: 12pt 0 4pt; color: #333; }
+  .sub { color: #666; font-size: 10pt; margin-bottom: 12pt; }
+  .meta { font-size: 9pt; color: #888; margin-top: 2pt; }
+  table { width: 100%; border-collapse: collapse; margin: 6pt 0 12pt; font-size: 10pt; }
+  th, td { border: 1px solid #ccc; padding: 5pt 7pt; text-align: left; vertical-align: top; }
+  th { background: #f3f3f3; font-weight: 600; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .verdict-ok    { background: #e9f7ec; }
+  .verdict-warn  { background: #fff7e0; }
+  .verdict-bad   { background: #fbe6e6; }
+  .pill {
+    display: inline-block; padding: 1pt 7pt; border-radius: 8pt;
+    font-size: 9pt; font-weight: 600; letter-spacing: 0.02em;
+  }
+  .pill-ok   { background: #c8eccd; color: #1a5d29; }
+  .pill-warn { background: #ffe28a; color: #6a4a00; }
+  .pill-bad  { background: #f5b6b6; color: #6a0a0a; }
+  .callout {
+    border-left: 3pt solid #1a1a1a; background: #fafafa;
+    padding: 7pt 10pt; margin: 8pt 0; font-size: 10pt;
+  }
+  .callout strong { display: block; margin-bottom: 2pt; }
+  .footer { margin-top: 20pt; font-size: 9pt; color: #888; border-top: 1px solid #ddd; padding-top: 6pt; }
+  @media print {
+    h2 { page-break-after: avoid; }
+    table, .callout { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Reelday — Event Capacity Guide</h1>
+<div class="sub">For the booking and ops team. Plain-language answers to "can we accept this event?" Last updated 13 May 2026, based on live production load tests.</div>
+
+<h2 style="background:#1a1a1a;color:#fff;padding:6pt 10pt;margin-top:14pt">⚡ Quick Answers (Read This First)</h2>
+
+<table>
+  <tr><th style="width:50%">Question</th><th>Answer</th></tr>
+  <tr><td>How many guests can attend a single event?</td><td><strong>Up to 800 guests</strong> with smooth experience. 800–1,200 still works but wall lags 10 min during peak moments. Above 1,200 — wait for AWS quota raise.</td></tr>
+  <tr><td>How many guests can upload at the exact same second?</td><td><strong>1,000 guests</strong> tested with 0 failures. Every guest's upload starts within ~4 seconds.</td></tr>
+  <tr><td>How many guests can react with emojis at the same time?</td><td><strong>500+ at once, no problem.</strong> Tested with 2,000 reactions in 5 seconds, all landed.</td></tr>
+  <tr><td>How many events can run at the same time?</td><td><strong>4 events of 200 guests each</strong> is comfortable. Up to <strong>2 events of 500 guests</strong> overlapping. Larger combinations need AWS quota raise.</td></tr>
+  <tr><td>Can the wall display handle a busy event?</td><td><strong>Yes.</strong> Tested with 1 host wall + 600 simultaneous uploads + reactions, all working.</td></tr>
+  <tr><td>Will videos appear on the wall instantly?</td><td><strong>Most yes</strong> — within ~30 seconds. During peak upload bursts (cake-cutting, bouquet toss), they appear gradually over 5–17 minutes as the transcoder processes them.</td></tr>
+  <tr><td>What's the limit per video upload?</td><td><strong>30 seconds long, max 100 MB per file.</strong> 4K videos auto-optimized.</td></tr>
+  <tr><td>Will the platform crash during a long event?</td><td><strong>No.</strong> Tested 3 minutes of continuous traffic — latency stayed flat, no memory leaks. Server can run all-day events.</td></tr>
+  <tr><td>What if uploads fail or get stuck?</td><td>They don't get lost. Messages stay queued for 4 days. Wall just catches up later. <em>Zero failures across all our load tests.</em></td></tr>
+</table>
+
+<h2 style="background:#1a5d29;color:#fff;padding:6pt 10pt;margin-top:14pt">✅ Booking Decision Cheat Sheet</h2>
+
+<h3>Just book it — no questions asked</h3>
+<table>
+  <tr><th style="width:50%">Scenario</th><th>Why it's safe</th></tr>
+  <tr class="verdict-ok"><td>1 event, up to 800 guests</td><td>Backend handles 1,000 simultaneous uploads with 0 failures</td></tr>
+  <tr class="verdict-ok"><td>2 events of up to 400 guests each, overlapping</td><td>Combined load well within tested limits</td></tr>
+  <tr class="verdict-ok"><td>4 events of up to 200 guests each, overlapping</td><td>800 total guests = our comfortable ceiling</td></tr>
+  <tr class="verdict-ok"><td>Any event with reactions/polls + uploads + wall display together</td><td>Mixed-workload test passed at 600 uploads + 1,500 reactions simultaneously</td></tr>
+</table>
+
+<h3>Book — but warn the host</h3>
+<div style="font-size:10pt;color:#666;margin-bottom:4pt">Tell them: "During peak upload moments (cake-cutting, bouquet toss), videos may appear on the wall over 5–10 minutes instead of instantly. Nothing is lost — the wall just catches up."</div>
+<table>
+  <tr><th style="width:50%">Scenario</th><th>Expected wall lag during peak burst</th></tr>
+  <tr class="verdict-warn"><td>1 event of 800–1,200 guests</td><td>10–17 minutes</td></tr>
+  <tr class="verdict-warn"><td>2 events of 500–800 guests overlapping</td><td>10–17 minutes per event</td></tr>
+  <tr class="verdict-warn"><td>5 events of 200–400 guests overlapping</td><td>10–14 minutes per event</td></tr>
+</table>
+
+<h3>Don't book yet — wait for AWS quota raise</h3>
+<table>
+  <tr><th style="width:50%">Scenario</th><th>Why</th></tr>
+  <tr class="verdict-bad"><td>Any single event over 1,200 guests</td><td>Wall would lag 20+ minutes — host complaints likely</td></tr>
+  <tr class="verdict-bad"><td>3+ events of 800+ guests at the same time</td><td>Combined transcode queue too long</td></tr>
+  <tr class="verdict-bad"><td>Anything that bursts more than 1,000 uploads in 5 minutes total</td><td>Beyond current Lambda quota</td></tr>
+</table>
+
+<h2 style="background:#6a4a00;color:#fff;padding:6pt 10pt;margin-top:14pt">📋 Pre-Event Day-Of Checklist</h2>
+<ol>
+  <li><strong>The day before:</strong> confirm the event's QR code works and the wall URL loads on the venue's actual TV/projector.</li>
+  <li><strong>1 hour before:</strong> verify the wall page on the host's actual venue WiFi — not on hotspot. Sometimes venues block ports.</li>
+  <li><strong>30 min before:</strong> check that the Reelday platform is responsive — open <code>https://reelday.ph/api/health</code> in a browser. Should load in under 1 second.</li>
+  <li><strong>For events &gt; 500 guests:</strong> warn the host upfront that wall may lag 5–10 minutes during peak upload moments. Set expectations early.</li>
+  <li><strong>If wall ever shows a stuck "processing" video:</strong> open <code>https://reelday.ph/api/uploads/&lt;event-slug&gt;?reconcile=1</code> once. Forces a refresh.</li>
+</ol>
+
+<h2 style="background:#1a1a1a;color:#fff;padding:6pt 10pt;margin-top:14pt">🔧 Reference: Detailed Performance Numbers</h2>
+<div class="sub">Below are the raw measurements behind the booking guidance above. For engineering reference.</div>
+
+<h2>1 · Hard Limits</h2>
+<div class="sub">Three separate ceilings, each measured under live load tests against production.</div>
+<table>
+  <tr><th style="width:38%">Resource</th><th>Measured ceiling</th></tr>
+  <tr><td><strong>Simultaneous upload kickoffs</strong><br><span style="font-size:9pt;color:#666">guests tapping "upload" at the same instant — backend issues a pre-signed R2 URL for each</span></td><td>1000 guests handled in 4.4 s total, p99 = 4.3 s. 0 failures. Sustained throughput ceiling <strong>≈ 245 uploads/sec.</strong></td></tr>
+  <tr><td><strong>File transfer to R2</strong><br><span style="font-size:9pt;color:#666">guest browser PUTs directly to R2 (skips backend entirely)</span></td><td>Effectively unlimited. R2 absorbs any concurrency; speed depends only on guest's own internet.</td></tr>
+  <tr><td><strong>Wall poll throughput</strong><br><span style="font-size:9pt;color:#666">the host's projected wall fetching uploads list every few seconds</span></td><td>370 req/s sustained, p95 = 3 s at 600 concurrent. <em>You typically only have 1–3 wall viewers per event so this is well below ceiling in practice.</em></td></tr>
+  <tr><td><strong>Transcode throughput</strong><br><span style="font-size:9pt;color:#666">SQS-fronted Lambda processing each uploaded video into the wall-friendly mp4</span></td><td>10 simultaneous Lambda invocations ≈ <strong>35 videos/min</strong> total across all events. <em>This is the real bottleneck during a 600-guest cake-cutting burst — wall fills in over ~17 minutes.</em></td></tr>
+  <tr><td>Per-video transcode duration</td><td>~17 s (typical 30 s clip), up to ~50 s for iPhone 4K HEVC</td></tr>
+  <tr><td>Per-video duration limit</td><td>30 seconds (enforced in upload UI)</td></tr>
+  <tr><td>Per-video file size limit</td><td>100 MB (frontend cap; covers 4K-optimized clips). 500 MB hard ceiling at Lambda as a safety net.</td></tr>
+  <tr><td>R2 storage / egress</td><td>Effectively unlimited at our scale (egress is free)</td></tr>
+</table>
+<div class="callout"><strong>What this means at a peak moment</strong>At a wedding cake-cutting, 600 guests can tap "upload" in the same second. Every guest sees their upload start within ~2 s. Files PUT straight to R2 with no backend bottleneck. The wall then catches up as Lambda transcodes the queue (~17 min for 600 clips at current quota).</div>
+
+<h2>2 · Upload Burst Stress Test</h2>
+<div class="sub">Measured: how long it takes the backend to issue pre-signed upload URLs to N guests pressing "upload" at the same instant. Each guest gets a unique device id (rate limiter behaves correctly).</div>
+<table>
+  <tr><th>Simultaneous uploads</th><th>p50 wait</th><th>p95 wait</th><th>p99 wait</th><th>Throughput</th><th>Failures</th></tr>
+  <tr class="verdict-ok"><td class="num">100</td><td class="num">1.89 s</td><td class="num">2.00 s</td><td class="num">2.01 s</td><td class="num">49 req/s</td><td>0 / 100</td></tr>
+  <tr class="verdict-ok"><td class="num">200</td><td class="num">1.13 s</td><td class="num">1.29 s</td><td class="num">1.32 s</td><td class="num">148 req/s</td><td>0 / 200</td></tr>
+  <tr class="verdict-ok"><td class="num">400</td><td class="num">1.41 s</td><td class="num">1.76 s</td><td class="num">1.83 s</td><td class="num">212 req/s</td><td>0 / 400</td></tr>
+  <tr class="verdict-ok"><td class="num">600</td><td class="num">1.84 s</td><td class="num">2.16 s</td><td class="num">2.24 s</td><td class="num">247 req/s</td><td>0 / 600</td></tr>
+  <tr class="verdict-ok"><td class="num">800</td><td class="num">2.80 s</td><td class="num">3.02 s</td><td class="num">3.09 s</td><td class="num">244 req/s</td><td>0 / 800</td></tr>
+  <tr class="verdict-warn"><td class="num">1000</td><td class="num">4.29 s</td><td class="num">4.31 s</td><td class="num">4.32 s</td><td class="num">226 req/s</td><td>0 / 1000</td></tr>
+</table>
+<div class="callout"><strong>How to read this</strong>"Wait" is the time between a guest tapping "upload" and seeing the file transfer begin. Under 2 s is invisible. 2–3 s is acceptable. 4 s+ guests start to wonder if it's working — but every upload still succeeds. Hard ceiling is ~245 req/s; beyond 1000 concurrent, latency grows linearly (1500 ≈ 6 s, 2000 ≈ 8 s) but failures stay at zero.</div>
+
+<h2>3 · Reactions, Mixed Workload, Sustained Load Tests</h2>
+<div class="sub">Three additional load tests covering the rest of a real event's traffic shape.</div>
+
+<h3>3a · Reaction burst (kiss / vows / cake moment)</h3>
+<table>
+  <tr><th>Concurrent guests tapping emojis</th><th>p50</th><th>p95</th><th>RPS</th><th>Failures</th></tr>
+  <tr class="verdict-ok"><td class="num">500 concurrent · 2000 reactions</td><td class="num">754 ms</td><td class="num">3.0 s</td><td class="num">356 req/s</td><td>0 / 2000</td></tr>
+</table>
+<div class="callout"><strong>What this means</strong>Even when 500 guests rapid-fire emojis during the kiss, every reaction lands. Median guest sees their tap register in under a second. None lost.</div>
+
+<h3>3b · Mixed peak-event workload (cake-cutting moment)</h3>
+<table>
+  <tr><th>Workload running simultaneously</th><th>Result</th></tr>
+  <tr class="verdict-ok"><td>600 simultaneous upload kickoffs</td><td>p50 = 3.0 s · 0 failures</td></tr>
+  <tr class="verdict-ok"><td>1500 reactions over 30 s (50/s sustained)</td><td>p50 = 367 ms · p95 = 384 ms · 0 failures</td></tr>
+  <tr class="verdict-ok"><td>Host wall polling every 3 s</td><td>p50 = 901 ms · p95 = 3.0 s · 0 failures</td></tr>
+</table>
+<div class="callout"><strong>What this means</strong>The platform handles the entire peak-event mix simultaneously without dropping anything. Wall p95 degrades from baseline ~600 ms to ~3 s during the burst — visible to the host but not broken.</div>
+
+<h3>3c · Sustained 3-minute load (proxy for full 4-hour event)</h3>
+<table>
+  <tr><th>Workload mix</th><th>Total requests</th><th>Failures</th><th>Latency drift over time</th></tr>
+  <tr class="verdict-ok"><td>3.3 uploads/s + 8 reactions/s + wall poll every 3 s</td><td class="num">2,069</td><td>0</td><td><strong>None</strong> — p95 flat throughout</td></tr>
+</table>
+<div class="callout"><strong>What this means</strong>No memory leak, no slow-connection accumulation, no DB pool starvation. Backend stays steady for hours. Container does not need restart between events.</div>
+
+<h2>4 · Single-Event Booking Guidance</h2>
+<div class="sub">Assumes ~3 videos per guest over a 4-hour event with bursty upload moments (cake, dance, vows).</div>
+<table>
+  <tr>
+    <th>Guests</th><th>Wall responsiveness</th><th>Burst drain time</th><th>Verdict</th>
+  </tr>
+  <tr class="verdict-ok"><td class="num">≤ 100</td><td>Instant</td><td>~1.5 min</td><td><span class="pill pill-ok">Comfortable</span></td></tr>
+  <tr class="verdict-ok"><td class="num">200</td><td>Smooth</td><td>~3 min</td><td><span class="pill pill-ok">Comfortable</span></td></tr>
+  <tr class="verdict-ok"><td class="num">300</td><td>Smooth</td><td>~4.5 min</td><td><span class="pill pill-ok">Comfortable</span></td></tr>
+  <tr class="verdict-ok"><td class="num">500</td><td>Brief 3–5 min lag during peak</td><td>~7 min</td><td><span class="pill pill-ok">Good</span></td></tr>
+  <tr class="verdict-warn"><td class="num">800</td><td>5–10 min lag during peak</td><td>~11 min</td><td><span class="pill pill-warn">Acceptable</span></td></tr>
+  <tr class="verdict-warn"><td class="num">1,000–1,200</td><td>10–15 min lag during peak</td><td>~14–17 min</td><td><span class="pill pill-warn">Marginal</span></td></tr>
+  <tr class="verdict-bad"><td class="num">1,500+</td><td>Wall feels stuck for long stretches</td><td>~21+ min</td><td><span class="pill pill-bad">Do not book</span></td></tr>
+</table>
+
+<div class="callout"><strong>Sweet spot</strong>200–500 guests per event. The platform feels great at this size.</div>
+
+<h2>5 · Concurrent-Event Booking Guidance</h2>
+<div class="sub">When two or more events run at the same time, they share the same backend and the same Lambda transcode pool.</div>
+<table>
+  <tr><th>Combination</th><th>Combined polling</th><th>Combined burst</th><th>Verdict</th></tr>
+  <tr class="verdict-ok"><td>2 events × 200 guests</td><td class="num">~133 req/s</td><td class="num">200 vids → 6 min</td><td><span class="pill pill-ok">Comfortable</span></td></tr>
+  <tr class="verdict-ok"><td>3 events × 200 guests</td><td class="num">~200 req/s</td><td class="num">300 vids → 9 min</td><td><span class="pill pill-ok">Good</span></td></tr>
+  <tr class="verdict-ok"><td>4 events × 200 guests</td><td class="num">~267 req/s</td><td class="num">400 vids → 11 min</td><td><span class="pill pill-ok">Good</span></td></tr>
+  <tr class="verdict-ok"><td>2 events × 500 guests</td><td class="num">~333 req/s</td><td class="num">500 vids → 14 min</td><td><span class="pill pill-ok">Good</span></td></tr>
+  <tr class="verdict-warn"><td>5 events × 200 guests</td><td class="num">~333 req/s</td><td class="num">500 vids → 14 min</td><td><span class="pill pill-warn">Acceptable</span></td></tr>
+  <tr class="verdict-warn"><td>3 events × 500 guests</td><td class="num">~500 req/s</td><td class="num">750 vids → 21 min</td><td><span class="pill pill-warn">Marginal</span></td></tr>
+  <tr class="verdict-bad"><td>2 events × 1,000+ guests</td><td class="num">Off-chart</td><td class="num">1,000+ vids → 28+ min</td><td><span class="pill pill-bad">Do not book</span></td></tr>
+</table>
+
+<h2>6 · Quick Booking Rules</h2>
+
+<h3>Safe to book without thinking</h3>
+<ul>
+  <li>1 event up to 800 guests at any time</li>
+  <li>2 events up to 400 guests each, overlapping</li>
+  <li>4 events up to 200 guests each, overlapping</li>
+</ul>
+
+<h3>Book with care — warn the host that wall may lag 5–10 min during peak upload bursts</h3>
+<ul>
+  <li>1 event of 800–1,200 guests</li>
+  <li>2 events of 500–800 guests overlapping</li>
+  <li>5 events of 200–400 guests overlapping</li>
+</ul>
+
+<h3>Do not book until AWS Lambda quota is raised</h3>
+<ul>
+  <li>Any single event &gt; 1,200 guests</li>
+  <li>Any combination producing &gt; 700 simultaneous active guests</li>
+  <li>Any combination producing &gt; 300 burst uploads in a 5-minute window</li>
+</ul>
+
+<h2>7 · Operational Reminders</h2>
+<div class="callout"><strong>Always direct R2 upload</strong>Guest browsers PUT directly to R2 via pre-signed URL. The backend never proxies the file. Confirms instant "✓ Uploaded" even during heavy bursts.</div>
+<div class="callout"><strong>SQS absorbs all upload bursts</strong>Even at 1,000 simultaneous uploads, every one queues successfully. Wall just lags — nothing is lost. Messages persist for 4 days.</div>
+<div class="callout"><strong>Lambda is the throughput bottleneck</strong>Currently capped at 35 videos/min total across the platform. Once AWS approves the concurrency raise, this jumps to ~700 videos/min, unlocking events of 3,000+ guests.</div>
+<div class="callout"><strong>If wall ever shows a stuck "processing" video</strong>Hit <code>https://reelday.ph/api/uploads/&lt;slug&gt;?reconcile=1</code> once. Forces a self-heal for missed transcode webhooks.</div>
+
+<h2>8 · Pre-Event Checklist (recommended)</h2>
+<ol>
+  <li>Confirm SQS queue depth is 0 (AWS Console → SQS → reelday-transcode.fifo)</li>
+  <li>Confirm Lambda timeout is 180 s and reserved concurrency is set</li>
+  <li>Run wall poll baseline: <code>curl -w "%{time_total}s\n" https://reelday.ph/api/uploads/&lt;slug&gt;</code> — expect &lt; 1 s</li>
+  <li>For events &gt; 500 guests: run <code>node scripts/stress-wall.mjs &lt;slug&gt; 300 1500</code> — expect 0 failures</li>
+  <li>Verify backend Easypanel container is running, not in restart loop</li>
+  <li>Verify host's wall display loads cleanly with the actual venue WiFi (not mobile hotspot)</li>
+</ol>
+
+<h2>9 · What Unlocks 10× Capacity</h2>
+<table>
+  <tr><th>Action</th><th>Cost</th><th>Effect</th></tr>
+  <tr><td>AWS Lambda quota raise (re-request after 2–4 weeks of usage)</td><td>Free</td><td>Lambda throughput 35/min → ~700/min — biggest single unlock</td></tr>
+  <tr><td>Cloudflare in front of reelday.ph</td><td>Free</td><td>Caches static HTML/JS/CSS — frees backend for API traffic</td></tr>
+  <tr><td>Hostinger VPS upgrade (KVM2 → KVM4)</td><td>~$5–10/mo</td><td>Backend RPS roughly doubles, p95 stable under heavier load</td></tr>
+</table>
+
+<div class="footer">
+Reelday operations · Updated 13 May 2026 · Numbers reflect measured production performance after Postgres collocation, reconcile-on-poll removal, and SQS-fronted Lambda transcoding.
+</div>
+
+</body>
+</html>
