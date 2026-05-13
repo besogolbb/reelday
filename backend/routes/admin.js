@@ -25,13 +25,14 @@ export default async function adminRoutes(fastify) {
   // Apply the admin gate to every route in this plugin.
   fastify.addHook('preHandler', requireAdmin);
 
-  // GET /api/admin/payments/pending
+  // GET /api/admin/payments/pending — kept for backward-compat with any
+  // older clients. New code should use /admin/payments?status=manual_pending.
   fastify.get('/admin/payments/pending', async () => {
     const { rows } = await fastify.db.query(
       `SELECT p.id, p.paymongo_payment_id, p.amount, p.plan, p.status, p.created_at,
               e.couple_names, e.slug, e.is_paid
        FROM payments p
-       JOIN events e ON e.id = p.event_id
+  LEFT JOIN events e ON e.id = p.event_id
        WHERE p.status = 'manual_pending'
        ORDER BY p.created_at DESC`,
     );
@@ -41,6 +42,131 @@ export default async function adminRoutes(fastify) {
         gcash_reference: r.paymongo_payment_id?.replace(/^gcash-/, '') ?? null,
       })),
     };
+  });
+
+  // GET /api/admin/payments?status=… — full history with optional filter.
+  // Joins events (may be NULL — admin-recorded payments aren't tied to a
+  // specific event row) and users so a single fetch populates the UI.
+  fastify.get('/admin/payments', async (request) => {
+    const status = String(request.query?.status || '').toLowerCase();
+    const validStatuses = new Set(['pending', 'manual_pending', 'succeeded', 'rejected', 'refunded']);
+    const args = [];
+    let where = '';
+    if (status && validStatuses.has(status)) {
+      args.push(status);
+      where = `WHERE p.status = $1`;
+    }
+    const { rows } = await fastify.db.query(
+      `SELECT p.id, p.user_id, p.event_id, p.paymongo_payment_id,
+              p.amount, p.plan, p.tier, p.status, p.created_at,
+              e.couple_names, e.slug,
+              u.email AS user_email, u.full_name AS user_name
+         FROM payments p
+    LEFT JOIN events e ON e.id = p.event_id
+    LEFT JOIN users  u ON u.id = p.user_id
+         ${where}
+     ORDER BY p.created_at DESC
+        LIMIT 500`,
+      args,
+    );
+    return {
+      payments: rows.map(r => ({
+        ...r,
+        gcash_reference: r.paymongo_payment_id?.startsWith('gcash-')
+          ? r.paymongo_payment_id.slice(6)
+          : null,
+      })),
+    };
+  });
+
+  // POST /api/admin/payments/manual — admin records an out-of-band
+  // payment (cash, bank transfer, etc.). Inserts as 'succeeded' and
+  // upgrades the user's subscription_tier in the same transaction so the
+  // change is immediate. event_id is optional — useful when the payment
+  // is for a future event the user hasn't created yet.
+  fastify.post('/admin/payments/manual', async (request, reply) => {
+    const { user_id, tier, amount, reference, slug } = request.body ?? {};
+    if (!user_id || !tier || amount === undefined || amount === null) {
+      return reply.status(400).send({ error: true, message: 'user_id, tier and amount are required' });
+    }
+    if (!VALID_TIERS.has(String(tier).toLowerCase())) {
+      return reply.status(400).send({ error: true, message: `Invalid tier. Allowed: ${[...VALID_TIERS].join(', ')}` });
+    }
+    const amt = Math.round(Number(amount));
+    if (!Number.isFinite(amt) || amt < 0) {
+      return reply.status(400).send({ error: true, message: 'amount must be a positive integer (centavos)' });
+    }
+    const tierLower = String(tier).toLowerCase();
+    const ref = String(reference || `admin-${Date.now()}`).slice(0, 200);
+
+    // Resolve event_id if a slug was provided.
+    let eventId = null;
+    if (slug) {
+      const { rows: er } = await fastify.db.query('SELECT id FROM events WHERE slug = $1', [slug]);
+      if (!er.length) return reply.status(404).send({ error: true, message: 'Event slug not found' });
+      eventId = er[0].id;
+    }
+
+    // Run the three writes in a single transaction so a partial failure
+    // never leaves the user upgraded without a corresponding payment row.
+    const client = await fastify.db.connect();
+    try {
+      await client.query('BEGIN');
+      const { rows: ins } = await client.query(
+        `INSERT INTO payments (user_id, event_id, paymongo_payment_id, amount, plan, tier, status)
+         VALUES ($1, $2, $3, $4, $5, $5, 'succeeded')
+         RETURNING id, created_at`,
+        [user_id, eventId, ref, amt, tierLower],
+      );
+      await client.query(
+        `UPDATE users SET subscription_tier = $2 WHERE id = $1`,
+        [user_id, tierLower],
+      );
+      if (eventId) {
+        await client.query(
+          `UPDATE events SET is_paid = true, plan = $2 WHERE id = $1`,
+          [eventId, tierLower],
+        );
+      }
+      await client.query('COMMIT');
+      return { success: true, payment_id: ins[0].id, created_at: ins[0].created_at };
+    } catch (err) {
+      try { await client.query('ROLLBACK'); } catch {}
+      throw err;
+    } finally {
+      client.release();
+    }
+  });
+
+  // POST /api/admin/payments/:id/refund — mark a succeeded payment as
+  // refunded. Also flips the associated event back to is_paid=false
+  // so the host can't use a refunded purchase to access paid features.
+  // Does NOT contact PayMongo — that has to be done manually in their
+  // dashboard. This just keeps our books straight.
+  fastify.post('/admin/payments/:id/refund', async (request, reply) => {
+    const { id } = request.params;
+    const { rows } = await fastify.db.query(
+      `WITH refunded AS (
+         UPDATE payments SET status = 'refunded'
+         WHERE id = $1 AND status = 'succeeded'
+         RETURNING event_id
+       )
+       UPDATE events SET is_paid = false
+       FROM refunded
+       WHERE events.id = refunded.event_id
+       RETURNING events.id`,
+      [id],
+    );
+    // If there was no event linked, the CTE still ran the UPDATE; verify.
+    const { rows: check } = await fastify.db.query(
+      'SELECT status FROM payments WHERE id = $1',
+      [id],
+    );
+    if (!check.length) return reply.status(404).send({ error: true, message: 'Payment not found' });
+    if (check[0].status !== 'refunded') {
+      return reply.status(409).send({ error: true, message: 'Only succeeded payments can be refunded' });
+    }
+    return { success: true, event_unpaid: rows.length > 0 };
   });
 
   // GET /api/admin/events

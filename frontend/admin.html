@@ -133,6 +133,59 @@
     .tier-dalisay  { background: rgba(196,90,58,.12);       color: var(--accent-deep); }
     .tier-hiraya   { background: rgba(78,52,128,.14);       color: #4e3480; }
 
+    /* Filter pills above the payments table. Active pill picks up the
+       brand accent so the current status filter is obvious. */
+    .filter-row { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: 1rem; }
+    .pay-filter {
+      padding: .35rem .85rem;
+      border: 1px solid var(--line-2);
+      background: #fff;
+      border-radius: 999px;
+      font-family: var(--mono);
+      font-size: .72rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .06em;
+      color: var(--ink-soft);
+      cursor: pointer;
+      transition: all .12s;
+    }
+    .pay-filter:hover { background: var(--paper-2); }
+    .pay-filter.active {
+      background: var(--accent); color: #fff; border-color: var(--accent);
+    }
+
+    /* Manual-entry inline form. Hidden by default; toggled by the
+       '+ Record manual payment' button. */
+    .manual-form {
+      background: var(--paper-2);
+      border: 1px solid var(--line);
+      border-radius: var(--r-lg);
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+    .manual-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: .75rem;
+    }
+    .manual-grid label {
+      display: flex; flex-direction: column; gap: .3rem;
+      font-family: var(--mono); font-size: .72rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft);
+    }
+    .manual-grid input, .manual-grid select {
+      padding: .55rem .75rem;
+      border: 1px solid var(--line-2);
+      border-radius: var(--r);
+      font-family: inherit; font-size: .9rem;
+      background: #fff; color: var(--ink);
+      outline: none;
+    }
+    .manual-grid input:focus, .manual-grid select:focus {
+      border-color: var(--accent); box-shadow: 0 0 0 3px rgba(196,90,58,.12);
+    }
+
+    .pill-refunded { background: rgba(78,52,128,.12);       color: #4e3480; }
+
     .action-btns { display: flex; gap: .5rem; }
 
     .empty-state { padding: 3rem 1rem; text-align: center; color: var(--ink-faint); font-size: .9rem; background: #fff; }
@@ -176,26 +229,66 @@
       <div class="stat-card"><div class="stat-num" id="s-revenue">—</div><div class="stat-lbl">Total Revenue</div></div>
     </div>
 
-    <!-- Pending Payments -->
+    <!-- Payments -->
     <div class="section">
       <div class="section-title">
-        💳 Pending GCash Payments
-        <span class="count-badge" id="pending-badge">0</span>
+        💳 Payments
+        <span class="count-badge" id="payments-badge">0</span>
+        <button class="btn-activate" style="margin-left:auto;padding:.4rem .85rem;font-size:.8rem" id="btn-open-manual">+ Record manual payment</button>
       </div>
+
+      <!-- Filter pills -->
+      <div class="filter-row">
+        <button class="pay-filter active" data-status="">All</button>
+        <button class="pay-filter" data-status="manual_pending">Pending GCash</button>
+        <button class="pay-filter" data-status="pending">Pending Card</button>
+        <button class="pay-filter" data-status="succeeded">Succeeded</button>
+        <button class="pay-filter" data-status="rejected">Rejected</button>
+        <button class="pay-filter" data-status="refunded">Refunded</button>
+      </div>
+
+      <!-- Manual entry form (hidden by default) -->
+      <div class="manual-form" id="manual-form" style="display:none">
+        <div class="manual-grid">
+          <label>User <select id="m-user"></select></label>
+          <label>Plan
+            <select id="m-tier">
+              <option value="sinag">Sinag</option>
+              <option value="dalisay">Dalisay</option>
+              <option value="hiraya">Hiraya</option>
+            </select>
+          </label>
+          <label>Amount (₱)
+            <input type="number" id="m-amount" min="0" step="1" placeholder="999" />
+          </label>
+          <label>Event slug <span style="color:var(--ink-faint);font-size:.72rem">(optional)</span>
+            <input type="text" id="m-slug" placeholder="e.g. mary-john-2026" />
+          </label>
+          <label style="grid-column:1/-1">Reference / note <span style="color:var(--ink-faint);font-size:.72rem">(optional)</span>
+            <input type="text" id="m-ref" placeholder="cash, bank-transfer, etc." />
+          </label>
+        </div>
+        <div style="display:flex;gap:.5rem;margin-top:.75rem;justify-content:flex-end">
+          <button class="btn-ghost-sm" id="btn-cancel-manual">Cancel</button>
+          <button class="btn-verify"   id="btn-submit-manual">Record payment</button>
+        </div>
+      </div>
+
       <div class="tbl-wrap">
         <table>
           <thead>
             <tr>
-              <th>Couple</th>
-              <th>Plan</th>
+              <th>User / Event</th>
               <th>Amount</th>
-              <th>GCash Reference</th>
+              <th>Plan</th>
+              <th>Status</th>
+              <th>Reference</th>
               <th>Date</th>
               <th>Actions</th>
             </tr>
           </thead>
-          <tbody id="pending-tbody">
-            <tr><td colspan="6" class="empty-state">Loading…</td></tr>
+          <tbody id="payments-tbody">
+            <tr><td colspan="7" class="empty-state">Loading…</td></tr>
           </tbody>
         </table>
       </div>
@@ -331,7 +424,7 @@
 
   // ── Data ─────────────────────────────────────────────
   async function loadAll() {
-    await Promise.all([loadStats(), loadPending(), loadUsers(), loadEvents()]);
+    await Promise.all([loadStats(), loadPayments(), loadUsers(), loadEvents()]);
   }
 
   // Cached user list so filtering by the search box doesn't refetch.
@@ -472,33 +565,133 @@
     } catch { /* silent */ }
   }
 
-  async function loadPending() {
+  // Active status filter for the payments table. Empty string = "All".
+  let paymentStatusFilter = '';
+
+  function actionsForPayment(p) {
+    if (p.status === 'manual_pending') {
+      return `<div class="action-btns">
+        <button class="btn-verify" onclick="verify('${esc(p.id)}')">✅ Verify</button>
+        <button class="btn-reject" onclick="reject('${esc(p.id)}')">❌ Reject</button>
+      </div>`;
+    }
+    if (p.status === 'succeeded') {
+      return `<button class="btn-reject" onclick="refundPayment('${esc(p.id)}')">↩ Refund</button>`;
+    }
+    return `<span style="color:var(--ink-faint);font-size:.78rem">—</span>`;
+  }
+
+  function statusPill(status) {
+    const map = {
+      pending:        ['pill-pending',   'Pending Card'],
+      manual_pending: ['pill-pending',   'Pending GCash'],
+      succeeded:      ['pill-succeeded', 'Succeeded'],
+      rejected:       ['pill-rejected',  'Rejected'],
+      refunded:       ['pill-refunded',  'Refunded'],
+    };
+    const [cls, label] = map[status] || ['pill-pending', status];
+    return `<span class="pill ${cls}">${esc(label)}</span>`;
+  }
+
+  async function loadPayments() {
     try {
-      const r = await adminFetch('/api/admin/payments/pending');
+      const qs = paymentStatusFilter ? `?status=${encodeURIComponent(paymentStatusFilter)}` : '';
+      const r = await adminFetch(`/api/admin/payments${qs}`);
       const { payments } = await r.json();
-      document.getElementById('pending-badge').textContent = payments.length;
-      const tbody = document.getElementById('pending-tbody');
+      document.getElementById('payments-badge').textContent = payments.length;
+      const tbody = document.getElementById('payments-tbody');
       if (!payments.length) {
-        tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No pending payments.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No payments match this filter.</td></tr>';
         return;
       }
       tbody.innerHTML = payments.map(p => `
         <tr id="row-${esc(p.id)}">
-          <td><strong>${esc(p.couple_names)}</strong><br><a href="/dashboard?slug=${esc(p.slug)}" target="_blank" style="color:var(--accent);font-size:.8rem">${esc(p.slug)}</a></td>
-          <td>${esc(p.plan)}</td>
-          <td>${formatAmount(p.amount)}</td>
-          <td><code style="background:var(--paper-2);padding:.2rem .5rem;border-radius:4px;font-size:.85rem;font-family:var(--mono)">${esc(p.gcash_reference || '—')}</code></td>
-          <td style="font-size:.8rem;color:var(--ink-faint)">${fmtDate(p.created_at)}</td>
           <td>
-            <div class="action-btns">
-              <button class="btn-verify" onclick="verify('${esc(p.id)}')">✅ Verify</button>
-              <button class="btn-reject" onclick="reject('${esc(p.id)}')">❌ Reject</button>
-            </div>
+            <strong>${esc(p.user_name || p.user_email || '—')}</strong>
+            ${p.user_email ? `<br><span style="color:var(--ink-faint);font-size:.8rem">${esc(p.user_email)}</span>` : ''}
+            ${p.slug ? `<br><a href="/dashboard?slug=${esc(p.slug)}" target="_blank" style="color:var(--accent);font-size:.78rem">${esc(p.slug)}</a>` : ''}
           </td>
+          <td>${formatAmount(p.amount)}</td>
+          <td>${esc(p.plan || p.tier || '—')}</td>
+          <td>${statusPill(p.status)}</td>
+          <td><code style="background:var(--paper-2);padding:.2rem .5rem;border-radius:4px;font-size:.78rem;font-family:var(--mono)">${esc(p.gcash_reference || p.paymongo_payment_id || '—')}</code></td>
+          <td style="font-size:.8rem;color:var(--ink-faint)">${fmtDate(p.created_at)}</td>
+          <td>${actionsForPayment(p)}</td>
         </tr>`).join('');
-    } catch (e) {
-      document.getElementById('pending-tbody').innerHTML = `<tr><td colspan="6" class="empty-state">Error loading payments.</td></tr>`;
+    } catch {
+      document.getElementById('payments-tbody').innerHTML = `<tr><td colspan="7" class="empty-state">Error loading payments.</td></tr>`;
     }
+  }
+
+  // Filter pill click handler — re-fetches the filtered list rather than
+  // doing client-side filtering, so the badge counts stay accurate.
+  document.querySelectorAll('.pay-filter').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.pay-filter').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      paymentStatusFilter = btn.dataset.status || '';
+      loadPayments();
+    });
+  });
+
+  // ── Manual payment entry ─────────────────────────────
+  const manualForm = document.getElementById('manual-form');
+  document.getElementById('btn-open-manual').onclick = () => {
+    // Populate the user dropdown from the already-loaded users cache so
+    // the admin picks from a known list instead of typing a UUID.
+    const sel = document.getElementById('m-user');
+    sel.innerHTML = '<option value="">Choose user…</option>' + allUsers.map(u =>
+      `<option value="${esc(u.id)}">${esc(u.full_name || u.email)} — ${esc(u.email)}</option>`
+    ).join('');
+    manualForm.style.display = 'block';
+    manualForm.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  };
+  document.getElementById('btn-cancel-manual').onclick = () => {
+    manualForm.style.display = 'none';
+  };
+  document.getElementById('btn-submit-manual').onclick = async () => {
+    const user_id   = document.getElementById('m-user').value;
+    const tier      = document.getElementById('m-tier').value;
+    const amountPhp = Number(document.getElementById('m-amount').value);
+    const slug      = document.getElementById('m-slug').value.trim();
+    const reference = document.getElementById('m-ref').value.trim();
+    if (!user_id) return alert('Please choose a user.');
+    if (!Number.isFinite(amountPhp) || amountPhp < 0) return alert('Enter a valid amount in pesos.');
+    try {
+      const r = await adminFetch('/api/admin/payments/manual', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id, tier,
+          // Pesos -> centavos to match the rest of the payments column.
+          amount: Math.round(amountPhp * 100),
+          slug: slug || undefined,
+          reference: reference || undefined,
+        }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.message || 'Failed');
+      manualForm.style.display = 'none';
+      // Reset form fields
+      document.getElementById('m-amount').value = '';
+      document.getElementById('m-slug').value = '';
+      document.getElementById('m-ref').value = '';
+      await Promise.all([loadPayments(), loadStats(), loadUsers(), loadEvents()]);
+    } catch (e) {
+      alert('Could not record payment: ' + (e.message || 'unknown error'));
+    }
+  };
+
+  async function refundPayment(id) {
+    if (!confirm('Mark this payment as refunded? The linked event will be flipped back to unpaid. This does NOT contact PayMongo — refund the actual money there separately.')) return;
+    try {
+      const r = await adminFetch(`/api/admin/payments/${id}/refund`, { method: 'POST' });
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        throw new Error(d.message || 'Failed');
+      }
+      await Promise.all([loadPayments(), loadStats(), loadEvents()]);
+    } catch (e) { alert('Failed to refund: ' + (e.message || '')); }
   }
 
   async function loadEvents() {
@@ -533,8 +726,9 @@
     try {
       const r = await adminFetch(`/api/admin/payments/verify/${id}`, { method: 'POST' });
       if (!r.ok) throw new Error();
-      document.getElementById(`row-${id}`)?.remove();
-      await Promise.all([loadStats(), loadEvents()]);
+      // Reload the table rather than just removing the row — the row may
+      // need to show under the Succeeded filter now, with different actions.
+      await Promise.all([loadStats(), loadPayments(), loadEvents()]);
     } catch { alert('Failed to verify payment.'); }
   }
 
@@ -543,8 +737,7 @@
     try {
       const r = await adminFetch(`/api/admin/payments/reject/${id}`, { method: 'POST' });
       if (!r.ok) throw new Error();
-      document.getElementById(`row-${id}`)?.remove();
-      await loadStats();
+      await Promise.all([loadStats(), loadPayments()]);
     } catch { alert('Failed to reject payment.'); }
   }
 
