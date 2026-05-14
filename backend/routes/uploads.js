@@ -414,8 +414,13 @@ export default async function uploadRoutes(fastify) {
     // column (older events that predate the toggle) is treated as OFF so
     // host review is the safe default.
     let isApproved;
-    if (!isVideo) {
-      // photos AND audio use the same photo auto-approve gate
+    if (isAudio) {
+      // Audio is companion content (voice message paired with a photo) — it is
+      // never shown as standalone visual content, so it always auto-approves.
+      // Without this, audio items sit pending and the wall never sees them,
+      // breaking audio↔photo pairing entirely.
+      isApproved = true;
+    } else if (!isVideo) {
       isApproved = event.auto_approve === true;
     } else if (isVidMsg) {
       isApproved = event.video_message_auto_approve === true;
