@@ -276,7 +276,7 @@ body { background: var(--paper); min-height: 100dvh; }
 .share-tabs--hero {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: auto auto;
+  grid-template-rows: auto auto auto;
   gap: 10px;
   margin-bottom: 20px;
 }
@@ -502,28 +502,43 @@ body { background: var(--paper); min-height: 100dvh; }
 .drop p { color: var(--ink-soft); font-size: 13px; margin-bottom: 16px; }
 .drop .choose-btn { display: inline-block; background: var(--accent); color: #fff; border-radius: 999px; padding: 11px 22px; font-size: 14px; font-weight: 500; pointer-events: none; }
 
-/* ── Gallery text link below mini tiles ─────────────────── */
-.gallery-link {
-  text-align: center;
-  font-size: 13px;
-  color: var(--ink-faint);
-  margin-top: -6px;
-  margin-bottom: 4px;
-  letter-spacing: .01em;
+/* ── Gallery pick card (full-width row below mini tiles) ── */
+.share-tabs--hero .share-tab--gallery {
+  grid-column: 1 / -1;
+  flex-direction: row;
+  justify-content: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: var(--r-lg);
+  background: linear-gradient(135deg, rgba(255,255,255,.58), rgba(255,255,255,.36));
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  backdrop-filter:         blur(16px) saturate(140%);
+  border: 1px solid rgba(255,255,255,.58);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.62),
+    0 6px 18px rgba(196,90,58,.08),
+    0 1px 4px rgba(42,26,20,.04);
 }
-.gallery-link-btn {
+.share-tabs--hero .share-tab--gallery .tab-icon {
+  width: 38px; height: 38px;
+  background: var(--paper-3);
   color: var(--accent);
-  font-family: var(--sans);
-  font-size: 13px;
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  text-decoration: underline;
-  text-decoration-color: rgba(196,90,58,.4);
-  text-underline-offset: 2px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 2px 6px rgba(42,26,20,.06);
 }
-.gallery-link-btn:hover { text-decoration-color: var(--accent); }
+.share-tabs--hero .share-tab--gallery .tab-label {
+  font-family: var(--sans); font-size: 15px; font-weight: 500;
+  letter-spacing: .01em; text-transform: none;
+  color: var(--ink-soft); text-align: left;
+}
+.share-tabs--hero .share-tab--gallery .tab-label small {
+  display: block; font-family: var(--mono); font-size: 10px;
+  letter-spacing: .13em; text-transform: uppercase;
+  color: var(--ink-faint); margin-top: 2px; font-weight: 400;
+}
+.share-tabs--hero .share-tab.active.share-tab--gallery {
+  border-color: var(--accent);
+  background: rgba(255,235,225,.55);
+}
 
 /* ── Panel 2: Record video ───────────────────────────── */
 .record-panel {
@@ -944,7 +959,7 @@ body { background: var(--paper); min-height: 100dvh; }
        spanning the full row. Record / React / Poll sit as smaller
        secondary tiles below to keep the hierarchy clear. -->
   <div class="share-tabs share-tabs--hero">
-    <div class="share-tab share-tab--camera active" onclick="switchTab('gallery',this); document.getElementById('fileInput').click();">
+    <div class="share-tab share-tab--camera active" onclick="switchTab('gallery',this); document.getElementById('cameraInput').click();">
       <div class="tab-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="6.5" width="18" height="13" rx="2.5"/>
@@ -972,11 +987,20 @@ body { background: var(--paper); min-height: 100dvh; }
       </div>
       <div class="tab-label">Poll</div>
     </div>
+    <div class="share-tab share-tab--gallery" onclick="switchTab('gallery',this); document.getElementById('fileInput').click();">
+      <div class="tab-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>
+          <rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
+        </svg>
+      </div>
+      <div class="tab-label">Pick from gallery<small>Choose existing photos &amp; videos</small></div>
+    </div>
   </div>
-  <p class="gallery-link">or <button class="gallery-link-btn" onclick="document.getElementById('fileInput').click()">pick from your gallery</button></p>
 
   <!-- ════ PANEL 1: Gallery ═════════════════════════════ -->
   <div class="share-panel active" id="panel-gallery">
+    <input type="file" id="cameraInput" accept="image/*,video/*" capture="environment" onchange="handleFiles(event)" style="display:none;" />
     <input type="file" id="fileInput" multiple accept="image/*,video/*" onchange="handleFiles(event)" style="display:none;" />
     <div class="queue" id="galleryQueue"></div>
 
