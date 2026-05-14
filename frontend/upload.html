@@ -279,7 +279,6 @@ body { background: var(--paper); min-height: 100dvh; }
   grid-template-rows: auto auto;
   gap: 10px;
   margin-bottom: 6px;
-  perspective: 1000px;
 }
 .share-tabs--hero .share-tab--camera {
   grid-column: 1 / 3;
@@ -288,36 +287,15 @@ body { background: var(--paper); min-height: 100dvh; }
   gap: 14px;
   padding: 22px 18px;
   border-radius: var(--r-lg);
-  background:
-    linear-gradient(180deg, rgba(255,255,255,.35) 0%, rgba(255,255,255,0) 38%, rgba(0,0,0,.05) 100%),
-    linear-gradient(135deg, #f5e4d3 0%, #edcfbb 60%, #e8c4ad 100%);
-  border: 1.5px solid rgba(196,90,58,.22);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.60),
-    inset 0 -1px 0 rgba(42,26,20,.04);
+  background: linear-gradient(135deg, #f5e4d3 0%, #edcfbb 60%, #e8c4ad 100%);
+  border: none;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.55);
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   z-index: 1;
-  transition: transform .35s cubic-bezier(.34,1.56,.64,1), box-shadow .35s ease;
-  transform-style: preserve-3d;
 }
-/* Subtle top-edge gloss — readable, no shimmer band */
-.share-tabs--hero .share-tab--camera::after {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0; height: 38%;
-  background: linear-gradient(180deg,
-      rgba(255,255,255,.32) 0%,
-      rgba(255,255,255,.08) 50%,
-      transparent 100%);
-  border-radius: var(--r-lg) var(--r-lg) 50% 50% / var(--r-lg) var(--r-lg) 18px 18px;
-  pointer-events: none; z-index: 1;
-}
-.share-tabs--hero .share-tab--camera:hover {
-  transform: translateY(-4px) rotateX(6deg) scale(1.015);
-}
-/* Lift content above halo (z:0) and gloss (z:1) */
-.share-tabs--hero .share-tab--camera > * { position: relative; z-index: 2; }
+/* Clip the inner ::before halo only */
+.share-tabs--hero .share-tab--camera > * { position: relative; z-index: 1; }
 .share-tabs--hero .share-tab--camera::before {
   content: '';
   position: absolute;
@@ -335,70 +313,48 @@ body { background: var(--paper); min-height: 100dvh; }
 }
 .share-tabs--hero .share-tab--camera .tab-icon {
   width: 60px; height: 60px;
-  background: linear-gradient(145deg, #b86048 0%, #7a3b2e 100%);
+  background: linear-gradient(135deg, var(--accent), var(--accent-deep));
   color: #fff;
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.22),
-    0 3px 8px rgba(42,26,20,.18);
+    inset 0 1px 0 rgba(255,255,255,.28),
+    0 0 0 0 rgba(196,90,58,.5);
   position: relative; z-index: 1;
+  animation: iconPulse 2.2s ease-in-out infinite;
+}
+@keyframes iconPulse {
+  0%, 100% { box-shadow: inset 0 1px 0 rgba(255,255,255,.28), 0 0 0 0 rgba(196,90,58,.55); }
+  50%      { box-shadow: inset 0 1px 0 rgba(255,255,255,.28), 0 0 0 10px rgba(196,90,58,0); }
 }
 .share-tabs--hero .share-tab--camera .tab-icon svg { width: 28px; height: 28px; }
 .share-tabs--hero .share-tab--camera .tab-label {
-  font-family: var(--display); font-size: 22px;
+  font-family: var(--display); font-size: 26px;
   letter-spacing: -.005em; text-transform: none;
   color: var(--ink); font-weight: 500;
   text-align: left; line-height: 1.1;
   position: relative; z-index: 1;
 }
 .share-tabs--hero .share-tab--camera .tab-label small {
-  display: block; font-family: var(--mono); font-size: 10px;
+  display: block; font-family: var(--mono); font-size: 12px;
   letter-spacing: .14em; text-transform: uppercase;
   color: var(--ink-soft); margin-top: 4px; font-weight: 400;
 }
 .share-tabs--hero .share-tab--mini {
   padding: 14px 6px 12px;
   border-radius: var(--r-lg);
-  /* Three.js-style frosted-glass material with deep extruded shadow.
-     The body is heavily blurred translucent; the top half wears a
-     dome of bright reflection. */
+  /* Same rose-tinted glass as the Camera tile, scaled down so the
+     hierarchy still reads: prominent Camera + three matched siblings. */
   background:
-    linear-gradient(180deg, rgba(255,255,255,.65) 0%, rgba(255,255,255,.1) 55%, rgba(0,0,0,.06) 100%),
-    linear-gradient(135deg, rgba(255,255,255,.85), rgba(255,235,225,.55));
-  -webkit-backdrop-filter: blur(22px) saturate(180%);
-  backdrop-filter:         blur(22px) saturate(180%);
-  border: 1px solid rgba(255,255,255,.85);
+    linear-gradient(135deg, rgba(255,255,255,.7), rgba(255,255,255,.45));
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  backdrop-filter:         blur(16px) saturate(150%);
+  border: 1px solid rgba(255,255,255,.65);
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.85),
-    inset 0 -1px 0 rgba(42,26,20,.04),
-    0 2px 6px rgba(42,26,20,.04),
-    0 8px 18px rgba(196,90,58,.10);
+    inset 0 1px 0 rgba(255,255,255,.7),
+    0 10px 24px rgba(196,90,58,.15),
+    0 2px 6px rgba(42,26,20,.05);
   gap: 8px;
   position: relative;
   overflow: hidden;
-  transition: transform .35s cubic-bezier(.34,1.56,.64,1), box-shadow .35s ease, border-color .2s;
-  transform-style: preserve-3d;
-}
-/* Subtle top-edge gloss on mini tiles */
-.share-tabs--hero .share-tab--mini::after {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0; height: 42%;
-  background: linear-gradient(180deg,
-      rgba(255,255,255,.38) 0%,
-      rgba(255,255,255,.08) 55%,
-      transparent 100%);
-  border-radius: var(--r-lg) var(--r-lg) 50% 50% / var(--r-lg) var(--r-lg) 18px 18px;
-  pointer-events: none; z-index: 1;
-}
-.share-tabs--hero .share-tab--mini > * { position: relative; z-index: 2; }
-.share-tabs--hero .share-tab--mini:hover {
-  border-color: rgba(196,90,58,.32);
-  transform: translateY(-4px) rotateX(5deg) scale(1.02);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.85),
-    inset 0 -1px 0 rgba(42,26,20,.04),
-    0 20px 44px rgba(196,90,58,.22),
-    0 6px 14px rgba(42,26,20,.08);
 }
 .share-tabs--hero .share-tab--mini::before {
   /* Soft warm halo behind the icon, no animation so only the Camera
