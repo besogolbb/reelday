@@ -528,18 +528,10 @@
     /* ── Caption frame ──────────────────────────────────────── */
     .frame {
       position: fixed; bottom: 0; left: 0; right: 0; z-index: 10;
-      padding: 0 84px 76px;
+      padding: 0 56px 48px;
       display: none; justify-content: space-between; align-items: flex-end; gap: 32px;
       pointer-events: none;
     }
-
-    /* ── Portrait: anchor text into the blurred gutters ───────────────
-       40px from each edge keeps caption and watermark clear of the
-       centre card and readable against the blurred backdrop. */
-    body.is-portrait .frame { padding: 0 40px 40px; }
-
-    /* ── Landscape: lower the frame so text clears the subject ──────── */
-    body.is-landscape .frame { padding-bottom: 46px; }
 
     .caption { flex: 1 1 auto; min-width: 0; max-width: none; padding-right: 24px; }
 
