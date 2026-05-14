@@ -524,6 +524,21 @@
         rgba(0,0,0,.14) 55%,
         rgba(0,0,0,0)   100%);
     }
+    /* Landscape: concentrate darkness in the lower-left text zone.
+       A radial blob anchored to the bottom-left corner + a thin
+       base strip — right side of the frame stays open. */
+    body.is-landscape .bottom-scrim {
+      height: 32%;
+      background:
+        radial-gradient(ellipse 62% 85% at 0% 100%,
+          rgba(0,0,0,.52) 0%,
+          rgba(0,0,0,.20) 52%,
+          rgba(0,0,0,0)   74%),
+        linear-gradient(to top,
+          rgba(0,0,0,.20) 0%,
+          rgba(0,0,0,.05) 52%,
+          rgba(0,0,0,0)   100%);
+    }
 
     /* ── Caption frame ──────────────────────────────────────── */
     .frame {
@@ -588,6 +603,77 @@
 
     .caption.fade .uploader,
     .caption.fade blockquote { opacity: 0; }
+
+    /* ── Landscape caption overrides ───────────────────────────
+       All rules scoped to body.is-landscape so portrait mode is
+       completely unaffected. Goal: TV / projector legibility while
+       preserving the cinematic minimal feel.
+    ─────────────────────────────────────────────────────────── */
+
+    /* Metadata strip: lose the glass pill, rely on the luminance
+       gradient + text-shadow for contrast. Clean sans-serif so
+       characters render crisply at screen distance. */
+    body.is-landscape .caption .uploader {
+      background: transparent;
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+      box-shadow: none;
+      padding: 0 2px;
+      border-radius: 0;
+      letter-spacing: .22em;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      text-shadow:
+        0 1px 2px rgba(0,0,0,.95),
+        0 2px 10px rgba(0,0,0,.72);
+    }
+    body.is-landscape .caption .uploader .uploader-name {
+      font-size: clamp(10px, 0.9vw, 14px);
+      font-weight: 600;
+      color: rgba(255,255,255,.96);
+    }
+    body.is-landscape .caption .uploader .uploader-sep {
+      color: rgba(255,255,255,.38);
+    }
+    body.is-landscape .caption .uploader .uploader-time {
+      font-weight: 400;
+      color: rgba(255,255,255,.58);
+    }
+
+    /* Caption: Fraunces reads better at projector distance than
+       Cormorant Garamond (thicker strokes, optical-size tuned for
+       display). Keep italic for warmth, bump contrast. */
+    body.is-landscape .caption blockquote {
+      font-family: var(--display);
+      font-style: italic;
+      font-weight: 400;
+      font-size: clamp(36px, 4.4vw, 64px);
+      color: rgba(255,255,255,.88);
+      text-shadow:
+        0 1px 2px rgba(0,0,0,.88),
+        0 3px 14px rgba(0,0,0,.68),
+        0 8px 32px rgba(0,0,0,.42);
+    }
+
+    /* Adaptive: short meaningful caption — slightly stronger weight
+       and contrast so the sentiment lands across the room. */
+    body.is-landscape .caption.cap-meaningful blockquote {
+      color: rgba(255,255,255,.96);
+      font-weight: 500;
+      text-shadow:
+        0 1px 3px rgba(0,0,0,.92),
+        0 4px 18px rgba(0,0,0,.74),
+        0 10px 42px rgba(0,0,0,.50);
+    }
+
+    /* Adaptive: long / repetitive caption — scale back so it
+       doesn't overpower the photo with noise. */
+    body.is-landscape .caption.cap-subtle blockquote {
+      color: rgba(255,255,255,.62);
+      font-size: clamp(26px, 3.2vw, 46px);
+      text-shadow:
+        0 1px 3px rgba(0,0,0,.82),
+        0 3px 12px rgba(0,0,0,.52);
+    }
 
     .corner {
       text-align: right; font-family: var(--mono); font-size: 11px;
@@ -2230,16 +2316,29 @@
     } catch { return ''; }
   }
 
+  function captionEmphasis(msg) {
+    if (!msg) return '';
+    // Detect spammy: repeated chars (hahaha, !!!!) or low alphanumeric ratio
+    const spammy = /(.)\1{4,}/u.test(msg) ||
+      ((msg.match(/[a-zA-Z0-9]/g) || []).length / msg.length < 0.28 && msg.length > 8);
+    if (spammy || msg.length > 75) return 'cap-subtle';
+    if (msg.length <= 40) return 'cap-meaningful';
+    return '';
+  }
+
   function updateCaption(item) {
     const name = (item.uploader_name || 'Panauhin').toUpperCase();
     let html = `<span class="uploader-name">${name}</span>`;
-    if (item.created_at) {
-      const d = new Date(item.created_at);
-      const t = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-      html += `<span class="uploader-sep"> • </span><span class="uploader-time">${t}</span>`;
-    }
+    const t = formatTime(item.created_at);
+    if (t) html += `<span class="uploader-sep"> • </span><span class="uploader-time">${t}</span>`;
     capUploader.innerHTML = html;
-    capQuote.textContent  = item.message || '';
+
+    const msg = (item.message || '').trim();
+    capQuote.textContent = msg;
+
+    caption.classList.remove('cap-meaningful', 'cap-subtle');
+    const cls = captionEmphasis(msg);
+    if (cls) caption.classList.add(cls);
   }
 
   function updateCorner() {
