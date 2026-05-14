@@ -342,6 +342,16 @@
       50%       { transform: scaleY(1);   opacity: 1; }
     }
 
+    /* Audio-first: hide photo for a moment so audio plays before image reveals */
+    .layer.audio-intro .pic,
+    .layer.audio-intro .vid { opacity: 0 !important; }
+    .layer.audio-intro .backdrop { opacity: 0 !important; }
+    .layer.audio-intro .backdrop-veil { opacity: 0 !important; }
+    .layer.audio-intro .audio-photo-overlay { opacity: 0 !important; }
+    .pic { transition: opacity 1.2s ease; }
+    .backdrop { transition: opacity 1.2s ease; }
+    .backdrop-veil { transition: opacity 1.2s ease; }
+
     /* Paired audio overlay — small waveform pill shown over photo */
     .audio-photo-overlay {
       position: absolute;
@@ -1823,6 +1833,10 @@
   let activeLayer = 'A';   // 'A' or 'B'
   let isPaused   = false;
   let netFrozen  = false;
+  // Survives items array reassignment on each poll cycle
+  let currentIsAudio        = false;
+  let currentIsVideo        = false;
+  let currentHasAudioOverlay = false;
 
   /* ══════════════════════════════════════════════════════════
      Net health tracker
@@ -1942,7 +1956,7 @@
     applySoundState();
     // Nudge the active video so the audio actually starts/stops immediately.
     const activeVid = activeLayer === 'A' ? vidA : vidB;
-    if (activeVid && items.__currentIsVideo) {
+    if (activeVid && currentIsVideo) {
       try { activeVid.play(); } catch {}
     }
   });
@@ -1970,7 +1984,12 @@
       const audTs = new Date(aud.created_at).getTime();
       let best = null, bestDiff = Infinity;
       for (const m of media) {
-        if (m.uploader_name !== aud.uploader_name) continue;
+        // Prefer guest_id match (same browser session); fall back to
+        // uploader_name + timestamp when guest_id isn't stored yet.
+        const sameGuest = aud.guest_id && m.guest_id
+          ? aud.guest_id === m.guest_id
+          : m.uploader_name === aud.uploader_name;
+        if (!sameGuest) continue;
         const diff = Math.abs(new Date(m.created_at).getTime() - audTs);
         if (diff < bestDiff && diff < 120000) { bestDiff = diff; best = m; }
       }
@@ -2170,8 +2189,8 @@
       inAud.src = item.file_url;
       inAud.load();
       inAud.play().catch(() => { inAud.muted = true; inAud.play().catch(() => {}); });
-      items.__currentIsAudio = true;
-      items.__currentIsVideo = false;
+      currentIsAudio = true;
+      currentIsVideo = false;
       // Caption still shows name even for audio
       caption.classList.add('fade');
       setTimeout(() => { updateCaption(item); caption.classList.remove('fade'); }, 500);
@@ -2185,8 +2204,8 @@
     // Drive the backdrop edge-samples (defined in CSS via ::before /
     // ::after) by setting a custom property. Filter/transform live in
     // CSS so we don't have to keep two sources of truth in sync.
-    items.__currentIsAudio = false;
-    items.__currentHasAudioOverlay = false; // may be set below if pairedAudioUrl
+    currentIsAudio = false;
+    currentHasAudioOverlay = false; // may be set below if pairedAudioUrl
     inLayer.classList.remove('has-audio', 'has-audio-overlay');
     inBackdrop.style.setProperty('--poster-img', posterBackground);
     inBackdrop.style.display = 'block';
@@ -2313,16 +2332,19 @@
     }
 
     // Stash so advance()/goTo() know whether this slide is a video.
-    items.__currentIsVideo = itemIsVideo;
+    currentIsVideo = itemIsVideo;
 
     // Paired audio: play the companion voice message alongside the photo/video.
-    items.__currentHasAudioOverlay = !!pairedAudioUrl;
+    // Audio plays first — photo fades in after 1.5 s so the voice is heard
+    // before the image is revealed.
+    currentHasAudioOverlay = !!pairedAudioUrl;
     if (pairedAudioUrl) {
-      inLayer.classList.add('has-audio-overlay');
+      inLayer.classList.add('has-audio-overlay', 'audio-intro');
       inAud.muted = !wallSoundOn;
       inAud.src = pairedAudioUrl;
       inAud.load();
       inAud.play().catch(() => { inAud.muted = true; inAud.play().catch(() => {}); });
+      setTimeout(() => inLayer.classList.remove('audio-intro'), 1500);
     }
 
     // Tag <body> with is-landscape / is-portrait for the current slide.
@@ -2364,7 +2386,7 @@
   const MAX_VIDEO_DURATION = 60000;
   const VIDEO_BOOT_TIMEOUT = 12000; // give the video a chance to load metadata
   function currentSlideDuration() {
-    if (!items.__currentIsVideo) return SLIDE_DURATION;
+    if (!currentIsVideo) return SLIDE_DURATION;
     const activeVid = activeLayer === 'A' ? vidA : vidB;
     const secs = Number.isFinite(activeVid?.duration) ? activeVid.duration : 0;
     if (secs > 0) return Math.min(secs * 1000 + 500, MAX_VIDEO_DURATION);
@@ -2379,7 +2401,7 @@
     if (isPaused || netFrozen || items.length < 2) return;
 
     // Standalone audio slides: advance on 'ended', with a 60 s safety net.
-    if (items.__currentIsAudio) {
+    if (currentIsAudio) {
       const activeAud = activeLayer === 'A' ? audA : audB;
       slideTimer = setTimeout(advance, 60000);
       if (activeAud) {
@@ -2392,7 +2414,7 @@
     }
 
     // Paired audio overlay: extend the photo slide to match the audio duration.
-    if (items.__currentHasAudioOverlay) {
+    if (currentHasAudioOverlay) {
       const activeAud = activeLayer === 'A' ? audA : audB;
       slideTimer = setTimeout(advance, 60000); // safety cap
       if (activeAud) {
@@ -2404,7 +2426,7 @@
       return;
     }
 
-    if (!items.__currentIsVideo) {
+    if (!currentIsVideo) {
       slideTimer = setTimeout(advance, SLIDE_DURATION);
       return;
     }
@@ -2544,10 +2566,10 @@
     if (isPaused) {
       clearTimeout(slideTimer);
       stopProgress();
-      if (items.__currentIsVideo && activeVid) try { activeVid.pause(); } catch {}
+      if (currentIsVideo && activeVid) try { activeVid.pause(); } catch {}
     } else {
       startProgress();
-      if (items.__currentIsVideo && activeVid) {
+      if (currentIsVideo && activeVid) {
         const p = activeVid.play(); if (p?.catch) p.catch(() => {});
       }
       scheduleAdvance();
@@ -2628,7 +2650,7 @@
     }
 
     // For video slides, try sampling the current frame first
-    if (items.__currentIsVideo) {
+    if (currentIsVideo) {
       const vid = activeLayer === 'A' ? vidA : vidB;
       if (vid && vid.readyState >= 2 && vid.videoWidth > 0) {
         try { apply(_sampleSource(vid, vid.videoWidth, vid.videoHeight)); return; } catch {}
@@ -3640,7 +3662,7 @@
     }
     // iOS Safari: only the <video> element can go fullscreen.
     const v = activeWallVideo();
-    if (v && typeof v.webkitEnterFullscreen === 'function' && items.__currentIsVideo) {
+    if (v && typeof v.webkitEnterFullscreen === 'function' && currentIsVideo) {
       // Audio defaults to on inside iOS native player, so we can also flip
       // the wall's mute state to match what the guest is about to see.
       v.muted = false;

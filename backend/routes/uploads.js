@@ -344,6 +344,7 @@ export default async function uploadRoutes(fastify) {
   // POST /api/uploads/complete — confirm R2 upload and save to DB
   fastify.post('/uploads/complete', { config: UPLOAD_WRITE_LIMIT }, async (request, reply) => {
     const { slug, fileKey, uploader_name, message, file_type, is_video_message, poster_data_url } = request.body;
+    const guestId = (request.headers['x-guest-id'] || '').trim().slice(0, 64) || null;
 
     // Optionally authenticate the user if a token is present
     request.user = tryGetUser(request);
@@ -424,8 +425,8 @@ export default async function uploadRoutes(fastify) {
 
     const { rows } = await fastify.db.query(
       `INSERT INTO uploads
-         (event_id, file_url, file_type, uploader_name, message, is_video_message, is_approved, original_key, video_status, pre_thumb_url)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+         (event_id, file_url, file_type, uploader_name, message, is_video_message, is_approved, original_key, video_status, pre_thumb_url, guest_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING *`,
       [
         event.id,
@@ -438,6 +439,7 @@ export default async function uploadRoutes(fastify) {
         originalKey,
         videoStatus,
         preThumbUrl,
+        guestId,
       ],
     );
 

@@ -64,6 +64,12 @@ const MIGRATIONS = `
   CREATE UNIQUE INDEX IF NOT EXISTS idx_uploads_original_key
     ON uploads(original_key) WHERE original_key IS NOT NULL;
 
+  -- Guest device identity for audio↔photo pairing on the wall.
+  -- Populated from the X-Guest-Id header (localStorage UUID) so all uploads
+  -- from the same browser session share an id, regardless of uploader name.
+  ALTER TABLE uploads ADD COLUMN IF NOT EXISTS guest_id TEXT;
+  CREATE INDEX IF NOT EXISTS idx_uploads_guest_id ON uploads(guest_id) WHERE guest_id IS NOT NULL;
+
   -- Backfill legacy rows so already-compressed videos remain playable on
   -- the wall, while videos still lacking a compressed derivative stay in
   -- processing mode until a webhook marks them ready.
