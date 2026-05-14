@@ -2404,9 +2404,12 @@
           <div style="font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.5);">Voice message</div>
         </div>`;
       } else if (isVideo) {
-        const posterSrc = hasCombined ? null : uploadPosterUrl(u, 320);
+        // For combined (photo+audio) tiles, use the original photo as poster so
+        // the tile never shows a blank/white frame while the video is loading.
+        // For regular videos, use the server-generated poster thumbnail.
+        const posterSrc = hasCombined ? uploadMediaUrl(u, false, 320) : uploadPosterUrl(u, 320);
         if (posterSrc) styleParts.push(`background-image:url('${posterSrc}')`, 'background-size:cover', 'background-position:center');
-        videoEl = `<video data-lazy-src="${escapeAttr(mediaSrc || '')}#t=0.1"${posterSrc ? ` poster="${escapeAttr(posterSrc)}"` : ''} muted playsinline loop preload="none" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:transparent;"></video>`;
+        videoEl = `<video data-lazy-src="${escapeAttr(mediaSrc || '')}#t=0.1"${posterSrc ? ` poster="${escapeAttr(posterSrc)}"` : ''} muted playsinline loop preload="none" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000;"></video>`;
         const icon = hasCombined ? '🎙▶' : '▶';
         videoEl += `<div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;display:flex;align-items:center;justify-content:center;font-size:${hasCombined ? '14px' : '18px'};pointer-events:none;z-index:2;border:2px solid rgba(255,255,255,.3);">${icon}</div>`;
         if (!mediaSrc) {
