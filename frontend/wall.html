@@ -627,7 +627,7 @@
         0 2px 10px rgba(0,0,0,.72);
     }
     body.is-landscape .caption .uploader .uploader-name {
-      font-size: clamp(14px, 1.4vw, 22px);
+      font-size: clamp(18px, 1.9vw, 30px);
       font-weight: 700;
       color: #fff;
     }
@@ -637,6 +637,15 @@
     body.is-landscape .caption .uploader .uploader-time {
       font-weight: 500;
       color: rgba(255,255,255,.80);
+    }
+    /* No caption: promote the metadata — it's the only text on screen */
+    body.is-landscape .caption.no-caption .uploader .uploader-name {
+      font-size: clamp(26px, 2.8vw, 44px);
+    }
+    body.is-landscape .caption.no-caption .uploader .uploader-sep,
+    body.is-landscape .caption.no-caption .uploader .uploader-time {
+      font-size: clamp(14px, 1.4vw, 22px);
+      color: rgba(255,255,255,.75);
     }
 
     /* Caption: Fraunces reads better at projector distance than
@@ -2336,9 +2345,13 @@
     const msg = (item.message || '').trim();
     capQuote.textContent = msg;
 
-    caption.classList.remove('cap-meaningful', 'cap-subtle');
-    const cls = captionEmphasis(msg);
-    if (cls) caption.classList.add(cls);
+    caption.classList.remove('cap-meaningful', 'cap-subtle', 'no-caption');
+    if (!msg) {
+      caption.classList.add('no-caption');
+    } else {
+      const cls = captionEmphasis(msg);
+      if (cls) caption.classList.add(cls);
+    }
   }
 
   function updateCorner() {
