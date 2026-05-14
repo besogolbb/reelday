@@ -2474,7 +2474,21 @@ body { background: var(--paper); min-height: 100dvh; }
   let _voiceBlob      = null;
   let _voiceTimerInt  = null;
   let _voiceSecs      = 0;
-  const MAX_VOICE_SECS = 60;
+  const MAX_VOICE_SECS = 30;
+
+  function pickVoiceMime() {
+    // Prefer opus-in-webm; fall back to audio/mp4 (iOS Safari's only option)
+    const candidates = [
+      'audio/webm;codecs=opus',
+      'audio/webm',
+      'audio/mp4',
+      'audio/ogg;codecs=opus',
+    ];
+    for (const m of candidates) {
+      try { if (MediaRecorder.isTypeSupported(m)) return m; } catch {}
+    }
+    return '';
+  }
 
   function switchMsgMode(mode) {
     const textPill  = document.getElementById('msgPillText');
@@ -2509,16 +2523,15 @@ body { background: var(--paper); min-height: 100dvh; }
       _voiceSecs   = 0;
       _voiceBlob   = null;
       document.getElementById('voicePreview').classList.remove('visible');
-      document.getElementById('voiceTimer').textContent = '0:00';
+      document.getElementById('voiceTimer').textContent = _fmtVoiceTime(MAX_VOICE_SECS);
 
-      const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-        ? 'audio/webm;codecs=opus' : 'audio/webm';
-      _voiceRecorder = new MediaRecorder(stream, { mimeType: mime });
+      const mime = pickVoiceMime();
+      _voiceRecorder = new MediaRecorder(stream, mime ? { mimeType: mime } : {});
       _voiceRecorder.ondataavailable = e => { if (e.data.size > 0) _voiceChunks.push(e.data); };
       _voiceRecorder.onstop = () => {
         stream.getTracks().forEach(t => t.stop());
         clearInterval(_voiceTimerInt);
-        _voiceBlob = new Blob(_voiceChunks, { type: mime });
+        _voiceBlob = new Blob(_voiceChunks, { type: _voiceRecorder.mimeType || mime });
         const url  = URL.createObjectURL(_voiceBlob);
         document.getElementById('voiceAudio').src = url;
         document.getElementById('voicePreview').classList.add('visible');
@@ -2531,7 +2544,9 @@ body { background: var(--paper); min-height: 100dvh; }
       document.getElementById('voiceHint').textContent = 'Recording… tap to stop';
       _voiceTimerInt = setInterval(() => {
         _voiceSecs++;
-        document.getElementById('voiceTimer').textContent = _fmtVoiceTime(_voiceSecs);
+        const remaining = MAX_VOICE_SECS - _voiceSecs;
+        document.getElementById('voiceTimer').textContent = _fmtVoiceTime(remaining);
+        if (remaining <= 5) document.getElementById('voiceHint').textContent = `${remaining}s left…`;
         if (_voiceSecs >= MAX_VOICE_SECS) _voiceRecorder.stop();
       }, 1000);
     } catch {
@@ -2862,7 +2877,9 @@ body { background: var(--paper); min-height: 100dvh; }
     // Upload voice message alongside photos/videos as a separate audio entry.
     // The wall will render it as a "Talking Photo" slide.
     if (_voiceBlob) {
-      const ext = _voiceBlob.type.includes('ogg') ? 'ogg' : 'webm';
+      const ext = _voiceBlob.type.includes('ogg') ? 'ogg'
+                : _voiceBlob.type.includes('mp4') ? 'mp4'
+                : 'webm';
       const voiceFile = new File([_voiceBlob], `voice-message.${ext}`, { type: _voiceBlob.type });
       fileSizes['voice'] = voiceFile.size;
       const queue = document.getElementById('galleryQueue');
@@ -2883,6 +2900,22 @@ body { background: var(--paper); min-height: 100dvh; }
     if (overlay) {
       overlay.classList.remove('visible');
       overlay.setAttribute('aria-hidden', 'true');
+    }
+
+    // Ask the server to combine photo + audio into a single MP4 for the
+    // dashboard and downloads. Fire-and-forget — the wall already shows
+    // the pair immediately via client-side pairing.
+    if (_voiceBlob && results.some(r => r.status === 'fulfilled')) {
+      const token = localStorage.getItem('reelday_token');
+      fetch(`/api/uploads/batch/${batchId}/finalize`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Guest-Id': GUEST_ID,
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ slug: currentEvent.slug }),
+      }).catch(() => {}); // non-critical — dashboard just shows separate tiles if this fails
     }
 
     __reelday_uploadInFlight = false;

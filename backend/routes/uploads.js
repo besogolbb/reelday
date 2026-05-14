@@ -4,6 +4,7 @@ import { PutObjectCommand, DeleteObjectCommand, HeadObjectCommand } from '@aws-s
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { resolvePlan } from '../lib/plans.js';
 import { triggerVideoTranscode } from '../lib/awsLambdaService.js';
+import { combinePhotoAudioInBackground } from '../lib/videoTranscode.js';
 import { verifyToken } from '../plugins/auth.js';
 
 export default async function uploadRoutes(fastify) {
@@ -465,6 +466,50 @@ export default async function uploadRoutes(fastify) {
     }
 
     return reply.status(201).send({ upload: rows[0] });
+  });
+
+  // POST /api/uploads/batch/:batchId/finalize — combine photo+audio into one MP4.
+  // Called by the upload page after all files in a batch have settled.
+  // Fire-and-forget: returns immediately; ffmpeg runs in the background.
+  fastify.post('/uploads/batch/:batchId/finalize', { config: UPLOAD_WRITE_LIMIT }, async (request, reply) => {
+    const { batchId } = request.params;
+    if (!batchId || batchId.length > 64) return reply.status(400).send({ error: true });
+
+    const { rows } = await fastify.db.query(
+      `SELECT id, file_url, file_type, created_at
+         FROM uploads
+        WHERE batch_id = $1 AND is_approved = true
+        ORDER BY created_at ASC`,
+      [batchId],
+    );
+
+    const photos = rows.filter(u => u.file_type === 'photo');
+    const audios = rows.filter(u => u.file_type === 'audio');
+
+    if (!photos.length || !audios.length) {
+      return reply.send({ ok: true, combined: false });
+    }
+
+    // Pair each audio with the closest photo in the same batch.
+    const claimed = new Set();
+    const pairs   = [];
+    for (const aud of audios) {
+      let best = null, bestDiff = Infinity;
+      for (const ph of photos) {
+        if (claimed.has(ph.id)) continue;
+        const diff = Math.abs(new Date(ph.created_at) - new Date(aud.created_at));
+        if (diff < bestDiff) { bestDiff = diff; best = ph; }
+      }
+      if (best) { pairs.push([best, aud]); claimed.add(best.id); }
+    }
+
+    for (const [photo, audio] of pairs) {
+      combinePhotoAudioInBackground(fastify, photo, audio).catch(err =>
+        fastify.log.warn({ err: err.message, batchId, photoId: photo.id }, 'combine failed'),
+      );
+    }
+
+    return reply.send({ ok: true, combined: pairs.length });
   });
 
   // GET /api/uploads/file/:id — stream an uploaded file through this app.

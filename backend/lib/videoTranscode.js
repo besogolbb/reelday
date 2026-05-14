@@ -193,6 +193,94 @@ function derivedKeys(originalKey) {
   };
 }
 
+// ffmpeg args for a static-image + audio combine.
+// -loop 1        — repeats the single photo frame for the duration of the audio
+// -tune stillimage — x264 tuning that skips motion estimation (fast, tiny output)
+// -t 30          — hard cap at 30 s matching the recording limit on the upload page
+// -shortest      — stop when the shorter stream (audio) ends, before the 30 s cap
+const COMBINE_ARGS = [
+  '-c:v', 'libx264',
+  '-tune', 'stillimage',
+  '-preset', 'veryfast',
+  '-profile:v', 'main',
+  '-pix_fmt', 'yuv420p',
+  '-vf', 'scale=w=1280:h=720:force_original_aspect_ratio=decrease:flags=lanczos,pad=1280:720:(ow-iw)/2:(oh-ih)/2:black',
+  '-c:a', 'aac',
+  '-b:a', '128k',
+  '-ar', '44100',
+  '-t', '30',
+  '-shortest',
+  '-movflags', '+faststart',
+];
+
+/**
+ * Combine a photo and an audio recording into a single wall-friendly MP4.
+ * Stores the result in uploads.combined_url on the photo row so the dashboard
+ * and download bundle can serve one clean file instead of two.
+ * The audio row is left in place — the wall still uses client-side pairing for
+ * instant display; this is a background quality-of-life job.
+ */
+export async function combinePhotoAudioInBackground(fastify, photoUpload, audioUpload) {
+  if (!photoUpload?.file_url || !audioUpload?.file_url) return;
+
+  const log = fastify.log.child({ photo_id: photoUpload.id, audio_id: audioUpload.id, op: 'combine' });
+
+  let photoKey, audioKey;
+  try {
+    photoKey = decodeURIComponent(new URL(photoUpload.file_url).pathname.replace(/^\/+/, ''));
+    audioKey = decodeURIComponent(new URL(audioUpload.file_url).pathname.replace(/^\/+/, ''));
+  } catch {
+    log.warn('Could not parse file_url(s); skipping combine');
+    return;
+  }
+
+  const dot  = photoKey.lastIndexOf('.');
+  const stem = dot > 0 ? photoKey.slice(0, dot) : photoKey;
+  const combinedKey = `${stem}_voice.mp4`;
+
+  let workdir = null;
+  try {
+    workdir = await mkdtemp(join(tmpdir(), 'reelday-comb-'));
+    const photoPath    = join(workdir, 'photo');
+    const audioPath    = join(workdir, 'audio');
+    const combinedPath = join(workdir, 'combined.mp4');
+
+    log.info({ photoKey, audioKey }, 'Downloading photo + audio from R2');
+    const [photoBytes, audioBytes] = await Promise.all([
+      r2Download(fastify.storage, photoKey),
+      r2Download(fastify.storage, audioKey),
+    ]);
+    await Promise.all([
+      writeFile(photoPath, photoBytes),
+      writeFile(audioPath, audioBytes),
+    ]);
+
+    log.info('Running ffmpeg photo+audio combine');
+    await acquireSlot();
+    const start = Date.now();
+    try {
+      await runFfmpeg(['-y', '-loop', '1', '-i', photoPath, '-i', audioPath, ...COMBINE_ARGS, combinedPath]);
+    } finally {
+      releaseSlot();
+    }
+
+    const combinedBuf = await readFile(combinedPath);
+    const combinedUrl = await r2Upload(fastify.storage, combinedKey, combinedBuf, 'video/mp4');
+
+    await fastify.db.query(
+      `UPDATE uploads SET combined_url = $2 WHERE id = $1`,
+      [photoUpload.id, combinedUrl],
+    );
+    log.info({ combinedUrl, bytes: combinedBuf.length, elapsedMs: Date.now() - start }, 'Combine complete');
+  } catch (err) {
+    log.warn({ err: err.message }, 'Combine failed — dashboard will show separate tiles');
+  } finally {
+    if (workdir) {
+      try { await rm(workdir, { recursive: true, force: true }); } catch {}
+    }
+  }
+}
+
 /**
  * Process one upload row in-place. Updates uploads.web_url + .poster_url
  * once the transcode finishes. Errors are logged but never thrown to the

@@ -76,6 +76,11 @@ const MIGRATIONS = `
   ALTER TABLE uploads ADD COLUMN IF NOT EXISTS batch_id TEXT;
   CREATE INDEX IF NOT EXISTS idx_uploads_batch_id ON uploads(batch_id) WHERE batch_id IS NOT NULL;
 
+  -- Combined photo+audio MP4 produced by ffmpeg for dashboard / downloads.
+  -- Populated asynchronously after /uploads/batch/:id/finalize is called.
+  -- The wall ignores this column and uses client-side pairing instead.
+  ALTER TABLE uploads ADD COLUMN IF NOT EXISTS combined_url TEXT;
+
   -- Audio is companion content and always auto-approves. Backfill any rows
   -- that were uploaded before this rule was in place.
   UPDATE uploads SET is_approved = true WHERE file_type = 'audio' AND is_approved = false;

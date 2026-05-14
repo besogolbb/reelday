@@ -2381,37 +2381,45 @@
 
       // Prefer local thumbnails, otherwise stream server files through the app.
       // This avoids blank tiles when R2 is private or R2_PUBLIC_URL is not public.
-      const isVideo = isVideoUpload(u);
-      const mediaSrc = uploadMediaUrl(u, isVideo);
+      // Photos with combined_url (ffmpeg photo+audio merge) render as video tiles.
+      const hasCombined = !!u.combined_url;
+      const isAudioOnly = u.file_type === 'audio';
+      const isVideo = hasCombined ? true : isVideoUpload(u);
+      const mediaSrc = hasCombined ? u.combined_url : uploadMediaUrl(u, isVideo);
       if (mediaSrc) ensurePreconnect(mediaSrc);
 
       const styleParts = ['position:relative', 'overflow:hidden'];
       let videoEl = '';
       let imageEl = '';
-      if (isVideo) {
-        // Server-generated poster (first frame). Painted as the tile
-        // background so the grid shows something instantly instead of a
-        // black rectangle while the lazy video loads.
-        const posterSrc = uploadPosterUrl(u, 320);
+      let badge   = '';
+      if (isAudioOnly) {
+        // Standalone audio tile — shown until the combined MP4 is ready.
+        // Render a waveform placeholder so it doesn't look broken.
+        badge = `<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(170deg,#180d08,#2e1510);gap:6px;">
+          <div style="font-size:28px;">🎙</div>
+          <div style="font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.5);">Voice message</div>
+        </div>`;
+      } else if (isVideo) {
+        const posterSrc = hasCombined ? null : uploadPosterUrl(u, 320);
         if (posterSrc) styleParts.push(`background-image:url('${posterSrc}')`, 'background-size:cover', 'background-position:center');
-        // Video elements are handled by the activateVideo function for lazy loading.
         videoEl = `<video data-lazy-src="${escapeAttr(mediaSrc || '')}#t=0.1"${posterSrc ? ` poster="${escapeAttr(posterSrc)}"` : ''} muted playsinline loop preload="none" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:transparent;"></video>`;
-        videoEl += `<div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;pointer-events:none;z-index:2;border:2px solid rgba(255,255,255,.3);">▶</div>`;
+        const icon = hasCombined ? '🎙▶' : '▶';
+        videoEl += `<div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;display:flex;align-items:center;justify-content:center;font-size:${hasCombined ? '14px' : '18px'};pointer-events:none;z-index:2;border:2px solid rgba(255,255,255,.3);">${icon}</div>`;
         if (!mediaSrc) {
           videoEl += `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#1a1a1a;color:#fff;font-size:10px;font-family:var(--mono);">VIDEO</div>`;
         }
       } else if (mediaSrc) {
         imageEl = `<img src="${escapeAttr(mediaSrc)}" alt="${escapeAttr(label)}"
                        loading="lazy" decoding="async" fetchpriority="low"
-                       onerror="this.remove()">`; // Remove image if direct R2 URL fails
+                       onerror="this.remove()">`;
       }
 
       const msgPreview = u.message
         ? `<div style="font-family:var(--display);font-style:italic;font-size:12px;color:var(--ink-soft);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px;">"${escapeHtml(u.message)}"</div>`
         : '';
 
-      const showLabelFallback = !mediaSrc && !isVideo;
-      return `<div class="placeholder ${cls}" style="${styleParts.join(';')};">${videoEl}${imageEl}${showLabelFallback ? safeLabel : ''}<div class="actions-overlay"><span class="uploader">${safeLabel}</span>${msgPreview}${actionBtn}</div></div>`;
+      const showLabelFallback = !mediaSrc && !isVideo && !isAudioOnly;
+      return `<div class="placeholder ${cls}" style="${styleParts.join(';')};">${badge}${videoEl}${imageEl}${showLabelFallback ? safeLabel : ''}<div class="actions-overlay"><span class="uploader">${safeLabel}</span>${msgPreview}${actionBtn}</div></div>`;
     }).join('');
 
     hydrateLazyVideos();
