@@ -1939,7 +1939,7 @@
     soundIcon.textContent  = wallSoundOn ? '🔊' : '🔇';
     soundLabel.textContent = wallSoundOn ? 'Sound on' : 'Tap for sound';
     [vidA, vidB].forEach(v => { if (v) v.muted = !wallSoundOn; });
-    // Sound is on now → drop the attention pulse (no need to nag).
+    [audA, audB].forEach(a => { if (a) a.muted = !wallSoundOn; });
     if (wallSoundOn) soundBtn?.classList.remove('attention');
   }
   applySoundState();
@@ -1948,10 +1948,19 @@
     wallSoundOn = !wallSoundOn;
     localStorage.setItem('reelday_wall_sound', wallSoundOn ? 'on' : 'off');
     applySoundState();
-    // Nudge the active video so the audio actually starts/stops immediately.
+    // Nudge the active video so sound starts/stops immediately.
     const activeVid = activeLayer === 'A' ? vidA : vidB;
     if (activeVid && currentIsVideo) {
       try { activeVid.play(); } catch {}
+    }
+    // Nudge the active audio element — if autoplay was blocked on refresh
+    // the audio will be paused; tapping sound should start it from wherever it is.
+    if (currentIsAudio || currentHasAudioOverlay) {
+      const activeAud = activeLayer === 'A' ? audA : audB;
+      if (activeAud && wallSoundOn && activeAud.paused && activeAud.src) {
+        activeAud.muted = false;
+        activeAud.play().catch(() => {});
+      }
     }
   });
 
@@ -2229,7 +2238,7 @@
       inAud.muted = !wallSoundOn;
       inAud.src = item.file_url;
       inAud.load();
-      inAud.play().catch(() => { inAud.muted = true; inAud.play().catch(() => {}); });
+      inAud.play().catch(() => {});
       currentIsAudio = true;
       currentIsVideo = false;
       // Caption still shows name even for audio
@@ -2384,7 +2393,7 @@
       inAud.muted = !wallSoundOn;
       inAud.src = pairedAudioUrl;
       inAud.load();
-      inAud.play().catch(() => { inAud.muted = true; inAud.play().catch(() => {}); });
+      inAud.play().catch(() => {});
     }
 
     // Tag <body> with is-landscape / is-portrait for the current slide.
