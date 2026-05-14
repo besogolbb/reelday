@@ -2168,6 +2168,24 @@
     }
   }
 
+  // Play an audio element, retrying unmuted on the first user interaction
+  // if the browser blocks autoplay (common on page refresh).
+  // The retry is identity-guarded: if the slide has already advanced and
+  // the element's src was cleared, the retry is a no-op.
+  function tryPlayAudio(audEl) {
+    audEl.play().catch(() => {
+      const retry = () => {
+        const nowActive = activeLayer === 'A' ? audA : audB;
+        if (audEl === nowActive && audEl.paused && audEl.src) {
+          audEl.muted = !wallSoundOn;
+          audEl.play().catch(() => {});
+        }
+      };
+      document.addEventListener('click',   retry, { once: true });
+      document.addEventListener('keydown', retry, { once: true });
+    });
+  }
+
   /* ══════════════════════════════════════════════════════════
      SLIDE ENGINE
   ══════════════════════════════════════════════════════════ */
@@ -2238,7 +2256,7 @@
       inAud.muted = !wallSoundOn;
       inAud.src = item.file_url;
       inAud.load();
-      inAud.play().catch(() => {});
+      tryPlayAudio(inAud);
       currentIsAudio = true;
       currentIsVideo = false;
       // Caption still shows name even for audio
@@ -2393,7 +2411,7 @@
       inAud.muted = !wallSoundOn;
       inAud.src = pairedAudioUrl;
       inAud.load();
-      inAud.play().catch(() => {});
+      tryPlayAudio(inAud);
     }
 
     // Tag <body> with is-landscape / is-portrait for the current slide.
