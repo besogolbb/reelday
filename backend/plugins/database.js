@@ -70,6 +70,12 @@ const MIGRATIONS = `
   ALTER TABLE uploads ADD COLUMN IF NOT EXISTS guest_id TEXT;
   CREATE INDEX IF NOT EXISTS idx_uploads_guest_id ON uploads(guest_id) WHERE guest_id IS NOT NULL;
 
+  -- Submission batch: all files uploaded in one "Share" tap share a UUID.
+  -- Used by the wall to pair audio with its companion photo/video precisely,
+  -- with no timestamp fuzzing or name matching required.
+  ALTER TABLE uploads ADD COLUMN IF NOT EXISTS batch_id TEXT;
+  CREATE INDEX IF NOT EXISTS idx_uploads_batch_id ON uploads(batch_id) WHERE batch_id IS NOT NULL;
+
   -- Audio is companion content and always auto-approves. Backfill any rows
   -- that were uploaded before this rule was in place.
   UPDATE uploads SET is_approved = true WHERE file_type = 'audio' AND is_approved = false;

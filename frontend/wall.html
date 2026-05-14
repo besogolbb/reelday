@@ -1979,25 +1979,51 @@
     const audios = arr.filter(u => u.file_type === 'audio');
     if (!audios.length) return arr;
     const media  = arr.filter(u => u.file_type !== 'audio');
-    const pairedAudioIds = new Set();
+    const pairedAudioIds  = new Set();
+    const claimedMediaIds = new Set(); // prevent one photo from absorbing two audios
+
     for (const aud of audios) {
-      const audTs = new Date(aud.created_at).getTime();
-      let best = null, bestDiff = Infinity;
-      for (const m of media) {
-        // Prefer guest_id match (same browser session); fall back to
-        // uploader_name + timestamp when guest_id isn't stored yet.
-        const sameGuest = aud.guest_id && m.guest_id
-          ? aud.guest_id === m.guest_id
-          : m.uploader_name === aud.uploader_name;
-        if (!sameGuest) continue;
-        const diff = Math.abs(new Date(m.created_at).getTime() - audTs);
-        if (diff < bestDiff && diff < 120000) { bestDiff = diff; best = m; }
+      let best = null;
+
+      // 1. Exact batch_id match — most reliable (same "Share" tap, any upload order)
+      if (aud.batch_id) {
+        for (const m of media) {
+          if (claimedMediaIds.has(m.id)) continue;
+          if (m.batch_id === aud.batch_id) { best = m; break; }
+        }
       }
+
+      // 2. guest_id + smallest timestamp gap (same browser session, ≤30 min)
+      if (!best && aud.guest_id) {
+        let bestDiff = Infinity;
+        const audTs = new Date(aud.created_at).getTime();
+        for (const m of media) {
+          if (claimedMediaIds.has(m.id)) continue;
+          if (m.guest_id !== aud.guest_id) continue;
+          const diff = Math.abs(new Date(m.created_at).getTime() - audTs);
+          if (diff < bestDiff && diff < 1800000) { bestDiff = diff; best = m; }
+        }
+      }
+
+      // 3. uploader_name + smallest timestamp gap (legacy rows, ≤10 min)
+      if (!best && aud.uploader_name) {
+        let bestDiff = Infinity;
+        const audTs = new Date(aud.created_at).getTime();
+        for (const m of media) {
+          if (claimedMediaIds.has(m.id)) continue;
+          if (m.uploader_name !== aud.uploader_name) continue;
+          const diff = Math.abs(new Date(m.created_at).getTime() - audTs);
+          if (diff < bestDiff && diff < 600000) { bestDiff = diff; best = m; }
+        }
+      }
+
       if (best) {
         audioUrlById.set(best.id, aud.file_url);
         pairedAudioIds.add(aud.id);
+        claimedMediaIds.add(best.id);
       }
     }
+
     const unpairedAudio = audios.filter(u => !pairedAudioIds.has(u.id));
     return [...media, ...unpairedAudio];
   }

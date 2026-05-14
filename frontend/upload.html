@@ -2597,6 +2597,7 @@ body { background: var(--paper); min-height: 100dvh; }
     const localKey = `reelday_uploads_${currentEvent.slug}`;
     const allUrls  = Object.values(itemDataUrls);   // one per selected file
     const now      = Date.now();
+    const batchId  = (crypto.randomUUID && crypto.randomUUID()) || (now.toString(36) + Math.random().toString(36).slice(2));
 
     const fileEntries = Object.entries(itemFiles); // [ [qId, file], ... ]
 
@@ -2811,6 +2812,7 @@ body { background: var(--paper); min-height: 100dvh; }
             file_type: isAudio ? 'audio' : isVideo ? 'video' : 'photo',
             is_video_message: isVidMsg,
             poster_data_url: browserPoster || null,
+            batch_id: batchId,
           })
         });
         if (!compRes.ok) {
