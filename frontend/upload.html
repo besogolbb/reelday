@@ -295,43 +295,25 @@ body { background: var(--paper); min-height: 100dvh; }
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,.55),
     inset 0 -1px 0 rgba(42,26,20,.05),
-    0 8px 28px rgba(196,90,58,.28),
-    0 2px 6px rgba(42,26,20,.08);
+    0 4px 14px rgba(196,90,58,.15),
+    0 1px 3px rgba(42,26,20,.06);
   position: relative;
   overflow: hidden;
-  animation: cameraTilePulse 2.4s ease-in-out infinite;
   z-index: 1;
-  transition: transform .35s cubic-bezier(.34,1.56,.64,1);
+  transition: transform .35s cubic-bezier(.34,1.56,.64,1), box-shadow .35s ease;
   transform-style: preserve-3d;
 }
-/* Three.js-style glossy reflective surface — top dome + moving shimmer */
+/* Subtle top-edge gloss — readable, no shimmer band */
 .share-tabs--hero .share-tab--camera::after {
   content: '';
   position: absolute;
-  top: -2px; left: -2px; right: -2px; height: 62%;
-  background:
-    linear-gradient(115deg,
-      rgba(255,255,255,0)   30%,
-      rgba(255,255,255,.55) 48%,
-      rgba(255,255,255,.85) 52%,
-      rgba(255,255,255,.55) 56%,
-      rgba(255,255,255,0)   74%),
-    linear-gradient(180deg,
-      rgba(255,255,255,.70) 0%,
-      rgba(255,255,255,.30) 35%,
-      rgba(255,255,255,.05) 70%,
+  top: 0; left: 0; right: 0; height: 38%;
+  background: linear-gradient(180deg,
+      rgba(255,255,255,.32) 0%,
+      rgba(255,255,255,.08) 50%,
       transparent 100%);
-  background-size: 220% 100%, 100% 100%;
-  background-position: 200% 0, 0 0;
-  border-radius: var(--r-lg) var(--r-lg) 60% 60% / var(--r-lg) var(--r-lg) 28px 28px;
+  border-radius: var(--r-lg) var(--r-lg) 50% 50% / var(--r-lg) var(--r-lg) 18px 18px;
   pointer-events: none; z-index: 1;
-  mix-blend-mode: screen;
-  animation: tileShimmer 5s ease-in-out infinite;
-}
-@keyframes tileShimmer {
-  0%   { background-position: 200% 0, 0 0; }
-  60%  { background-position: -120% 0, 0 0; }
-  100% { background-position: -120% 0, 0 0; }
 }
 .share-tabs--hero .share-tab--camera:hover {
   transform: translateY(-4px) rotateX(6deg) scale(1.015);
@@ -404,44 +386,28 @@ body { background: var(--paper); min-height: 100dvh; }
   backdrop-filter:         blur(22px) saturate(180%);
   border: 1px solid rgba(255,255,255,.85);
   box-shadow:
-    inset 0 1.5px 0 rgba(255,255,255,.95),
-    inset 0 -1.5px 0 rgba(42,26,20,.06),
-    inset 0 0 0 1px rgba(255,255,255,.35),
-    0 4px 8px rgba(42,26,20,.04),
-    0 14px 32px rgba(196,90,58,.18),
-    0 26px 60px rgba(196,90,58,.10);
+    inset 0 1px 0 rgba(255,255,255,.85),
+    inset 0 -1px 0 rgba(42,26,20,.04),
+    0 2px 6px rgba(42,26,20,.04),
+    0 8px 18px rgba(196,90,58,.10);
   gap: 8px;
   position: relative;
   overflow: hidden;
   transition: transform .35s cubic-bezier(.34,1.56,.64,1), box-shadow .35s ease, border-color .2s;
   transform-style: preserve-3d;
 }
-/* Three.js glossy reflective dome + traveling specular shimmer */
+/* Subtle top-edge gloss on mini tiles */
 .share-tabs--hero .share-tab--mini::after {
   content: '';
   position: absolute;
-  top: -2px; left: -2px; right: -2px; height: 58%;
-  background:
-    linear-gradient(115deg,
-      rgba(255,255,255,0)   30%,
-      rgba(255,255,255,.6)  48%,
-      rgba(255,255,255,.9)  52%,
-      rgba(255,255,255,.6)  56%,
-      rgba(255,255,255,0)   74%),
-    linear-gradient(180deg,
-      rgba(255,255,255,.75) 0%,
-      rgba(255,255,255,.25) 45%,
+  top: 0; left: 0; right: 0; height: 42%;
+  background: linear-gradient(180deg,
+      rgba(255,255,255,.38) 0%,
+      rgba(255,255,255,.08) 55%,
       transparent 100%);
-  background-size: 220% 100%, 100% 100%;
-  background-position: 200% 0, 0 0;
-  border-radius: var(--r-lg) var(--r-lg) 55% 55% / var(--r-lg) var(--r-lg) 24px 24px;
+  border-radius: var(--r-lg) var(--r-lg) 50% 50% / var(--r-lg) var(--r-lg) 18px 18px;
   pointer-events: none; z-index: 1;
-  mix-blend-mode: screen;
-  animation: tileShimmer 6s ease-in-out infinite;
 }
-.share-tabs--hero .share-tab--mini:nth-of-type(2)::after { animation-delay: .8s; }
-.share-tabs--hero .share-tab--mini:nth-of-type(3)::after { animation-delay: 1.6s; }
-.share-tabs--hero .share-tab--mini:nth-of-type(4)::after { animation-delay: 2.4s; }
 .share-tabs--hero .share-tab--mini > * { position: relative; z-index: 2; }
 .share-tabs--hero .share-tab--mini:hover {
   border-color: rgba(196,90,58,.32);
