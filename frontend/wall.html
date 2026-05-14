@@ -2440,24 +2440,26 @@
     clearTimeout(slideTimer);
     if (isPaused || netFrozen || items.length < 2) return;
 
-    // Standalone audio slides: advance on 'ended', with a 60 s safety net.
-    if (currentIsAudio) {
+    // Standalone audio slides and paired audio overlays: advance on 'ended'.
+    // Timer is armed from metadata duration once it loads (capped at 30 s).
+    // Falls back to SLIDE_DURATION if audio never loads/plays (autoplay blocked).
+    if (currentIsAudio || currentHasAudioOverlay) {
       const activeAud = activeLayer === 'A' ? audA : audB;
-      slideTimer = setTimeout(advance, 60000);
+      const MAX_AUDIO_MS = 30000;
+      slideTimer = setTimeout(advance, SLIDE_DURATION); // fallback if metadata never arrives
       if (activeAud) {
-        activeAud.addEventListener('ended', () => {
-          clearTimeout(slideTimer);
-          advance();
-        }, { once: true });
-      }
-      return;
-    }
-
-    // Paired audio overlay: extend the photo slide to match the audio duration.
-    if (currentHasAudioOverlay) {
-      const activeAud = activeLayer === 'A' ? audA : audB;
-      slideTimer = setTimeout(advance, 60000); // safety cap
-      if (activeAud) {
+        const armFromDuration = () => {
+          const secs = Number.isFinite(activeAud.duration) ? activeAud.duration : 0;
+          if (secs > 0) {
+            clearTimeout(slideTimer);
+            slideTimer = setTimeout(advance, Math.min(secs * 1000 + 800, MAX_AUDIO_MS));
+          }
+        };
+        if (Number.isFinite(activeAud.duration) && activeAud.duration > 0) {
+          armFromDuration();
+        } else {
+          activeAud.addEventListener('loadedmetadata', armFromDuration, { once: true });
+        }
         activeAud.addEventListener('ended', () => {
           clearTimeout(slideTimer);
           advance();
