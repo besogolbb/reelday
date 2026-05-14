@@ -298,6 +298,23 @@ body { background: var(--paper); min-height: 100dvh; }
     0 2px 8px rgba(42,26,20,.06);
   position: relative;
   overflow: hidden;
+  animation: cameraTilePulse 3s ease-in-out infinite;
+}
+@keyframes cameraTilePulse {
+  0%, 100% {
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.75),
+      0 14px 38px rgba(196,90,58,.22),
+      0 2px 8px rgba(42,26,20,.06),
+      0 0 0 0 rgba(196,90,58,.18);
+  }
+  50% {
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.75),
+      0 18px 44px rgba(196,90,58,.38),
+      0 2px 8px rgba(42,26,20,.06),
+      0 0 0 7px rgba(196,90,58,.08);
+  }
 }
 .share-tabs--hero .share-tab--camera::before {
   /* Gradient glow halo behind the icon — pulses slowly to draw the eye. */
@@ -484,6 +501,29 @@ body { background: var(--paper); min-height: 100dvh; }
 .drop h3 { font-family: var(--display); font-size: 20px; font-weight: 500; margin-bottom: 5px; color: var(--ink); }
 .drop p { color: var(--ink-soft); font-size: 13px; margin-bottom: 16px; }
 .drop .choose-btn { display: inline-block; background: var(--accent); color: #fff; border-radius: 999px; padding: 11px 22px; font-size: 14px; font-weight: 500; pointer-events: none; }
+
+/* ── Gallery text link below mini tiles ─────────────────── */
+.gallery-link {
+  text-align: center;
+  font-size: 13px;
+  color: var(--ink-faint);
+  margin-top: -6px;
+  margin-bottom: 4px;
+  letter-spacing: .01em;
+}
+.gallery-link-btn {
+  color: var(--accent);
+  font-family: var(--sans);
+  font-size: 13px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: rgba(196,90,58,.4);
+  text-underline-offset: 2px;
+}
+.gallery-link-btn:hover { text-decoration-color: var(--accent); }
 
 /* ── Panel 2: Record video ───────────────────────────── */
 .record-panel {
@@ -904,7 +944,7 @@ body { background: var(--paper); min-height: 100dvh; }
        spanning the full row. Record / React / Poll sit as smaller
        secondary tiles below to keep the hierarchy clear. -->
   <div class="share-tabs share-tabs--hero">
-    <div class="share-tab share-tab--camera active" onclick="switchTab('gallery',this)">
+    <div class="share-tab share-tab--camera active" onclick="switchTab('gallery',this); document.getElementById('fileInput').click();">
       <div class="tab-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="6.5" width="18" height="13" rx="2.5"/>
@@ -933,16 +973,11 @@ body { background: var(--paper); min-height: 100dvh; }
       <div class="tab-label">Poll</div>
     </div>
   </div>
+  <p class="gallery-link">or <button class="gallery-link-btn" onclick="document.getElementById('fileInput').click()">pick from your gallery</button></p>
 
   <!-- ════ PANEL 1: Gallery ═════════════════════════════ -->
   <div class="share-panel active" id="panel-gallery">
-    <div class="drop" id="dropZone">
-      <input type="file" id="fileInput" multiple accept="image/*,video/*" onchange="handleFiles(event)" />
-      <div class="icon">+</div>
-      <h3>Tap to share</h3>
-      <p>Photos · videos up to 30s &amp; 100&nbsp;MB · 4K auto-optimized</p>
-      <div class="choose-btn">Choose from gallery</div>
-    </div>
+    <input type="file" id="fileInput" multiple accept="image/*,video/*" onchange="handleFiles(event)" style="display:none;" />
     <div class="queue" id="galleryQueue"></div>
 
     <!-- Name — required, comes first -->
@@ -1372,7 +1407,7 @@ body { background: var(--paper); min-height: 100dvh; }
       // drop zone or the record viewfinder); otherwise scroll the panel
       // itself into view.
       const focus =
-        panel.querySelector('.drop, .record-panel, .react-grid, .poll-slot, .poll-empty')
+        panel.querySelector('.record-panel, .react-grid, .poll-slot, .poll-empty')
         || panel;
       try {
         focus.scrollIntoView({ behavior: 'smooth', block: 'start' });
