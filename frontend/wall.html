@@ -606,81 +606,49 @@
        preserving the cinematic minimal feel.
     ─────────────────────────────────────────────────────────── */
 
-    /* Metadata strip: lose the glass pill, rely on the luminance
-       gradient + text-shadow for contrast. Clean sans-serif so
-       characters render crisply at screen distance. */
+    /* Landscape pill: same glass pill as portrait — only text-shadow
+       strength is adjusted for TV/projector viewing distance. */
     body.is-landscape .caption .uploader {
-      background: transparent;
-      -webkit-backdrop-filter: none;
-      backdrop-filter: none;
-      box-shadow: none;
-      padding: 0 2px;
-      border-radius: 0;
-      letter-spacing: .22em;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       text-shadow:
-        0 1px 2px rgba(0,0,0,.95),
-        0 2px 10px rgba(0,0,0,.72);
+        0 1px 3px rgba(0,0,0,.80),
+        0 2px 8px rgba(0,0,0,.55);
     }
     body.is-landscape .caption .uploader .uploader-name {
-      font-size: .8rem;
-      font-weight: 700;
-      letter-spacing: .15em;
-      opacity: .7;
-      color: #fff;
+      font-size: clamp(16px, 1.6vw, 26px);
     }
-    body.is-landscape .caption .uploader .uploader-sep {
-      color: rgba(255,255,255,.55);
-    }
-    body.is-landscape .caption .uploader .uploader-time {
-      font-weight: 500;
-      color: rgba(255,255,255,.80);
-    }
-    /* No caption: promote the metadata — it's the only text on screen */
     body.is-landscape .caption.no-caption .uploader .uploader-name {
-      font-size: clamp(26px, 2.8vw, 44px);
+      font-size: clamp(22px, 2.2vw, 36px);
     }
     body.is-landscape .caption.no-caption .uploader .uploader-sep,
     body.is-landscape .caption.no-caption .uploader .uploader-time {
-      font-size: clamp(14px, 1.4vw, 22px);
-      color: rgba(255,255,255,.75);
+      font-size: clamp(11px, 1.1vw, 18px);
     }
 
-    /* Caption: Fraunces reads better at projector distance than
-       Cormorant Garamond (thicker strokes, optical-size tuned for
-       display). Keep italic for warmth, bump contrast. */
+    /* Blockquote: same elegant serif as portrait, sized for the room. */
     body.is-landscape .caption blockquote {
-      font-family: var(--display);
+      font-family: var(--elegant);
       font-style: italic;
       font-weight: 400;
       font-size: 3rem;
       opacity: .9;
       color: rgba(255,255,255,.88);
       text-shadow:
-        0 1px 2px rgba(0,0,0,.88),
-        0 3px 14px rgba(0,0,0,.68),
-        0 8px 32px rgba(0,0,0,.42);
+        0 1px 2px rgba(0,0,0,.75),
+        0 3px 12px rgba(0,0,0,.50);
     }
-
-    /* Adaptive: short meaningful caption — slightly stronger weight
-       and contrast so the sentiment lands across the room. */
     body.is-landscape .caption.cap-meaningful blockquote {
       color: rgba(255,255,255,.96);
       font-weight: 500;
       text-shadow:
-        0 1px 3px rgba(0,0,0,.92),
-        0 4px 18px rgba(0,0,0,.74),
-        0 10px 42px rgba(0,0,0,.50);
+        0 1px 3px rgba(0,0,0,.88),
+        0 4px 16px rgba(0,0,0,.65);
     }
-
-    /* Adaptive: long / repetitive caption — scale back so it
-       doesn't overpower the photo with noise. */
     body.is-landscape .caption.cap-subtle blockquote {
-      color: rgba(255,255,255,.62);
-      font-size: clamp(26px, 3.2vw, 46px);
+      color: rgba(255,255,255,.65);
+      font-size: 2.2rem;
       text-shadow:
-        0 1px 3px rgba(0,0,0,.82),
-        0 3px 12px rgba(0,0,0,.52);
+        0 1px 2px rgba(0,0,0,.70),
+        0 2px 8px rgba(0,0,0,.40);
     }
 
     /* ── Luminance-adaptive caption: dark text when bottom-left is bright.
@@ -692,12 +660,11 @@
       color: rgba(0,0,0,.8);
       text-shadow: none;
     }
-    /* Portrait pill: swap to light glass */
-    body.is-portrait .caption.on-light-bg .uploader {
+    /* Both modes: swap pill to light glass on bright backgrounds */
+    .caption.on-light-bg .uploader {
       background: rgba(255,255,255,.22);
+      text-shadow: none;
     }
-    /* Landscape: clear text-shadow — dark text needs no stroke on a bright bg */
-    body.is-landscape .caption.on-light-bg .uploader { text-shadow: none; }
     body.is-landscape .caption.on-light-bg blockquote { text-shadow: none; }
 
     .corner {
