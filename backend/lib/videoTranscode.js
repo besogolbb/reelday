@@ -194,21 +194,21 @@ function derivedKeys(originalKey) {
 }
 
 // ffmpeg args for a static-image + audio combine.
-// -loop 1        — repeats the single photo frame for the duration of the audio
-// -tune stillimage — x264 tuning that skips motion estimation (fast, tiny output)
-// -t 30          — hard cap at 30 s matching the recording limit on the upload page
-// -shortest      — stop when the shorter stream (audio) ends, before the 30 s cap
+// -loop 1 -framerate 1  — constant 1 fps loop; fixes variable-timestamp
+//                         flicker caused by ffmpeg's default loop behavior.
+// -r 1                  — lock output framerate to 1 fps (static photo, tiny file).
+// No -tune stillimage   — that tune causes decoder-side flickering artifacts.
+// -shortest             — stop when audio ends.
 const COMBINE_ARGS = [
   '-c:v', 'libx264',
-  '-tune', 'stillimage',
   '-preset', 'veryfast',
+  '-crf', '23',
   '-profile:v', 'main',
-  '-pix_fmt', 'yuv420p',
-  '-vf', 'scale=w=1280:h=720:force_original_aspect_ratio=decrease:flags=lanczos,pad=1280:720:(ow-iw)/2:(oh-ih)/2:black',
+  '-vf', 'scale=1280:720:force_original_aspect_ratio=decrease:flags=lanczos,pad=1280:720:(ow-iw)/2:(oh-ih)/2:black,format=yuv420p',
+  '-r', '1',
   '-c:a', 'aac',
   '-b:a', '128k',
   '-ar', '44100',
-  '-t', '30',
   '-shortest',
   '-movflags', '+faststart',
 ];
@@ -259,7 +259,7 @@ export async function combinePhotoAudioInBackground(fastify, photoUpload, audioU
     await acquireSlot();
     const start = Date.now();
     try {
-      await runFfmpeg(['-y', '-loop', '1', '-i', photoPath, '-i', audioPath, ...COMBINE_ARGS, combinedPath]);
+      await runFfmpeg(['-y', '-loop', '1', '-framerate', '1', '-i', photoPath, '-i', audioPath, ...COMBINE_ARGS, combinedPath]);
     } finally {
       releaseSlot();
     }
