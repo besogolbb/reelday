@@ -523,9 +523,9 @@
     .caption { flex: 1 1 auto; min-width: 0; max-width: none; padding-right: 24px; }
 
     .caption .uploader {
-      font-family: var(--elegant); font-size: clamp(34px, 3.6vw, 58px);
-      font-weight: 500; font-style: italic;
-      letter-spacing: .04em; text-transform: none;
+      font-family: var(--elegant); font-size: clamp(28px, 3vw, 48px);
+      font-weight: 500; font-style: normal;
+      letter-spacing: .12em; text-transform: none;
       color: #fff; margin-bottom: 16px;
       /* Glass name plate — the guest's name is the moment, so it gets
          a translucent dark pill with a backdrop blur and a subtle
@@ -2208,8 +2208,14 @@
   }
 
   function updateCaption(item) {
-    const name = item.uploader_name || 'Panauhin';
-    capUploader.textContent = `— ${name}`;
+    const name = (item.uploader_name || 'Panauhin').toUpperCase();
+    let label = name;
+    if (item.created_at) {
+      const d = new Date(item.created_at);
+      const t = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+      label = `${name} • ${t}`;
+    }
+    capUploader.textContent = label;
     capQuote.textContent    = item.message || '';
   }
 
