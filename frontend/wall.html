@@ -2356,7 +2356,9 @@
 
     if (!imageUrl) return;
     const img = new Image();
-    img.crossOrigin = 'anonymous';
+    // No crossOrigin — CDN doesn't serve CORS headers, so setting it
+    // would trigger a blocked preflight and fill the console with errors.
+    // Canvas will be tainted; getImageData() throws and is caught below.
     img.onload = () => {
       if (token !== _lumToken) return;
       try {
