@@ -3808,7 +3808,7 @@
 
     // Include every approved upload — photos, picked videos, and recorded
     // video messages. The slide engine knows how to play videos.
-    const slideable = merged;
+    const slideable = buildAudioPairing(merged);
     slideable.forEach(u => knownIds.add(u.id));
     items = slideable;
 
