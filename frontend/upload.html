@@ -258,6 +258,11 @@ body { background: var(--paper); min-height: 100dvh; }
   user-select: none;
   order: -1;
 }
+/* Event-monogram state: usually two letters ("A & J" → "AJ"), so
+   shrink the type and drop the italic for legibility. */
+.profile-section .pf-avatar--event {
+  font-size: 20px; font-style: normal; letter-spacing: .02em;
+}
 
 /* ── Welcome line (under profile section) ──────────────── */
 .upload-hero--minimal {
@@ -385,6 +390,22 @@ body { background: var(--paper); min-height: 100dvh; }
   font-size: 10px;
   color: var(--ink);
   position: relative; z-index: 1;
+}
+
+/* Per-mode icon hue — readable function differentiation at a glance.
+   Gallery keeps the default warm accent; Record stays clay (close
+   sibling of camera); React goes gold; Poll goes sage. */
+.share-tabs--hero .share-tab--record .tab-icon {
+  background: linear-gradient(135deg, #d8755a, var(--accent-deep));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 4px 10px rgba(122,59,46,.32);
+}
+.share-tabs--hero .share-tab--react .tab-icon {
+  background: linear-gradient(135deg, #e8c074, var(--gold));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 4px 10px rgba(216,160,90,.35);
+}
+.share-tabs--hero .share-tab--poll .tab-icon {
+  background: linear-gradient(135deg, #5f8a72, var(--sage));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 4px 10px rgba(45,74,61,.32);
 }
 .share-tabs--hero .share-tab.active.share-tab--camera {
   border-color: var(--accent);
@@ -737,6 +758,9 @@ body { background: var(--paper); min-height: 100dvh; }
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
+  /* Soft fade on right edge hints there's more to scroll. */
+  -webkit-mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 36px), transparent 100%);
+          mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 36px), transparent 100%);
 }
 .polaroid-strip::-webkit-scrollbar { display: none; }
 .polaroid {
@@ -1125,19 +1149,19 @@ body { background: var(--paper); min-height: 100dvh; }
       </div>
       <div class="tab-label">Gallery</div>
     </div>
-    <div class="share-tab share-tab--mini" onclick="switchTab('record',this)">
+    <div class="share-tab share-tab--mini share-tab--record" onclick="switchTab('record',this)">
       <div class="tab-icon">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="9" stroke-dasharray="3 2"/></svg>
       </div>
       <div class="tab-label">Record</div>
     </div>
-    <div class="share-tab share-tab--mini" onclick="switchTab('react',this)">
+    <div class="share-tab share-tab--mini share-tab--react" onclick="switchTab('react',this)">
       <div class="tab-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
       </div>
       <div class="tab-label">React</div>
     </div>
-    <div class="share-tab share-tab--mini" onclick="switchTab('poll',this)">
+    <div class="share-tab share-tab--mini share-tab--poll" onclick="switchTab('poll',this)">
       <div class="tab-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="4" height="9" rx="1"/><rect x="10" y="6" width="4" height="14" rx="1"/><rect x="17" y="14" width="4" height="6" rx="1"/></svg>
       </div>
@@ -1455,6 +1479,18 @@ body { background: var(--paper); min-height: 100dvh; }
     document.getElementById('heroName').innerHTML = nameHtml;
     document.title = `Reelday — ${ev.name}`;
 
+    /* Event monogram: first letter of each half of "A & B"-style names,
+       else the first letter of the name. Used as the avatar fallback so
+       guests never see a bare "?" on first load. */
+    const cleaned = ev.name.replace(/[^\p{L}\p{N}\s&]/gu, '').trim();
+    const parts = cleaned.split(/\s*&\s*/).map(p => p.trim()).filter(Boolean);
+    const monogram = (parts.length >= 2
+      ? parts[0][0] + parts[1][0]
+      : (cleaned[0] || '')).toUpperCase();
+    const avEl = document.getElementById('profileAvatar');
+    if (avEl) avEl.dataset.eventMonogram = monogram;
+    refreshProfileAvatar();
+
     // Format the event date if it parses as one; otherwise pass through.
     let formattedDate = '';
     if (ev.date) {
@@ -1576,7 +1612,13 @@ body { background: var(--paper); min-height: 100dvh; }
       ch = stripped ? stripped[0].toUpperCase() : null;
     }
     const el = document.getElementById('profileAvatar');
-    if (el) el.textContent = ch || '?';
+    if (!el) return;
+    /* Fall back to the event monogram (set in applyEvent) before "?"
+       so a fresh visitor sees the event's mark, not a broken icon.
+       Once they type a name, swap to their own initial. */
+    const fallback = el.dataset.eventMonogram || '?';
+    el.textContent = ch || fallback;
+    el.classList.toggle('pf-avatar--event', !ch && !!el.dataset.eventMonogram);
   }
 
   function activePanelId() {
