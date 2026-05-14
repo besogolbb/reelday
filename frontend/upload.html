@@ -1629,7 +1629,8 @@ body { background: var(--paper); min-height: 100dvh; }
   }
   function hasStagedItems(panel) {
     if (panel === 'gallery') {
-      return document.querySelectorAll('#galleryQueue .queue-item').length > 0;
+      return document.querySelectorAll('#galleryQueue .queue-item').length > 0
+        || (typeof _voiceBlob !== 'undefined' && !!_voiceBlob);
     }
     if (panel === 'record') {
       return typeof recordedBlob !== 'undefined' && !!recordedBlob;
@@ -2523,6 +2524,7 @@ body { background: var(--paper); min-height: 100dvh; }
         document.getElementById('voicePreview').classList.add('visible');
         document.getElementById('voiceRecBtn').classList.remove('recording');
         document.getElementById('voiceHint').textContent = 'Your voice message';
+        refreshCtaBar(); // enable the Share button now that there's a voice blob
       };
       _voiceRecorder.start();
       document.getElementById('voiceRecBtn').classList.add('recording');
@@ -2723,9 +2725,10 @@ body { background: var(--paper); min-height: 100dvh; }
       }
     }
 
-    const processUpload = async (file, queueId, i, isVidMsg = false) => {
+    const processUpload = async (file, queueId, i, isVidMsg = false, forceFileType = null) => {
       const entryId = now + i;
-      const isVideo = file.type.startsWith('video/');
+      const isAudio = forceFileType === 'audio' || (!forceFileType && file.type.startsWith('audio/'));
+      const isVideo = !isAudio && (forceFileType === 'video' || (!forceFileType && file.type.startsWith('video/')));
       const msgToSend = (i === 0 && msg) ? msg : '';
       const browserPoster = isVideo
         ? (
@@ -2805,7 +2808,7 @@ body { background: var(--paper); min-height: 100dvh; }
             fileKey,
             uploader_name: name,
             message: msgToSend,
-            file_type: isVideo ? 'video' : 'photo',
+            file_type: isAudio ? 'audio' : isVideo ? 'video' : 'photo',
             is_video_message: isVidMsg,
             poster_data_url: browserPoster || null,
           })
@@ -2852,6 +2855,26 @@ body { background: var(--paper); min-height: 100dvh; }
     ];
     if (fileEntries.length === 0 && recordedBlob) {
       jobs.push(processUpload(recordedBlob, 'record', 0, true));
+    }
+
+    // Upload voice message alongside photos/videos as a separate audio entry.
+    // The wall will render it as a "Talking Photo" slide.
+    if (_voiceBlob) {
+      const ext = _voiceBlob.type.includes('ogg') ? 'ogg' : 'webm';
+      const voiceFile = new File([_voiceBlob], `voice-message.${ext}`, { type: _voiceBlob.type });
+      fileSizes['voice'] = voiceFile.size;
+      const queue = document.getElementById('galleryQueue');
+      if (queue) {
+        const vi = document.createElement('div');
+        vi.className = 'queue-item'; vi.id = 'voice';
+        vi.innerHTML = `
+          <div class="q-thumb placeholder placeholder--coral" style="font-size:18px;display:flex;align-items:center;justify-content:center;">🎙</div>
+          <div><div class="q-name">Voice message</div><div class="q-prog"><span id="bvoice" style="width:0%"></span></div></div>
+          <div class="q-status" id="svoice">Uploading…</div>
+          <span style="width:24px"></span>`;
+        queue.appendChild(vi);
+      }
+      jobs.push(processUpload(voiceFile, 'voice', jobs.length, false, 'audio'));
     }
 
     const results = await Promise.allSettled(jobs);

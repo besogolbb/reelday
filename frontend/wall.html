@@ -251,6 +251,97 @@
         linear-gradient(180deg, rgba(20,10,7,.12) 0%, transparent 22%, transparent 74%, rgba(12,6,4,.18) 100%);
     }
 
+    /* ── Talking Photo — audio slide ──────────────────────────
+       The audio card sits inside each A/B layer. It fades in when
+       the layer receives .has-audio; the pic and vid elements are
+       hidden so only the card and its ambient bg are visible.    */
+    .layer.has-audio .pic { opacity: 0 !important; animation: none !important; }
+    .layer.has-audio .vid { display: none !important; }
+    .layer.has-audio .backdrop { opacity: 0 !important; }
+    .layer.has-audio .vignette { opacity: 0 !important; }
+
+    .audio-card {
+      position: absolute; inset: 0; z-index: 4;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none;
+      transition: opacity .9s ease;
+      overflow: hidden;
+      background:
+        radial-gradient(ellipse 100% 80% at 50% 18%, rgba(196,90,58,.22) 0%, transparent 65%),
+        radial-gradient(ellipse 65% 55% at 82% 82%, rgba(240,163,122,.09) 0%, transparent 70%),
+        linear-gradient(170deg, #180d08 0%, #2e1510 45%, #180d08 100%);
+    }
+    .layer.has-audio .audio-card { opacity: 1; }
+
+    /* Ghost monogram — personality in the background */
+    .audio-card-monogram {
+      position: absolute; top: 6%; right: 4%;
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: clamp(80px, 18vw, 200px);
+      font-weight: 700; font-style: italic;
+      color: rgba(255,255,255,.055); line-height: 1;
+      user-select: none; pointer-events: none;
+      animation: audioMonoFloat 10s ease-in-out infinite;
+    }
+    @keyframes audioMonoFloat {
+      0%, 100% { transform: translateY(0) rotate(-3deg); opacity: .055; }
+      50%       { transform: translateY(-20px) rotate(-5.5deg); opacity: .10; }
+    }
+
+    /* Ambient radial pulse in background */
+    .audio-card-pulse {
+      position: absolute; inset: 0; z-index: 0;
+      background: radial-gradient(ellipse 55% 48% at 50% 50%,
+        rgba(196,90,58,.16) 0%, transparent 70%);
+      animation: audioBgPulse 2.8s ease-in-out infinite;
+    }
+    @keyframes audioBgPulse {
+      0%, 100% { opacity: .5; transform: scale(1); }
+      50%       { opacity: 1;  transform: scale(1.14); }
+    }
+
+    .audio-card-name {
+      position: relative; z-index: 2;
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: clamp(36px, 6.5vw, 78px);
+      font-weight: 600; font-style: italic; color: #fff;
+      text-align: center; line-height: 1.15; padding: 0 8%;
+      text-shadow: 0 2px 56px rgba(196,90,58,.55), 0 0 120px rgba(196,90,58,.22);
+      animation: audioNameBreathe 4.5s ease-in-out infinite;
+    }
+    @keyframes audioNameBreathe {
+      0%, 100% { transform: scale(1) translateY(0); }
+      50%       { transform: scale(1.014) translateY(-7px); }
+    }
+    .audio-card-msg {
+      position: relative; z-index: 2;
+      font-family: 'Fraunces', Georgia, serif; font-style: italic;
+      font-size: clamp(14px, 2vw, 22px); color: rgba(255,255,255,.58);
+      text-align: center; max-width: 52ch; padding: 0 8%; line-height: 1.6;
+      margin-top: 20px;
+      text-shadow: 0 1px 24px rgba(0,0,0,.65);
+    }
+
+    /* Animated equalizer waveform */
+    .audio-waveform {
+      position: relative; z-index: 2;
+      display: flex; align-items: flex-end; gap: 6px;
+      height: 68px; margin-top: 56px;
+    }
+    .waveform-bar {
+      width: 5px; border-radius: 4px;
+      background: linear-gradient(to top, rgba(196,90,58,.85), rgba(240,163,122,1));
+      transform-origin: bottom;
+      animation: waveBar var(--dur) ease-in-out infinite;
+      animation-delay: var(--delay);
+      box-shadow: 0 0 14px rgba(240,163,122,.3);
+    }
+    @keyframes waveBar {
+      0%, 100% { transform: scaleY(.1);  opacity: .4; }
+      50%       { transform: scaleY(1);   opacity: 1; }
+    }
+
     /* ── Top ticker ─────────────────────────────────────────── */
     .ticker {
       position: fixed; top: 0; left: 0; right: 0; z-index: 10;
@@ -1255,6 +1346,28 @@
   <video class="vid" id="vid-a" muted playsinline preload="auto"></video>
   <div class="video-loader" id="loader-a"><span class="reel-spinner" aria-hidden="true"></span><div class="copy-wrap"><span class="copy">✨ Preparing your cinematic moment...</span><span class="subcopy">Your Reel will play in just a few moments!</span></div></div>
   <div class="vignette"></div>
+  <div class="audio-card" id="audio-card-a">
+    <div class="audio-card-pulse"></div>
+    <div class="audio-card-monogram" id="audio-monogram-a"></div>
+    <div class="audio-card-name" id="audio-name-a"></div>
+    <div class="audio-card-msg"  id="audio-msg-a"></div>
+    <div class="audio-waveform">
+      <div class="waveform-bar" style="height:22px;--dur:1.30s;--delay:.00s"></div>
+      <div class="waveform-bar" style="height:34px;--dur:1.05s;--delay:.07s"></div>
+      <div class="waveform-bar" style="height:50px;--dur:1.50s;--delay:.14s"></div>
+      <div class="waveform-bar" style="height:40px;--dur:1.10s;--delay:.21s"></div>
+      <div class="waveform-bar" style="height:62px;--dur:1.35s;--delay:.28s"></div>
+      <div class="waveform-bar" style="height:68px;--dur:0.90s;--delay:.35s"></div>
+      <div class="waveform-bar" style="height:56px;--dur:1.45s;--delay:.42s"></div>
+      <div class="waveform-bar" style="height:68px;--dur:1.00s;--delay:.35s"></div>
+      <div class="waveform-bar" style="height:60px;--dur:1.20s;--delay:.28s"></div>
+      <div class="waveform-bar" style="height:44px;--dur:1.50s;--delay:.21s"></div>
+      <div class="waveform-bar" style="height:46px;--dur:1.10s;--delay:.14s"></div>
+      <div class="waveform-bar" style="height:28px;--dur:1.30s;--delay:.07s"></div>
+      <div class="waveform-bar" style="height:18px;--dur:1.05s;--delay:.00s"></div>
+    </div>
+  </div>
+  <audio id="aud-a" preload="none"></audio>
 </div>
 <div class="layer out" id="layer-b">
   <div class="backdrop" id="backdrop-b"></div>
@@ -1263,6 +1376,28 @@
   <video class="vid" id="vid-b" muted playsinline preload="metadata"></video>
   <div class="video-loader" id="loader-b"><span class="reel-spinner" aria-hidden="true"></span><div class="copy-wrap"><span class="copy">✨ Preparing your cinematic moment...</span><span class="subcopy">Your Reel will play in just a few moments!</span></div></div>
   <div class="vignette"></div>
+  <div class="audio-card" id="audio-card-b">
+    <div class="audio-card-pulse"></div>
+    <div class="audio-card-monogram" id="audio-monogram-b"></div>
+    <div class="audio-card-name" id="audio-name-b"></div>
+    <div class="audio-card-msg"  id="audio-msg-b"></div>
+    <div class="audio-waveform">
+      <div class="waveform-bar" style="height:22px;--dur:1.30s;--delay:.00s"></div>
+      <div class="waveform-bar" style="height:34px;--dur:1.05s;--delay:.07s"></div>
+      <div class="waveform-bar" style="height:50px;--dur:1.50s;--delay:.14s"></div>
+      <div class="waveform-bar" style="height:40px;--dur:1.10s;--delay:.21s"></div>
+      <div class="waveform-bar" style="height:62px;--dur:1.35s;--delay:.28s"></div>
+      <div class="waveform-bar" style="height:68px;--dur:0.90s;--delay:.35s"></div>
+      <div class="waveform-bar" style="height:56px;--dur:1.45s;--delay:.42s"></div>
+      <div class="waveform-bar" style="height:68px;--dur:1.00s;--delay:.35s"></div>
+      <div class="waveform-bar" style="height:60px;--dur:1.20s;--delay:.28s"></div>
+      <div class="waveform-bar" style="height:44px;--dur:1.50s;--delay:.21s"></div>
+      <div class="waveform-bar" style="height:46px;--dur:1.10s;--delay:.14s"></div>
+      <div class="waveform-bar" style="height:28px;--dur:1.30s;--delay:.07s"></div>
+      <div class="waveform-bar" style="height:18px;--dur:1.05s;--delay:.00s"></div>
+    </div>
+  </div>
+  <audio id="aud-b" preload="none"></audio>
 </div>
 
 <!-- ════ TOP TICKER ═══════════════════════════════════════ -->
@@ -1743,6 +1878,8 @@
   const vidB        = document.getElementById('vid-b');
   const loaderA     = document.getElementById('loader-a');
   const loaderB     = document.getElementById('loader-b');
+  const audA        = document.getElementById('aud-a');
+  const audB        = document.getElementById('aud-b');
   const soundBtn    = document.getElementById('sound-btn');
   const soundIcon   = document.getElementById('sound-icon');
   const soundLabel  = document.getElementById('sound-label');
@@ -1774,6 +1911,9 @@
     if (u?.file_type === 'video') return true;
     if (typeof u?.file_url === 'string' && /\.(mp4|webm|mov|m4v|ogg)$/i.test(u.file_url)) return true;
     return false;
+  }
+  function isAudioItem(u) {
+    return u?.file_type === 'audio';
   }
   const frame       = document.getElementById('frame');
   const caption     = document.getElementById('caption');
@@ -1922,6 +2062,12 @@
         outVid.load();
       } catch {}
     }
+    // Stop outgoing audio and tear down its Talking Photo state.
+    const outAud = reuseActive ? (activeLayer === 'A' ? audB : audA) : (activeLayer === 'A' ? audA : audB);
+    if (!reuseActive && outAud) {
+      try { outAud.pause(); outAud.removeAttribute('src'); outAud.load(); } catch {}
+    }
+    if (!reuseActive) outLayer.classList.remove('has-audio');
     if (!reuseActive) outLayer.classList.remove('video-visible');
     outLoader?.classList.remove('visible');
     // Make the incoming layer the bandwidth-priority one; the other can
@@ -1935,11 +2081,43 @@
     const posterUrl = isVideoItem(item) ? (videoPosterUrl(item, 1280) || videoPreThumb || immediateVisual) : mediaUrl;
     const itemIsVideo = isReadyVideo(item) && !!mediaUrl;
     const itemIsProcessingVideo = isProcessingVideo(item);
+    const itemIsAudio = isAudioItem(item);
     const posterBackground = posterUrl ? `url('${posterUrl}')` : `url('${wallFallbackUrl(item, 'Loading moment')}')`;
+
+    // ── Talking Photo branch — audio slides skip the normal pic/video path ──
+    const inAud = activeLayer === 'A' ? audB : audA; // inLayer is opposite of activeLayer
+    if (itemIsAudio) {
+      const suffix = inLayer === layerA ? 'a' : 'b';
+      const nameEl = document.getElementById(`audio-name-${suffix}`);
+      const msgEl  = document.getElementById(`audio-msg-${suffix}`);
+      const monoEl = document.getElementById(`audio-monogram-${suffix}`);
+      if (nameEl) nameEl.textContent = item.uploader_name || 'A Guest';
+      if (msgEl)  msgEl.textContent  = item.message || '';
+      if (monoEl) monoEl.textContent = (item.uploader_name || '').trim().slice(0, 2).toUpperCase() || '♪';
+      inLayer.classList.add('has-audio');
+      inLayer.classList.remove('has-video', 'video-visible', 'out');
+      inPic.style.animation = 'none';
+      inAud.muted = !wallSoundOn;
+      inAud.src = item.file_url;
+      inAud.load();
+      inAud.play().catch(() => { inAud.muted = true; inAud.play().catch(() => {}); });
+      items.__currentIsAudio = true;
+      items.__currentIsVideo = false;
+      // Caption still shows name even for audio
+      caption.classList.add('fade');
+      setTimeout(() => { updateCaption(item); caption.classList.remove('fade'); }, 500);
+      if (!reuseActive) {
+        outLayer.classList.add('out');
+        activeLayer = activeLayer === 'A' ? 'B' : 'A';
+      }
+      return;
+    }
 
     // Drive the backdrop edge-samples (defined in CSS via ::before /
     // ::after) by setting a custom property. Filter/transform live in
     // CSS so we don't have to keep two sources of truth in sync.
+    items.__currentIsAudio = false;
+    inLayer.classList.remove('has-audio');
     inBackdrop.style.setProperty('--poster-img', posterBackground);
     inBackdrop.style.display = 'block';
     inBackdrop.style.opacity = '1';
@@ -2121,6 +2299,19 @@
   function scheduleAdvance() {
     clearTimeout(slideTimer);
     if (isPaused || netFrozen || items.length < 2) return;
+
+    // Audio slides: advance on 'ended', with a 60 s safety net.
+    if (items.__currentIsAudio) {
+      const activeAud = activeLayer === 'A' ? audA : audB;
+      slideTimer = setTimeout(advance, 60000);
+      if (activeAud) {
+        activeAud.addEventListener('ended', () => {
+          clearTimeout(slideTimer);
+          advance();
+        }, { once: true });
+      }
+      return;
+    }
 
     if (!items.__currentIsVideo) {
       slideTimer = setTimeout(advance, SLIDE_DURATION);

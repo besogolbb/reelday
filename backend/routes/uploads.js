@@ -357,7 +357,10 @@ export default async function uploadRoutes(fastify) {
 
     const publicBase = (process.env.R2_PUBLIC_URL || 'https://media.reelday.ph').replace(/\/+$/, '');
     const fileUrl = `${publicBase}/${fileKey}`;
-    const isVideo = file_type === 'video' || (file_type !== 'photo' && fileKey.match(/\.(mp4|webm|mov|m4v|ogg)$/i));
+    // Audio must be detected first — audio/webm shares the .webm extension
+    // with video, so the regex below would misclassify it without this guard.
+    const isAudio = file_type === 'audio';
+    const isVideo = !isAudio && (file_type === 'video' || (file_type !== 'photo' && fileKey.match(/\.(mp4|webm|mov|m4v|ogg)$/i)));
     const isVidMsg = isVideo && is_video_message === true;
     const originalKey = isVideo ? fileKey : null;
     const videoStatus = isVideo ? 'processing' : null;
@@ -411,6 +414,7 @@ export default async function uploadRoutes(fastify) {
     // host review is the safe default.
     let isApproved;
     if (!isVideo) {
+      // photos AND audio use the same photo auto-approve gate
       isApproved = event.auto_approve === true;
     } else if (isVidMsg) {
       isApproved = event.video_message_auto_approve === true;
@@ -426,7 +430,7 @@ export default async function uploadRoutes(fastify) {
       [
         event.id,
         fileUrl,
-        isVideo ? 'video' : 'photo',
+        isAudio ? 'audio' : isVideo ? 'video' : 'photo',
         uploader_name || null,
         message       || null,
         isVidMsg,
