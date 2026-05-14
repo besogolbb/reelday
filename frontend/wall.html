@@ -624,31 +624,34 @@
       font-size: clamp(11px, 1.1vw, 18px);
     }
 
-    /* Blockquote: same elegant serif as portrait, sized for the room. */
+    /* Blockquote: same elegant serif as portrait, sized for the room.
+       Heavier shadow stack ensures legibility even on bright scenes. */
     body.is-landscape .caption blockquote {
       font-family: var(--elegant);
       font-style: italic;
       font-weight: 400;
       font-size: 3rem;
       opacity: .9;
-      color: rgba(255,255,255,.88);
+      color: rgba(255,255,255,.92);
       text-shadow:
-        0 1px 2px rgba(0,0,0,.75),
-        0 3px 12px rgba(0,0,0,.50);
+        0 1px 4px rgba(0,0,0,.95),
+        0 3px 14px rgba(0,0,0,.80),
+        0 8px 28px rgba(0,0,0,.55);
     }
     body.is-landscape .caption.cap-meaningful blockquote {
-      color: rgba(255,255,255,.96);
+      color: #fff;
       font-weight: 500;
       text-shadow:
-        0 1px 3px rgba(0,0,0,.88),
-        0 4px 16px rgba(0,0,0,.65);
+        0 1px 4px rgba(0,0,0,.95),
+        0 4px 18px rgba(0,0,0,.80),
+        0 10px 36px rgba(0,0,0,.55);
     }
     body.is-landscape .caption.cap-subtle blockquote {
-      color: rgba(255,255,255,.65);
+      color: rgba(255,255,255,.70);
       font-size: 2.2rem;
       text-shadow:
-        0 1px 2px rgba(0,0,0,.70),
-        0 2px 8px rgba(0,0,0,.40);
+        0 1px 3px rgba(0,0,0,.88),
+        0 3px 10px rgba(0,0,0,.60);
     }
 
     /* ── Luminance-adaptive caption: dark text when bottom-left is bright.
@@ -656,16 +659,23 @@
     .caption.on-light-bg .uploader .uploader-name,
     .caption.on-light-bg .uploader .uploader-sep,
     .caption.on-light-bg .uploader .uploader-time { color: rgba(0,0,0,.8); }
+    /* Blockquote on bright bg: frosted glass pill so it pops regardless
+       of how light the underlying photo is. */
     .caption.on-light-bg blockquote {
-      color: rgba(0,0,0,.8);
+      color: rgba(15,8,4,.90);
+      background: rgba(255,255,255,.22);
+      -webkit-backdrop-filter: blur(12px) saturate(100%);
+      backdrop-filter:         blur(12px) saturate(100%);
+      padding: 6px 16px;
+      border-radius: 12px;
       text-shadow: none;
+      font-weight: 500;
     }
-    /* Both modes: swap pill to light glass on bright backgrounds */
+    /* Both modes: swap uploader pill to light glass on bright backgrounds */
     .caption.on-light-bg .uploader {
       background: rgba(255,255,255,.22);
       text-shadow: none;
     }
-    body.is-landscape .caption.on-light-bg blockquote { text-shadow: none; }
 
     .corner {
       text-align: right; font-family: var(--mono); font-size: 11px;
@@ -2377,7 +2387,7 @@
 
     function apply(lum) {
       if (token !== _lumToken) return; // slide changed — ignore
-      const bright = lum > 160;
+      const bright = lum > 140;
       caption.classList.toggle('on-light-bg', bright);
       document.body.classList.toggle('on-light-bg', bright);
     }
