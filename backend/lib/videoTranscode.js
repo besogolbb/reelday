@@ -268,7 +268,7 @@ export async function combinePhotoAudioInBackground(fastify, photoUpload, audioU
     const combinedUrl = await r2Upload(fastify.storage, combinedKey, combinedBuf, 'video/mp4');
 
     await fastify.db.query(
-      `UPDATE uploads SET combined_url = $2 WHERE id = $1`,
+      `UPDATE uploads SET combined_url = $2, is_video_message = true WHERE id = $1`,
       [photoUpload.id, combinedUrl],
     );
     log.info({ combinedUrl, bytes: combinedBuf.length, elapsedMs: Date.now() - start }, 'Combine complete');

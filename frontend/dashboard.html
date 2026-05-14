@@ -1869,12 +1869,16 @@
   function normalizeUploads(arr) { return Array.isArray(arr) ? arr.map(normalizeUpload) : []; }
 
   function isVideoUpload(u) {
+    if (u?.combined_url) return true; // ffmpeg photo+audio merge is a video message
     if (u?.file_type === 'video') return true;
     if (typeof u?.file_url === 'string' && /\.(mp4|webm|mov|m4v|ogg)$/i.test(u.file_url)) return true;
     return false;
   }
   function filterByStream(uploads) {
+    // Paired audio rows are absorbed into their combined video — hide them.
+    const pairedAudioUrls = new Set(uploads.filter(u => u.audio_url).map(u => u.audio_url));
     return uploads.filter(u => {
+      if (u.file_type === 'audio' && pairedAudioUrls.has(u.file_url)) return false;
       const v = isVideoUpload(u);
       if (currentStream === 'photo')   return !v;
       if (currentStream === 'video')   return  v && u.is_video_message !== true;
