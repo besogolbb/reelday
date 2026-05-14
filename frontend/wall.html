@@ -1976,16 +1976,37 @@
   // unmatched audio falls through as standalone Talking Photo slides.
   function buildAudioPairing(arr) {
     audioUrlById.clear();
+
+    // Primary: server already linked audio to photo via audio_url column.
+    // Set this directly — no matching needed.
+    for (const m of arr) {
+      if (m.audio_url && m.file_type !== 'audio') {
+        audioUrlById.set(m.id, m.audio_url);
+      }
+    }
+
+    // Remove standalone audio items from the slideshow.
+    // Items whose audio_url is already set via the server link are absorbed.
     const audios = arr.filter(u => u.file_type === 'audio');
     if (!audios.length) return arr;
-    const media  = arr.filter(u => u.file_type !== 'audio');
-    const pairedAudioIds  = new Set();
-    const claimedMediaIds = new Set(); // prevent one photo from absorbing two audios
 
+    const media          = arr.filter(u => u.file_type !== 'audio');
+    const pairedAudioIds = new Set();
+    const claimedMediaIds = new Set(
+      media.filter(m => audioUrlById.has(m.id)).map(m => m.id),
+    );
+
+    // Fallback JS matching for rows without audio_url (uploaded before this fix)
     for (const aud of audios) {
+      // Skip if a server-linked photo already claims this audio's file_url
+      if ([...audioUrlById.values()].includes(aud.file_url)) {
+        pairedAudioIds.add(aud.id);
+        continue;
+      }
+
       let best = null;
 
-      // 1. Exact batch_id match — most reliable (same "Share" tap, any upload order)
+      // batch_id exact match
       if (aud.batch_id) {
         for (const m of media) {
           if (claimedMediaIds.has(m.id)) continue;
@@ -1993,7 +2014,7 @@
         }
       }
 
-      // 2. guest_id + smallest timestamp gap (same browser session, ≤30 min)
+      // guest_id + ≤30 min
       if (!best && aud.guest_id) {
         let bestDiff = Infinity;
         const audTs = new Date(aud.created_at).getTime();
@@ -2005,7 +2026,7 @@
         }
       }
 
-      // 3. uploader_name + smallest timestamp gap (legacy rows, ≤10 min)
+      // uploader_name + ≤10 min
       if (!best && aud.uploader_name) {
         let bestDiff = Infinity;
         const audTs = new Date(aud.created_at).getTime();

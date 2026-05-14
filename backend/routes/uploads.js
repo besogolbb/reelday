@@ -465,6 +465,30 @@ export default async function uploadRoutes(fastify) {
       }
     }
 
+    // When an audio file lands, immediately link it to its companion photo/video
+    // (same batch_id). This writes audio_url on the photo row so the wall can
+    // pair them by a direct DB field — no JS timestamp/name matching required.
+    if (isAudio && batchId) {
+      try {
+        await fastify.db.query(
+          `UPDATE uploads
+              SET audio_url = $1
+            WHERE id = (
+              SELECT id FROM uploads
+               WHERE batch_id  = $2
+                 AND file_type IN ('photo', 'video')
+                 AND event_id  = $3
+                 AND audio_url IS NULL
+               ORDER BY created_at DESC
+               LIMIT 1
+            )`,
+          [fileUrl, batchId, rows[0].event_id],
+        );
+      } catch (err) {
+        fastify.log.warn({ err: err.message, batchId }, 'audio_url link failed');
+      }
+    }
+
     return reply.status(201).send({ upload: rows[0] });
   });
 

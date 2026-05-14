@@ -78,8 +78,13 @@ const MIGRATIONS = `
 
   -- Combined photo+audio MP4 produced by ffmpeg for dashboard / downloads.
   -- Populated asynchronously after /uploads/batch/:id/finalize is called.
-  -- The wall ignores this column and uses client-side pairing instead.
+  -- The wall ignores this column and uses audio_url for instant pairing.
   ALTER TABLE uploads ADD COLUMN IF NOT EXISTS combined_url TEXT;
+
+  -- Direct server-side audio link. Set immediately when an audio upload lands:
+  -- the /uploads/complete handler finds the companion photo (same batch_id) and
+  -- writes its file_url here. The wall reads this — no JS matching needed.
+  ALTER TABLE uploads ADD COLUMN IF NOT EXISTS audio_url TEXT;
 
   -- Audio is companion content and always auto-approves. Backfill any rows
   -- that were uploaded before this rule was in place.
