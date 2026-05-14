@@ -276,12 +276,12 @@ body { background: var(--paper); min-height: 100dvh; }
 .share-tabs--hero {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: auto auto auto;
+  grid-template-rows: auto auto;
   gap: 10px;
-  margin-bottom: 20px;
+  margin-bottom: 6px;
 }
 .share-tabs--hero .share-tab--camera {
-  grid-column: 1 / -1;
+  grid-column: 1 / 3;
   flex-direction: row;
   justify-content: center;
   gap: 14px;
@@ -504,40 +504,65 @@ body { background: var(--paper); min-height: 100dvh; }
 
 /* ── Gallery pick card (full-width row below mini tiles) ── */
 .share-tabs--hero .share-tab--gallery {
-  grid-column: 1 / -1;
-  flex-direction: row;
+  grid-column: 3 / 4;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
-  gap: 12px;
-  padding: 14px 18px;
+  gap: 8px;
+  padding: 14px 6px;
   border-radius: var(--r-lg);
-  background: linear-gradient(135deg, rgba(255,255,255,.58), rgba(255,255,255,.36));
-  -webkit-backdrop-filter: blur(16px) saturate(140%);
-  backdrop-filter:         blur(16px) saturate(140%);
-  border: 1px solid rgba(255,255,255,.58);
+  background: linear-gradient(135deg, rgba(255,255,255,.7), rgba(255,255,255,.45));
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  backdrop-filter:         blur(16px) saturate(150%);
+  border: 1px solid rgba(255,255,255,.65);
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.62),
-    0 6px 18px rgba(196,90,58,.08),
-    0 1px 4px rgba(42,26,20,.04);
+    inset 0 1px 0 rgba(255,255,255,.7),
+    0 10px 24px rgba(196,90,58,.13),
+    0 2px 6px rgba(42,26,20,.05);
+  position: relative; overflow: hidden;
+}
+.share-tabs--hero .share-tab--gallery::before {
+  content: '';
+  position: absolute;
+  left: 50%; top: 10px;
+  width: 90px; height: 90px;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at center,
+    rgba(240,163,122,.28) 0%,
+    rgba(196,90,58,.12) 40%,
+    rgba(196,90,58,0) 75%);
+  filter: blur(14px);
+  pointer-events: none;
 }
 .share-tabs--hero .share-tab--gallery .tab-icon {
-  width: 38px; height: 38px;
-  background: var(--paper-3);
-  color: var(--accent);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 2px 6px rgba(42,26,20,.06);
+  width: 44px; height: 44px;
+  background: linear-gradient(135deg, var(--accent-soft), var(--accent));
+  color: #fff;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.3),
+    0 5px 12px rgba(196,90,58,.32);
+  position: relative; z-index: 1;
 }
+.share-tabs--hero .share-tab--gallery .tab-icon svg { width: 18px; height: 18px; }
 .share-tabs--hero .share-tab--gallery .tab-label {
-  font-family: var(--sans); font-size: 15px; font-weight: 500;
-  letter-spacing: .01em; text-transform: none;
-  color: var(--ink-soft); text-align: left;
-}
-.share-tabs--hero .share-tab--gallery .tab-label small {
-  display: block; font-family: var(--mono); font-size: 10px;
-  letter-spacing: .13em; text-transform: uppercase;
-  color: var(--ink-faint); margin-top: 2px; font-weight: 400;
+  font-family: var(--mono); font-size: 10px; font-weight: 700;
+  letter-spacing: .12em; text-transform: uppercase;
+  color: var(--ink-soft); text-align: center; line-height: 1.2;
+  position: relative; z-index: 1;
 }
 .share-tabs--hero .share-tab.active.share-tab--gallery {
   border-color: var(--accent);
-  background: rgba(255,235,225,.55);
+  background: rgba(255,235,225,.7);
+}
+.share-tabs--hero .share-tab.active.share-tab--gallery .tab-icon { background: var(--accent); }
+
+/* ── Hint text below tiles ───────────────────────────── */
+.share-hint {
+  text-align: center;
+  font-family: var(--mono); font-size: 10px; letter-spacing: .10em;
+  color: var(--ink-faint);
+  margin-bottom: 16px;
+  line-height: 1.5;
 }
 
 /* ── Panel 2: Record video ───────────────────────────── */
@@ -1045,6 +1070,15 @@ body { background: var(--paper); min-height: 100dvh; }
       </div>
       <div class="tab-label">Camera<small>Share a moment</small></div>
     </div>
+    <div class="share-tab share-tab--gallery" onclick="switchTab('gallery',this); document.getElementById('fileInput').click();">
+      <div class="tab-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>
+          <rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
+        </svg>
+      </div>
+      <div class="tab-label">Gallery</div>
+    </div>
     <div class="share-tab share-tab--mini" onclick="switchTab('record',this)">
       <div class="tab-icon">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="9" stroke-dasharray="3 2"/></svg>
@@ -1063,16 +1097,8 @@ body { background: var(--paper); min-height: 100dvh; }
       </div>
       <div class="tab-label">Poll</div>
     </div>
-    <div class="share-tab share-tab--gallery" onclick="switchTab('gallery',this); document.getElementById('fileInput').click();">
-      <div class="tab-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>
-          <rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
-        </svg>
-      </div>
-      <div class="tab-label">Pick from gallery<small>Choose existing photos &amp; videos</small></div>
-    </div>
   </div>
+  <p class="share-hint">Up to 30s recording &nbsp;·&nbsp; 100 MB max &nbsp;·&nbsp; 4K auto-optimized</p>
 
   <!-- ════ PANEL 1: Gallery ═════════════════════════════ -->
   <div class="share-panel active" id="panel-gallery">
