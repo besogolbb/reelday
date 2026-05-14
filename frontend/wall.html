@@ -342,6 +342,23 @@
       50%       { transform: scaleY(1);   opacity: 1; }
     }
 
+    /* Paired audio overlay — small waveform pill shown over photo */
+    .audio-photo-overlay {
+      position: absolute;
+      bottom: 130px; left: 50%; transform: translateX(-50%);
+      z-index: 5;
+      display: flex; align-items: flex-end; gap: 5px;
+      padding: 10px 18px 12px;
+      background: rgba(0,0,0,.42);
+      border-radius: 40px;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,.10);
+      opacity: 0; pointer-events: none;
+      transition: opacity .7s ease;
+    }
+    .layer.has-audio-overlay .audio-photo-overlay { opacity: 1; }
+
     /* ── Top ticker ─────────────────────────────────────────── */
     .ticker {
       position: fixed; top: 0; left: 0; right: 0; z-index: 10;
@@ -1367,6 +1384,17 @@
       <div class="waveform-bar" style="height:18px;--dur:1.05s;--delay:.00s"></div>
     </div>
   </div>
+  <div class="audio-photo-overlay" id="audio-overlay-a">
+    <div class="waveform-bar" style="height:14px;--dur:1.20s;--delay:.00s"></div>
+    <div class="waveform-bar" style="height:22px;--dur:0.95s;--delay:.08s"></div>
+    <div class="waveform-bar" style="height:30px;--dur:1.40s;--delay:.16s"></div>
+    <div class="waveform-bar" style="height:22px;--dur:1.10s;--delay:.24s"></div>
+    <div class="waveform-bar" style="height:34px;--dur:0.85s;--delay:.32s"></div>
+    <div class="waveform-bar" style="height:34px;--dur:1.30s;--delay:.32s"></div>
+    <div class="waveform-bar" style="height:30px;--dur:1.00s;--delay:.24s"></div>
+    <div class="waveform-bar" style="height:22px;--dur:1.45s;--delay:.16s"></div>
+    <div class="waveform-bar" style="height:14px;--dur:1.05s;--delay:.08s"></div>
+  </div>
   <audio id="aud-a" preload="none"></audio>
 </div>
 <div class="layer out" id="layer-b">
@@ -1396,6 +1424,17 @@
       <div class="waveform-bar" style="height:28px;--dur:1.30s;--delay:.07s"></div>
       <div class="waveform-bar" style="height:18px;--dur:1.05s;--delay:.00s"></div>
     </div>
+  </div>
+  <div class="audio-photo-overlay" id="audio-overlay-b">
+    <div class="waveform-bar" style="height:14px;--dur:1.20s;--delay:.00s"></div>
+    <div class="waveform-bar" style="height:22px;--dur:0.95s;--delay:.08s"></div>
+    <div class="waveform-bar" style="height:30px;--dur:1.40s;--delay:.16s"></div>
+    <div class="waveform-bar" style="height:22px;--dur:1.10s;--delay:.24s"></div>
+    <div class="waveform-bar" style="height:34px;--dur:0.85s;--delay:.32s"></div>
+    <div class="waveform-bar" style="height:34px;--dur:1.30s;--delay:.32s"></div>
+    <div class="waveform-bar" style="height:30px;--dur:1.00s;--delay:.24s"></div>
+    <div class="waveform-bar" style="height:22px;--dur:1.45s;--delay:.16s"></div>
+    <div class="waveform-bar" style="height:14px;--dur:1.05s;--delay:.08s"></div>
   </div>
   <audio id="aud-b" preload="none"></audio>
 </div>
@@ -1880,6 +1919,7 @@
   const loaderB     = document.getElementById('loader-b');
   const audA        = document.getElementById('aud-a');
   const audB        = document.getElementById('aud-b');
+  const audioUrlById = new Map(); // photo/video id → paired audio file_url
   const soundBtn    = document.getElementById('sound-btn');
   const soundIcon   = document.getElementById('sound-icon');
   const soundLabel  = document.getElementById('sound-label');
@@ -1914,6 +1954,33 @@
   }
   function isAudioItem(u) {
     return u?.file_type === 'audio';
+  }
+
+  // Pair standalone audio uploads with their companion photo/video.
+  // Matches by uploader_name + closest created_at within 120 s.
+  // Paired audio items are absorbed into the photo (sets audioUrlById);
+  // unmatched audio falls through as standalone Talking Photo slides.
+  function buildAudioPairing(arr) {
+    audioUrlById.clear();
+    const audios = arr.filter(u => u.file_type === 'audio');
+    if (!audios.length) return arr;
+    const media  = arr.filter(u => u.file_type !== 'audio');
+    const pairedAudioIds = new Set();
+    for (const aud of audios) {
+      const audTs = new Date(aud.created_at).getTime();
+      let best = null, bestDiff = Infinity;
+      for (const m of media) {
+        if (m.uploader_name !== aud.uploader_name) continue;
+        const diff = Math.abs(new Date(m.created_at).getTime() - audTs);
+        if (diff < bestDiff && diff < 120000) { bestDiff = diff; best = m; }
+      }
+      if (best) {
+        audioUrlById.set(best.id, aud.file_url);
+        pairedAudioIds.add(aud.id);
+      }
+    }
+    const unpairedAudio = audios.filter(u => !pairedAudioIds.has(u.id));
+    return [...media, ...unpairedAudio];
   }
   const frame       = document.getElementById('frame');
   const caption     = document.getElementById('caption');
@@ -2067,7 +2134,7 @@
     if (!reuseActive && outAud) {
       try { outAud.pause(); outAud.removeAttribute('src'); outAud.load(); } catch {}
     }
-    if (!reuseActive) outLayer.classList.remove('has-audio');
+    if (!reuseActive) outLayer.classList.remove('has-audio', 'has-audio-overlay');
     if (!reuseActive) outLayer.classList.remove('video-visible');
     outLoader?.classList.remove('visible');
     // Make the incoming layer the bandwidth-priority one; the other can
@@ -2082,6 +2149,8 @@
     const itemIsVideo = isReadyVideo(item) && !!mediaUrl;
     const itemIsProcessingVideo = isProcessingVideo(item);
     const itemIsAudio = isAudioItem(item);
+    // Paired audio URL (if companion voice message was uploaded alongside this photo/video)
+    const pairedAudioUrl = itemIsAudio ? null : (audioUrlById.get(item.id) || null);
     const posterBackground = posterUrl ? `url('${posterUrl}')` : `url('${wallFallbackUrl(item, 'Loading moment')}')`;
 
     // ── Talking Photo branch — audio slides skip the normal pic/video path ──
@@ -2117,7 +2186,8 @@
     // ::after) by setting a custom property. Filter/transform live in
     // CSS so we don't have to keep two sources of truth in sync.
     items.__currentIsAudio = false;
-    inLayer.classList.remove('has-audio');
+    items.__currentHasAudioOverlay = false; // may be set below if pairedAudioUrl
+    inLayer.classList.remove('has-audio', 'has-audio-overlay');
     inBackdrop.style.setProperty('--poster-img', posterBackground);
     inBackdrop.style.display = 'block';
     inBackdrop.style.opacity = '1';
@@ -2245,14 +2315,22 @@
     // Stash so advance()/goTo() know whether this slide is a video.
     items.__currentIsVideo = itemIsVideo;
 
+    // Paired audio: play the companion voice message alongside the photo/video.
+    items.__currentHasAudioOverlay = !!pairedAudioUrl;
+    if (pairedAudioUrl) {
+      inLayer.classList.add('has-audio-overlay');
+      inAud.muted = !wallSoundOn;
+      inAud.src = pairedAudioUrl;
+      inAud.load();
+      inAud.play().catch(() => { inAud.muted = true; inAud.play().catch(() => {}); });
+    }
+
     // Tag <body> with is-landscape / is-portrait for the current slide.
     applyOrientationClass(item, itemIsVideo ? inVid : null);
 
-    // Show the unmute toggle only when there's a video on screen.
-    // Pulse it (the .attention class) whenever the video is muted so
-    // guests notice the unmute action — small icon was easy to miss.
-    soundBtn?.classList.toggle('visible', itemIsVideo);
-    soundBtn?.classList.toggle('attention', itemIsVideo && !wallSoundOn);
+    // Show the unmute toggle when there's a video or paired audio on screen.
+    soundBtn?.classList.toggle('visible', itemIsVideo || !!pairedAudioUrl);
+    soundBtn?.classList.toggle('attention', (itemIsVideo || !!pairedAudioUrl) && !wallSoundOn);
 
     // Crossfade layers
     if (!reuseActive) {
@@ -2300,10 +2378,23 @@
     clearTimeout(slideTimer);
     if (isPaused || netFrozen || items.length < 2) return;
 
-    // Audio slides: advance on 'ended', with a 60 s safety net.
+    // Standalone audio slides: advance on 'ended', with a 60 s safety net.
     if (items.__currentIsAudio) {
       const activeAud = activeLayer === 'A' ? audA : audB;
       slideTimer = setTimeout(advance, 60000);
+      if (activeAud) {
+        activeAud.addEventListener('ended', () => {
+          clearTimeout(slideTimer);
+          advance();
+        }, { once: true });
+      }
+      return;
+    }
+
+    // Paired audio overlay: extend the photo slide to match the audio duration.
+    if (items.__currentHasAudioOverlay) {
+      const activeAud = activeLayer === 'A' ? audA : audB;
+      slideTimer = setTimeout(advance, 60000); // safety cap
       if (activeAud) {
         activeAud.addEventListener('ended', () => {
           clearTimeout(slideTimer);
@@ -3324,7 +3415,10 @@
     const prevStatusById = new Map(items.map(u => [u.id, u.video_status]));
     allUploads = merged;
 
-    const slideable = merged;
+    // Pair audio uploads with companion photos (same uploader, ≤120 s apart).
+    // Paired audio is absorbed — the photo plays the audio; unpaired audio
+    // slides through as standalone Talking Photo cards.
+    const slideable = buildAudioPairing(merged);
     const prevCount = items.length;
     const newOnes   = slideable.filter(u => !knownIds.has(u.id));
     const apiById   = new Map(slideable.map(u => [u.id, u]));
