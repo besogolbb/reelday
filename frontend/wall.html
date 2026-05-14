@@ -1747,7 +1747,6 @@
   }
 
   function isReadyVideo(upload) {
-    if (upload?.combined_url) return true; // ffmpeg voice message is immediately playable
     return isVideoItem(upload) && upload?.video_status === 'ready';
   }
 
@@ -1765,8 +1764,6 @@
   }
 
   function readyVideoUrl(upload) {
-    const combinedUrl = absoluteMediaUrl(upload?.combined_url);
-    if (combinedUrl) return combinedUrl;
     const compressedUrl = absoluteMediaUrl(upload?.compressed_key);
     if (compressedUrl) return compressedUrl;
     const webUrl = absoluteMediaUrl(upload?.web_url);
@@ -2239,8 +2236,8 @@
     const itemIsVideo = isReadyVideo(item) && !!mediaUrl;
     const itemIsProcessingVideo = isProcessingVideo(item);
     const itemIsAudio = isAudioItem(item);
-    // Paired audio URL — skip when item already has a combined video (audio is embedded).
-    const pairedAudioUrl = (itemIsAudio || !!item.combined_url) ? null : (audioUrlById.get(item.id) || null);
+    // Paired audio URL (if companion voice message was uploaded alongside this photo/video)
+    const pairedAudioUrl = itemIsAudio ? null : (audioUrlById.get(item.id) || null);
     const posterBackground = posterUrl ? `url('${posterUrl}')` : `url('${wallFallbackUrl(item, 'Loading moment')}')`;
 
     // ── Talking Photo branch — audio slides skip the normal pic/video path ──
