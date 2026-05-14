@@ -103,10 +103,77 @@ function unwrapEvent(event) {
   return event || {};
 }
 
+function deriveCombinedKey(photoKey) {
+  const cleanKey = String(photoKey || '').replace(/^\/+/, '');
+  const dir = pathPosix.dirname(cleanKey);
+  const ext = pathPosix.extname(cleanKey);
+  const base = pathPosix.basename(cleanKey, ext);
+  const joinKey = name => (dir && dir !== '.' ? `${dir}/${name}` : name);
+  return joinKey(`${base}_voice.mp4`);
+}
+
+async function handleCombine(event) {
+  const photoKey  = String(event.photoKey  || '').replace(/^\/+/, '');
+  const audioKey  = String(event.audioKey  || '').replace(/^\/+/, '');
+  const uploadId  = event.uploadId;
+
+  if (!photoKey || !audioKey) throw new Error('Missing photoKey or audioKey for combine');
+  if (!uploadId) throw new Error('Missing uploadId for combine');
+
+  const combinedKey = deriveCombinedKey(photoKey);
+
+  const existing = await r2Head(combinedKey);
+  if (existing) {
+    await notifyWebhook({ status: 'combine_ready', uploadId, combinedKey });
+    return { statusCode: 200, body: JSON.stringify({ ok: true, combinedKey, cached: true }) };
+  }
+
+  let workdir = null;
+  try {
+    workdir = await mkdtemp(join(tmpdir(), 'reelday-comb-'));
+    const photoPath    = join(workdir, 'photo');
+    const audioPath    = join(workdir, 'audio');
+    const combinedPath = join(workdir, 'combined.mp4');
+
+    await Promise.all([
+      r2DownloadToFile(photoKey, photoPath),
+      r2DownloadToFile(audioKey, audioPath),
+    ]);
+
+    await runFfmpeg([
+      '-y', '-loop', '1', '-framerate', '1',
+      '-i', photoPath,
+      '-i', audioPath,
+      '-c:v', 'libx264',
+      '-preset', 'veryfast',
+      '-crf', '23',
+      '-profile:v', 'main',
+      '-vf', 'scale=1280:720:force_original_aspect_ratio=decrease:flags=lanczos,pad=1280:720:(ow-iw)/2:(oh-ih)/2:black,format=yuv420p',
+      '-r', '1',
+      '-c:a', 'aac',
+      '-b:a', '128k',
+      '-ar', '44100',
+      '-shortest',
+      '-movflags', '+faststart',
+      combinedPath,
+    ]);
+
+    await r2UploadFile(combinedKey, combinedPath, 'video/mp4');
+    notifyWebhook({ status: 'combine_ready', uploadId, combinedKey }, { timeoutMs: 2000 });
+
+    return { statusCode: 200, body: JSON.stringify({ ok: true, combinedKey }) };
+  } finally {
+    if (workdir) { try { await rm(workdir, { recursive: true, force: true }); } catch {} }
+  }
+}
+
 export const handler = async (rawEvent, context) => {
   if (context) context.callbackWaitsForEmptyEventLoop = false;
 
   const event = unwrapEvent(rawEvent);
+
+  if (event.operation === 'combine') return handleCombine(event);
+
   const originalKey = (event.fileName || event.originalKey || '').trim();
   // preThumbKey is still accepted in the payload (backend stores the
   // guest thumbnail in R2 for the wall to surface during processing),

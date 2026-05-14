@@ -53,3 +53,25 @@ export async function triggerVideoTranscode(filePath, options = {}) {
     Payload: Buffer.from(JSON.stringify(payload)),
   }));
 }
+
+export async function triggerPhotoCombine(photoKey, audioKey, uploadId, options = {}) {
+  const payload = { operation: 'combine', photoKey, audioKey, uploadId };
+
+  if (sqsClient && sqsQueueUrl) {
+    const groupId = deriveGroupId(photoKey, options.eventId);
+    const dedupId = createHash('sha256').update(`combine:${photoKey}:${audioKey}`).digest('hex').slice(0, 64);
+    await sqsClient.send(new SendMessageCommand({
+      QueueUrl: sqsQueueUrl,
+      MessageBody: JSON.stringify(payload),
+      MessageGroupId: groupId,
+      MessageDeduplicationId: dedupId,
+    }));
+    return;
+  }
+
+  await lambdaClient.send(new InvokeCommand({
+    FunctionName: lambdaFunctionName,
+    InvocationType: 'Event',
+    Payload: Buffer.from(JSON.stringify(payload)),
+  }));
+}

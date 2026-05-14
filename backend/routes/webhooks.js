@@ -69,6 +69,22 @@ export default async function webhookRoutes(fastify) {
       request.body?.poster_url,
     );
 
+    // combine_ready — photo+audio merge completed in Lambda
+    if (status === 'combine_ready') {
+      const combinedKey = readString(request.body?.combinedKey, request.body?.combined_key);
+      const uploadId    = request.body?.uploadId;
+      if (!uploadId || !combinedKey) {
+        return reply.status(400).send({ error: true, message: 'uploadId and combinedKey required for combine_ready' });
+      }
+      const combinedUrl = isAbsoluteUrl(combinedKey) ? combinedKey : buildPublicUrl(combinedKey);
+      const { rows } = await fastify.db.query(
+        `UPDATE uploads SET combined_url = $2, is_video_message = true WHERE id = $1 RETURNING *`,
+        [uploadId, combinedUrl],
+      );
+      if (!rows.length) return reply.status(404).send({ error: true, message: 'Upload not found' });
+      return { success: true, upload: rows[0] };
+    }
+
     if (!originalKey || !status) {
       return reply.status(400).send({
         error: true,

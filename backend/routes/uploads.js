@@ -3,7 +3,7 @@ import { randomUUID } from 'crypto';
 import { PutObjectCommand, DeleteObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { resolvePlan } from '../lib/plans.js';
-import { triggerVideoTranscode } from '../lib/awsLambdaService.js';
+import { triggerVideoTranscode, triggerPhotoCombine } from '../lib/awsLambdaService.js';
 import { combinePhotoAudioInBackground } from '../lib/videoTranscode.js';
 import { verifyToken } from '../plugins/auth.js';
 
@@ -500,7 +500,7 @@ export default async function uploadRoutes(fastify) {
     if (!batchId || batchId.length > 64) return reply.status(400).send({ error: true });
 
     const { rows } = await fastify.db.query(
-      `SELECT id, file_url, file_type, created_at
+      `SELECT id, event_id, file_url, file_type, created_at
          FROM uploads
         WHERE batch_id = $1 AND is_approved = true
         ORDER BY created_at ASC`,
@@ -528,9 +528,25 @@ export default async function uploadRoutes(fastify) {
     }
 
     for (const [photo, audio] of pairs) {
-      combinePhotoAudioInBackground(fastify, photo, audio).catch(err =>
-        fastify.log.warn({ err: err.message, batchId, photoId: photo.id }, 'combine failed'),
-      );
+      // Extract R2 keys from stored URLs.
+      let photoKey, audioKey;
+      try {
+        photoKey = decodeURIComponent(new URL(photo.file_url).pathname.replace(/^\/+/, ''));
+        audioKey = decodeURIComponent(new URL(audio.file_url).pathname.replace(/^\/+/, ''));
+      } catch {
+        fastify.log.warn({ batchId, photoId: photo.id }, 'combine skipped: could not parse file_url');
+        continue;
+      }
+
+      // Preferred path: offload to Lambda so the server stays free.
+      // Falls back to local ffmpeg if Lambda is not reachable.
+      triggerPhotoCombine(photoKey, audioKey, photo.id, { eventId: photo.event_id })
+        .catch(lambdaErr => {
+          fastify.log.warn({ err: lambdaErr.message, batchId, photoId: photo.id }, 'Lambda combine failed; falling back to local ffmpeg');
+          combinePhotoAudioInBackground(fastify, photo, audio).catch(err =>
+            fastify.log.warn({ err: err.message, batchId, photoId: photo.id }, 'combine failed'),
+          );
+        });
     }
 
     return reply.send({ ok: true, combined: pairs.length });
