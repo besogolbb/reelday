@@ -684,6 +684,24 @@
         0 3px 12px rgba(0,0,0,.52);
     }
 
+    /* ── Luminance-adaptive caption: dark text when the bottom-left
+       photo region is bright. Class toggled per-slide by JS. ────── */
+    .caption.on-light-bg .uploader .uploader-name { color: rgba(20,12,8,.88); }
+    .caption.on-light-bg .uploader .uploader-sep  { color: rgba(20,12,8,.50); }
+    .caption.on-light-bg .uploader .uploader-time { color: rgba(20,12,8,.60); }
+    .caption.on-light-bg blockquote {
+      color: rgba(20,12,8,.80);
+      text-shadow: 0 1px 3px rgba(255,255,255,.35);
+    }
+    /* Portrait pill: swap to light glass so the pill stays readable */
+    body.is-portrait .caption.on-light-bg .uploader {
+      background: rgba(255,255,255,.22);
+    }
+    /* Landscape: soften the shadow direction for bright backgrounds */
+    body.is-landscape .caption.on-light-bg .uploader {
+      text-shadow: 0 1px 2px rgba(255,255,255,.6);
+    }
+
     .corner {
       text-align: right; font-family: var(--mono); font-size: 11px;
       letter-spacing: .2em; text-transform: uppercase;
@@ -1990,6 +2008,9 @@
     inPic.style.backgroundImage      = posterBackground;
     fitPicByAspect(inPic, posterUrl || mediaUrl);
     inLayer.classList.remove('out');
+    // Kick off luminance sampling immediately so the image load
+    // overlaps with the rest of the slide setup (500 ms head start).
+    applyBgLuminanceClass(posterUrl || mediaUrl);
 
     if (itemIsVideo) {
       inPic.style.animation            = 'none';
@@ -2351,6 +2372,62 @@
       const cls = captionEmphasis(msg);
       if (cls) caption.classList.add(cls);
     }
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     BOTTOM-LEFT LUMINANCE SAMPLING
+     Draws the bottom-left region of the current media into a
+     1×1 canvas to get the average color, then toggles
+     .on-light-bg on .caption so CSS can flip text to dark.
+  ══════════════════════════════════════════════════════════ */
+  const _lumCanvas = document.createElement('canvas');
+  _lumCanvas.width  = 1;
+  _lumCanvas.height = 1;
+  const _lumCtx = _lumCanvas.getContext('2d', { willReadFrequently: true });
+  let   _lumToken = 0; // incremented each slide to discard stale callbacks
+
+  function _sampleSource(source, w, h) {
+    // Crop: left 35% × bottom 40% of the media — where caption text lives
+    const sx = 0;
+    const sy = Math.round(h * 0.60);
+    const sw = Math.max(1, Math.round(w * 0.35));
+    const sh = Math.max(1, h - sy);
+    _lumCtx.drawImage(source, sx, sy, sw, sh, 0, 0, 1, 1);
+    const d = _lumCtx.getImageData(0, 0, 1, 1).data;
+    return 0.299 * d[0] + 0.587 * d[1] + 0.114 * d[2];
+  }
+
+  function applyBgLuminanceClass(imageUrl) {
+    const token = ++_lumToken;
+
+    function apply(lum) {
+      if (token !== _lumToken) return; // slide changed — ignore
+      caption.classList.toggle('on-light-bg', lum > 160);
+    }
+
+    // For video slides, try sampling the current frame first
+    if (items.__currentIsVideo) {
+      const vid = activeLayer === 'A' ? vidA : vidB;
+      if (vid && vid.readyState >= 2 && vid.videoWidth > 0) {
+        try { apply(_sampleSource(vid, vid.videoWidth, vid.videoHeight)); return; } catch {}
+      }
+      // Video frame not ready yet — fall through to poster image URL
+    }
+
+    if (!imageUrl) return;
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      if (token !== _lumToken) return;
+      try {
+        apply(_sampleSource(img, img.naturalWidth, img.naturalHeight));
+      } catch {
+        // CORS / tainted canvas — default to dark-friendly (no class)
+        if (token === _lumToken) caption.classList.remove('on-light-bg');
+      }
+    };
+    img.onerror = () => { if (token === _lumToken) caption.classList.remove('on-light-bg'); };
+    img.src = imageUrl;
   }
 
   function updateCorner() {
