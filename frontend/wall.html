@@ -512,6 +512,19 @@
       display: inline-block;
     }
 
+    /* ── Bottom scrim — always-on text-readability gradient ───
+       Sits below the caption (z-index 9) and above the photo
+       layers. Guarantees legibility on bright / washed-out shots
+       without visibly darkening the composition. */
+    .bottom-scrim {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      height: 22%; z-index: 9; pointer-events: none;
+      background: linear-gradient(to top,
+        rgba(0,0,0,.38) 0%,
+        rgba(0,0,0,.14) 55%,
+        rgba(0,0,0,0)   100%);
+    }
+
     /* ── Caption frame ──────────────────────────────────────── */
     .frame {
       position: fixed; bottom: 0; left: 0; right: 0; z-index: 10;
@@ -1218,6 +1231,9 @@
 
 <!-- ════ UPCOMING STRIP ═══════════════════════════════════ -->
 <div class="upcoming" id="upcoming-col"></div>
+
+<!-- ════ BOTTOM SCRIM ════════════════════════════════════ -->
+<div class="bottom-scrim"></div>
 
 <!-- ════ CAPTION FRAME ════════════════════════════════════ -->
 <div class="frame" id="frame">
