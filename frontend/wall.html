@@ -518,20 +518,12 @@
        without visibly darkening the composition. */
     .bottom-scrim {
       position: fixed; bottom: 0; left: 0; right: 0;
-      height: 22%; z-index: 9; pointer-events: none;
-      background: linear-gradient(to top,
-        rgba(0,0,0,.38) 0%,
-        rgba(0,0,0,.14) 55%,
-        rgba(0,0,0,0)   100%);
-    }
-    /* Landscape: simple linear scrim behind the bottom-left text.
-       Hidden when .on-light-bg is active — dark text handles contrast. */
-    body.is-landscape .bottom-scrim {
-      height: 40%;
+      height: 40%; z-index: 9; pointer-events: none;
       background: linear-gradient(to top, rgba(0,0,0,.60) 0%, transparent 40%);
       transition: opacity .4s ease;
     }
-    body.is-landscape.on-light-bg .bottom-scrim { opacity: 0; }
+    body.is-landscape.on-light-bg .bottom-scrim,
+    body.is-portrait.on-light-bg  .bottom-scrim { opacity: 0; }
 
     /* ── Caption frame ──────────────────────────────────────── */
     .frame {
@@ -601,7 +593,8 @@
     .caption.fade .uploader,
     .caption.fade blockquote { opacity: 0; }
 
-    /* ── Landscape: deeper shadows for TV/projector distance ─────────── */
+    /* ── Portrait + Landscape: explicit shadows so both modes render identically ── */
+    body.is-portrait .caption .uploader,
     body.is-landscape .caption .uploader {
       text-shadow:
         0 1px 4px rgba(0,0,0,.92),
@@ -610,6 +603,7 @@
     body.is-landscape .caption.no-caption .uploader .uploader-name {
       font-size: clamp(13px, 1.3vw, 17px);
     }
+    body.is-portrait .caption blockquote,
     body.is-landscape .caption blockquote {
       opacity: .9;
       text-shadow:
@@ -617,6 +611,7 @@
         0 3px 14px rgba(0,0,0,.82),
         0 8px 28px rgba(0,0,0,.58);
     }
+    body.is-portrait .caption.cap-meaningful blockquote,
     body.is-landscape .caption.cap-meaningful blockquote {
       color: #fff; font-weight: 500;
       text-shadow:
@@ -624,6 +619,7 @@
         0 4px 18px rgba(0,0,0,.82),
         0 10px 36px rgba(0,0,0,.58);
     }
+    body.is-portrait .caption.cap-subtle blockquote,
     body.is-landscape .caption.cap-subtle blockquote {
       color: rgba(255,255,255,.70); font-size: 2.2rem;
       text-shadow:
