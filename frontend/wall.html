@@ -24,7 +24,7 @@
 
     html, body {
       width: 100vw; height: 100vh; overflow: hidden;
-      background: #1a0f0a; color: #fff;
+      background: #000; color: #fff;
     }
 
     /* ── Photo layers (Ken Burns) ──────────────────────────── */
@@ -44,7 +44,7 @@
       z-index: 1 !important;
       display: block !important;
       opacity: 1 !important;
-      background-image: radial-gradient(circle at center, #2a1a14, #1a0f0a);
+      background-image: radial-gradient(circle at center, #111, #000);
     }
     /* Edge samples — each pseudo zooms the source horizontally and
        anchors to its respective edge, so the bars show only the very
@@ -342,12 +342,6 @@
       50%       { transform: scaleY(1);   opacity: 1; }
     }
 
-    /* Audio-first: hide photo for a moment so audio plays before image reveals */
-    .layer.audio-intro .pic,
-    .layer.audio-intro .vid { opacity: 0 !important; }
-    .layer.audio-intro .backdrop { opacity: 0 !important; }
-    .layer.audio-intro .backdrop-veil { opacity: 0 !important; }
-    .layer.audio-intro .audio-photo-overlay { opacity: 0 !important; }
     .pic { transition: opacity 1.2s ease; }
     .backdrop { transition: opacity 1.2s ease; }
     .backdrop-veil { transition: opacity 1.2s ease; }
@@ -2386,12 +2380,11 @@
     // before the image is revealed.
     currentHasAudioOverlay = !!pairedAudioUrl;
     if (pairedAudioUrl) {
-      inLayer.classList.add('has-audio-overlay', 'audio-intro');
+      inLayer.classList.add('has-audio-overlay');
       inAud.muted = !wallSoundOn;
       inAud.src = pairedAudioUrl;
       inAud.load();
       inAud.play().catch(() => { inAud.muted = true; inAud.play().catch(() => {}); });
-      setTimeout(() => inLayer.classList.remove('audio-intro'), 1500);
     }
 
     // Tag <body> with is-landscape / is-portrait for the current slide.
