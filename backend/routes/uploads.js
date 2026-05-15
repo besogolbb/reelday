@@ -11,7 +11,8 @@ import { getCount as getPresenceCount } from './presence.js';
 // 600 walls polling every 2s would otherwise fire 600 DB queries per cycle.
 // 1.5s TTL keeps staleness below one poll interval; dashboard bypasses it.
 const UPLOADS_CACHE_TTL = 1500;
-const uploadsCache = new Map(); // slug → { payload, expiresAt }
+const uploadsCache  = new Map(); // slug → { payload, expiresAt }
+const uploadsInflight = new Map(); // slug → Promise<payload>  (single-flight dedup)
 
 export default async function uploadRoutes(fastify) {
   function publicMediaUrl(key) {
@@ -595,17 +596,51 @@ export default async function uploadRoutes(fastify) {
                            request.query?.include_pending === 'true';
     const wantReconcile  = request.query?.reconcile === '1' || request.query?.reconcile === 'true';
 
-    // Serve from cache for the wall's public read path. Dashboard requests
-    // (include_pending) and manual reconcile requests always bypass it.
+    // ── Cache + single-flight for the wall's public read path ──────────
+    // Dashboard (?include_pending) and ?reconcile always bypass both.
     if (!includePending && !wantReconcile) {
       const cached = uploadsCache.get(slug);
       if (cached && cached.expiresAt > Date.now()) {
-        // guest_count is in-memory — recompute on every hit for free so the
-        // count stays live even while the uploads payload is cached.
+        // guest_count is in-memory — recompute free on every hit.
         return { ...cached.payload, guest_count: getPresenceCount(slug) };
       }
+
+      // Single-flight: if a DB query is already in-flight for this slug,
+      // await the same promise instead of firing a duplicate query.
+      // Eliminates the thundering-herd when 600 walls all poll at t=0.
+      let inflight = uploadsInflight.get(slug);
+      if (!inflight) {
+        inflight = (async () => {
+          const { rows: evRows } = await fastify.db.query(
+            'SELECT * FROM events WHERE slug = $1 AND is_active = true', [slug],
+          );
+          if (!evRows.length) return null;
+          const ev = evRows[0];
+          const { rows: ups } = await fastify.db.query(
+            `SELECT * FROM uploads WHERE event_id = $1 AND is_approved = true ORDER BY created_at DESC`,
+            [ev.id],
+          );
+          const now = new Date();
+          const payload = {
+            uploads: ups,
+            event:   ev,
+            locks: {
+              gallery_locked: !!(ev.gallery_expires_at  && new Date(ev.gallery_expires_at)  < now),
+              uploads_closed: !!(ev.upload_window_ends_at && new Date(ev.upload_window_ends_at) < now),
+            },
+          };
+          uploadsCache.set(slug, { payload, expiresAt: Date.now() + UPLOADS_CACHE_TTL });
+          return payload;
+        })().finally(() => uploadsInflight.delete(slug));
+        uploadsInflight.set(slug, inflight);
+      }
+
+      const payload = await inflight;
+      if (!payload) return reply.status(404).send({ error: true, message: 'Event not found' });
+      return { ...payload, guest_count: getPresenceCount(slug) };
     }
 
+    // ── Dashboard / reconcile path — no cache ───────────────────────────
     const { rows: eventRows } = await fastify.db.query(
       'SELECT * FROM events WHERE slug = $1 AND is_active = true',
       [slug],
@@ -618,10 +653,7 @@ export default async function uploadRoutes(fastify) {
     const event = eventRows[0];
 
     const { rows: uploads } = await fastify.db.query(
-      `SELECT * FROM uploads
-        WHERE event_id = $1
-          ${includePending ? '' : 'AND is_approved = true'}
-        ORDER BY created_at DESC`,
+      `SELECT * FROM uploads WHERE event_id = $1 ORDER BY created_at DESC`,
       [event.id],
     );
     // Reconcile is the slow self-healing fallback for missed transcode webhooks —
@@ -631,18 +663,11 @@ export default async function uploadRoutes(fastify) {
 
     const now = new Date();
     const locks = {
-      gallery_locked: !!(event.gallery_expires_at && new Date(event.gallery_expires_at) < now),
+      gallery_locked: !!(event.gallery_expires_at    && new Date(event.gallery_expires_at)    < now),
       uploads_closed: !!(event.upload_window_ends_at && new Date(event.upload_window_ends_at) < now),
     };
 
-    const payload = { uploads: hydratedUploads, event, locks };
-
-    // Cache the DB result for wall readers; skip caching pending/reconcile responses.
-    if (!includePending && !wantReconcile) {
-      uploadsCache.set(slug, { payload, expiresAt: Date.now() + UPLOADS_CACHE_TTL });
-    }
-
-    return { ...payload, guest_count: getPresenceCount(slug) };
+    return { uploads: hydratedUploads, event, locks, guest_count: getPresenceCount(slug) };
   });
 
   // GET /api/uploads/:slug/download — list all file URLs for bulk download
