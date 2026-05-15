@@ -2,6 +2,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { config as loadEnv } from 'dotenv';
 import Fastify from 'fastify';
+import compress from '@fastify/compress';
 import cors from '@fastify/cors';
 import multipart from '@fastify/multipart';
 import formbody from '@fastify/formbody';
@@ -95,6 +96,8 @@ await fastify.register(rateLimit, {
 // they can apply tighter, per-route buckets without re-implementing both.
 fastify.decorate('limiterKey',          limiterKey);
 fastify.decorate('friendlyRateLimit',   FRIENDLY_RATE_LIMIT);
+
+await fastify.register(compress, { global: true, encodings: ['gzip', 'deflate'] });
 
 await fastify.register(cors, {
   origin: ['https://reelday.ph', 'http://localhost:3000'], // Allow specific origins for production and local development
