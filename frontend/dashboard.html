@@ -1259,22 +1259,36 @@
     }
     @media (max-width: 640px) {
       /* Header — tighter bottom pad so stat cards don't push content way down */
-      .event-header { padding: 16px 16px 72px; }
-      .event-header h1 { font-size: clamp(28px, 9vw, 40px); margin-bottom: 6px; }
-      .event-header .badge { font-size: 10px; padding: 6px 12px; margin-bottom: 12px; }
-      .event-header .meta { font-size: 11px; gap: 10px; }
-      .event-header-top { margin-bottom: 20px; flex-wrap: wrap; gap: 8px; }
+      .event-header { padding: 14px 14px 68px; }
+      .event-header h1 { font-size: clamp(26px, 8vw, 38px); margin-bottom: 4px; }
+      .event-header .badge { font-size: 10px; padding: 5px 11px; margin-bottom: 10px; }
+      .event-header .meta { font-size: 11px; gap: 8px; }
 
-      /* Nav pill scrolls horizontally so it never wraps */
-      .event-header .nav { overflow-x: auto; max-width: 100%; scrollbar-width: none; }
+      /* Top row: logo left + right-side buttons right on row 1,
+         nav pill full-width on row 2 */
+      .event-header-top {
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+        gap: 8px 0;
+        align-items: center;
+      }
+      .event-header .brand-lockup { order: 1; padding: 5px 10px; border-radius: 10px; }
+      .event-header .brand-img { height: 30px; }
+      .event-header-top-right { order: 2; margin-left: auto; gap: 6px; }
+      .event-header .nav {
+        order: 3;
+        width: 100%;
+        overflow-x: auto;
+        scrollbar-width: none;
+        justify-content: flex-start;
+      }
       .event-header .nav::-webkit-scrollbar { display: none; }
-      .event-header .nav a { font-size: 12px; padding: 7px 12px; }
+      .event-header .nav a { font-size: 12px; padding: 6px 11px; white-space: nowrap; }
 
-      /* Header right — stack user/logout/new tighter */
-      .event-header-top-right { gap: 8px; }
-      .header-user-name { font-size: 12px; max-width: 90px; }
-      .header-logout-btn { font-size: 11px; padding: 6px 10px; }
-      .header-new-btn { font-size: 11px; padding: 7px 12px; }
+      /* Header right buttons — compact */
+      .header-user-name { font-size: 12px; max-width: 80px; }
+      .header-logout-btn { font-size: 11px; padding: 5px 9px; }
+      .header-new-btn { font-size: 11px; padding: 6px 11px; }
 
       /* Stats — all 3 in a single row, compact */
       .stats {
