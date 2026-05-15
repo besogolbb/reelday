@@ -112,6 +112,14 @@ const MIGRATIONS = `
   );
   CREATE INDEX IF NOT EXISTS idx_reactions_event_time ON reactions(event_id, created_at DESC);
 
+  -- Wall poll hot path: GET /uploads/:slug filters by event + approved, orders by time.
+  -- Partial index covers only approved rows so it stays small and the planner always picks it.
+  CREATE INDEX IF NOT EXISTS idx_uploads_event_approved_time
+    ON uploads(event_id, created_at DESC) WHERE is_approved = true;
+
+  -- Event lookup by slug is called on every single API request — make it instant.
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_events_slug ON events(slug);
+
   -- Live polls: host pre-creates questions in the dashboard, then taps
   -- "Run on wall" to set status='live'. The wall poll picks it up,
   -- pauses photos, and shows the question + a live tally. Auto-ends
