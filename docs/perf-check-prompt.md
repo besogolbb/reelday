@@ -28,10 +28,15 @@ KEY ENDPOINTS
 
 KNOWN BASELINES (good performance looks like)
 - /api/health: under 200 ms typical
-- /api/uploads/:slug: under 700 ms typical, 60 KB response
+- /api/uploads/:slug: under 700 ms typical, 14 KB response (gzip)
 - 1000 simultaneous upload kickoffs: 0 failures, ~4 s p99
-- 600 concurrent wall polls: ~370 rps, 0 failures, p95 ~3 s
+- 200 concurrent wall polls: ~393 rps, 0 failures, p95 ~0.94 s
+- 600 concurrent wall polls: ~217 rps, 0 failures, p95 ~2.55 s
 - Sustained mixed load 3 min: 0 failures, flat latency
+
+BASELINE HISTORY
+- 2026-05-13: 600 concurrent wall polls — 370 rps, p95 3.0 s, 60 KB response (no compression)
+- 2026-05-15: SELECT * → explicit columns + gzip via Node zlib; 600 concurrent — 217 rps, p95 2.55 s, 14 KB response
 
 STRESS TEST SCRIPTS (all in scripts/ folder)
 - scripts/stress-wall.mjs <slug> [conc] [total]
