@@ -772,6 +772,55 @@
     .preview-modal-actions button:disabled { opacity: .5; cursor: not-allowed; transform: none; }
     .pill { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); padding: 8px 12px; border-radius: 999px; background: #f6eadc; border: 1px solid rgba(196,90,58,.12); white-space: nowrap; }
 
+    /* ── Voice note audio player in preview modal ───────────── */
+    #preview-audio-player {
+      display: none;
+      align-items: center;
+      gap: 14px;
+      padding: 18px 22px;
+      background: rgba(255,255,255,.05);
+      border-top: 1px solid rgba(255,255,255,.07);
+    }
+    #preview-audio-player.visible { display: flex; }
+    #preview-audio-playbtn {
+      flex-shrink: 0;
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      background: rgba(196,90,58,.85);
+      border: none;
+      color: #fff;
+      font-size: 16px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .15s, transform .15s;
+    }
+    #preview-audio-playbtn:hover { background: rgba(196,90,58,1); transform: scale(1.07); }
+    .preview-waveform {
+      display: flex;
+      align-items: flex-end;
+      gap: 4px;
+      height: 36px;
+      flex: 1;
+    }
+    .preview-waveform .wvbar {
+      width: 4px; border-radius: 3px;
+      background: linear-gradient(to top, rgba(196,90,58,.9), rgba(240,163,122,1));
+      transform-origin: bottom;
+      animation: wvBarAnim var(--dur) ease-in-out infinite;
+      animation-delay: var(--delay);
+      box-shadow: 0 0 10px rgba(240,163,122,.25);
+    }
+    @keyframes wvBarAnim {
+      0%, 100% { transform: scaleY(.12); opacity: .45; }
+      50%       { transform: scaleY(1);   opacity: 1; }
+    }
+    #preview-audio-player.paused .wvbar { animation-play-state: paused; opacity: .22; }
+    .preview-audio-label {
+      flex-shrink: 0;
+      font-size: 20px;
+      line-height: 1;
+    }
+
     /* ── Sub-tabs (All / Pending / Approved / Featured / Hidden) ─── */
     .tab-row {
       display: flex; gap: 6px;
@@ -1662,6 +1711,12 @@
   <div class="preview-modal-card">
     <img   id="preview-modal-image" alt="" style="display:none" />
     <video id="preview-modal-video" controls preload="metadata" style="display:none"></video>
+    <!-- Voice note player — shown only for audio-photo items -->
+    <div id="preview-audio-player" aria-label="Voice note player">
+      <button type="button" id="preview-audio-playbtn" title="Play / Pause voice note">&#9654;</button>
+      <div class="preview-waveform" id="preview-waveform"></div>
+      <span class="preview-audio-label">🎙</span>
+    </div>
     <div class="preview-modal-meta">
       <div class="uploader" id="preview-modal-uploader">Guest</div>
       <div class="when"     id="preview-modal-when">—</div>
@@ -3311,6 +3366,7 @@
       previewVideo.style.display = 'block';
       previewVideo.src = uploadMediaUrl(upload, true) || '';
       try { previewVideo.currentTime = 0; } catch {}
+      previewAudioPlayer.classList.remove('visible');
     } else {
       previewVideo.style.display = 'none';
       try { previewVideo.pause(); } catch {}
@@ -3321,17 +3377,18 @@
       // through; R2 URLs get a 1600px CDN variant.
       const raw = upload.file_url || upload.thumb || upload.thumbnail_url || '';
       previewImage.src = (upload.thumb && !upload.file_url) ? raw : cdnImage(raw, 1600);
-      // Auto-play voice note when the modal opens for an audio-photo.
+      // Show / auto-play voice note player when the modal opens for an audio-photo.
       if (upload.audio_url) {
+        previewAudioPlayer.classList.add('visible');
         if (!sidecarAudio) {
           sidecarAudio = new Audio();
-          sidecarAudio.addEventListener('ended', () => {
-            if (sidecarPlayingBtn) { sidecarPlayingBtn.textContent = '🎙'; sidecarPlayingBtn = null; }
-          });
+          sidecarAudio.addEventListener('ended', () => setPreviewAudioPlaying(false));
         }
         sidecarAudio.src = upload.audio_url;
         sidecarAudio.currentTime = 0;
-        sidecarAudio.play().catch(() => {});
+        sidecarAudio.play().then(() => setPreviewAudioPlaying(true)).catch(() => setPreviewAudioPlaying(false));
+      } else {
+        previewAudioPlayer.classList.remove('visible');
       }
     }
     previewUploader.textContent = upload.uploader_name || 'Anonymous guest';
@@ -3371,6 +3428,7 @@
     previewImage.removeAttribute('src');
     previewImage.style.display = 'none';
     stopSidecarAudio();
+    previewAudioPlayer.classList.remove('visible');
     previewingId = null;
   }
 
@@ -3728,11 +3786,50 @@
 
   // ── Sidecar audio playback (photo + voice note) ──────────────
   let sidecarAudio = null;
-  let sidecarPlayingBtn = null;
+
+  const previewAudioPlayer  = document.getElementById('preview-audio-player');
+  const previewAudioPlayBtn = document.getElementById('preview-audio-playbtn');
+  const previewWaveform     = document.getElementById('preview-waveform');
+
+  // Build randomised waveform bars once
+  (function buildWaveform() {
+    const heights = [0.35, 0.6, 0.85, 1, 0.75, 0.55, 0.9, 0.65, 0.45, 0.8, 0.5, 0.7];
+    heights.forEach((h, i) => {
+      const bar = document.createElement('div');
+      bar.className = 'wvbar';
+      bar.style.setProperty('--dur',   `${0.7 + h * 0.6}s`);
+      bar.style.setProperty('--delay', `${i * 0.07}s`);
+      bar.style.height = `${Math.round(h * 36)}px`;
+      previewWaveform.appendChild(bar);
+    });
+  })();
+
+  function setPreviewAudioPlaying(playing) {
+    if (playing) {
+      previewAudioPlayer.classList.remove('paused');
+      previewAudioPlayBtn.innerHTML = '&#9646;&#9646;'; // pause icon
+    } else {
+      previewAudioPlayer.classList.add('paused');
+      previewAudioPlayBtn.innerHTML = '&#9654;'; // play icon
+    }
+  }
 
   function stopSidecarAudio() {
     if (sidecarAudio && !sidecarAudio.paused) sidecarAudio.pause();
-    if (sidecarPlayingBtn) { sidecarPlayingBtn.textContent = '🎙'; sidecarPlayingBtn = null; }
+    setPreviewAudioPlaying(false);
+  }
+
+  if (previewAudioPlayBtn) {
+    previewAudioPlayBtn.addEventListener('click', () => {
+      if (!sidecarAudio) return;
+      if (sidecarAudio.paused) {
+        sidecarAudio.play().catch(() => {});
+        setPreviewAudioPlaying(true);
+      } else {
+        sidecarAudio.pause();
+        setPreviewAudioPlaying(false);
+      }
+    });
   }
 
   if (photoGrid) {
