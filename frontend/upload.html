@@ -663,9 +663,13 @@ body { background: var(--paper); min-height: 100dvh; }
 /* ── Voice message recorder ──────────────────────────── */
 .msg-header {
   display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 6px;
+  margin-bottom: 2px;
 }
 .msg-header label { font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--ink); }
+.msg-mode-hint {
+  font-family: var(--sans, sans-serif); font-size: 11px; color: var(--ink-faint);
+  font-style: italic; margin-bottom: 10px; letter-spacing: 0;
+}
 .msg-mode-pills {
   display: inline-flex; background: var(--paper-2); border: 1px solid var(--line);
   border-radius: 999px; padding: 2px; gap: 2px;
@@ -1197,7 +1201,7 @@ body { background: var(--paper); min-height: 100dvh; }
     <div class="gallery-msg">
       <div class="mp-textarea-wrap" style="margin-top:14px;">
         <div class="msg-header">
-          <label>Add a message (optional)</label>
+          <label>Add a message <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;color:var(--ink-faint)">(optional)</span></label>
           <div class="msg-mode-pills">
             <button class="msg-mode-pill active" id="msgPillText" onclick="switchMsgMode('text')">
               <svg viewBox="0 0 24 24"><path d="M17 6H3M21 12H3M13 18H3"/></svg>Type
@@ -1207,6 +1211,7 @@ body { background: var(--paper); min-height: 100dvh; }
             </button>
           </div>
         </div>
+        <div class="msg-mode-hint">Write something or record a voice note</div>
         <div id="msgTextWrap">
           <textarea class="mp-textarea" id="msgText" maxlength="160" placeholder="Write something for the wall… &quot;Lolo would have loved this.&quot;" oninput="updateMsgPreview()"></textarea>
         </div>
@@ -2537,11 +2542,19 @@ body { background: var(--paper); min-height: 100dvh; }
         document.getElementById('voicePreview').classList.add('visible');
         document.getElementById('voiceRecBtn').classList.remove('recording');
         document.getElementById('voiceHint').textContent = 'Your voice message';
+        // Re-enable inline send button; ctaBtn is re-evaluated by refreshCtaBar()
+        const _inlineSendBtnStop = document.querySelector('#panel-gallery .send-btn');
+        if (_inlineSendBtnStop) _inlineSendBtnStop.disabled = false;
         refreshCtaBar(); // enable the Share button now that there's a voice blob
       };
       _voiceRecorder.start();
       document.getElementById('voiceRecBtn').classList.add('recording');
       document.getElementById('voiceHint').textContent = 'Recording… tap to stop';
+      // Disable share button while recording is active
+      const _inlineSendBtn = document.querySelector('#panel-gallery .send-btn');
+      const _ctaBtnRec = document.getElementById('ctaBtn');
+      if (_inlineSendBtn) _inlineSendBtn.disabled = true;
+      if (_ctaBtnRec) _ctaBtnRec.disabled = true;
       _voiceTimerInt = setInterval(() => {
         _voiceSecs++;
         const remaining = MAX_VOICE_SECS - _voiceSecs;
