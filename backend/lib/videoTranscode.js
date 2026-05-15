@@ -194,16 +194,24 @@ function derivedKeys(originalKey) {
 }
 
 // ffmpeg args for a static-image + audio combine.
-// -loop 1 -framerate 1  — constant 1 fps loop; fixes variable-timestamp
-//                         flicker caused by ffmpeg's default loop behavior.
+// -loop 1 -framerate 1  — constant 1 fps loop.
 // -r 1                  — lock output framerate to 1 fps (static photo, tiny file).
+// -pix_fmt yuv420p      — explicit output pixel format; format=yuv420p in the
+//                         filter chain is not always honoured by libx264 alone,
+//                         which causes alternating colored/grayscale frames when
+//                         the chroma planes are inconsistently signalled.
+// -g 1                  — force every frame to be a keyframe (I-frame only).
+//                         At 1 fps, P/B frames referencing incomplete chroma
+//                         produce the same colored↔grayscale flicker.
 // No -tune stillimage   — that tune causes decoder-side flickering artifacts.
 // -shortest             — stop when audio ends.
 const COMBINE_ARGS = [
   '-c:v', 'libx264',
   '-preset', 'veryfast',
   '-crf', '23',
-  '-profile:v', 'main',
+  '-profile:v', 'baseline',
+  '-pix_fmt', 'yuv420p',
+  '-g', '1',
   '-vf', 'scale=1280:720:force_original_aspect_ratio=decrease:flags=lanczos,pad=1280:720:(ow-iw)/2:(oh-ih)/2:black,format=yuv420p',
   '-r', '1',
   '-c:a', 'aac',
