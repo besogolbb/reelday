@@ -2420,7 +2420,8 @@
       }
 
       if (hasSidecarAudio) {
-        audioBtn = `<button data-play-audio="${escapeAttr(u.audio_url)}" title="Play voice message" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;border:2px solid rgba(255,255,255,.3);font-size:20px;line-height:1;cursor:pointer;z-index:3;display:flex;align-items:center;justify-content:center;">🎙</button>`;
+        // Badge only — clicking the tile opens the preview modal which auto-plays the audio.
+        audioBtn = `<div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;border:2px solid rgba(255,255,255,.3);font-size:20px;line-height:1;pointer-events:none;z-index:3;display:flex;align-items:center;justify-content:center;">🎙</div>`;
       }
 
       const msgPreview = u.message
@@ -3320,6 +3321,18 @@
       // through; R2 URLs get a 1600px CDN variant.
       const raw = upload.file_url || upload.thumb || upload.thumbnail_url || '';
       previewImage.src = (upload.thumb && !upload.file_url) ? raw : cdnImage(raw, 1600);
+      // Auto-play voice note when the modal opens for an audio-photo.
+      if (upload.audio_url) {
+        if (!sidecarAudio) {
+          sidecarAudio = new Audio();
+          sidecarAudio.addEventListener('ended', () => {
+            if (sidecarPlayingBtn) { sidecarPlayingBtn.textContent = '🎙'; sidecarPlayingBtn = null; }
+          });
+        }
+        sidecarAudio.src = upload.audio_url;
+        sidecarAudio.currentTime = 0;
+        sidecarAudio.play().catch(() => {});
+      }
     }
     previewUploader.textContent = upload.uploader_name || 'Anonymous guest';
     if (upload.created_at) {
@@ -3357,6 +3370,7 @@
     previewVideo.load();
     previewImage.removeAttribute('src');
     previewImage.style.display = 'none';
+    stopSidecarAudio();
     previewingId = null;
   }
 
@@ -3721,36 +3735,8 @@
     if (sidecarPlayingBtn) { sidecarPlayingBtn.textContent = '🎙'; sidecarPlayingBtn = null; }
   }
 
-  function toggleSidecarAudio(audioUrl, btn) {
-    if (!sidecarAudio) {
-      sidecarAudio = new Audio();
-      sidecarAudio.addEventListener('ended', () => {
-        if (sidecarPlayingBtn) { sidecarPlayingBtn.textContent = '🎙'; sidecarPlayingBtn = null; }
-      });
-    }
-    if (sidecarPlayingBtn === btn && !sidecarAudio.paused) {
-      sidecarAudio.pause();
-      btn.textContent = '🎙';
-      sidecarPlayingBtn = null;
-      return;
-    }
-    stopSidecarAudio();
-    sidecarAudio.src = audioUrl;
-    sidecarAudio.currentTime = 0;
-    sidecarAudio.play().catch(() => {});
-    btn.textContent = '⏸';
-    sidecarPlayingBtn = btn;
-  }
-
   if (photoGrid) {
     photoGrid.addEventListener('click', (e) => {
-      const audioPlayBtn = e.target.closest('[data-play-audio]');
-      if (audioPlayBtn) {
-        e.stopPropagation();
-        toggleSidecarAudio(audioPlayBtn.dataset.playAudio, audioPlayBtn);
-        return;
-      }
-
       const actionBtn = e.target.closest('.actions-btn');
       if (actionBtn) {
         const action = actionBtn.dataset.action;
