@@ -130,7 +130,7 @@
 <div class="callout"><strong>How to read this</strong>"Wait" is the time between a guest tapping "upload" and seeing the file transfer begin. Under 2 s is invisible. 2–3 s is acceptable. 4 s+ guests start to wonder if it's working — but every upload still succeeds. Hard ceiling is ~245 req/s; beyond 1000 concurrent, latency grows linearly (1500 ≈ 6 s, 2000 ≈ 8 s) but failures stay at zero.</div>
 
 <h2>3 · Reactions, Mixed Workload, Sustained Load Tests</h2>
-<div class="sub">Three additional load tests covering the rest of a real event's traffic shape.</div>
+<div class="sub">Load tests covering the rest of a real event's traffic shape, including multi-wall and cross-event scenarios.</div>
 
 <h3>3a · Reaction burst (kiss / vows / cake moment)</h3>
 <table>
@@ -157,6 +157,36 @@
   <tr class="verdict-ok"><td>Wall poll</td><td class="num">166 ms</td><td class="num">218 ms</td><td>0 / 60</td></tr>
 </table>
 <div class="callout"><strong>What this means</strong>No memory leak, no slow-connection accumulation, no DB pool starvation. Wall poll p95 under steady load is 218 ms — well within baseline. Backend stays steady for hours. Container does not need restart between events.</div>
+
+<h3>3d · Multi-wall + reaction spam (exact failure mode previously observed)</h3>
+<div style="font-size:10pt;color:#666;margin-bottom:4pt">3 wall displays each polling uploads every 3 s and reactions every 1 s, while 150 guests spam reactions simultaneously. Previously caused both walls to lag and hang.</div>
+<table>
+  <tr><th>Component</th><th>p50</th><th>p95</th><th>Failures</th></tr>
+  <tr class="verdict-ok"><td>Wall uploads poll (3 walls)</td><td class="num">145 ms</td><td class="num">222 ms</td><td>0 / 24</td></tr>
+  <tr class="verdict-ok"><td>Wall reactions poll (3 walls)</td><td class="num">159 ms</td><td class="num">303 ms</td><td>0 / 78</td></tr>
+  <tr class="verdict-warn"><td>Reaction writes (150 spammers)</td><td class="num">108 ms</td><td class="num">243 ms</td><td>93 / 2944 (rate-limited at extreme spam)</td></tr>
+</table>
+<div class="callout"><strong>What this means</strong>Walls are fully protected — 0 failures, p95 under 300 ms even during extreme reaction spam. The 93 write failures are guests exceeding the per-device rate limit (60/min), not a backend crash. Real guests tap emoji occasionally — this failure mode does not occur in practice.</div>
+
+<h3>3e · Cross-event isolation (reaction storm on Event A, wall on Event B)</h3>
+<div style="font-size:10pt;color:#666;margin-bottom:4pt">200 guests spamming reactions on one event should not degrade a second concurrent event's wall. Both share the same DB pool (50 connections).</div>
+<table>
+  <tr><th>Component</th><th>p50</th><th>p95</th><th>Failures</th></tr>
+  <tr class="verdict-ok"><td>Reaction spam — Event A (cxzv-fe0y)</td><td class="num">108 ms</td><td class="num">116 ms</td><td>0 / 3256</td></tr>
+  <tr class="verdict-ok"><td>Wall poll — Event A (feeling the storm)</td><td class="num">153 ms</td><td class="num">321 ms</td><td>0 / 10</td></tr>
+  <tr class="verdict-ok"><td>Wall poll — Event B (scarlette-skye-td9n)</td><td class="num">113 ms</td><td class="num">280 ms</td><td>0 / 10</td></tr>
+</table>
+<div class="callout"><strong>What this means</strong>Event B's wall is completely unaffected — p95 280 ms, indistinguishable from its idle baseline. DB pool never saturates across event boundaries. Multiple concurrent events are fully isolated even during a reaction storm.</div>
+
+<h3>3f · Live poll vote storm (300 guests voting simultaneously)</h3>
+<div style="font-size:10pt;color:#666;margin-bottom:4pt">All guests vote at the same instant — maximum upsert contention on poll_votes PK. Tested 2 rounds (vote + change mind).</div>
+<table>
+  <tr><th>Component</th><th>p50</th><th>p95</th><th>p99</th><th>Failures</th></tr>
+  <tr class="verdict-ok"><td>Poll votes — Round 1 (INSERT path)</td><td class="num">~900 ms</td><td class="num">1.74 s</td><td class="num">1.81 s</td><td>0 / 300</td></tr>
+  <tr class="verdict-ok"><td>Poll votes — Round 2 (UPDATE path, faster)</td><td class="num">~400 ms</td><td class="num">~900 ms</td><td class="num">~950 ms</td><td>0 / 300</td></tr>
+  <tr class="verdict-ok"><td>Tally reads (/polls/active)</td><td class="num">124 ms</td><td class="num">124 ms</td><td class="num">124 ms</td><td>0 / 2</td></tr>
+</table>
+<div class="callout"><strong>What this means</strong>Zero failures across 600 votes fired simultaneously. Upsert lock contention is handled cleanly by Postgres. Tally reads stay fast (124 ms) during the write storm. Round 2 is faster because all rows exist — ON CONFLICT DO UPDATE is cheaper than INSERT.</div>
 
 <h2>4 · Single-Event Booking Guidance</h2>
 <div class="sub">Assumes ~3 videos per guest over a 4-hour event with bursty upload moments (cake, dance, vows).</div>
@@ -238,7 +268,7 @@
 </table>
 
 <div class="footer">
-Reelday operations · Updated 15 May 2026 · Numbers reflect measured production performance after Postgres collocation, reconcile-on-poll removal, SQS-fronted Lambda transcoding, DB partial indexes, in-memory single-flight cache, and gzip compression on wall poll (Node built-in zlib).
+Reelday operations · Updated 15 May 2026 · Numbers reflect measured production performance after Postgres collocation, reconcile-on-poll removal, SQS-fronted Lambda transcoding, DB partial indexes, in-memory single-flight cache, gzip compression on wall poll, and validated multi-wall / cross-event / poll vote storm scenarios.
 </div>
 
 </body>

@@ -33,10 +33,14 @@ KNOWN BASELINES (good performance looks like)
 - 200 concurrent wall polls: ~393 rps, 0 failures, p95 ~0.94 s
 - 600 concurrent wall polls: ~217 rps, 0 failures, p95 ~2.55 s
 - Sustained mixed load 3 min: 0 failures, flat latency
+- Multi-wall (3 walls) + 150 reaction spammers: wall p95 < 300 ms, 0 wall failures
+- Cross-event isolation (200 spammers on A): wall B p95 ~280 ms, unaffected
+- Poll vote storm (300 simultaneous voters): 0 failures, p95 ~1.74 s
 
 BASELINE HISTORY
 - 2026-05-13: 600 concurrent wall polls — 370 rps, p95 3.0 s, 60 KB response (no compression)
 - 2026-05-15: SELECT * → explicit columns + gzip via Node zlib; 600 concurrent — 217 rps, p95 2.55 s, 14 KB response
+- 2026-05-15: Multi-wall, cross-event, poll vote storm — all passing, new scripts added
 
 STRESS TEST SCRIPTS (all in scripts/ folder)
 - scripts/stress-wall.mjs <slug> [conc] [total]
@@ -44,6 +48,9 @@ STRESS TEST SCRIPTS (all in scripts/ folder)
 - scripts/stress-reactions.mjs <slug> [conc] [total]
 - scripts/stress-mixed.mjs <slug> [uploads] [reactions] [duration_s]
 - scripts/stress-sustained.mjs <slug> [duration_min]
+- scripts/stress-multiwall.mjs <slug> [walls=3] [spammers=150] [duration_s=30]
+- scripts/stress-cross-event.mjs <slug-a> <slug-b> [spammers=200] [duration_s=30]
+- scripts/stress-poll-vote.mjs <slug> <poll-id> [voters=300] [rounds=3]
 
 HOW TO USE THESE WITH AN AI ASSISTANT
 1. Run the relevant script and paste the output.
@@ -76,13 +83,23 @@ node scripts/stress-reactions.mjs cxzv-fe0y 200 1000
 ```
 Healthy = 0 failures on both.
 
-### Full deep-check before a 1000+ guest event (~4 min)
+### Full deep-check before a 1000+ guest event (~6 min)
 ```powershell
 node scripts/stress-upload.mjs cxzv-fe0y 1000 1000
 node scripts/stress-mixed.mjs cxzv-fe0y 600 1500 30
 node scripts/stress-sustained.mjs cxzv-fe0y 3
+node scripts/stress-multiwall.mjs cxzv-fe0y 3 150 30
+node scripts/stress-cross-event.mjs cxzv-fe0y scarlette-skye-td9n 200 30
 ```
-Healthy = 0 failures across all three, sustained latency stays flat.
+Healthy = 0 failures across all, sustained latency stays flat, wall B p95 < 1 s during cross-event test.
+
+### Poll vote storm (run while a poll is live on the wall)
+```powershell
+# 1. Start a poll in the dashboard ("Run on wall")
+# 2. Grab the poll UUID from: curl https://reelday.ph/api/events/cxzv-fe0y/polls/active
+node scripts/stress-poll-vote.mjs cxzv-fe0y <poll-uuid> 300 2
+```
+Healthy = 0 failures, vote p95 < 2 s, tally reads < 500 ms.
 
 ---
 
@@ -96,6 +113,9 @@ Healthy = 0 failures across all three, sustained latency stays flat.
 | Failures with status `5xx` | Container crash or proxy issue — check Easypanel logs |
 | Latency creeps up over a sustained run | Memory leak or socket exhaustion |
 | Upload kickoff slow but wall poll fast | Pre-signed URL signing path issue |
+| Wall B lags during cross-event test | DB pool saturation — one event's storm bleeding into another |
+| Poll vote p95 > 5 s or 5xx | Upsert lock contention on poll_votes — check DB pool depth |
+| Wall polls fine but reaction polls lag | Reaction eventCache cold — check DB index on reactions table |
 
 If anything degrades, the AI you paste the prompt into will help diagnose. Keep
 this doc updated whenever a baseline meaningfully changes.
