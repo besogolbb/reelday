@@ -46,9 +46,9 @@ a dropdown to Account / Log out.
 
 - **My Events** (`/my-events`) — list of all events the host owns,
   with status badges and quick links.
-- **Create Event** (`/create`) — wizard that captures event type,
-  couple/celebrant names, date, venue, then auto-generates a unique
-  slug and a wall URL.
+- **Create Event** (`/start`) — wizard that captures event type,
+  couple/celebrant names, date, then auto-generates a unique slug and
+  a wall URL. (`/create` redirects here permanently.)
 - **Dashboard** (`/dashboard?slug=…`) — per-event control center:
   - Real-time queue of pending upload approvals when auto-approve is off.
   - Toggles for auto-approve (photos / videos / video messages).

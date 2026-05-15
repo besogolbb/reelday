@@ -155,9 +155,10 @@ fastify.get('/', (_request, reply) => {
   reply.sendFile('index.html');
 });
 
-// Serve create.html
-fastify.get('/create', (_request, reply) => {
-  reply.sendFile('create.html');
+// /create is superseded by /start — redirect permanently so saved links still work.
+fastify.get('/create', (request, reply) => {
+  const qs = request.url.includes('?') ? request.url.slice(request.url.indexOf('?')) : '';
+  reply.redirect(301, `/start${qs}`);
 });
 
 // Serve start.html — Jotform-style free-tier wizard

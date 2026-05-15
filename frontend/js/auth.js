@@ -44,7 +44,7 @@ export function initNav() {
   } else {
     nav.innerHTML = `
       <a class="snav-link" href="/login">Login</a>
-      <a class="snav-btn snav-cta" href="/create">Start Free</a>`;
+      <a class="snav-btn snav-cta" href="/start">Start Free</a>`;
   }
 }
 
