@@ -133,15 +133,6 @@ export default async function reactionsRoutes(fastify) {
     const since = request.query?.since;
 
     try {
-      const { rows: eventRows } = await fastify.db.query(
-        'SELECT id FROM events WHERE slug = $1 AND is_active = true',
-        [slug],
-      );
-      if (!eventRows.length) {
-        return reply.status(404).send({ error: true, message: 'Event not found' });
-      }
-      const eventId = eventRows[0].id;
-
       let sinceTs;
       try {
         sinceTs = since ? new Date(since) : new Date(Date.now() - 5 * 60 * 1000);
@@ -150,6 +141,32 @@ export default async function reactionsRoutes(fastify) {
       }
       if (Number.isNaN(sinceTs.getTime())) {
         sinceTs = new Date(Date.now() - 5 * 60 * 1000);
+      }
+
+      // Reuse the POST handler's event cache (slug → {event, expires}) to skip
+      // a DB round-trip on the hot read path. Cache miss falls back to a single
+      // JOIN query. Wall polls every 1s — without this it was 2 DB queries/poll.
+      let eventId;
+      const cachedEv = eventCache.get(slug);
+      if (cachedEv && cachedEv.expires > Date.now()) {
+        if (!cachedEv.event) {
+          return reply.status(404).send({ error: true, message: 'Event not found' });
+        }
+        eventId = cachedEv.event.id;
+      } else {
+        const { rows: evRows } = await fastify.db.query(
+          'SELECT id FROM events WHERE slug = $1 AND is_active = true',
+          [slug],
+        );
+        if (!evRows.length) {
+          eventCache.set(slug, { expires: Date.now() + EVENT_CACHE_TTL_MS, event: null });
+          return reply.status(404).send({ error: true, message: 'Event not found' });
+        }
+        eventId = evRows[0].id;
+        // Warm the cache entry if missing (POST path may not have run yet).
+        if (!cachedEv) {
+          eventCache.set(slug, { expires: Date.now() + EVENT_CACHE_TTL_MS, event: evRows[0], allowed: true });
+        }
       }
 
       const { rows } = await fastify.db.query(
