@@ -1929,10 +1929,10 @@
     return false;
   }
   function filterByStream(uploads) {
-    // Paired audio rows are absorbed into their combined video — hide them.
-    const pairedAudioUrls = new Set(uploads.filter(u => u.audio_url).map(u => u.audio_url));
+    // Audio-only rows are never shown as standalone tiles — they're surfaced via
+    // the mic badge on their paired photo/video tile.
     return uploads.filter(u => {
-      if (u.file_type === 'audio' && pairedAudioUrls.has(u.file_url)) return false;
+      if (u.file_type === 'audio') return false;
       const v = isVideoUpload(u);
       if (currentStream === 'photo')   return !v;
       if (currentStream === 'video')   return  v && u.is_video_message !== true;
