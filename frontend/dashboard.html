@@ -2385,28 +2385,26 @@
 
       // Prefer local thumbnails, otherwise stream server files through the app.
       // This avoids blank tiles when R2 is private or R2_PUBLIC_URL is not public.
-      // Photos with combined_url (ffmpeg photo+audio merge) render as video tiles.
-      const hasCombined = !!u.combined_url;
-      const isAudioOnly = u.file_type === 'audio';
-      const isVideo = hasCombined ? true : isVideoUpload(u);
-      const mediaSrc = hasCombined ? u.combined_url : uploadMediaUrl(u, isVideo);
+      const hasCombined      = !!u.combined_url;
+      const isAudioOnly      = u.file_type === 'audio';
+      // Sidecar: photo has a paired voice note via audio_url (no FFmpeg merge needed).
+      const hasSidecarAudio  = !isAudioOnly && !hasCombined && !!u.audio_url;
+      const isVideo          = hasCombined ? true : isVideoUpload(u);
+      const mediaSrc         = hasCombined ? u.combined_url : uploadMediaUrl(u, isVideo);
       if (mediaSrc) ensurePreconnect(mediaSrc);
 
       const styleParts = ['position:relative', 'overflow:hidden'];
-      let videoEl = '';
-      let imageEl = '';
-      let badge   = '';
+      let videoEl  = '';
+      let imageEl  = '';
+      let badge    = '';
+      let audioBtn = '';
       if (isAudioOnly) {
-        // Standalone audio tile — shown until the combined MP4 is ready.
-        // Render a waveform placeholder so it doesn't look broken.
+        // Standalone audio tile that hasn't been linked to a photo yet.
         badge = `<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(170deg,#180d08,#2e1510);gap:6px;">
           <div style="font-size:28px;">🎙</div>
           <div style="font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.5);">Voice message</div>
         </div>`;
       } else if (isVideo) {
-        // For combined (photo+audio) tiles, use the original photo as poster so
-        // the tile never shows a blank/white frame while the video is loading.
-        // For regular videos, use the server-generated poster thumbnail.
         const posterSrc = hasCombined ? uploadMediaUrl(u, false, 320) : uploadPosterUrl(u, 320);
         if (posterSrc) styleParts.push(`background-image:url('${posterSrc}')`, 'background-size:cover', 'background-position:center');
         videoEl = `<video data-lazy-src="${escapeAttr(mediaSrc || '')}#t=0.1"${posterSrc ? ` poster="${escapeAttr(posterSrc)}"` : ''} muted playsinline loop preload="none" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000;"></video>`;
@@ -2421,12 +2419,16 @@
                        onerror="this.remove()">`;
       }
 
+      if (hasSidecarAudio) {
+        audioBtn = `<button data-play-audio="${escapeAttr(u.audio_url)}" title="Play voice message" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;border:2px solid rgba(255,255,255,.3);font-size:20px;line-height:1;cursor:pointer;z-index:3;display:flex;align-items:center;justify-content:center;">🎙</button>`;
+      }
+
       const msgPreview = u.message
         ? `<div style="font-family:var(--display);font-style:italic;font-size:12px;color:var(--ink-soft);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px;">"${escapeHtml(u.message)}"</div>`
         : '';
 
       const showLabelFallback = !mediaSrc && !isVideo && !isAudioOnly;
-      return `<div class="placeholder ${cls}" style="${styleParts.join(';')};">${badge}${videoEl}${imageEl}${showLabelFallback ? safeLabel : ''}<div class="actions-overlay"><span class="uploader">${safeLabel}</span>${msgPreview}${actionBtn}</div></div>`;
+      return `<div class="placeholder ${cls}" style="${styleParts.join(';')};">${badge}${videoEl}${imageEl}${audioBtn}${showLabelFallback ? safeLabel : ''}<div class="actions-overlay"><span class="uploader">${safeLabel}</span>${msgPreview}${actionBtn}</div></div>`;
     }).join('');
 
     hydrateLazyVideos();
@@ -3299,6 +3301,7 @@
   }
 
   function openPreview(upload) {
+    stopSidecarAudio();
     previewingId = upload.id;
     const isVideo = isVideoUpload(upload);
     if (isVideo) {
@@ -3709,8 +3712,45 @@
     tabRow.addEventListener('click', handleTabClick);
   }
 
+  // ── Sidecar audio playback (photo + voice note) ──────────────
+  let sidecarAudio = null;
+  let sidecarPlayingBtn = null;
+
+  function stopSidecarAudio() {
+    if (sidecarAudio && !sidecarAudio.paused) sidecarAudio.pause();
+    if (sidecarPlayingBtn) { sidecarPlayingBtn.textContent = '🎙'; sidecarPlayingBtn = null; }
+  }
+
+  function toggleSidecarAudio(audioUrl, btn) {
+    if (!sidecarAudio) {
+      sidecarAudio = new Audio();
+      sidecarAudio.addEventListener('ended', () => {
+        if (sidecarPlayingBtn) { sidecarPlayingBtn.textContent = '🎙'; sidecarPlayingBtn = null; }
+      });
+    }
+    if (sidecarPlayingBtn === btn && !sidecarAudio.paused) {
+      sidecarAudio.pause();
+      btn.textContent = '🎙';
+      sidecarPlayingBtn = null;
+      return;
+    }
+    stopSidecarAudio();
+    sidecarAudio.src = audioUrl;
+    sidecarAudio.currentTime = 0;
+    sidecarAudio.play().catch(() => {});
+    btn.textContent = '⏸';
+    sidecarPlayingBtn = btn;
+  }
+
   if (photoGrid) {
     photoGrid.addEventListener('click', (e) => {
+      const audioPlayBtn = e.target.closest('[data-play-audio]');
+      if (audioPlayBtn) {
+        e.stopPropagation();
+        toggleSidecarAudio(audioPlayBtn.dataset.playAudio, audioPlayBtn);
+        return;
+      }
+
       const actionBtn = e.target.closest('.actions-btn');
       if (actionBtn) {
         const action = actionBtn.dataset.action;

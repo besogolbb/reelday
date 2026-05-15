@@ -3,8 +3,7 @@ import { randomUUID } from 'crypto';
 import { PutObjectCommand, DeleteObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { resolvePlan } from '../lib/plans.js';
-import { triggerVideoTranscode, triggerPhotoCombine } from '../lib/awsLambdaService.js';
-import { combinePhotoAudioInBackground } from '../lib/videoTranscode.js';
+import { triggerVideoTranscode } from '../lib/awsLambdaService.js';
 import { verifyToken } from '../plugins/auth.js';
 
 export default async function uploadRoutes(fastify) {
@@ -492,64 +491,13 @@ export default async function uploadRoutes(fastify) {
     return reply.status(201).send({ upload: rows[0] });
   });
 
-  // POST /api/uploads/batch/:batchId/finalize — combine photo+audio into one MP4.
-  // Called by the upload page after all files in a batch have settled.
-  // Fire-and-forget: returns immediately; ffmpeg runs in the background.
+  // POST /api/uploads/batch/:batchId/finalize — no-op kept for client compat.
+  // audio_url is written directly by /uploads/complete when an audio file
+  // lands with a matching batch_id, so no server-side pairing step is needed.
   fastify.post('/uploads/batch/:batchId/finalize', { config: UPLOAD_WRITE_LIMIT }, async (request, reply) => {
     const { batchId } = request.params;
     if (!batchId || batchId.length > 64) return reply.status(400).send({ error: true });
-
-    const { rows } = await fastify.db.query(
-      `SELECT id, event_id, file_url, file_type, created_at
-         FROM uploads
-        WHERE batch_id = $1 AND is_approved = true
-        ORDER BY created_at ASC`,
-      [batchId],
-    );
-
-    const photos = rows.filter(u => u.file_type === 'photo');
-    const audios = rows.filter(u => u.file_type === 'audio');
-
-    if (!photos.length || !audios.length) {
-      return reply.send({ ok: true, combined: false });
-    }
-
-    // Pair each audio with the closest photo in the same batch.
-    const claimed = new Set();
-    const pairs   = [];
-    for (const aud of audios) {
-      let best = null, bestDiff = Infinity;
-      for (const ph of photos) {
-        if (claimed.has(ph.id)) continue;
-        const diff = Math.abs(new Date(ph.created_at) - new Date(aud.created_at));
-        if (diff < bestDiff) { bestDiff = diff; best = ph; }
-      }
-      if (best) { pairs.push([best, aud]); claimed.add(best.id); }
-    }
-
-    for (const [photo, audio] of pairs) {
-      // Extract R2 keys from stored URLs.
-      let photoKey, audioKey;
-      try {
-        photoKey = decodeURIComponent(new URL(photo.file_url).pathname.replace(/^\/+/, ''));
-        audioKey = decodeURIComponent(new URL(audio.file_url).pathname.replace(/^\/+/, ''));
-      } catch {
-        fastify.log.warn({ batchId, photoId: photo.id }, 'combine skipped: could not parse file_url');
-        continue;
-      }
-
-      // Preferred path: offload to Lambda so the server stays free.
-      // Falls back to local ffmpeg if Lambda is not reachable.
-      triggerPhotoCombine(photoKey, audioKey, photo.id, { eventId: photo.event_id })
-        .catch(lambdaErr => {
-          fastify.log.warn({ err: lambdaErr.message, batchId, photoId: photo.id }, 'Lambda combine failed; falling back to local ffmpeg');
-          combinePhotoAudioInBackground(fastify, photo, audio).catch(err =>
-            fastify.log.warn({ err: err.message, batchId, photoId: photo.id }, 'combine failed'),
-          );
-        });
-    }
-
-    return reply.send({ ok: true, combined: pairs.length });
+    return reply.send({ ok: true });
   });
 
   // GET /api/uploads/file/:id — stream an uploaded file through this app.

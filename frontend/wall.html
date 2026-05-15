@@ -2467,9 +2467,11 @@
     clearTimeout(slideTimer);
     if (isPaused || netFrozen || items.length < 2) return;
 
-    // Standalone audio slides and paired audio overlays: advance on 'ended'.
-    // Timer is armed from metadata duration once it loads (capped at 30 s).
-    // Falls back to SLIDE_DURATION if audio never loads/plays (autoplay blocked).
+    // Standalone audio slides and paired audio overlays.
+    // Rule: show the slide for at least SLIDE_DURATION; if the audio is
+    // longer, extend to match it (capped at MAX_AUDIO_MS).
+    // The 'ended' event only advances early when audio outlasted SLIDE_DURATION —
+    // short clips let the normal slide timer run out naturally.
     if (currentIsAudio || currentHasAudioOverlay) {
       const activeAud = activeLayer === 'A' ? audA : audB;
       const MAX_AUDIO_MS = 30000;
@@ -2479,7 +2481,9 @@
           const secs = Number.isFinite(activeAud.duration) ? activeAud.duration : 0;
           if (secs > 0) {
             clearTimeout(slideTimer);
-            slideTimer = setTimeout(advance, Math.min(secs * 1000 + 800, MAX_AUDIO_MS));
+            // Wait at least SLIDE_DURATION; extend if audio is longer (capped at 30 s).
+            const ms = Math.min(Math.max(secs * 1000 + 800, SLIDE_DURATION), MAX_AUDIO_MS);
+            slideTimer = setTimeout(advance, ms);
           }
         };
         if (Number.isFinite(activeAud.duration) && activeAud.duration > 0) {
@@ -2488,8 +2492,13 @@
           activeAud.addEventListener('loadedmetadata', armFromDuration, { once: true });
         }
         activeAud.addEventListener('ended', () => {
-          clearTimeout(slideTimer);
-          advance();
+          // Only fire an early advance if audio ran longer than SLIDE_DURATION.
+          // If audio was short the slideTimer (≥ SLIDE_DURATION) handles it.
+          const secs = Number.isFinite(activeAud.duration) ? activeAud.duration : 0;
+          if (secs * 1000 + 800 >= SLIDE_DURATION) {
+            clearTimeout(slideTimer);
+            advance();
+          }
         }, { once: true });
       }
       return;
