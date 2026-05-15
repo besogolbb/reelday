@@ -212,7 +212,7 @@ const COMBINE_ARGS = [
   '-profile:v', 'baseline',
   '-pix_fmt', 'yuv420p',
   '-g', '1',
-  '-vf', 'scale=1280:720:force_original_aspect_ratio=decrease:flags=lanczos,pad=1280:720:(ow-iw)/2:(oh-ih)/2:black,format=yuv420p',
+  '-vf', 'format=rgb24,scale=1280:720:force_original_aspect_ratio=decrease:flags=lanczos,pad=1280:720:(ow-iw)/2:(oh-ih)/2:black,format=yuv420p',
   '-r', '1',
   '-c:a', 'aac',
   '-b:a', '128k',
