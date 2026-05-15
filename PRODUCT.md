@@ -289,6 +289,28 @@ Global Fastify rate-limiter keyed by `X-Guest-Id` (guests),
 exempt. Per-route tighter buckets on writes (POST reactions,
 uploads, poll votes, wall-error beacons).
 
+### Performance characteristics (measured 15 May 2026)
+
+- **Wall poll** (`GET /api/uploads/:slug`): 14 KB gzip response. p95 = 0.94 s
+  at 200 concurrent, 2.55 s at 600 concurrent. In-memory single-flight
+  cache (1.5 s TTL) + pre-built gzip buffer so cache hits are a raw
+  buffer send. DB partial index on `(event_id, created_at DESC) WHERE
+  is_approved = true`.
+- **Upload kickoff** (`POST /api/uploads/presigned`): p95 = 2.7 s at 500
+  concurrent, 0 failures. Photos skip Lambda entirely — appear on wall
+  within one 2 s poll cycle.
+- **Reactions**: write p95 = 116 ms at 200 concurrent. Read (wall polls
+  every 1 s) uses a shared `eventCache` (5 s TTL) so the event-ID lookup
+  is free on warm hits — one DB query per reaction GET, not two.
+- **Poll votes**: upsert storm of 300 simultaneous voters, 0 failures,
+  p95 = 1.74 s. Tally reads unaffected (124 ms).
+- **Cross-event isolation**: a 200-spammer reaction storm on Event A does
+  not degrade Event B's wall (p95 280 ms, indistinguishable from idle).
+  DB pool (50 conns) never saturates across event boundaries.
+- **Transcode ceiling**: 10 concurrent Lambda invocations ≈ 35 videos/min
+  total across all events. This — not the HTTP layer — is the bottleneck
+  for large events.
+
 ### Things the codebase has learned (i.e. footguns we've patched)
 
 - Don't send big base64 data URLs through SQS — 256 KiB hard cap.
@@ -304,6 +326,12 @@ uploads, poll votes, wall-error beacons).
 - Don't use `object-fit: cover` blindly on portrait sources — it
   reads as aggressive head-zoom. Detect aspect at slide-time and
   pick cover for ~16:9, contain (with blurred backdrop) for the rest.
+- Don't use `SELECT *` on the wall poll hot path — at 100+ uploads the
+  payload ballooned to 156 KB and caused 600-concurrent p95 to spike to
+  9 s. Select only the 15 columns the wall reads.
+- Don't add new npm packages for compression — `@fastify/compress` failed
+  to install in the Easypanel Docker build and caused a 502. Use Node's
+  built-in `zlib.gzipSync` on the specific hot endpoint instead.
 
 ---
 
