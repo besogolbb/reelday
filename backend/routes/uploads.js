@@ -7,6 +7,12 @@ import { triggerVideoTranscode } from '../lib/awsLambdaService.js';
 import { verifyToken } from '../plugins/auth.js';
 import { getCount as getPresenceCount } from './presence.js';
 
+// Short TTL cache for GET /uploads/:slug (the wall's hot-read path).
+// 600 walls polling every 2s would otherwise fire 600 DB queries per cycle.
+// 1.5s TTL keeps staleness below one poll interval; dashboard bypasses it.
+const UPLOADS_CACHE_TTL = 1500;
+const uploadsCache = new Map(); // slug → { payload, expiresAt }
+
 export default async function uploadRoutes(fastify) {
   function publicMediaUrl(key) {
     const base = (process.env.R2_PUBLIC_URL || 'https://media.reelday.ph').replace(/\/+$/, '');
@@ -587,6 +593,18 @@ export default async function uploadRoutes(fastify) {
     const { slug } = request.params;
     const includePending = request.query?.include_pending === '1' ||
                            request.query?.include_pending === 'true';
+    const wantReconcile  = request.query?.reconcile === '1' || request.query?.reconcile === 'true';
+
+    // Serve from cache for the wall's public read path. Dashboard requests
+    // (include_pending) and manual reconcile requests always bypass it.
+    if (!includePending && !wantReconcile) {
+      const cached = uploadsCache.get(slug);
+      if (cached && cached.expiresAt > Date.now()) {
+        // guest_count is in-memory — recompute on every hit for free so the
+        // count stays live even while the uploads payload is cached.
+        return { ...cached.payload, guest_count: getPresenceCount(slug) };
+      }
+    }
 
     const { rows: eventRows } = await fastify.db.query(
       'SELECT * FROM events WHERE slug = $1 AND is_active = true',
@@ -609,7 +627,6 @@ export default async function uploadRoutes(fastify) {
     // Reconcile is the slow self-healing fallback for missed transcode webhooks —
     // it does up to 4 R2 HeadObject calls per video row. Off by default; pass
     // ?reconcile=1 to force it for manual refresh.
-    const wantReconcile = request.query?.reconcile === '1' || request.query?.reconcile === 'true';
     const hydratedUploads = wantReconcile ? await reconcileVideoUploads(uploads) : uploads;
 
     const now = new Date();
@@ -618,7 +635,14 @@ export default async function uploadRoutes(fastify) {
       uploads_closed: !!(event.upload_window_ends_at && new Date(event.upload_window_ends_at) < now),
     };
 
-    return { uploads: hydratedUploads, event, locks, guest_count: getPresenceCount(slug) };
+    const payload = { uploads: hydratedUploads, event, locks };
+
+    // Cache the DB result for wall readers; skip caching pending/reconcile responses.
+    if (!includePending && !wantReconcile) {
+      uploadsCache.set(slug, { payload, expiresAt: Date.now() + UPLOADS_CACHE_TTL });
+    }
+
+    return { ...payload, guest_count: getPresenceCount(slug) };
   });
 
   // GET /api/uploads/:slug/download — list all file URLs for bulk download
