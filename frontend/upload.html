@@ -671,18 +671,19 @@ body { background: var(--paper); min-height: 100dvh; }
   font-style: italic; margin-bottom: 10px; letter-spacing: 0;
 }
 .msg-mode-pills {
-  display: inline-flex; background: var(--paper-2); border: 1px solid var(--line);
-  border-radius: 999px; padding: 2px; gap: 2px;
+  display: inline-flex; background: var(--paper-2); border: 1.5px solid var(--ink-soft);
+  border-radius: 999px; padding: 3px; gap: 3px;
 }
 .msg-mode-pill {
   font-family: var(--mono); font-size: 10px; letter-spacing: .10em;
-  text-transform: uppercase; padding: 4px 10px; border-radius: 999px;
-  color: var(--ink-soft); cursor: pointer; border: none; background: none;
-  transition: background .15s, color .15s;
-  display: flex; align-items: center; gap: 4px;
+  text-transform: uppercase; padding: 5px 13px; border-radius: 999px;
+  color: var(--ink-soft); cursor: pointer; border: 1px solid transparent; background: none;
+  transition: background .15s, color .15s, border-color .15s;
+  display: flex; align-items: center; gap: 5px; font-weight: 700;
 }
-.msg-mode-pill.active { background: var(--ink); color: var(--paper); }
-.msg-mode-pill svg { width: 11px; height: 11px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; }
+.msg-mode-pill:not(.active):hover { color: var(--ink); border-color: var(--line); }
+.msg-mode-pill.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.msg-mode-pill svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; }
 .voice-recorder-wrap { display: none; flex-direction: column; align-items: center; gap: 10px; padding: 16px 0 4px; }
 .voice-recorder-wrap.visible { display: flex; }
 .voice-rec-btn {
