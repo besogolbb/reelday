@@ -2402,16 +2402,35 @@
     // Stash so advance()/goTo() know whether this slide is a video.
     currentIsVideo = itemIsVideo;
 
-    // Paired audio: play the companion voice message alongside the photo/video.
-    // Audio plays first — photo fades in after 1.5 s so the voice is heard
-    // before the image is revealed.
+    // Paired audio: show waveform overlay + play audio only after the photo
+    // image has painted. If we add the overlay immediately the bars animate
+    // on the blurred backdrop before the sharp photo appears ("brown flash").
     currentHasAudioOverlay = !!pairedAudioUrl;
     if (pairedAudioUrl) {
-      inLayer.classList.add('has-audio-overlay');
-      inAud.muted = !wallSoundOn;
-      inAud.src = pairedAudioUrl;
-      inAud.load();
-      tryPlayAudio(inAud);
+      const capturedIdx = currentIdx;
+      const capturedAud = inAud;
+      const capturedLayer = inLayer;
+      const startAudioOverlay = () => {
+        // Abort if the slide has already advanced away
+        if (currentIdx !== capturedIdx) return;
+        capturedLayer.classList.add('has-audio-overlay');
+        capturedAud.muted = !wallSoundOn;
+        capturedAud.src = pairedAudioUrl;
+        capturedAud.load();
+        tryPlayAudio(capturedAud);
+      };
+      const photoUrl = mediaUrl; // same URL inPic uses
+      if (!photoUrl) {
+        startAudioOverlay();
+      } else {
+        const probe = new Image();
+        let done = false;
+        const go = () => { if (done) return; done = true; startAudioOverlay(); };
+        probe.onload = probe.onerror = go;
+        probe.src = photoUrl;
+        // Fallback: don't delay more than 1.2 s even on slow connections
+        setTimeout(go, 1200);
+      }
     }
 
     // Tag <body> with is-landscape / is-portrait for the current slide.
