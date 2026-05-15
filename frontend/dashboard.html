@@ -3673,7 +3673,7 @@
   // no new ids appear.
   function uploadsChanged(prev, next) {
     if (prev.length !== next.length) return true;
-    const sig = u => `${u.id}|${u.is_approved !== false}|${u.is_video_message === true}`;
+    const sig = u => `${u.id}|${u.is_approved !== false}|${u.is_video_message === true}|${u.audio_url || ''}`;
     const prevSig = new Set(prev.map(sig));
     return next.some(u => !prevSig.has(sig(u)));
   }
