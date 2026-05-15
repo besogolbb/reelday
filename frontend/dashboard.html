@@ -1478,9 +1478,9 @@
     <div class="delta">↑ <span id="stat-total-change">0</span> in last hour</div>
   </div>
   <div class="stat">
-    <div class="lbl">Live now</div>
+    <div class="lbl">Total uploaders</div>
     <div class="num"><em id="stat-guests">0</em></div>
-    <div class="delta" id="stat-guests-delta">0 total uploaders</div>
+    <div class="delta">Unique guests</div>
   </div>
   <div class="stat">
     <div class="lbl">Pending review</div>
@@ -2359,10 +2359,9 @@
     const total = uploads.length;
     $('stat-total').textContent = total;
 
-    // Unique uploaders shown as context under the live count
+    // Unique uploaders card
     const uniqueUploaders = new Set(uploads.map(u => u.uploader_name || 'Anonymous')).size;
-    const delta = $('stat-guests-delta');
-    if (delta) delta.textContent = `${uniqueUploaders} total uploaders`;
+    $('stat-guests').textContent = uniqueUploaders;
 
     // Pending count
     const pending = uploads.filter(u => u.status === 'pending').length;
@@ -2377,7 +2376,6 @@
 
   // Guest count arrives piggy-backed on the existing refreshUploads() response.
   function updateLiveGuestCount(count) {
-    $('stat-guests').textContent = count;
     const liveCount = $('live-count');
     if (liveCount) liveCount.textContent = count;
   }
