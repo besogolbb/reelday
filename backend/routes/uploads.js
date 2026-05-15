@@ -612,12 +612,17 @@ export default async function uploadRoutes(fastify) {
       if (!inflight) {
         inflight = (async () => {
           const { rows: evRows } = await fastify.db.query(
-            'SELECT * FROM events WHERE slug = $1 AND is_active = true', [slug],
+            `SELECT id, slug, couple_names, gallery_expires_at, upload_window_ends_at,
+                    playback_burst_id, playback_burst_queue
+               FROM events WHERE slug = $1 AND is_active = true`, [slug],
           );
           if (!evRows.length) return null;
           const ev = evRows[0];
           const { rows: ups } = await fastify.db.query(
-            `SELECT * FROM uploads WHERE event_id = $1 AND is_approved = true ORDER BY created_at DESC`,
+            `SELECT id, file_url, web_url, poster_url, pre_thumb_url, file_type,
+                    uploader_name, message, is_video_message, audio_url,
+                    created_at, video_status, compressed_key, batch_id, guest_id
+               FROM uploads WHERE event_id = $1 AND is_approved = true ORDER BY created_at DESC`,
             [ev.id],
           );
           const now = new Date();
