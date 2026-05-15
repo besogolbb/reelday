@@ -1924,7 +1924,6 @@
   function normalizeUploads(arr) { return Array.isArray(arr) ? arr.map(normalizeUpload) : []; }
 
   function isVideoUpload(u) {
-    if (u?.combined_url) return true; // ffmpeg photo+audio merge is a video message
     if (u?.file_type === 'video') return true;
     if (typeof u?.file_url === 'string' && /\.(mp4|webm|mov|m4v|ogg)$/i.test(u.file_url)) return true;
     return false;
@@ -2011,9 +2010,8 @@
     if (!isVideo && upload.thumb) return upload.thumb;
 
     if (isVideo) {
-      // combined_url = ffmpeg voice message; web_url = transcoded video.
-      // Falls back to original file_url until background job lands.
-      return upload.combined_url || upload.web_url || upload.file_url || upload.thumbnail_url || null;
+      // Falls back to original file_url until background transcode lands.
+      return upload.web_url || upload.file_url || upload.thumbnail_url || null;
     }
     const raw = upload.file_url || upload.thumbnail_url || null;
     if (!raw) return raw;
@@ -2440,12 +2438,10 @@
 
       // Prefer local thumbnails, otherwise stream server files through the app.
       // This avoids blank tiles when R2 is private or R2_PUBLIC_URL is not public.
-      const hasCombined      = !!u.combined_url;
       const isAudioOnly      = u.file_type === 'audio';
-      // Sidecar: photo has a paired voice note via audio_url (no FFmpeg merge needed).
-      const hasSidecarAudio  = !isAudioOnly && !hasCombined && !!u.audio_url;
-      const isVideo          = hasCombined ? true : isVideoUpload(u);
-      const mediaSrc         = hasCombined ? u.combined_url : uploadMediaUrl(u, isVideo);
+      const hasSidecarAudio  = !isAudioOnly && !!u.audio_url;
+      const isVideo          = isVideoUpload(u);
+      const mediaSrc         = uploadMediaUrl(u, isVideo);
       if (mediaSrc) ensurePreconnect(mediaSrc);
 
       const styleParts = ['position:relative', 'overflow:hidden'];
@@ -2460,11 +2456,10 @@
           <div style="font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.5);">Voice message</div>
         </div>`;
       } else if (isVideo) {
-        const posterSrc = hasCombined ? uploadMediaUrl(u, false, 320) : uploadPosterUrl(u, 320);
+        const posterSrc = uploadPosterUrl(u, 320);
         if (posterSrc) styleParts.push(`background-image:url('${posterSrc}')`, 'background-size:cover', 'background-position:center');
         videoEl = `<video data-lazy-src="${escapeAttr(mediaSrc || '')}#t=0.1"${posterSrc ? ` poster="${escapeAttr(posterSrc)}"` : ''} muted playsinline loop preload="none" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000;"></video>`;
-        const icon = hasCombined ? '🎙▶' : '▶';
-        videoEl += `<div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;display:flex;align-items:center;justify-content:center;font-size:${hasCombined ? '14px' : '18px'};pointer-events:none;z-index:2;border:2px solid rgba(255,255,255,.3);">${icon}</div>`;
+        videoEl += `<div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;pointer-events:none;z-index:2;border:2px solid rgba(255,255,255,.3);">▶</div>`;
         if (!mediaSrc) {
           videoEl += `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#1a1a1a;color:#fff;font-size:10px;font-family:var(--mono);">VIDEO</div>`;
         }

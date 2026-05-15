@@ -76,11 +76,6 @@ const MIGRATIONS = `
   ALTER TABLE uploads ADD COLUMN IF NOT EXISTS batch_id TEXT;
   CREATE INDEX IF NOT EXISTS idx_uploads_batch_id ON uploads(batch_id) WHERE batch_id IS NOT NULL;
 
-  -- Combined photo+audio MP4 produced by ffmpeg for dashboard / downloads.
-  -- Populated asynchronously after /uploads/batch/:id/finalize is called.
-  -- The wall ignores this column and uses audio_url for instant pairing.
-  ALTER TABLE uploads ADD COLUMN IF NOT EXISTS combined_url TEXT;
-
   -- Direct server-side audio link. Set immediately when an audio upload lands:
   -- the /uploads/complete handler finds the companion photo (same batch_id) and
   -- writes its file_url here. The wall reads this — no JS matching needed.
