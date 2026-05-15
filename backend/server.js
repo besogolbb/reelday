@@ -255,6 +255,27 @@ process.on('uncaughtException', (err) => {
 
 const port = Number(process.env.PORT) || 3000;
 
+// Graceful shutdown: docker/k8s sends SIGTERM, Ctrl+C sends SIGINT.
+// Without this, in-flight requests (uploads, transcode webhooks) get
+// killed mid-flight on every deploy. fastify.close() drains open
+// connections, runs the onClose hooks (which close the DB pool), then
+// resolves so we can exit cleanly.
+let shuttingDown = false;
+async function gracefulShutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  fastify.log.info(`${signal} received — draining connections`);
+  try {
+    await fastify.close();
+    process.exit(0);
+  } catch (err) {
+    fastify.log.error({ err }, 'Error during graceful shutdown');
+    process.exit(1);
+  }
+}
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT',  () => gracefulShutdown('SIGINT'));
+
 try {
   await fastify.listen({ port, host: '0.0.0.0' });
   console.log(`\n  Reelday running at http://localhost:${port}\n`);

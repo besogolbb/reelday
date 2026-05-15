@@ -8,9 +8,22 @@ function resend() {
   return new Resend(process.env.RESEND_API_KEY);
 }
 
+// The Resend SDK doesn't expose AbortSignal on emails.send(), so we race
+// it against a timer. If Resend hangs, registration/reset still completes;
+// the email failure is caught by the caller's try/catch and logged.
+function withTimeout(promise, ms, label) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(
+      () => reject(new Error(`${label} timed out after ${ms}ms`)),
+      ms,
+    )),
+  ]);
+}
+
 async function sendVerifyEmail(email, fullName, token, appUrl) {
   const link = `${appUrl}/verify?token=${token}`;
-  await resend().emails.send({
+  await withTimeout(resend().emails.send({
     from:    'Reelday <noreply@reelday.ph>',
     to:      email,
     subject: 'Verify your Reelday account',
@@ -23,12 +36,12 @@ async function sendVerifyEmail(email, fullName, token, appUrl) {
         </a>
         <p style="font-size:.85rem;color:#888">Link expires in 24 hours. If you didn't sign up, ignore this email.</p>
       </div>`,
-  });
+  }), 10_000, 'Resend (verify)');
 }
 
 async function sendResetEmail(email, token, appUrl) {
   const link = `${appUrl}/reset-password?token=${token}`;
-  await resend().emails.send({
+  await withTimeout(resend().emails.send({
     from:    'Reelday <noreply@reelday.ph>',
     to:      email,
     subject: 'Reset your Reelday password',
@@ -41,7 +54,7 @@ async function sendResetEmail(email, token, appUrl) {
         </a>
         <p style="font-size:.85rem;color:#888">If you didn't request this, ignore this email.</p>
       </div>`,
-  });
+  }), 10_000, 'Resend (reset)');
 }
 
 export default async function authRoutes(fastify) {
@@ -255,9 +268,18 @@ export default async function authRoutes(fastify) {
       return reply.status(400).send({ error: true, message: 'credential is required' });
     }
 
-    const googleRes = await fetch(
-      `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`,
-    );
+    // 10s ceiling — Google's tokeninfo endpoint is normally sub-200ms,
+    // but a hung socket would otherwise pin the request thread indefinitely.
+    let googleRes;
+    try {
+      googleRes = await fetch(
+        `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`,
+        { signal: AbortSignal.timeout(10_000) },
+      );
+    } catch (err) {
+      fastify.log.warn({ err: err.message }, 'Google tokeninfo unreachable');
+      return reply.status(503).send({ error: true, message: 'Google sign-in temporarily unavailable. Please try again.' });
+    }
     if (!googleRes.ok) {
       return reply.status(401).send({ error: true, message: 'Invalid Google token' });
     }

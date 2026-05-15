@@ -22,6 +22,23 @@ function requireAdmin(request, reply, done) {
 }
 
 export default async function adminRoutes(fastify) {
+  // Stricter rate limit on admin routes — the global limiter (server.js)
+  // bypasses any request carrying an Authorization header, which would
+  // leave brute-forcing the ADMIN_TOKEN entirely unthrottled. Key on IP
+  // (not the guest-id header) so a single attacker can't open multiple
+  // sockets to widen their guess rate. 30/min is generous for legitimate
+  // admin work but ruinous for any enumeration attempt.
+  fastify.addHook('onRequest', fastify.rateLimit({
+    max: 30,
+    timeWindow: '1 minute',
+    keyGenerator: req => req.ip,
+    errorResponseBuilder: () => ({
+      error: true,
+      code: 'admin_rate_limited',
+      message: 'Too many admin requests. Slow down.',
+    }),
+  }));
+
   // Apply the admin gate to every route in this plugin.
   fastify.addHook('preHandler', requireAdmin);
 

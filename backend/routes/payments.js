@@ -78,7 +78,10 @@ async function applyTierUpgrade(db, { userId, tier, slug }) {
   await db.query(updateSql, params);
 
   if (slug) {
-    // Re-stamp the event with the new plan's expiry windows
+    // Re-stamp the event with the new plan's expiry windows.
+    // The WHERE clause includes user_id so a crafted webhook payload
+    // (or metadata.slug pointing at someone else's event) can't upgrade
+    // an event the buyer doesn't actually own.
     const stampDate          = new Date();
     const galleryExpiresAt   = galleryExpiryFor(plan.id, stampDate);
     const uploadWindowEndsAt = uploadWindowEndFor(plan.id, stampDate);
@@ -89,8 +92,8 @@ async function applyTierUpgrade(db, { userId, tier, slug }) {
              plan                  = $2,
              gallery_expires_at    = $3,
              upload_window_ends_at = $4
-       WHERE slug = $1`,
-      [slug, plan.id, galleryExpiresAt, uploadWindowEndsAt],
+       WHERE slug = $1 AND user_id = $5`,
+      [slug, plan.id, galleryExpiresAt, uploadWindowEndsAt, userId],
     );
   }
 }
@@ -141,6 +144,9 @@ export default async function paymentRoutes(fastify) {
     try {
       const checkoutRes = await fetch('https://api.paymongo.com/v1/checkout_sessions', {
         method: 'POST',
+        // Hard 15s ceiling — without this a hung PayMongo socket holds
+        // the request thread until the upstream client gives up.
+        signal: AbortSignal.timeout(15_000),
         headers: {
           'Content-Type':  'application/json',
           'Authorization': paymongoAuth(),
@@ -286,6 +292,7 @@ export default async function paymentRoutes(fastify) {
       try {
         const res = await fetch(`https://api.paymongo.com/v1/checkout_sessions/${pmt.paymongo_payment_id}`, {
           headers: { 'Authorization': paymongoAuth() },
+          signal: AbortSignal.timeout(10_000),
         });
         if (!res.ok) continue;
         const body = await res.json();

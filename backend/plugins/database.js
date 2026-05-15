@@ -164,6 +164,13 @@ async function dbPlugin(fastify) {
       : false,
     max: 50,                    // bumped from 30: reaction bursts on event A were saturating the pool and freezing wall GETs for event B
     idleTimeoutMillis: 30_000,
+    // Kill any single query that runs longer than 30s. Without this, a
+    // hung or pathological query holds a pool connection forever and
+    // subsequent requests start failing. NOTE: we deliberately do NOT
+    // set connectionTimeoutMillis — burst stress (1000 concurrent) needs
+    // requests to queue, not error out at 10s. statement_timeout is
+    // sufficient to keep the pool from getting permanently jammed.
+    statement_timeout: 30_000,
   });
 
   const client = await pool.connect();
