@@ -1490,6 +1490,7 @@
         <a class="active" href="#">Dashboard</a>
         <a id="wall-nav-link" href="#" target="_blank" rel="noopener">Wall</a>
         <a id="upload-nav-link" href="#" target="_blank" rel="noopener">Upload page</a>
+        <a href="#qr-wrap" id="qr-nav-link">QR Code</a>
         <a href="#">Settings</a>
       </div>
       <div class="event-header-top-right">
@@ -2121,6 +2122,15 @@
     if (uploadLink) uploadLink.href = buildUploadUrl();
     const wallBtn = $('btn-open-wall');
     if (wallBtn) wallBtn.href = `/wall/${slug}`;
+
+    const qrNavLink = $('qr-nav-link');
+    if (qrNavLink) {
+      qrNavLink.addEventListener('click', e => {
+        e.preventDefault();
+        const target = $('qr-wrap');
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+    }
 
     // Info card
     const infoType    = $('info-type');
