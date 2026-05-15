@@ -684,12 +684,6 @@ body { background: var(--paper); min-height: 100dvh; }
 .msg-mode-pill:not(.active):not([disabled]):hover { color: var(--ink); border-color: var(--line); }
 .msg-mode-pill.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 .msg-mode-pill[disabled] { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
-.attach-required-hint {
-  display: none; font-family: var(--mono); font-size: 10px; letter-spacing: .12em;
-  text-transform: uppercase; color: var(--accent); text-align: center;
-  padding: 6px 0 2px;
-}
-.attach-required-hint.visible { display: block; }
 .msg-mode-pill svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; }
 .voice-recorder-wrap { display: none; flex-direction: column; align-items: center; gap: 10px; padding: 16px 0 4px; }
 .voice-recorder-wrap.visible { display: flex; }
@@ -1242,7 +1236,6 @@ body { background: var(--paper); min-height: 100dvh; }
       <div class="mp-char-count" id="charCount" style="margin-top:4px;">0 / 160</div>
     </div>
 
-    <div class="attach-required-hint visible" id="attachRequiredHint">↑ Please attach a photo or video</div>
     <button class="btn btn-primary send-btn" onclick="handleSend('gallery', event)">Share moments →</button>
     <div class="success-banner" id="gallerySuccess">
       <div class="s-icon">★</div>
@@ -1673,7 +1666,9 @@ body { background: var(--paper); min-height: 100dvh; }
     }
     const staged = hasStagedItems(panel);
     btn.classList.toggle('staged', staged);
-    btn.disabled = !staged;
+    // Gallery button is always clickable — handleSend validates and toasts if no files.
+    // Record button stays disabled until a clip is recorded.
+    btn.disabled = panel === 'record' && !staged;
   }
   function ctaBarClick(e) {
     const btn = document.getElementById('ctaBtn');
@@ -2314,14 +2309,6 @@ body { background: var(--paper); min-height: 100dvh; }
     // the same "Send N moments" affordance everywhere.
     const cta = document.getElementById('ctaBtn');
     if (cta && cta.dataset.target === 'gallery') cta.textContent = label;
-    refreshAttachHint();
-  }
-
-  function refreshAttachHint() {
-    const hint = document.getElementById('attachRequiredHint');
-    if (!hint) return;
-    const hasFiles = document.querySelectorAll('#galleryQueue .queue-item').length > 0;
-    hint.classList.toggle('visible', !hasFiles);
   }
 
   function refreshVoiceAvailability() {
