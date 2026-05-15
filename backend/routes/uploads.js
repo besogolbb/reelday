@@ -464,9 +464,15 @@ export default async function uploadRoutes(fastify) {
       }
     }
 
-    // When an audio file lands, immediately link it to its companion photo/video
-    // (same batch_id). This writes audio_url on the photo row so the wall can
-    // pair them by a direct DB field — no JS timestamp/name matching required.
+    // Bidirectional audio_url linking — handles the race between photo and audio
+    // uploads that run in parallel on the guest's device.
+    //
+    // Audio-arrives-first path: photo row doesn't exist yet when audio /complete
+    // fires, so the UPDATE below finds nothing. When the photo /complete arrives
+    // moments later it runs the photo-side link below to catch the orphaned audio.
+    //
+    // Photo-arrives-first path: audio /complete runs after photo row is inserted,
+    // the UPDATE finds it immediately.
     if (isAudio && batchId) {
       try {
         await fastify.db.query(
@@ -485,6 +491,29 @@ export default async function uploadRoutes(fastify) {
         );
       } catch (err) {
         fastify.log.warn({ err: err.message, batchId }, 'audio_url link failed');
+      }
+    }
+
+    // Photo-side link: audio arrived before this photo row existed.
+    // Find the earliest unlinked audio for this batch and attach it.
+    if (!isAudio && batchId) {
+      try {
+        await fastify.db.query(
+          `UPDATE uploads
+              SET audio_url = (
+                SELECT file_url FROM uploads
+                 WHERE batch_id  = $2
+                   AND file_type = 'audio'
+                   AND event_id  = $3
+                 ORDER BY created_at ASC
+                 LIMIT 1
+              )
+            WHERE id = $1
+              AND audio_url IS NULL`,
+          [rows[0].id, batchId, rows[0].event_id],
+        );
+      } catch (err) {
+        fastify.log.warn({ err: err.message, batchId }, 'photo-side audio_url link failed');
       }
     }
 
