@@ -1,5 +1,6 @@
 import { extname, posix as pathPosix } from 'path';
 import { randomUUID } from 'crypto';
+import { gzipSync } from 'zlib';
 import { PutObjectCommand, DeleteObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { resolvePlan } from '../lib/plans.js';
@@ -10,8 +11,10 @@ import { getCount as getPresenceCount } from './presence.js';
 // Short TTL cache for GET /uploads/:slug (the wall's hot-read path).
 // 600 walls polling every 2s would otherwise fire 600 DB queries per cycle.
 // 1.5s TTL keeps staleness below one poll interval; dashboard bypasses it.
+// Each cache entry also stores a pre-built gzip buffer (built once on the DB
+// query that populates the entry) so cache hits are a cheap buffer send.
 const UPLOADS_CACHE_TTL = 1500;
-const uploadsCache  = new Map(); // slug → { payload, expiresAt }
+const uploadsCache  = new Map(); // slug → { payload, gzipped, expiresAt }
 const uploadsInflight = new Map(); // slug → Promise<payload>  (single-flight dedup)
 
 export default async function uploadRoutes(fastify) {
@@ -601,6 +604,16 @@ export default async function uploadRoutes(fastify) {
     if (!includePending && !wantReconcile) {
       const cached = uploadsCache.get(slug);
       if (cached && cached.expiresAt > Date.now()) {
+        const acceptsGzip = (request.headers['accept-encoding'] || '').includes('gzip');
+        if (acceptsGzip && cached.gzipped) {
+          // Fast path: pre-built gzip buffer, no CPU work needed.
+          // guest_count is baked into gzipped at cache-fill time (max 1.5s stale — fine).
+          return reply
+            .header('Content-Type', 'application/json; charset=utf-8')
+            .header('Content-Encoding', 'gzip')
+            .header('Vary', 'Accept-Encoding')
+            .send(cached.gzipped);
+        }
         // guest_count is in-memory — recompute free on every hit.
         return { ...cached.payload, guest_count: getPresenceCount(slug) };
       }
@@ -634,7 +647,11 @@ export default async function uploadRoutes(fastify) {
               uploads_closed: !!(ev.upload_window_ends_at && new Date(ev.upload_window_ends_at) < now),
             },
           };
-          uploadsCache.set(slug, { payload, expiresAt: Date.now() + UPLOADS_CACHE_TTL });
+          // Build gzip once at cache-fill time. guest_count is sampled now
+          // (max 1.5s stale on subsequent hits — acceptable for a display counter).
+          const fullPayload = { ...payload, guest_count: getPresenceCount(slug) };
+          const gzipped = gzipSync(JSON.stringify(fullPayload));
+          uploadsCache.set(slug, { payload, gzipped, expiresAt: Date.now() + UPLOADS_CACHE_TTL });
           return payload;
         })().finally(() => uploadsInflight.delete(slug));
         uploadsInflight.set(slug, inflight);
@@ -642,6 +659,16 @@ export default async function uploadRoutes(fastify) {
 
       const payload = await inflight;
       if (!payload) return reply.status(404).send({ error: true, message: 'Event not found' });
+      // After inflight resolves the cache entry (with gzip) is populated.
+      const afterCache = uploadsCache.get(slug);
+      const acceptsGzip = (request.headers['accept-encoding'] || '').includes('gzip');
+      if (acceptsGzip && afterCache?.gzipped) {
+        return reply
+          .header('Content-Type', 'application/json; charset=utf-8')
+          .header('Content-Encoding', 'gzip')
+          .header('Vary', 'Accept-Encoding')
+          .send(afterCache.gzipped);
+      }
       return { ...payload, guest_count: getPresenceCount(slug) };
     }
 
