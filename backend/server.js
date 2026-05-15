@@ -21,6 +21,7 @@ import paymentRoutes from './routes/payments.js';
 import webhookRoutes from './routes/webhooks.js';
 import authRoutes from './routes/auth.js';
 import adminRoutes from './routes/admin.js';
+import presenceRoutes from './routes/presence.js';
 import { reconcilePendingTranscodes } from './lib/videoTranscode.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -147,6 +148,7 @@ await fastify.register(paymentRoutes, { prefix: '/api' });
 await fastify.register(webhookRoutes, { prefix: '/api' });
 await fastify.register(authRoutes,    { prefix: '/api' });
 await fastify.register(adminRoutes,   { prefix: '/api' });
+await fastify.register(presenceRoutes,{ prefix: '' });
 
 // Serve index.html at root
 fastify.get('/', (_request, reply) => {

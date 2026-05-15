@@ -1455,6 +1455,13 @@ body { background: var(--paper); min-height: 100dvh; }
     applyEvent(event);
     loadHappeningNow(event.slug);
 
+    // Announce presence immediately then heartbeat every 30s so the
+    // wall and dashboard show a live guest count.
+    pingPresence();
+    if (!window._presenceInterval) {
+      window._presenceInterval = setInterval(pingPresence, 30_000);
+    }
+
     // Reactions require Sinag+ on the event owner's tier. data.plan_info
     // ships the resolved feature flags from the backend; if reactions
     // aren't included we mark the grid locked and refreshReactGate()
@@ -1684,6 +1691,7 @@ body { background: var(--paper); min-height: 100dvh; }
   function onNameInput(input) {
     document.getElementById('nameField').classList.remove('error');
     broadcastGuestName(input.value);
+    pingPresence();
   }
   function onReactNameInput(input) {
     document.getElementById('nameFieldReact')?.classList.remove('error');
@@ -2068,6 +2076,17 @@ body { background: var(--paper); min-height: 100dvh; }
     }
   }
   const GUEST_ID = getGuestId();
+
+  function pingPresence() {
+    if (!currentEvent?.slug) return;
+    const name = document.getElementById('galleryName')?.value.trim()
+               || document.getElementById('recordName')?.value.trim() || '';
+    fetch(`/api/events/${currentEvent.slug}/presence`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Guest-Id': GUEST_ID },
+      body: JSON.stringify({ name }),
+    }).catch(() => {});
+  }
 
   /* ── Gallery ───────────────────────────────────────── */
   const itemDataUrls = {};

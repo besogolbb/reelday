@@ -769,6 +769,13 @@
 
     .corner .names em { color: rgba(255,255,255,.40); font-style: normal; font-weight: 400; }
 
+    .guest-badge {
+      font-family: var(--mono); font-size: 10px; letter-spacing: .15em;
+      text-transform: uppercase; color: rgba(255,255,255,.45);
+      margin-bottom: 5px; display: none;
+    }
+    .guest-badge.visible { display: block; }
+
     /* ── Progress bar ───────────────────────────────────────── */
     .slide-progress {
       position: fixed; bottom: 0; left: 0; right: 0; height: 3px; z-index: 20;
@@ -1471,6 +1478,7 @@
   </div>
   <div class="corner">
     <div class="names" id="corner-names"></div>
+    <div class="guest-badge" id="guest-badge">👥 <span id="guest-count">0</span> guests here</div>
     <div>&#9733; Powered by Reelday</div>
   </div>
 </div>
@@ -3445,6 +3453,20 @@
     } catch { /* network blip */ }
   }
 
+  // ── Live guest count ─────────────────────────────────────
+  async function pollPresence() {
+    try {
+      const res = await fetch(`/api/events/${slug}/presence`);
+      if (!res.ok) return;
+      const { count } = await res.json();
+      const badge    = document.getElementById('guest-badge');
+      const countEl  = document.getElementById('guest-count');
+      if (!badge || !countEl) return;
+      countEl.textContent = count;
+      badge.classList.toggle('visible', count > 0);
+    } catch {}
+  }
+
   // ── Reactions polling ────────────────────────────────────
   // The endpoint returns { reactions:[…], server_time } where
   // server_time lets us pin the next ?since to the SERVER clock, not
@@ -3869,6 +3891,10 @@
     }
 
     setInterval(refreshUploads, POLL_INTERVAL);
+
+    // Live guest count — how many guests have the upload page open
+    pollPresence();
+    setInterval(pollPresence, 15_000);
 
     // Poll the event endpoint a bit more frequently so a host clicking
     // "Play video messages" sees the wall react within a few seconds.

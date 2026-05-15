@@ -1478,9 +1478,9 @@
     <div class="delta">↑ <span id="stat-total-change">0</span> in last hour</div>
   </div>
   <div class="stat">
-    <div class="lbl">Active guests</div>
+    <div class="lbl">Live now</div>
     <div class="num"><em id="stat-guests">0</em></div>
-    <div class="delta">↑ <span id="stat-guests-change">0</span> since 6pm</div>
+    <div class="delta" id="stat-guests-delta">0 total uploaders</div>
   </div>
   <div class="stat">
     <div class="lbl">Pending review</div>
@@ -2356,28 +2356,35 @@
 
   // ── Render stats ──────────────────────────────────────
   function renderStats(uploads) {
-    // These would ideally come from a dedicated API endpoint
-    // For now, compute from uploads data
     const total = uploads.length;
-    $('stat-total').textContent  = total;
+    $('stat-total').textContent = total;
 
-    // Guest count: unique uploaders
-    const uniqueGuests = new Set(uploads.map(u => u.uploader_name || 'Anonymous')).size;
-    $('stat-guests').textContent = uniqueGuests || 0;
+    // Unique uploaders shown as context under the live count
+    const uniqueUploaders = new Set(uploads.map(u => u.uploader_name || 'Anonymous')).size;
+    const delta = $('stat-guests-delta');
+    if (delta) delta.textContent = `${uniqueUploaders} total uploaders`;
 
     // Pending count
     const pending = uploads.filter(u => u.status === 'pending').length;
     $('stat-pending').textContent = pending;
-
-    // Update live count
-    const liveCount = $('live-count');
-    if (liveCount) liveCount.textContent = uniqueGuests || 0;
 
     // Update tab counts
     updateTabCounts(uploads);
 
     // Phase 2: refresh quota meter + soft-lock banner
     if (currentDashEvent) renderQuota(currentDashEvent, uploads.length);
+  }
+
+  async function refreshPresence() {
+    if (!currentDashEvent?.slug) return;
+    try {
+      const res = await fetch(`/api/events/${currentDashEvent.slug}/presence`);
+      if (!res.ok) return;
+      const { count } = await res.json();
+      $('stat-guests').textContent = count;
+      const liveCount = $('live-count');
+      if (liveCount) liveCount.textContent = count;
+    } catch {}
   }
 
   // ── Get action button based on upload status ──────────
@@ -3929,6 +3936,8 @@
   setInterval(refreshUploads, 10000);
   refreshWallErrors();
   setInterval(refreshWallErrors, 5000);
+  refreshPresence();
+  setInterval(refreshPresence, 15_000);
 </script>
 
 </body>
