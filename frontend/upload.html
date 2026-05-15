@@ -681,8 +681,15 @@ body { background: var(--paper); min-height: 100dvh; }
   transition: background .15s, color .15s, border-color .15s;
   display: flex; align-items: center; gap: 5px; font-weight: 700;
 }
-.msg-mode-pill:not(.active):hover { color: var(--ink); border-color: var(--line); }
+.msg-mode-pill:not(.active):not([disabled]):hover { color: var(--ink); border-color: var(--line); }
 .msg-mode-pill.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.msg-mode-pill[disabled] { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
+.attach-required-hint {
+  display: none; font-family: var(--mono); font-size: 10px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--accent); text-align: center;
+  padding: 6px 0 2px;
+}
+.attach-required-hint.visible { display: block; }
 .msg-mode-pill svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; }
 .voice-recorder-wrap { display: none; flex-direction: column; align-items: center; gap: 10px; padding: 16px 0 4px; }
 .voice-recorder-wrap.visible { display: flex; }
@@ -1235,6 +1242,7 @@ body { background: var(--paper); min-height: 100dvh; }
       <div class="mp-char-count" id="charCount" style="margin-top:4px;">0 / 160</div>
     </div>
 
+    <div class="attach-required-hint visible" id="attachRequiredHint">↑ Please attach a photo or video</div>
     <button class="btn btn-primary send-btn" onclick="handleSend('gallery', event)">Share moments →</button>
     <div class="success-banner" id="gallerySuccess">
       <div class="s-icon">★</div>
@@ -1635,8 +1643,7 @@ body { background: var(--paper); min-height: 100dvh; }
   }
   function hasStagedItems(panel) {
     if (panel === 'gallery') {
-      return document.querySelectorAll('#galleryQueue .queue-item').length > 0
-        || (typeof _voiceBlob !== 'undefined' && !!_voiceBlob);
+      return document.querySelectorAll('#galleryQueue .queue-item').length > 0;
     }
     if (panel === 'record') {
       return typeof recordedBlob !== 'undefined' && !!recordedBlob;
@@ -2276,6 +2283,7 @@ body { background: var(--paper); min-height: 100dvh; }
         setTimeout(() => { try { nameInput.focus({ preventScroll: true }); } catch {} }, 350);
       }
     }
+    refreshVoiceAvailability();
   }
 
   function removeItem(id) {
@@ -2288,6 +2296,7 @@ body { background: var(--paper); min-height: 100dvh; }
     updateWallPreview();
     updateSendBtn();
     refreshCtaBar();
+    refreshVoiceAvailability();
   }
 
   // The wall preview was removed from the upload page; this is now a no-op
@@ -2305,6 +2314,28 @@ body { background: var(--paper); min-height: 100dvh; }
     // the same "Send N moments" affordance everywhere.
     const cta = document.getElementById('ctaBtn');
     if (cta && cta.dataset.target === 'gallery') cta.textContent = label;
+    refreshAttachHint();
+  }
+
+  function refreshAttachHint() {
+    const hint = document.getElementById('attachRequiredHint');
+    if (!hint) return;
+    const hasFiles = document.querySelectorAll('#galleryQueue .queue-item').length > 0;
+    hint.classList.toggle('visible', !hasFiles);
+  }
+
+  function refreshVoiceAvailability() {
+    const hasVideo = Object.values(itemFiles).some(f => (f.type || '').startsWith('video/'));
+    const voicePill = document.getElementById('msgPillVoice');
+    if (!voicePill) return;
+    if (hasVideo) {
+      voicePill.disabled = true;
+      voicePill.title = 'Voice notes cannot be added when a video is attached';
+      if (voicePill.classList.contains('active')) switchMsgMode('text');
+    } else {
+      voicePill.disabled = false;
+      voicePill.title = '';
+    }
   }
 
   /* ── Record Video — real camera + MediaRecorder ────── */
@@ -2629,6 +2660,12 @@ body { background: var(--paper); min-height: 100dvh; }
     const batchId  = (crypto.randomUUID && crypto.randomUUID()) || (now.toString(36) + Math.random().toString(36).slice(2));
 
     const fileEntries = Object.entries(itemFiles); // [ [qId, file], ... ]
+
+    if (mode === 'gallery' && fileEntries.length === 0) {
+      showToast('Please attach a photo or video first.');
+      btn.disabled = false;
+      return;
+    }
 
     /* ── Step 1: Save one entry per file immediately (no thumbnails yet) ── */
     const entries = fileEntries.length > 0
