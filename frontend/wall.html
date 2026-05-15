@@ -3454,17 +3454,13 @@
   }
 
   // ── Live guest count ─────────────────────────────────────
-  async function pollPresence() {
-    try {
-      const res = await fetch(`/api/events/${slug}/presence`);
-      if (!res.ok) return;
-      const { count } = await res.json();
-      const badge    = document.getElementById('guest-badge');
-      const countEl  = document.getElementById('guest-count');
-      if (!badge || !countEl) return;
-      countEl.textContent = count;
-      badge.classList.toggle('visible', count > 0);
-    } catch {}
+  // Count arrives piggy-backed on the existing refreshUploads() response.
+  function updateGuestBadge(count) {
+    const badge   = document.getElementById('guest-badge');
+    const countEl = document.getElementById('guest-count');
+    if (!badge || !countEl) return;
+    countEl.textContent = count;
+    badge.classList.toggle('visible', count > 0);
   }
 
   // ── Reactions polling ────────────────────────────────────
@@ -3543,7 +3539,11 @@
     let apiUploads = [];
     try {
       const res = await fetch(`/api/uploads/${slug}`);
-      if (res.ok) apiUploads = (await res.json()).uploads || [];
+      if (res.ok) {
+        const data = await res.json();
+        apiUploads = data.uploads || [];
+        updateGuestBadge(data.guest_count ?? 0);
+      }
     } catch { /* fall through to local-only */ }
 
     const merged = mergeUploads(apiUploads);
@@ -3891,10 +3891,6 @@
     }
 
     setInterval(refreshUploads, POLL_INTERVAL);
-
-    // Live guest count — how many guests have the upload page open
-    pollPresence();
-    setInterval(pollPresence, 15_000);
 
     // Poll the event endpoint a bit more frequently so a host clicking
     // "Play video messages" sees the wall react within a few seconds.

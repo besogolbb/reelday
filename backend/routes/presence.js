@@ -16,6 +16,11 @@ function pruneAndGet(slug) {
   return [...map.values()];
 }
 
+// Called by the uploads GET route so guest_count rides the existing poll response.
+export function getCount(slug) {
+  return pruneAndGet(slug).length;
+}
+
 export default async function presenceRoutes(fastify) {
   // Upload-page heartbeat — called every 30s per guest
   fastify.post('/api/events/:slug/presence', {

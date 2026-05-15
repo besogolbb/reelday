@@ -2375,16 +2375,11 @@
     if (currentDashEvent) renderQuota(currentDashEvent, uploads.length);
   }
 
-  async function refreshPresence() {
-    if (!currentDashEvent?.slug) return;
-    try {
-      const res = await fetch(`/api/events/${currentDashEvent.slug}/presence`);
-      if (!res.ok) return;
-      const { count } = await res.json();
-      $('stat-guests').textContent = count;
-      const liveCount = $('live-count');
-      if (liveCount) liveCount.textContent = count;
-    } catch {}
+  // Guest count arrives piggy-backed on the existing refreshUploads() response.
+  function updateLiveGuestCount(count) {
+    $('stat-guests').textContent = count;
+    const liveCount = $('live-count');
+    if (liveCount) liveCount.textContent = count;
   }
 
   // ── Get action button based on upload status ──────────
@@ -3708,6 +3703,7 @@
       const uploadsJson = uploadsRes.ok ? await uploadsRes.json() : { uploads: [] };
       const qrJson      = qrRes.ok      ? await qrRes.json()      : { qr_code: null };
       const uploads = uploadsJson.uploads || [];
+      updateLiveGuestCount(uploadsJson.guest_count ?? 0);
       const qr_code = qrJson.qr_code     || null;
 
       /* Merge API uploads with any locally-saved uploads (upload page saves here) */
@@ -3763,7 +3759,8 @@
       // host's localStorage copy.
       const res = await fetch(`/api/uploads/${slug}?include_pending=1&t=${Date.now()}`, { cache: 'no-store' });
       if (!res.ok) throw new Error('api down');
-      const { uploads } = await res.json();
+      const { uploads, guest_count } = await res.json();
+      updateLiveGuestCount(guest_count ?? 0);
       const localUploads = readLocalUploads();
       const apiIds = new Set(uploads.map(u => String(u.id)));
       const merged = normalizeUploads(
@@ -3936,8 +3933,6 @@
   setInterval(refreshUploads, 10000);
   refreshWallErrors();
   setInterval(refreshWallErrors, 5000);
-  refreshPresence();
-  setInterval(refreshPresence, 15_000);
 </script>
 
 </body>

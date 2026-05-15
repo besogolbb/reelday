@@ -5,6 +5,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { resolvePlan } from '../lib/plans.js';
 import { triggerVideoTranscode } from '../lib/awsLambdaService.js';
 import { verifyToken } from '../plugins/auth.js';
+import { getCount as getPresenceCount } from './presence.js';
 
 export default async function uploadRoutes(fastify) {
   function publicMediaUrl(key) {
@@ -617,7 +618,7 @@ export default async function uploadRoutes(fastify) {
       uploads_closed: !!(event.upload_window_ends_at && new Date(event.upload_window_ends_at) < now),
     };
 
-    return { uploads: hydratedUploads, event, locks };
+    return { uploads: hydratedUploads, event, locks, guest_count: getPresenceCount(slug) };
   });
 
   // GET /api/uploads/:slug/download — list all file URLs for bulk download
