@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Reelday — Launch Readiness Checklist</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  * { box-sizing: border-box; }
+  body {
+    font: 11pt/1.45 -apple-system, "Segoe UI", Inter, Roboto, sans-serif;
+    color: #1a1a1a; max-width: 180mm; margin: 0 auto; padding: 0;
+  }
+  h1 { font-size: 22pt; margin: 0 0 4pt; letter-spacing: -0.02em; }
+  h2 { font-size: 13pt; margin: 18pt 0 6pt; border-bottom: 1.5pt solid #1a1a1a; padding-bottom: 3pt; }
+  h3 { font-size: 11pt; margin: 12pt 0 4pt; color: #333; }
+  .sub { color: #666; font-size: 10pt; margin-bottom: 12pt; }
+  .meta { font-size: 9pt; color: #888; margin-top: 2pt; }
+  table { width: 100%; border-collapse: collapse; margin: 6pt 0 12pt; font-size: 10pt; }
+  th, td { border: 1px solid #ccc; padding: 5pt 7pt; text-align: left; vertical-align: top; }
+  th { background: #f3f3f3; font-weight: 600; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td.center { text-align: center; }
+  .verdict-ok    { background: #e9f7ec; }
+  .verdict-warn  { background: #fff7e0; }
+  .verdict-bad   { background: #fbe6e6; }
+  .pill {
+    display: inline-block; padding: 1pt 7pt; border-radius: 8pt;
+    font-size: 9pt; font-weight: 600; letter-spacing: 0.02em;
+  }
+  .pill-ok      { background: #c8eccd; color: #1a5d29; }
+  .pill-warn    { background: #ffe28a; color: #6a4a00; }
+  .pill-bad     { background: #f5b6b6; color: #6a0a0a; }
+  .pill-blocker { background: #1a1a1a; color: #fff; }
+  .callout {
+    border-left: 3pt solid #1a1a1a; background: #fafafa;
+    padding: 7pt 10pt; margin: 8pt 0; font-size: 10pt;
+  }
+  .callout strong { display: block; margin-bottom: 2pt; }
+  .callout.warn { border-left-color: #c08800; background: #fffaeb; }
+  .callout.danger { border-left-color: #c01010; background: #fff0f0; }
+  ul.checklist, ol.checklist { padding-left: 0; list-style: none; }
+  ul.checklist li, ol.checklist li {
+    margin: 4pt 0; padding-left: 22pt; position: relative;
+    page-break-inside: avoid;
+  }
+  ul.checklist input[type="checkbox"] {
+    position: absolute; left: 0; top: 3pt;
+    width: 14pt; height: 14pt;
+    accent-color: #1a5d29; cursor: pointer;
+  }
+  .check-detail { display: block; color: #666; font-size: 9pt; margin-top: 1pt; }
+  code {
+    background: #f0f0f0; padding: 1pt 4pt; border-radius: 3pt;
+    font: 9.5pt/1.3 "SF Mono", Consolas, Menlo, monospace;
+  }
+  .footer { margin-top: 20pt; font-size: 9pt; color: #888; border-top: 1px solid #ddd; padding-top: 6pt; }
+  .section-banner {
+    color: #fff; padding: 6pt 10pt; margin-top: 14pt;
+    font-size: 13pt; font-weight: 600;
+  }
+  .banner-success { background: #1a5d29; }
+  .banner-blocker { background: #c01010; }
+  .banner-action  { background: #6a4a00; }
+  .banner-neutral { background: #1a1a1a; }
+  .gate-note {
+    border: 1.5pt solid #1a1a1a; padding: 8pt 12pt; margin: 8pt 0 14pt;
+    background: #f8f8f8; font-size: 10pt;
+  }
+  @media print {
+    h2, h3 { page-break-after: avoid; }
+    table, .callout, .gate-note { page-break-inside: avoid; }
+    ul.checklist input[type="checkbox"] { border: 1pt solid #999; }
+  }
+  @media screen {
+    body { padding: 24pt 18pt; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Reelday — Launch Readiness Checklist</h1>
+<div class="sub">Public launch target: <strong>Tuesday 19 May 2026</strong>. Work top to bottom — each section gates the next. If a row is flagged a <span class="pill pill-blocker">BLOCKER</span> and isn't checked, do not launch.</div>
+<div class="meta">Last updated 17 May 2026 · Source: <code>docs/launch-readiness-checklist.md</code></div>
+
+<div class="gate-note">
+<strong>How to use this page:</strong> Open in a browser and check the boxes as you complete each item. Boxes are not saved — print to PDF if you need a permanent record. Sections 2 and 3 must be fully checked before launch.
+</div>
+
+<!-- ====================================================================== -->
+<div class="section-banner banner-success">✅ 1 · Backend Performance — Validated 17 May</div>
+
+<div class="sub">All items below were proven by stress tests run from PowerShell (production-truth, through Cloudflare). <strong>No backend work required before launch.</strong> See <code>docs/perf-test-database.md</code> for the full evidence log.</div>
+
+<table>
+  <tr><th style="width:45%">Check</th><th style="width:25%">Result</th><th>Evidence</th></tr>
+  <tr class="verdict-ok"><td>Upload 1000c kickoff handles burst</td><td>0 failures · p95 5.3 s</td><td><code>stress-upload.mjs cxzv-fe0y 1000 1000</code></td></tr>
+  <tr class="verdict-ok"><td>Mixed peak load (600 uploads + 1500 reactions + walls)</td><td>0 failures · p95 within baseline</td><td><code>stress-mixed.mjs cxzv-fe0y 600 1500 30</code></td></tr>
+  <tr class="verdict-ok"><td>Sustained 3 min — no memory leak, flat latency</td><td>0 failures · flat throughout</td><td><code>stress-sustained.mjs cxzv-fe0y 3</code></td></tr>
+  <tr class="verdict-ok"><td>Multi-wall + 150 reaction spammers</td><td>0 failures · walls protected</td><td><code>stress-multiwall.mjs cxzv-fe0y 3 150 30</code></td></tr>
+  <tr class="verdict-ok"><td>Cross-event isolation (storm on A, polling B)</td><td>0 failures · Wall B p95 611 ms</td><td><code>stress-cross-event.mjs ... 200 90</code></td></tr>
+  <tr class="verdict-ok"><td>Single-user E2E upload (real guest experience)</td><td>p50 1.7 s · p95 2.3 s</td><td><code>stress-upload-e2e.mjs cxzv-fe0y 1 10</code></td></tr>
+</table>
+
+<div class="callout"><strong>Aggregate</strong>~13,000 requests across the full deep-check suite with 0 backend failures. The only failures observed (91 out of one 1000c run) were client-side Windows TIME_WAIT pressure — confirmed by clean re-run.</div>
+
+<!-- ====================================================================== -->
+<div class="section-banner banner-blocker">⛔ 2 · Operational Readiness — Blockers</div>
+
+<div class="sub">Each unchecked row blocks launch. These are the gaps identified during the perf review.</div>
+
+<ul class="checklist">
+  <li>
+    <input type="checkbox" id="op1">
+    <label for="op1"><strong>Verify nightly Postgres backup is running.</strong></label>
+    <span class="check-detail">Where: Hostinger control panel → Backups. Test: confirm a backup exists from the last 24 h. If not, configure it now.</span>
+  </li>
+  <li>
+    <input type="checkbox" id="op2">
+    <label for="op2"><strong>Test restore-from-backup at least once.</strong></label>
+    <span class="check-detail">Why: a backup you've never restored is not a backup. Test: spin up a throwaway DB on the VPS, restore last night's snapshot, confirm the schema and a few rows load.</span>
+  </li>
+  <li>
+    <input type="checkbox" id="op3">
+    <label for="op3"><strong>Set up uptime monitoring (UptimeRobot free tier).</strong></label>
+    <span class="check-detail">Configure: HTTPS check on <code>https://reelday.ph/api/health</code> every 5 minutes. Alert: email + SMS to your number. Expected: 200 response in under 2 seconds.</span>
+  </li>
+  <li>
+    <input type="checkbox" id="op4">
+    <label for="op4"><strong>Configure Easypanel container alerts.</strong></label>
+    <span class="check-detail">Where: Easypanel → Reelday app → Notifications. Alert on: container restart, CPU &gt; 90% sustained 5 min, memory &gt; 90%.</span>
+  </li>
+  <li>
+    <input type="checkbox" id="op5">
+    <label for="op5"><strong>Confirm host-warning copy is wired into booking flow.</strong></label>
+    <span class="check-detail">Where: booking confirmation email + post-booking dashboard message. Content: "For events over 500 guests, your wall may take 5–10 minutes to fully display all guest videos during peak upload moments. Nothing is lost — the wall catches up automatically."</span>
+  </li>
+  <li>
+    <input type="checkbox" id="op6">
+    <label for="op6"><strong>Verify SQS dead-letter queue is configured.</strong></label>
+    <span class="check-detail">Where: AWS Console → SQS → <code>reelday-transcode.fifo</code>. Confirm a DLQ exists and is wired to the main queue. Why: if a video fails to transcode 3 times, it lands in DLQ instead of looping forever.</span>
+  </li>
+</ul>
+
+<!-- ====================================================================== -->
+<div class="section-banner banner-action">📱 3 · User Flow Validation — Manual on Real Devices</div>
+
+<div class="sub">Synthetic load tests don't catch device-specific bugs. Run these flows by hand on actual phones before launch.</div>
+
+<h3>Devices (test on at least these three)</h3>
+<ul class="checklist">
+  <li><input type="checkbox" id="d1"><label for="d1">iPhone (any model with iOS 16+) on Safari</label></li>
+  <li><input type="checkbox" id="d2"><label for="d2">Android phone on Chrome</label></li>
+  <li><input type="checkbox" id="d3"><label for="d3">Desktop browser (Chrome or Edge)</label></li>
+</ul>
+
+<h3>Guest upload flow (on each device)</h3>
+<ul class="checklist">
+  <li><input type="checkbox" id="g1"><label for="g1">Scan event QR code → land on guest upload page</label></li>
+  <li><input type="checkbox" id="g2"><label for="g2">Sign in / register guest name</label></li>
+  <li><input type="checkbox" id="g3"><label for="g3">Take a photo with camera → upload → see ✓ confirmation</label></li>
+  <li><input type="checkbox" id="g4"><label for="g4">Pick a 30-second video from gallery → upload → see ✓ confirmation</label></li>
+  <li><input type="checkbox" id="g5"><label for="g5">Wait up to 60 seconds → video appears on wall display in another tab/screen</label></li>
+  <li><input type="checkbox" id="g6"><label for="g6">React with an emoji → wall shows the reaction</label></li>
+  <li><input type="checkbox" id="g7"><label for="g7">Vote on a live poll (if one is active) → wall updates tally</label></li>
+  <li><input type="checkbox" id="g8"><label for="g8">Force a slow network (Chrome DevTools → "Fast 3G") → upload still completes</label></li>
+</ul>
+
+<h3>Wall display flow</h3>
+<ul class="checklist">
+  <li><input type="checkbox" id="w1"><label for="w1">Open wall on a TV / projector / second screen</label></li>
+  <li><input type="checkbox" id="w2"><label for="w2">Confirm autoplay works (videos play with no user click)</label></li>
+  <li><input type="checkbox" id="w3"><label for="w3">Confirm wall stays responsive after 30+ minutes of idle time</label></li>
+  <li><input type="checkbox" id="w4"><label for="w4">Confirm <code>?reconcile=1</code> recovers a stuck wall</label></li>
+</ul>
+
+<h3>Account & dashboard flow</h3>
+<ul class="checklist">
+  <li><input type="checkbox" id="a1"><label for="a1">Create a new event from the host dashboard</label></li>
+  <li><input type="checkbox" id="a2"><label for="a2">Generate the event QR code → confirm it scans correctly with a phone camera</label></li>
+  <li><input type="checkbox" id="a3"><label for="a3">Customize event branding (colors, message) → confirm changes appear on guest page and wall</label></li>
+  <li><input type="checkbox" id="a4"><label for="a4">Receive booking confirmation email → confirm formatting on Gmail and Apple Mail</label></li>
+</ul>
+
+<!-- ====================================================================== -->
+<div class="section-banner banner-neutral">🚀 4 · Day-of-Launch (Tuesday Morning)</div>
+
+<div class="sub">Run these on launch morning before flipping any "go live" switches.</div>
+
+<ul class="checklist">
+  <li><input type="checkbox" id="day1"><label for="day1">Run <code>npm run perf:full-local</code> from Easypanel terminal — confirm 0 failures</label></li>
+  <li><input type="checkbox" id="day2"><label for="day2">Check Easypanel: container running, no restart loop, CPU &lt; 30% idle</label></li>
+  <li><input type="checkbox" id="day3"><label for="day3">Check SQS queue depth: should be 0 (or near 0)</label></li>
+  <li><input type="checkbox" id="day4"><label for="day4">Check R2 bucket: writable, no quota warnings</label></li>
+  <li><input type="checkbox" id="day5"><label for="day5">Confirm Cloudflare is proxying <code>reelday.ph</code> (orange cloud on)</label></li>
+  <li><input type="checkbox" id="day6"><label for="day6">Visit <code>https://reelday.ph</code> in incognito → page loads cleanly, no console errors</label></li>
+  <li><input type="checkbox" id="day7"><label for="day7">Visit <code>https://reelday.ph/api/health</code> → returns 200 in under 2 s</label></li>
+  <li><input type="checkbox" id="day8"><label for="day8">Visit the public demo wall → loads, shows existing content</label></li>
+  <li><input type="checkbox" id="day9"><label for="day9">Confirm your phone gets UptimeRobot alerts (test by pausing the monitor briefly)</label></li>
+</ul>
+
+<!-- ====================================================================== -->
+<div class="section-banner banner-neutral">📣 5 · Communication Readiness</div>
+
+<ul class="checklist">
+  <li><input type="checkbox" id="c1"><label for="c1">Landing page (<code>reelday.ph</code>) has clear CTA to book or try demo</label></li>
+  <li><input type="checkbox" id="c2"><label for="c2">Pricing is visible (or "contact us" path is clear)</label></li>
+  <li><input type="checkbox" id="c3"><label for="c3">Contact / support method visible (email or Messenger link)</label></li>
+  <li><input type="checkbox" id="c4"><label for="c4">FAQ covers top 5 questions: how it works · cost · video time limit · non-tech-savvy guests · privacy</label></li>
+  <li><input type="checkbox" id="c5"><label for="c5">Social proof: at least 1 testimonial or sample event visible on the landing page</label></li>
+  <li><input type="checkbox" id="c6"><label for="c6">Privacy policy and terms of service exist and are linked in the footer</label></li>
+  <li><input type="checkbox" id="c7"><label for="c7">Launch announcement post drafted for Instagram, Facebook, TikTok</label></li>
+</ul>
+
+<!-- ====================================================================== -->
+<div class="section-banner banner-neutral">🔧 6 · Rollback / Incident Plan</div>
+
+<div class="sub">If something breaks on launch day — these are the runbook entries. Memorize the columns; don't look them up under pressure.</div>
+
+<table>
+  <tr><th style="width:30%">Symptom</th><th style="width:50%">Immediate action</th><th>Notify</th></tr>
+  <tr class="verdict-bad">
+    <td>Site is down (<code>/api/health</code> failing)</td>
+    <td>Check Easypanel → restart container if needed. If DB issue, restore from last backup.</td>
+    <td>Yourself + anyone with active events</td>
+  </tr>
+  <tr class="verdict-bad">
+    <td>Uploads failing en masse</td>
+    <td>Check R2 status page, check Cloudflare status. If R2 is down, communicate the outage to active hosts.</td>
+    <td>Active hosts</td>
+  </tr>
+  <tr class="verdict-warn">
+    <td>Wall not updating</td>
+    <td>Run <code>?reconcile=1</code> on the affected event. If platform-wide, check SQS queue depth and Lambda errors.</td>
+    <td>Affected hosts</td>
+  </tr>
+  <tr class="verdict-warn">
+    <td>Transcoding stuck (videos not appearing)</td>
+    <td>Check Lambda CloudWatch logs for errors. Check SQS queue depth. Manually drain DLQ if needed.</td>
+    <td>Affected hosts</td>
+  </tr>
+  <tr class="verdict-bad">
+    <td>Container in restart loop</td>
+    <td>Check Easypanel logs for stack trace. Roll back to the previous deploy if a recent change is the cause.</td>
+    <td>Yourself</td>
+  </tr>
+</table>
+
+<div class="callout warn"><strong>Rollback path</strong>Easypanel keeps deploy history. To roll back: Easypanel → Reelday app → Deployments → click the previous successful deploy → Redeploy.</div>
+
+<div class="callout"><strong>Backup contact</strong>Set one trusted person who can reach you (or check the site) if you're unreachable during an event.</div>
+
+<!-- ====================================================================== -->
+<div class="section-banner banner-neutral">📈 7 · Post-Launch (Days 1–7)</div>
+
+<ul class="checklist">
+  <li><input type="checkbox" id="p1"><label for="p1">Day 1: monitor every 2 hours, respond to all DMs within 2 hours</label></li>
+  <li><input type="checkbox" id="p2"><label for="p2">Day 2: ask first 3 users for honest feedback — one question: "what would have made this 10× better?"</label></li>
+  <li><input type="checkbox" id="p3"><label for="p3">Day 3: re-run spot-check (<code>npm run perf:local</code>)</label></li>
+  <li><input type="checkbox" id="p4"><label for="p4">Day 7: full perf check (<code>npm run perf:full-local</code>) — compare to baseline, update <code>perf-test-database.md</code> if anything materially changed</label></li>
+  <li><input type="checkbox" id="p5"><label for="p5">Day 7: review UptimeRobot logs for any incidents you missed</label></li>
+</ul>
+
+<!-- ====================================================================== -->
+<h2>Sign-off</h2>
+
+<div class="gate-note">
+  <strong>Launch is approved when:</strong>
+  <ul style="margin: 4pt 0 0 18pt; padding: 0;">
+    <li>All Section 2 (Operational) checkboxes complete</li>
+    <li>All Section 3 (User Flow) checkboxes complete on at least 2 devices</li>
+    <li>Section 4 (Day-of) checks pass on launch morning</li>
+    <li>You can answer "what do I do if X breaks?" for each row in Section 6 without looking it up</li>
+  </ul>
+</div>
+
+<div class="callout danger"><strong>If any of these are not true on Tuesday morning</strong>Delay by 24 hours. A 1-day slip is invisible to the public. A botched launch is not.</div>
+
+<div class="footer">
+Reelday operations · Launch checklist version 1 · 17 May 2026 · Companion docs: <code>perf-test-database.md</code>, <code>perf-check-prompt.md</code>, <code>reelday-event-capacity.html</code>
+</div>
+
+</body>
+</html>
