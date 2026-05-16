@@ -902,6 +902,28 @@
       border: none; color: var(--ink);
     }
 
+    /* Bulk-select mode */
+    .photo-grid.select-mode > div { cursor: pointer; }
+    .photo-grid.select-mode > div::after {
+      content: '';
+      position: absolute; top: 8px; right: 8px;
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,.85);
+      background: rgba(0,0,0,.35);
+      z-index: 10;
+      box-sizing: border-box;
+    }
+    .photo-grid.select-mode > div.bulk-selected::after {
+      background: #dc3545;
+      border-color: #dc3545;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2 6l3 3 5-5' stroke='%23fff' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: center;
+      background-size: 12px;
+    }
+    .photo-grid.select-mode > div.bulk-selected { outline: 3px solid #dc3545; outline-offset: -3px; }
+
     /* Placeholder color classes */
     .placeholder--clay   { background: #b07a5c; }
     .placeholder--ochre   { background: #c8a45a; }
@@ -1672,8 +1694,16 @@
         <span class="tab" data-tab="approved">Approved <span id="tab-approved-count">0</span></span>
         <span class="tab" data-tab="featured">Featured <span id="tab-featured-count">0</span></span>
         <span class="tab" data-tab="hidden">Hidden <span id="tab-hidden-count">0</span></span>
+        <button type="button" id="btn-select-mode" style="margin-left:auto;font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;padding:5px 12px;border-radius:999px;border:1px solid var(--dash-border);background:transparent;color:var(--ink-soft);cursor:pointer;">Select</button>
       </div>
       <div class="photo-grid" id="photo-grid"></div>
+    </div>
+
+    <!-- Bulk-delete floating bar -->
+    <div id="bulk-bar" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:999;background:var(--ink);color:#fff;border-radius:999px;padding:10px 20px;display:none;align-items:center;gap:16px;box-shadow:0 8px 32px rgba(0,0,0,.35);font-family:var(--mono);font-size:11px;letter-spacing:.1em;white-space:nowrap;">
+      <span id="bulk-count">0 selected</span>
+      <button type="button" id="btn-bulk-cancel" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:999px;padding:5px 14px;cursor:pointer;font-family:var(--mono);font-size:11px;letter-spacing:.1em;">Cancel</button>
+      <button type="button" id="btn-bulk-delete" style="background:#dc3545;border:none;color:#fff;border-radius:999px;padding:5px 14px;cursor:pointer;font-family:var(--mono);font-size:11px;letter-spacing:.1em;font-weight:600;">Delete selected</button>
     </div>
 
     <!-- Poll editor modal — appended at body-level below for proper stacking -->
@@ -2599,6 +2629,7 @@
 
     // Update current tab and re-render gallery
     currentTab = tab.dataset.tab;
+    if (selectMode) exitSelectMode();
     renderGallery(allUploads);
   }
 
@@ -3874,8 +3905,79 @@
     });
   }
 
+  // ── Bulk select ────────────────────────────────────────
+  let selectMode = false;
+  const selectedIds = new Set();
+  const btnSelectMode  = document.getElementById('btn-select-mode');
+  const bulkBar        = document.getElementById('bulk-bar');
+  const bulkCount      = document.getElementById('bulk-count');
+  const btnBulkCancel  = document.getElementById('btn-bulk-cancel');
+  const btnBulkDelete  = document.getElementById('btn-bulk-delete');
+
+  function enterSelectMode() {
+    selectMode = true;
+    selectedIds.clear();
+    photoGrid.classList.add('select-mode');
+    btnSelectMode.textContent = 'Cancel';
+    btnSelectMode.style.color = 'var(--accent)';
+    btnSelectMode.style.borderColor = 'var(--accent)';
+  }
+
+  function exitSelectMode() {
+    selectMode = false;
+    selectedIds.clear();
+    photoGrid.classList.remove('select-mode');
+    photoGrid.querySelectorAll('.bulk-selected').forEach(t => t.classList.remove('bulk-selected'));
+    btnSelectMode.textContent = 'Select';
+    btnSelectMode.style.color = '';
+    btnSelectMode.style.borderColor = '';
+    bulkBar.style.display = 'none';
+  }
+
+  function updateBulkBar() {
+    const n = selectedIds.size;
+    if (n === 0) { bulkBar.style.display = 'none'; return; }
+    bulkBar.style.display = 'flex';
+    bulkCount.textContent = `${n} selected`;
+  }
+
+  if (btnSelectMode) btnSelectMode.addEventListener('click', () => {
+    if (selectMode) exitSelectMode(); else enterSelectMode();
+  });
+
+  if (btnBulkCancel) btnBulkCancel.addEventListener('click', exitSelectMode);
+
+  if (btnBulkDelete) btnBulkDelete.addEventListener('click', async () => {
+    const ids = Array.from(selectedIds);
+    if (!ids.length) return;
+    if (!confirm(`Delete ${ids.length} upload${ids.length > 1 ? 's' : ''}? This cannot be undone.`)) return;
+    btnBulkDelete.disabled = true;
+    btnBulkDelete.textContent = 'Deleting…';
+    await Promise.all(ids.map(id =>
+      fetch(`/api/uploads/${id}`, { method: 'DELETE', headers: authHeader() }).catch(() => {}),
+    ));
+    exitSelectMode();
+    await refreshUploads();
+  });
+
   if (photoGrid) {
     photoGrid.addEventListener('click', (e) => {
+      // In select mode, toggle tile selection instead of opening preview.
+      if (selectMode) {
+        const tile = e.target.closest('.photo-grid > div');
+        if (!tile) return;
+        const grid = Array.from(photoGrid.children);
+        const idx  = grid.indexOf(tile);
+        const filtered = filterUploads(filterByStream(allUploads), currentTab);
+        const upload = filtered[idx];
+        if (!upload) return;
+        const id = String(upload.id);
+        if (selectedIds.has(id)) { selectedIds.delete(id); tile.classList.remove('bulk-selected'); }
+        else { selectedIds.add(id); tile.classList.add('bulk-selected'); }
+        updateBulkBar();
+        return;
+      }
+
       const actionBtn = e.target.closest('.actions-btn');
       if (actionBtn) {
         const action = actionBtn.dataset.action;
