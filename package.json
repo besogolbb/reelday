@@ -10,7 +10,8 @@
     "perf": "node scripts/perf.mjs",
     "perf:pre": "node scripts/perf.mjs pre",
     "perf:full": "node scripts/perf.mjs full",
-    "perf:health": "node scripts/perf.mjs health"
+    "perf:health": "node scripts/perf.mjs health",
+    "perf:local": "node scripts/perf.mjs local"
   },
   "dependencies": {
     "@aws-sdk/client-lambda": "^3.1045.0",
