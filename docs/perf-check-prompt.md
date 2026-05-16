@@ -41,6 +41,14 @@ BASELINE HISTORY
 - 2026-05-13: 600 concurrent wall polls — 370 rps, p95 3.0 s, 60 KB response (no compression)
 - 2026-05-15: SELECT * → explicit columns + gzip via Node zlib; 600 concurrent — 217 rps, p95 2.55 s, 14 KB response
 - 2026-05-15: Multi-wall, cross-event, poll vote storm — all passing, new scripts added
+- 2026-05-16: JOIN + 10s cache on upload validation; upload 600c — p50 1.49 s, p95 1.80 s, 291 rps, 0 failures (beats May 15); reactions 200c — p50 263 ms, p95 689 ms, 596 rps, 0 failures. Run via npm run perf:pre-local from Easypanel terminal.
+
+NOTE ON TEST METHODOLOGY
+- Run perf:*-local from the Easypanel terminal for accurate numbers (bypasses Cloudflare+Traefik geographic overhead)
+- GitHub Actions tests (US runners → Asia VPS) add ~1300ms base latency per connection and are not comparable to local baselines
+- npm run perf:local → quick health + wall sanity check
+- npm run perf:pre-local → upload 600c + reactions 200c (pre-event check)
+- npm run perf:full-local → full suite
 
 STRESS TEST SCRIPTS (all in scripts/ folder)
 - scripts/stress-wall.mjs <slug> [conc] [total]
