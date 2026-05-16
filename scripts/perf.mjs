@@ -5,7 +5,8 @@
 //   npm run perf           → spot check (wall 200c/1000req, ~30s)
 //   npm run perf pre       → pre-event check (upload 600c + reactions 200c, ~1min)
 //   npm run perf full      → full deep check (all scripts, ~6min)
-//   npm run perf health    → health endpoint only
+//   npm run perf health    → health via Cloudflare+Traefik
+//   npm run perf:local     → health direct to localhost:3000 (bypasses Traefik)
 //
 // Override slug: SLUG=my-slug npm run perf
 // Override base: BASE_URL=http://localhost:3000 npm run perf
@@ -49,7 +50,27 @@ async function health() {
 console.log(`\nReelday perf runner — mode=${mode} slug=${slug}`);
 console.log(new Date().toISOString());
 
-if (mode === 'health') {
+if (mode === 'local') {
+  // Hits Fastify directly inside the container — bypasses Traefik and Cloudflare entirely.
+  // Run from the Easypanel terminal to isolate whether Traefik is adding latency.
+  process.env.BASE_URL = 'http://localhost:3000';
+  console.log('Direct container test (no Traefik, no Cloudflare)');
+  await health();
+  // Also time the wall endpoint directly
+  const wallUrl = `http://localhost:3000/api/uploads/${slug}`;
+  console.log(`\nChecking ${wallUrl} …`);
+  const t0 = performance.now();
+  try {
+    const r = await fetch(wallUrl, { headers: { 'X-Guest-Id': 'perf-local' } });
+    const ms = (performance.now() - t0).toFixed(0);
+    await r.text();
+    console.log(`  ${r.status} in ${ms}ms`);
+    if (ms > 700) console.log('  ⚠ wall > 700ms baseline');
+    else console.log('  ✓ wall OK');
+  } catch (e) {
+    console.log(`  ✗ wall failed: ${e.message}`);
+  }
+} else if (mode === 'health') {
   await health();
 } else if (mode === 'spot') {
   await health();
