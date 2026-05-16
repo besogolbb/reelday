@@ -13,10 +13,14 @@ on:
           - pre
           - full
           - health
+      target:
+        description: 'Target (default = production via Cloudflare+Traefik)'
+        required: false
+        default: 'https://reelday.ph'
 
 jobs:
   perf:
-    name: Run (${{ github.event.inputs.mode }})
+    name: Run (${{ github.event.inputs.mode }}) → ${{ github.event.inputs.target }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -28,4 +32,6 @@ jobs:
           node-version: '20'
 
       - name: Run perf tests
+        env:
+          BASE_URL: ${{ github.event.inputs.target }}
         run: node scripts/perf.mjs ${{ github.event.inputs.mode }}
