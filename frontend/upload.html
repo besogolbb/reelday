@@ -538,9 +538,9 @@ body { background: var(--paper); min-height: 100dvh; }
 }
 .share-tabs--hero .share-tab--gallery .tab-icon svg { width: 18px; height: 18px; }
 .share-tabs--hero .share-tab--gallery .tab-label {
-  font-family: var(--mono); font-size: 10px; font-weight: 700;
-  letter-spacing: .12em; text-transform: uppercase;
-  color: var(--ink-soft); text-align: center; line-height: 1.2;
+  font-family: var(--sans); font-size: 10px; font-weight: 600;
+  letter-spacing: 0; text-transform: none;
+  color: var(--ink-soft); text-align: center; line-height: 1.3;
   position: relative; z-index: 1;
 }
 .share-tabs--hero .share-tab.active.share-tab--gallery {
@@ -1140,7 +1140,7 @@ body { background: var(--paper); min-height: 100dvh; }
           <rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
         </svg>
       </div>
-      <div class="tab-label">Photo / Video</div>
+      <div class="tab-label">Upload<br>photo or video</div>
     </div>
     <div class="share-tab share-tab--mini share-tab--record" onclick="switchTab('record',this)">
       <div class="tab-icon">
@@ -1202,7 +1202,7 @@ body { background: var(--paper); min-height: 100dvh; }
         </div>
         <div class="msg-mode-hint">Write something or record a voice note</div>
         <div id="msgTextWrap">
-          <textarea class="mp-textarea" id="msgText" maxlength="160" placeholder="Write something for the wall… &quot;Lolo would have loved this.&quot;" oninput="updateMsgPreview()"></textarea>
+          <textarea class="mp-textarea" id="msgText" maxlength="160" placeholder="Write a message…" oninput="updateMsgPreview()"></textarea>
         </div>
         <div class="voice-recorder-wrap" id="voiceRecorderWrap">
           <div class="voice-hint" id="voiceHint">Tap to record your message</div>
@@ -1530,6 +1530,11 @@ body { background: var(--paper); min-height: 100dvh; }
       }
       const wallLink = document.getElementById('closedWallLink');
       if (wallLink && ev.slug) wallLink.href = `/wall/${ev.slug}`;
+    }
+
+    const msgTextarea = document.getElementById('msgText');
+    if (msgTextarea && ev.name) {
+      msgTextarea.placeholder = `Write a message for ${ev.name}…`;
     }
   }
 
