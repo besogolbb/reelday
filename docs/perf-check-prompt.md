@@ -42,6 +42,18 @@ BASELINE HISTORY
 - 2026-05-15: SELECT * → explicit columns + gzip via Node zlib; 600 concurrent — 217 rps, p95 2.55 s, 14 KB response
 - 2026-05-15: Multi-wall, cross-event, poll vote storm — all passing, new scripts added
 - 2026-05-16: JOIN + 10s cache on upload validation; upload 600c — p50 1.49 s, p95 1.80 s, 291 rps, 0 failures (beats May 15); reactions 200c — p50 263 ms, p95 689 ms, 596 rps, 0 failures. Run via npm run perf:pre-local from Easypanel terminal.
+- 2026-05-16 (PH laptop, through Cloudflare+Traefik — production-truth): full perf:full, 0 failures across 5 scenarios.
+  - health: 1083 ms total / server_ms=0 (overhead is pure CF+network)
+  - upload 1000c: rps 164, p50 3877 ms, p95 4749 ms, p99 5178 ms, 0 fail
+  - mixed (600 uploads + 1500 reactions / 30s): uploads p95 3035 ms · reactions p95 301 ms · wall p95 2816 ms · 0 fail
+  - sustained 3 min: flat p95 throughout (upload ~320 ms, reaction ~360 ms, wall ~460 ms), 0 fail
+  - multi-wall 3+150: wall uploads-poll p95 120 ms, wall reactions-poll p95 330 ms, 0 fail
+  - cross-event: wall B p95 216 ms while event A spammed (clean isolation)
+
+REMOTE vs LOCAL BASELINES
+- Local (Easypanel terminal) = backend isolation. Best for regression hunting.
+- Remote (PH laptop) = what real guests experience. Best for production-truth.
+- The ~600–1000 ms gap between them is Cloudflare+Traefik+geographic overhead. It's constant — those layers scale horizontally and don't degrade under load.
 
 NOTE ON TEST METHODOLOGY
 - Run perf:*-local from the Easypanel terminal for accurate numbers (bypasses Cloudflare+Traefik geographic overhead)
@@ -52,7 +64,8 @@ NOTE ON TEST METHODOLOGY
 
 STRESS TEST SCRIPTS (all in scripts/ folder)
 - scripts/stress-wall.mjs <slug> [conc] [total]
-- scripts/stress-upload.mjs <slug> [conc] [total]
+- scripts/stress-upload.mjs <slug> [conc] [total]                — kickoff only (presigned)
+- scripts/stress-upload-e2e.mjs <slug> [conc] [total]            — full flow: presigned + R2 PUT + complete (use before launches)
 - scripts/stress-reactions.mjs <slug> [conc] [total]
 - scripts/stress-mixed.mjs <slug> [uploads] [reactions] [duration_s]
 - scripts/stress-sustained.mjs <slug> [duration_min]
