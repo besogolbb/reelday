@@ -1,0 +1,31 @@
+name: Performance Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Test mode'
+        required: true
+        default: 'spot'
+        type: choice
+        options:
+          - spot
+          - pre
+          - full
+          - health
+
+jobs:
+  perf:
+    name: Run (${{ github.event.inputs.mode }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run perf tests
+        run: node scripts/perf.mjs ${{ github.event.inputs.mode }}
