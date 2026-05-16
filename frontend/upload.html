@@ -1552,7 +1552,7 @@ body { background: var(--paper); min-height: 100dvh; }
      they even pick their own files. Fires once after loadEvent(). */
   const _MEDIA_BASE = 'https://media.reelday.ph';
   function _resolveThumbUrl(upload) {
-    const raw = upload.thumb || upload.file_url;
+    const raw = upload.thumb || upload.pre_thumb_url || upload.file_url;
     if (!raw) return null;
     if (/^https?:\/\//i.test(raw) || raw.startsWith('data:')) return raw;
     return `${_MEDIA_BASE}/${raw.replace(/^\/+/, '')}`;
