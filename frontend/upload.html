@@ -87,13 +87,6 @@ input, textarea, select { font-family: inherit; font-size: inherit; color: inher
   color: var(--accent); font-weight: 500; text-transform: uppercase;
   position: relative; top: -2px;
 }
-.lang-switch {
-  display: inline-flex; background: var(--paper-2); border: 1px solid var(--line);
-  border-radius: 999px; padding: 3px; font-family: var(--mono);
-  font-size: 11px; letter-spacing: .1em;
-}
-.lang-switch button { padding: 5px 10px; border-radius: 999px; color: var(--ink-soft); }
-.lang-switch button.active { background: var(--ink); color: var(--paper); }
 .btn {
   display: inline-flex; align-items: center; justify-content: center;
   gap: .5rem; font-weight: 500; font-size: 15px; padding: 14px 22px;
@@ -216,10 +209,6 @@ body { background: var(--paper); min-height: 100dvh; }
   margin-bottom: 14px;
 }
 .upload-top--centered .brand-img { height: 64px; width: auto; opacity: .95; }
-.upload-top--centered .lang-switch {
-  position: absolute; right: 0; top: 50%; transform: translateY(-50%);
-  font-size: 10px;
-}
 
 /* ── Profile section (event identity + guest avatar) ────
    Stacked + centered: avatar sits above the event name so the
@@ -1103,10 +1092,6 @@ body { background: var(--paper); min-height: 100dvh; }
   <!-- Top bar — small centered logo + lang switch parked on the right -->
   <div class="upload-top upload-top--centered">
     <a class="brand brand-lockup" href="/" aria-label="Reelday.ph — home"><img src="/images/LOGO.png?v=2" alt="Reelday.ph" class="brand-img" /></a>
-    <div class="lang-switch" id="langSwitch">
-      <button class="active" onclick="setLang('EN',this)">EN</button>
-      <button onclick="setLang('FIL',this)">FIL</button>
-    </div>
   </div>
 
   <!-- Profile section — event identity (Serif) + guest initial avatar -->
@@ -1731,11 +1716,6 @@ body { background: var(--paper); min-height: 100dvh; }
         focus.scrollIntoView();
       }
     });
-  }
-
-  function setLang(lang, btn) {
-    document.querySelectorAll('#langSwitch button').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
   }
 
   // Tiny escape helpers so guest-supplied filenames (or any user text we
