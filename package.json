@@ -6,7 +6,11 @@
   "main": "backend/server.js",
   "scripts": {
     "start": "node backend/server.js",
-    "dev": "node --watch backend/server.js"
+    "dev": "node --watch backend/server.js",
+    "perf": "node scripts/perf.mjs",
+    "perf:pre": "node scripts/perf.mjs pre",
+    "perf:full": "node scripts/perf.mjs full",
+    "perf:health": "node scripts/perf.mjs health"
   },
   "dependencies": {
     "@aws-sdk/client-lambda": "^3.1045.0",
