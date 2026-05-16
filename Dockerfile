@@ -14,6 +14,7 @@ RUN npm ci --omit=dev
 
 COPY backend/ ./backend/
 COPY frontend/ ./frontend/
+COPY scripts/ ./scripts/
 
 EXPOSE 3000
 
