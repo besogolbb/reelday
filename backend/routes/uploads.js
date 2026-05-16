@@ -383,7 +383,7 @@ export default async function uploadRoutes(fastify) {
 
   // POST /api/uploads/complete — confirm R2 upload and save to DB
   fastify.post('/uploads/complete', { config: UPLOAD_WRITE_LIMIT }, async (request, reply) => {
-    const { slug, fileKey, uploader_name, message, file_type, is_video_message, poster_data_url, batch_id } = request.body;
+    const { slug, fileKey, uploader_name, message, file_type, is_video_message, poster_data_url, thumb_data_url, batch_id } = request.body;
     const guestId  = (request.headers['x-guest-id'] || '').trim().slice(0, 64) || null;
     const batchId  = (typeof batch_id === 'string' ? batch_id.trim().slice(0, 64) : null) || null;
 
@@ -407,22 +407,18 @@ export default async function uploadRoutes(fastify) {
     const originalKey = isVideo ? fileKey : null;
     const videoStatus = isVideo ? 'processing' : null;
 
-    // Persist the guest-browser thumbnail as a sibling R2 object instead
-    // of inlining the data URL anywhere. Two reasons:
-    //   1) SQS messages have a 256 KiB hard limit; a 960px JPEG data URL
-    //      can blow past it, silently failing the transcode kickoff.
-    //   2) The lambda webhook overwrites poster_url with the final poster,
-    //      losing the guest's choice. Storing it under its own key lets
-    //      the wall surface the guest thumb during the processing window.
+    // Persist the guest-browser thumbnail as a sibling R2 object.
+    // Videos send poster_data_url (a frame captured from the video element).
+    // Photos send thumb_data_url (a 320px canvas JPEG).
+    // Both end up in pre_thumb_url so the wall can show something while the
+    // full asset loads, and so the polaroid strip on the upload page uses the
+    // small version instead of the full-resolution file.
     let preThumbUrl = null;
     let preThumbKey = null;
-    if (
-      isVideo &&
-      typeof poster_data_url === 'string' &&
-      /^data:image\/(?:jpeg|jpg|png|webp);base64,/i.test(poster_data_url)
-    ) {
+    const rawThumb = isVideo ? poster_data_url : (!isAudio ? thumb_data_url : null);
+    if (typeof rawThumb === 'string' && /^data:image\/(?:jpeg|jpg|png|webp);base64,/i.test(rawThumb)) {
       try {
-        const match = poster_data_url.match(/^data:image\/(jpeg|jpg|png|webp);base64,(.+)$/i);
+        const match = rawThumb.match(/^data:image\/(jpeg|jpg|png|webp);base64,(.+)$/i);
         if (match) {
           const ext = match[1].toLowerCase() === 'jpg' ? 'jpeg' : match[1].toLowerCase();
           const contentType = `image/${ext}`;

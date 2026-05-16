@@ -2688,49 +2688,39 @@ body { background: var(--paper); min-height: 100dvh; }
 
     entries.forEach(e => saveEntry(localKey, e));
 
-    /* ── Step 2: Resize each image (large enough for wall) and patch its saved entry ── */
-    fileEntries.forEach(([qId, file], i) => {
+    /* ── Step 2: Resize each image — expose result as per-file Promises ── */
+    // Keyed by qId so processUpload (Step 3) can await the thumb right before
+    // the /complete call, which runs in parallel with the R2 PUT.
+    const photoThumbPromises = new Map();
+    fileEntries.forEach(([qId, file]) => {
       if ((file.type || '').startsWith('video/')) return;
       const fullUrl = itemDataUrls[qId];
-      if (!fullUrl) return;
-      const entryId = now + i;
-      const img = new Image();
-      img.onload = () => {
-        try {
-          // Big enough for the live wall (1920px screens) without exploding storage
-          const maxDim = 1600;
-          const ratio  = Math.min(maxDim / img.width, maxDim / img.height, 1);
-          const canvas = document.createElement('canvas');
-          canvas.width  = Math.round(img.width  * ratio);
-          canvas.height = Math.round(img.height * ratio);
-          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-          const large  = canvas.toDataURL('image/jpeg', 0.82);
+      if (!fullUrl) { photoThumbPromises.set(qId, Promise.resolve(null)); return; }
+      photoThumbPromises.set(qId, new Promise(resolve => {
+        const img = new Image();
+        img.onload = () => {
+          try {
+            const maxDim = 1600;
+            const ratio  = Math.min(maxDim / img.width, maxDim / img.height, 1);
+            const canvas = document.createElement('canvas');
+            canvas.width  = Math.round(img.width  * ratio);
+            canvas.height = Math.round(img.height * ratio);
+            canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+            const large  = canvas.toDataURL('image/jpeg', 0.82);
 
-          // Also produce a small thumb for the dashboard grid
-          const thumbDim = 320;
-          const tRatio   = Math.min(thumbDim / img.width, thumbDim / img.height, 1);
-          const tCanvas  = document.createElement('canvas');
-          tCanvas.width  = Math.round(img.width  * tRatio);
-          tCanvas.height = Math.round(img.height * tRatio);
-          tCanvas.getContext('2d').drawImage(img, 0, 0, tCanvas.width, tCanvas.height);
-          const small    = tCanvas.toDataURL('image/jpeg', 0.75);
-
-          const stored = JSON.parse(localStorage.getItem(localKey) || '[]');
-          const found  = stored.find(u => u.id === entryId);
-          if (found) {
-            found.thumb    = small;  // small one for grid
-            found.file_url = large;  // big one for wall
-            try {
-              localStorage.setItem(localKey, JSON.stringify(stored));
-            } catch {
-              // Quota hit — drop file_url, keep thumb so dashboard still works
-              delete found.file_url;
-              try { localStorage.setItem(localKey, JSON.stringify(stored)); } catch { /* give up */ }
-            }
-          }
-        } catch { /* entry already saved without media */ }
-      };
-      img.src = fullUrl;
+            const thumbDim = 320;
+            const tRatio   = Math.min(thumbDim / img.width, thumbDim / img.height, 1);
+            const tCanvas  = document.createElement('canvas');
+            tCanvas.width  = Math.round(img.width  * tRatio);
+            tCanvas.height = Math.round(img.height * tRatio);
+            tCanvas.getContext('2d').drawImage(img, 0, 0, tCanvas.width, tCanvas.height);
+            const small    = tCanvas.toDataURL('image/jpeg', 0.75);
+            resolve({ large, small });
+          } catch { resolve(null); }
+        };
+        img.onerror = () => resolve(null);
+        img.src = fullUrl;
+      }));
     });
 
     /* ── Step 3: Direct R2 upload via presigned URL ── */
@@ -2856,6 +2846,24 @@ body { background: var(--paper); min-height: 100dvh; }
           xhr.send(file);
         });
 
+        // For photos: thumbnail generation runs in parallel with the R2 PUT.
+        // Await it here so we can include it in the complete call.
+        let thumbDataUrl = null;
+        if (!isVideo && !isAudio) {
+          const thumbResult = await (photoThumbPromises.get(queueId) || Promise.resolve(null));
+          if (thumbResult) {
+            thumbDataUrl = thumbResult.small;
+            const stored = JSON.parse(localStorage.getItem(localKey) || '[]');
+            const found  = stored.find(u => u.id === entryId);
+            if (found) {
+              found.thumb    = thumbResult.small;
+              found.file_url = thumbResult.large;
+              try { localStorage.setItem(localKey, JSON.stringify(stored)); }
+              catch { delete found.file_url; try { localStorage.setItem(localKey, JSON.stringify(stored)); } catch {} }
+            }
+          }
+        }
+
         const compRes = await fetch('/api/uploads/complete', {
           method: 'POST',
           headers: {
@@ -2871,6 +2879,7 @@ body { background: var(--paper); min-height: 100dvh; }
             file_type: isAudio ? 'audio' : isVideo ? 'video' : 'photo',
             is_video_message: isVidMsg,
             poster_data_url: browserPoster || null,
+            thumb_data_url: thumbDataUrl || null,
             batch_id: batchId,
           })
         });
