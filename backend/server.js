@@ -49,6 +49,21 @@ const fastify = Fastify({
   },
 });
 
+// Server-Timing header on every API response so browser DevTools can split
+// server processing time from Cloudflare/network overhead at a glance.
+// e.g. "Server-Timing: app;dur=42" means Fastify took 42ms; if the browser
+// shows 280ms total, ~238ms was Cloudflare+network — not the app's fault.
+fastify.addHook('onRequest', (request, _reply, done) => {
+  request.startAt = Date.now();
+  done();
+});
+fastify.addHook('onSend', (request, reply, _payload, done) => {
+  if (request.url?.startsWith('/api/')) {
+    reply.header('Server-Timing', `app;dur=${Date.now() - (request.startAt ?? Date.now())}`);
+  }
+  done();
+});
+
 // Friendly rate-limit response shown to guests when they exceed a bucket.
 // The frontend checks for code === 'rate_limited' and surfaces a toast.
 const FRIENDLY_RATE_LIMIT = {
