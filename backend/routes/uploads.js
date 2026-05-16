@@ -17,6 +17,13 @@ const UPLOADS_CACHE_TTL = 1500;
 const uploadsCache  = new Map(); // slug → { payload, gzipped, expiresAt }
 const uploadsInflight = new Map(); // slug → Promise<payload>  (single-flight dedup)
 
+// Cache for upload validation (event + owner plan). During a burst 600 guests
+// all hit presigned at the same instant — without this each fires 2 sequential
+// DB queries (events + users). A 10s TTL covers the entire burst window while
+// keeping plan/window changes visible within one cache cycle.
+const EVENT_VALIDATION_TTL = 10_000;
+const eventValidationCache = new Map(); // slug → { data: {event, plan}, expiresAt }
+
 export default async function uploadRoutes(fastify) {
   function publicMediaUrl(key) {
     const base = (process.env.R2_PUBLIC_URL || 'https://media.reelday.ph').replace(/\/+$/, '');
@@ -147,41 +154,64 @@ export default async function uploadRoutes(fastify) {
     catch { return null; }
   }
 
-  // Helper to validate event status and plan limits before allowing uploads
+  // Helper to validate event status and plan limits before allowing uploads.
   // Reused by both legacy multipart and new presigned flows.
+  //
+  // Optimisations vs the original three-sequential-query version:
+  //   1. Single LEFT JOIN fetches event + owner tier in one round-trip.
+  //   2. Result is cached per slug for EVENT_VALIDATION_TTL (10 s) so a
+  //      600-guest simultaneous burst hits the DB once, not 600 times.
+  //      Owner requests bypass the cache so hosts always get live data.
   async function getValidatedEvent(slug, currentUser = null) {
-    const { rows: eventRows } = await fastify.db.query(
-      'SELECT * FROM events WHERE slug = $1',
-      [slug],
-    );
+    const isOwnerRequest = Boolean(currentUser);
+    let eventData = null;
 
-    if (!eventRows.length || eventRows[0].is_active === false) {
-      throw { statusCode: 404, message: 'Event not found' };
-    }
-    const event = eventRows[0];
-
-    // QR / event must belong to a registered account.
-    if (!event.user_id) {
-      throw { statusCode: 403, code: 'orphan_event', message: 'This event is not linked to an account.' };
+    if (!isOwnerRequest) {
+      const hit = eventValidationCache.get(slug);
+      if (hit && hit.expiresAt > Date.now()) eventData = hit.data;
     }
 
+    if (!eventData) {
+      // One query: event columns + owner's live subscription tier via LEFT JOIN.
+      // LEFT JOIN (not INNER) so we can distinguish owner_missing from not_found.
+      const { rows } = await fastify.db.query(
+        `SELECT e.id, e.slug, e.user_id, e.plan, e.is_active,
+                e.gallery_expires_at, e.upload_window_ends_at,
+                e.auto_approve, e.video_auto_approve, e.video_message_auto_approve,
+                e.couple_names, e.playback_burst_id, e.playback_burst_queue,
+                u.id AS owner_db_id, u.subscription_tier, u.is_active AS owner_is_active
+           FROM events e
+           LEFT JOIN users u ON u.id = e.user_id
+          WHERE e.slug = $1`,
+        [slug],
+      );
+
+      if (!rows.length || rows[0].is_active === false) {
+        throw { statusCode: 404, message: 'Event not found' };
+      }
+      const row = rows[0];
+
+      if (!row.user_id) {
+        throw { statusCode: 403, code: 'orphan_event', message: 'This event is not linked to an account.' };
+      }
+      if (!row.owner_db_id) {
+        throw { statusCode: 403, code: 'owner_missing', message: 'Event owner account no longer exists.' };
+      }
+
+      const effectiveTier = row.subscription_tier || row.plan;
+      const plan = resolvePlan(effectiveTier);
+      const event = row;
+
+      eventData = { event, plan };
+      if (!isOwnerRequest) {
+        eventValidationCache.set(slug, { data: eventData, expiresAt: Date.now() + EVENT_VALIDATION_TTL });
+      }
+    }
+
+    const { event, plan } = eventData;
     const isOwner = currentUser && currentUser.id === event.user_id;
 
     fastify.log.info({ slug, isOwner, userId: currentUser?.id, eventUserId: event.user_id }, 'Validating event upload');
-
-    // Owner must still exist (account not deleted). Pulls the live tier as well.
-    let effectiveTier = event.plan;
-    const { rows: ownerRows } = await fastify.db.query(
-      `SELECT subscription_tier FROM users WHERE id = $1`,
-      [event.user_id],
-    );
-    if (!ownerRows.length) {
-      throw { statusCode: 403, code: 'owner_missing', message: 'Event owner account no longer exists.' };
-    }
-    if (ownerRows[0].subscription_tier) {
-      effectiveTier = ownerRows[0].subscription_tier;
-    }
-    const plan = resolvePlan(effectiveTier);
 
     // NOTE: uploads are intentionally OPEN regardless of event.is_paid —
     // PH manual-payment flow can lag, and we don't want guests blocked at the QR.
@@ -190,7 +220,6 @@ export default async function uploadRoutes(fastify) {
     if (!isOwner && event.gallery_expires_at && new Date(event.gallery_expires_at) < new Date()) {
       throw { statusCode: 403, code: 'gallery_locked', message: 'Gallery archived. Uploads closed.' };
     }
-
     if (!isOwner && event.upload_window_ends_at && new Date(event.upload_window_ends_at) < new Date()) {
       throw { statusCode: 403, code: 'upload_window_closed', message: 'Upload window has ended.' };
     }
@@ -200,11 +229,11 @@ export default async function uploadRoutes(fastify) {
         'SELECT COUNT(*)::int AS count FROM uploads WHERE event_id = $1',
         [event.id],
       );
-      const used = countRows[0].count;
-      if (used >= plan.uploadLimit) {
+      if (countRows[0].count >= plan.uploadLimit) {
         throw { statusCode: 403, code: 'plan_limit_uploads', message: `Upload limit reached for ${plan.name} plan.` };
       }
     }
+
     return { event, plan };
   }
 
