@@ -59,9 +59,9 @@ body {
 .drop .choose-btn { font-size: 16px !important; padding: 13px 26px !important; }
 .queue-item .q-name   { font-size: 15px !important; }
 .queue-item .q-status { font-size: 12px !important; }
-.name-field label { font-size: 12px !important; }
+.name-field label { font-size: 14px !important; }
 .name-field input { font-size: 17px !important; }
-.mp-textarea-wrap label { font-size: 12px !important; }
+.mp-textarea-wrap label { font-size: 14px !important; }
 .mp-textarea { font-size: 18px !important; }
 .send-btn { font-size: 17px !important; padding: 17px !important; }
 .share-tab .tab-label { font-size: 12px !important; }
@@ -654,7 +654,7 @@ body { background: var(--paper); min-height: 100dvh; }
   display: flex; align-items: center; justify-content: space-between;
   margin-bottom: 2px;
 }
-.msg-header label { font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--ink); }
+.msg-header label { font-family: var(--sans); font-size: 13px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--ink); }
 .msg-mode-hint {
   font-family: var(--sans, sans-serif); font-size: 11px; color: var(--ink-faint);
   font-style: italic; margin-bottom: 10px; letter-spacing: 0;
@@ -804,8 +804,8 @@ body { background: var(--paper); min-height: 100dvh; }
 .name-field:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(196,90,58,.1); }
 .name-field.error { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(196,90,58,.15); animation: shake .3s ease; }
 @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
-.name-field label { font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--ink); display: block; margin-bottom: 4px; }
-.name-field input { width: 100%; border: none; outline: none; font-size: 15px; background: transparent; color: var(--ink); }
+.name-field label { font-family: var(--sans); font-size: 13px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--ink); display: block; margin-bottom: 6px; }
+.name-field input { width: 100%; border: none; outline: none; font-size: 16px; background: transparent; color: var(--ink); }
 
 /* ── Upload progress overlay (aggregate) ─────────────── */
 .upload-overlay { position: fixed; inset: 0; background: rgba(20,20,20,.55); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 999; }
@@ -1140,7 +1140,7 @@ body { background: var(--paper); min-height: 100dvh; }
           <rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
         </svg>
       </div>
-      <div class="tab-label">Gallery</div>
+      <div class="tab-label">Photo / Video</div>
     </div>
     <div class="share-tab share-tab--mini share-tab--record" onclick="switchTab('record',this)">
       <div class="tab-icon">
