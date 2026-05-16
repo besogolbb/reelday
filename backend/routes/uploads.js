@@ -23,6 +23,7 @@ const uploadsInflight = new Map(); // slug → Promise<payload>  (single-flight 
 // keeping plan/window changes visible within one cache cycle.
 const EVENT_VALIDATION_TTL = 10_000;
 const eventValidationCache = new Map(); // slug → { data: {event, plan}, expiresAt }
+const eventValidationInflight = new Map(); // slug → Promise<{event,plan}|null>  (single-flight dedup)
 
 export default async function uploadRoutes(fastify) {
   function publicMediaUrl(key) {
@@ -169,42 +170,65 @@ export default async function uploadRoutes(fastify) {
     if (!isOwnerRequest) {
       const hit = eventValidationCache.get(slug);
       if (hit && hit.expiresAt > Date.now()) eventData = hit.data;
+
+      // Single-flight: if another request is already fetching this slug, wait for it
+      // rather than stampeding the DB with duplicate queries.
+      if (!eventData && eventValidationInflight.has(slug)) {
+        eventData = await eventValidationInflight.get(slug);
+      }
     }
 
     if (!eventData) {
-      // One query: event columns + owner's live subscription tier via LEFT JOIN.
-      // LEFT JOIN (not INNER) so we can distinguish owner_missing from not_found.
-      const { rows } = await fastify.db.query(
-        `SELECT e.id, e.slug, e.user_id, e.plan, e.is_active,
-                e.gallery_expires_at, e.upload_window_ends_at,
-                e.auto_approve, e.video_auto_approve, e.video_message_auto_approve,
-                e.couple_names, e.playback_burst_id, e.playback_burst_queue,
-                u.id AS owner_db_id, u.subscription_tier, u.is_active AS owner_is_active
-           FROM events e
-           LEFT JOIN users u ON u.id = e.user_id
-          WHERE e.slug = $1`,
-        [slug],
-      );
-
-      if (!rows.length || rows[0].is_active === false) {
-        throw { statusCode: 404, message: 'Event not found' };
-      }
-      const row = rows[0];
-
-      if (!row.user_id) {
-        throw { statusCode: 403, code: 'orphan_event', message: 'This event is not linked to an account.' };
-      }
-      if (!row.owner_db_id) {
-        throw { statusCode: 403, code: 'owner_missing', message: 'Event owner account no longer exists.' };
-      }
-
-      const effectiveTier = row.subscription_tier || row.plan;
-      const plan = resolvePlan(effectiveTier);
-      const event = row;
-
-      eventData = { event, plan };
+      let settle;
       if (!isOwnerRequest) {
-        eventValidationCache.set(slug, { data: eventData, expiresAt: Date.now() + EVENT_VALIDATION_TTL });
+        // Register inflight promise before the await so concurrent arrivals coalesce.
+        const promise = new Promise(resolve => { settle = resolve; });
+        eventValidationInflight.set(slug, promise);
+      }
+
+      try {
+        // One query: event columns + owner's live subscription tier via LEFT JOIN.
+        // LEFT JOIN (not INNER) so we can distinguish owner_missing from not_found.
+        const { rows } = await fastify.db.query(
+          `SELECT e.id, e.slug, e.user_id, e.plan, e.is_active,
+                  e.gallery_expires_at, e.upload_window_ends_at,
+                  e.auto_approve, e.video_auto_approve, e.video_message_auto_approve,
+                  e.couple_names, e.playback_burst_id, e.playback_burst_queue,
+                  u.id AS owner_db_id, u.subscription_tier, u.is_active AS owner_is_active
+             FROM events e
+             LEFT JOIN users u ON u.id = e.user_id
+            WHERE e.slug = $1`,
+          [slug],
+        );
+
+        if (!rows.length || rows[0].is_active === false) {
+          throw { statusCode: 404, message: 'Event not found' };
+        }
+        const row = rows[0];
+
+        if (!row.user_id) {
+          throw { statusCode: 403, code: 'orphan_event', message: 'This event is not linked to an account.' };
+        }
+        if (!row.owner_db_id) {
+          throw { statusCode: 403, code: 'owner_missing', message: 'Event owner account no longer exists.' };
+        }
+
+        const effectiveTier = row.subscription_tier || row.plan;
+        const plan = resolvePlan(effectiveTier);
+        const event = row;
+
+        eventData = { event, plan };
+        if (!isOwnerRequest) {
+          eventValidationCache.set(slug, { data: eventData, expiresAt: Date.now() + EVENT_VALIDATION_TTL });
+          settle(eventData);
+          eventValidationInflight.delete(slug);
+        }
+      } catch (e) {
+        if (settle) {
+          settle(null); // unblock waiters; they will re-attempt their own query
+          eventValidationInflight.delete(slug);
+        }
+        throw e;
       }
     }
 
