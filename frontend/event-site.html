@@ -192,6 +192,65 @@
     }
     body.menu-open { overflow: hidden; }
 
+    /* ── Mobile sticky action dock ─────────────────────
+       Two shortcut buttons (Find Your Seat + RSVP) anchored to
+       the bottom of the viewport on phones. Slides in once the
+       hero is mostly out of view (same trigger as the top nav)
+       so it doesn't smother the hero on first paint. Respects
+       iOS safe-area inset so it sits above the home indicator. */
+    .es-dock {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 35;
+      display: none;
+      padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
+      gap: 8px;
+      background:
+        linear-gradient(180deg, rgba(251,247,238,0) 0%, rgba(251,247,238,.92) 35%, rgba(244,234,217,.96) 100%);
+      backdrop-filter: saturate(140%) blur(18px);
+      -webkit-backdrop-filter: saturate(140%) blur(18px);
+      transform: translateY(110%); transition: transform .35s cubic-bezier(.4,0,.2,1);
+      box-shadow: 0 -14px 36px -18px rgba(42,26,20,.30);
+    }
+    .es-dock.show { transform: translateY(0); }
+    .es-dock a {
+      flex: 1; min-width: 0;
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 14px 12px;
+      border-radius: 16px;
+      font-family: var(--mono); font-size: 11px; font-weight: 700;
+      letter-spacing: .18em; text-transform: uppercase;
+      transition: transform .15s, box-shadow .15s, background .15s, color .15s;
+      min-height: 48px;
+    }
+    .es-dock a .ico {
+      flex: 0 0 18px; width: 18px; height: 18px;
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+    .es-dock a .ico svg { width: 16px; height: 16px; stroke-width: 2; }
+    /* Secondary — paper chip with accent stroke. */
+    .es-dock .es-dock-secondary {
+      background: rgba(255,255,255,.95);
+      color: var(--ink);
+      border: 1px solid rgba(196,90,58,.30);
+      box-shadow: 0 4px 14px -6px rgba(42,26,20,.20);
+    }
+    .es-dock .es-dock-secondary .ico svg { stroke: var(--accent); }
+    .es-dock .es-dock-secondary:active { transform: translateY(1px); }
+    /* Primary — accent fill, what we want guests to tap. */
+    .es-dock .es-dock-primary {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 10px 24px -8px rgba(196,90,58,.50);
+    }
+    .es-dock .es-dock-primary .ico svg { stroke: #fff; }
+    .es-dock .es-dock-primary:active { transform: translateY(1px); box-shadow: 0 4px 12px -4px rgba(196,90,58,.45); }
+    /* Phones only. The full nav handles desktop just fine. */
+    @media (max-width: 720px) {
+      .es-dock { display: flex; }
+      /* Reserve space at the bottom of the page so the dock never
+         eclipses the footer's last line. */
+      .es-foot { padding-bottom: calc(120px + env(safe-area-inset-bottom)); }
+    }
+
     /* ── Hero ──────────────────────────────────────────
        Full-bleed cover image with a slow Ken-Burns zoom and a
        generous bottom gradient so the lockup stays legible no
@@ -2026,10 +2085,60 @@
 
       // Show sticky nav once the hero is mostly out of view.
       var navEl = nav;
+      // Mobile shortcut dock — only built when the matching sections
+      // actually exist on the page. If neither seat finder nor RSVP
+      // is enabled, no dock is created (so the CSS @media display:flex
+      // doesn't render an empty bar). Both enabled → primary RSVP +
+      // secondary seat. Just one enabled → that one fills the dock.
+      var seatOn = cfg.seatEnabled !== false;
+      var rsvpOn = cfg.rsvpEnabled !== false;
+      var dockEl = null;
+      if (seatOn || rsvpOn) {
+        // Re-create on every render so language/state changes don't
+        // leave a stale dock from a previous build.
+        var prevDock = document.getElementById('esDock');
+        if (prevDock) prevDock.remove();
+        dockEl = el('div', { class: 'es-dock', id: 'esDock' });
+        function dockBtn(href, label, primary, iconSvg) {
+          var a = el('a', { class: primary ? 'es-dock-primary' : 'es-dock-secondary',
+            href: href });
+          a.addEventListener('click', function (e) {
+            // Smooth-scroll within the same page; preserves browser
+            // history (the hash still updates) so back works as expected.
+            var target = document.querySelector(href);
+            if (target) {
+              e.preventDefault();
+              target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              history.replaceState(null, '', href);
+            }
+          });
+          var ico = el('span', { class: 'ico' });
+          ico.innerHTML = iconSvg;
+          a.appendChild(ico);
+          a.appendChild(document.createTextNode(label));
+          return a;
+        }
+        var seatIcon =
+          '<svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+          '<path d="M6 21V9a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12"/>' +
+          '<path d="M4 21h16"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/></svg>';
+        var rsvpIcon =
+          '<svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+          '<path d="M4 7h16v12H4z"/><path d="M4 7l8 6 8-6"/></svg>';
+        if (seatOn) dockEl.appendChild(dockBtn('#seat', t('seat'), !rsvpOn, seatIcon));
+        if (rsvpOn) dockEl.appendChild(dockBtn('#rsvp', t('rsvp'), true,    rsvpIcon));
+        document.body.appendChild(dockEl);
+      }
+
       var heroBottomObs = new IntersectionObserver(function (entries) {
         entries.forEach(function (en) {
-          if (en.intersectionRatio < 0.25) navEl.classList.add('show');
-          else navEl.classList.remove('show');
+          if (en.intersectionRatio < 0.25) {
+            navEl.classList.add('show');
+            if (dockEl) dockEl.classList.add('show');
+          } else {
+            navEl.classList.remove('show');
+            if (dockEl) dockEl.classList.remove('show');
+          }
         });
       }, { threshold: [0, 0.25, 1] });
       heroBottomObs.observe(hero);
