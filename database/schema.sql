@@ -107,3 +107,35 @@ CREATE INDEX IF NOT EXISTS idx_uploads_created_at  ON uploads(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_video_messages_event ON video_messages(event_id);
 CREATE INDEX IF NOT EXISTS idx_payments_event_id   ON payments(event_id);
 CREATE INDEX IF NOT EXISTS idx_events_slug         ON events(slug);
+
+-- ── Background music for the wall (Phase 1) ──
+-- Curated, royalty-free playlists. Host picks one per event in the dashboard;
+-- the wall streams the playlist on loop (with ducking during guest videos).
+-- Tracks live in R2 under `music/<mood>/<filename>.mp3` and are served via
+-- the bucket's public URL (no per-request signing — same as guest uploads).
+CREATE TABLE IF NOT EXISTS music_playlists (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name         VARCHAR(80)  NOT NULL,
+  mood         VARCHAR(40)  NOT NULL,   -- 'ceremony' | 'cocktail' | 'dinner' | 'party'
+  description  TEXT,
+  cover_color  VARCHAR(20),             -- hex, used as picker swatch
+  is_active    BOOLEAN      DEFAULT true,
+  position     INTEGER      DEFAULT 0,  -- display order in the dashboard picker
+  created_at   TIMESTAMPTZ  DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS music_tracks (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  playlist_id   UUID REFERENCES music_playlists(id) ON DELETE CASCADE,
+  title         VARCHAR(160) NOT NULL,
+  artist        VARCHAR(160),
+  file_url      TEXT         NOT NULL,  -- absolute R2 public URL
+  duration_s    INTEGER      NOT NULL DEFAULT 0,
+  position      INTEGER      NOT NULL DEFAULT 0,
+  license_info  TEXT,                   -- attribution string if required
+  created_at    TIMESTAMPTZ  DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_music_tracks_playlist ON music_tracks(playlist_id, position);
+
+ALTER TABLE events ADD COLUMN IF NOT EXISTS music_playlist_id UUID REFERENCES music_playlists(id);
+ALTER TABLE events ADD COLUMN IF NOT EXISTS music_enabled     BOOLEAN DEFAULT true;

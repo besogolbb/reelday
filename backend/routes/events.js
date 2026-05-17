@@ -285,10 +285,18 @@ export default async function eventRoutes(fastify) {
       auto_approve,
       video_auto_approve,
       video_message_auto_approve,
+      music_playlist_id, music_enabled,
     } = request.body ?? {};
 
     // Treat empty string as "clear this field"; treat undefined as "leave alone"
     const orNull = v => (v === undefined ? null : v);
+
+    // music_playlist_id == '' means "remove the picked playlist". Anything
+    // else gets passed through; the FK constraint guards bad IDs.
+    const musicPlaylistArg =
+      music_playlist_id === undefined ? undefined
+      : music_playlist_id === ''      ? null
+      : music_playlist_id;
 
     // The WHERE clause carries the ownership check so a guess-the-slug
     // attempt against someone else's event returns the same 404 either way.
@@ -303,7 +311,9 @@ export default async function eventRoutes(fastify) {
            welcome_message            = COALESCE($8, welcome_message),
            auto_approve               = COALESCE($9,  auto_approve),
            video_auto_approve         = COALESCE($10, video_auto_approve),
-           video_message_auto_approve = COALESCE($11, video_message_auto_approve)
+           video_message_auto_approve = COALESCE($11, video_message_auto_approve),
+           music_playlist_id          = CASE WHEN $13::boolean THEN $14::uuid ELSE music_playlist_id END,
+           music_enabled              = COALESCE($15, music_enabled)
        WHERE slug = $1 AND user_id = $12
        RETURNING *`,
       [
@@ -319,6 +329,9 @@ export default async function eventRoutes(fastify) {
         typeof video_auto_approve         === 'boolean' ? video_auto_approve         : null,
         typeof video_message_auto_approve === 'boolean' ? video_message_auto_approve : null,
         request.user.id,
+        musicPlaylistArg !== undefined,        // $13 — was a value (incl. null) provided?
+        musicPlaylistArg ?? null,              // $14 — the value to set (or NULL to clear)
+        typeof music_enabled === 'boolean' ? music_enabled : null,
       ],
     );
 

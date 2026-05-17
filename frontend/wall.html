@@ -1450,6 +1450,11 @@
   <audio id="aud-b" preload="none"></audio>
 </div>
 
+<!-- Background music for the wall. Streams a curated playlist from R2;
+     ducks automatically when guest video/audio plays (see music player JS).
+     Shares the existing sound-btn for autoplay-unlock — no separate UI. -->
+<audio id="bg-music" preload="auto"></audio>
+
 <!-- ════ TOP TICKER ═══════════════════════════════════════ -->
 <div class="ticker">
   <div class="live">
@@ -1943,14 +1948,123 @@
   // Persist sound choice per browser so the host doesn't have to retap each refresh.
   let wallSoundOn = localStorage.getItem('reelday_wall_sound') === 'on';
 
+  // ── Background music (Phase 1) ──────────────────────────────
+  // Streams a curated playlist from R2 via the public bucket URL — no
+  // backend involvement after the initial /api/events/:slug/music fetch.
+  // Ducks to a low volume during guest video/audio playback so it stays
+  // present but never competes with the moment on screen. Polls have no
+  // audio so music keeps playing at normal volume during them.
+  const bgMusic = document.getElementById('bg-music');
+  const MUSIC_VOL_NORMAL = 0.55;
+  const MUSIC_VOL_DUCKED = 0.08;
+  const MUSIC_DUCK_FADE_MS = 300;
+  let   musicTracks  = [];
+  let   musicIdx     = 0;
+  let   musicLoaded  = false;
+  let   musicDucked  = false;
+  let   musicFadeId  = 0;
+
+  async function loadBackgroundMusic() {
+    if (!slug || !bgMusic) return;
+    try {
+      const r = await fetch(`/api/events/${slug}/music`, { credentials: 'same-origin' });
+      if (!r.ok) return;
+      const data = await r.json();
+      const tracks = data?.playlist?.tracks;
+      if (!Array.isArray(tracks) || !tracks.length) return;
+      // Light shuffle so different walls don't start at the same track if
+      // the host opens two screens at once.
+      musicTracks = tracks.slice().sort(() => Math.random() - 0.5);
+      musicIdx    = 0;
+      musicLoaded = true;
+      bgMusic.volume = MUSIC_VOL_NORMAL;
+      bgMusic.muted  = !wallSoundOn;
+      loadCurrentTrack();
+      if (wallSoundOn) tryStartMusic();
+    } catch (e) {
+      // Silent failure — wall stays silent, host can investigate via dashboard
+      console.warn('Background music load failed', e);
+    }
+  }
+
+  function loadCurrentTrack() {
+    if (!musicLoaded || !bgMusic) return;
+    const t = musicTracks[musicIdx % musicTracks.length];
+    if (!t?.file_url) return;
+    bgMusic.src = t.file_url;
+    bgMusic.load();
+  }
+
+  function tryStartMusic() {
+    if (!musicLoaded || !bgMusic || !wallSoundOn) return;
+    // play() may reject if autoplay isn't unlocked yet; sound-btn click
+    // path retries via applySoundState → tryStartMusic.
+    bgMusic.play().catch(() => {});
+  }
+
+  function fadeMusicTo(target) {
+    if (!bgMusic) return;
+    const start = bgMusic.volume;
+    const t0    = performance.now();
+    const myId  = ++musicFadeId; // cancel any in-flight fade
+    function step() {
+      if (myId !== musicFadeId) return;
+      const k = Math.min(1, (performance.now() - t0) / MUSIC_DUCK_FADE_MS);
+      bgMusic.volume = start + (target - start) * k;
+      if (k < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  function setMusicDucked(ducked) {
+    if (!musicLoaded) return;
+    if (ducked === musicDucked) return;
+    musicDucked = ducked;
+    fadeMusicTo(ducked ? MUSIC_VOL_DUCKED : MUSIC_VOL_NORMAL);
+  }
+
+  // Advance through the playlist on each track end; loop forever.
+  bgMusic?.addEventListener('ended', () => {
+    musicIdx = (musicIdx + 1) % Math.max(1, musicTracks.length);
+    loadCurrentTrack();
+    if (wallSoundOn) tryStartMusic();
+  });
+
+  // Duck whenever a guest video or paired-audio element actually starts
+  // playing. Unducks when nothing else is playing. Event-driven so we
+  // don't have to poke showSlide internals.
+  function checkUnduck() {
+    const anyPlaying = [vidA, vidB, audA, audB].some(
+      el => el && !el.paused && !el.ended,
+    );
+    if (!anyPlaying) setMusicDucked(false);
+  }
+  [vidA, vidB, audA, audB].forEach(el => {
+    if (!el) return;
+    el.addEventListener('play',  () => setMusicDucked(true));
+    el.addEventListener('playing', () => setMusicDucked(true));
+    el.addEventListener('pause', checkUnduck);
+    el.addEventListener('ended', checkUnduck);
+    el.addEventListener('emptied', checkUnduck);
+  });
+
   function applySoundState() {
     soundIcon.textContent  = wallSoundOn ? '🔊' : '🔇';
     soundLabel.textContent = wallSoundOn ? 'Sound on' : 'Tap for sound';
     [vidA, vidB].forEach(v => { if (v) v.muted = !wallSoundOn; });
     [audA, audB].forEach(a => { if (a) a.muted = !wallSoundOn; });
+    if (bgMusic) {
+      bgMusic.muted = !wallSoundOn;
+      if (wallSoundOn) tryStartMusic();
+      else { try { bgMusic.pause(); } catch {} }
+    }
     if (wallSoundOn) soundBtn?.classList.remove('attention');
   }
   applySoundState();
+
+  // Kick off the music fetch right after sound state is initialised so
+  // the playlist is ready by the time the host taps the sound button.
+  loadBackgroundMusic();
 
   soundBtn?.addEventListener('click', () => {
     wallSoundOn = !wallSoundOn;

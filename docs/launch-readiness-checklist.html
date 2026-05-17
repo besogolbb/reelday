@@ -79,7 +79,7 @@
 <body>
 
 <h1>Reelday — Launch Readiness Checklist</h1>
-<div class="sub">Public launch target: <strong>Tuesday 19 May 2026</strong>. Work top to bottom — each section gates the next. If a row is flagged a <span class="pill pill-blocker">BLOCKER</span> and isn't checked, do not launch.</div>
+<div class="sub">Public launch target: <strong>Wednesday 20 May 2026</strong> (slipped one day to ship the wall background-music feature). Work top to bottom — each section gates the next. If a row is flagged a <span class="pill pill-blocker">BLOCKER</span> and isn't checked, do not launch.</div>
 <div class="meta">Last updated 17 May 2026 · Source: <code>docs/launch-readiness-checklist.md</code></div>
 
 <div class="gate-note">
@@ -139,6 +139,16 @@
     <label for="op6"><strong>Verify SQS dead-letter queue is configured.</strong></label>
     <span class="check-detail">Where: AWS Console → SQS → <code>reelday-transcode.fifo</code>. Confirm a DLQ exists and is wired to the main queue. Why: if a video fails to transcode 3 times, it lands in DLQ instead of looping forever.</span>
   </li>
+  <li>
+    <input type="checkbox" id="op7">
+    <label for="op7"><strong>Apply the music schema migration on prod Postgres.</strong></label>
+    <span class="check-detail">Run <code>database/schema.sql</code> against prod (idempotent — uses <code>CREATE TABLE IF NOT EXISTS</code>). Verify tables: <code>\d music_playlists</code>, <code>\d music_tracks</code>. Verify column: <code>events.music_playlist_id</code>.</span>
+  </li>
+  <li>
+    <input type="checkbox" id="op8">
+    <label for="op8"><strong>Seed the music library.</strong></label>
+    <span class="check-detail">Curate 4 playlists (ceremony, cocktail, dinner, party) with 5–8 royalty-free tracks each (YouTube Audio Library, FreePD, Bensound). Layout: <code>./music-library/&lt;mood&gt;/manifest.json</code> + <code>.mp3</code> files. Run from Easypanel terminal: <code>node scripts/seed-music-library.mjs</code>. Verify in dashboard event settings — "Wall music" dropdown should list the playlists.</span>
+  </li>
 </ul>
 
 <!-- ====================================================================== -->
@@ -171,6 +181,16 @@
   <li><input type="checkbox" id="w2"><label for="w2">Confirm autoplay works (videos play with no user click)</label></li>
   <li><input type="checkbox" id="w3"><label for="w3">Confirm wall stays responsive after 30+ minutes of idle time</label></li>
   <li><input type="checkbox" id="w4"><label for="w4">Confirm <code>?reconcile=1</code> recovers a stuck wall</label></li>
+</ul>
+
+<h3>Wall music flow (new in v1.0)</h3>
+<ul class="checklist">
+  <li><input type="checkbox" id="m1"><label for="m1">Pick a playlist for the demo event in dashboard → save</label></li>
+  <li><input type="checkbox" id="m2"><label for="m2">Open the wall → tap the sound button once → music starts</label></li>
+  <li><input type="checkbox" id="m3"><label for="m3">Trigger a video upload from a guest phone → music <strong>ducks</strong> to low volume while video plays, restores after</label></li>
+  <li><input type="checkbox" id="m4"><label for="m4">Run a live poll → music <strong>keeps playing</strong> at normal volume during the poll</label></li>
+  <li><input type="checkbox" id="m5"><label for="m5">Reload the wall → music resumes automatically if "sound on" was previously set (localStorage persistence)</label></li>
+  <li><input type="checkbox" id="m6"><label for="m6">Switch playlist to "Off" in dashboard → reload wall → music doesn't play</label></li>
 </ul>
 
 <h3>Account & dashboard flow</h3>

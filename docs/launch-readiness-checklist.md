@@ -1,6 +1,6 @@
 # Reelday Launch Readiness Checklist
 
-**Target launch:** Tuesday 19 May 2026 (public)
+**Target launch:** Wednesday 20 May 2026 (public) — slipped one day to ship the wall background-music feature
 **Last updated:** 17 May 2026
 
 Use this checklist to confirm everything is in place before the public launch. Work top to bottom — each section gates the next. If a row says "blocker" and isn't checked, do not launch.
@@ -57,6 +57,18 @@ These are the gaps flagged from the perf review. Each one is a launch blocker.
   - Confirm: a DLQ exists and is wired to the main queue
   - Why: if a video fails to transcode 3 times, it lands in DLQ instead of looping forever
 
+- [ ] **Apply the music schema migration on prod Postgres.**
+  - Run `database/schema.sql` against prod (idempotent — uses `CREATE TABLE IF NOT EXISTS`)
+  - Confirm tables exist: `\d music_playlists`, `\d music_tracks`
+  - Confirm `events.music_playlist_id` column exists
+
+- [ ] **Seed the music library.**
+  - Curate 4 playlists (one per mood: ceremony, cocktail, dinner, party) with 5–8 royalty-free tracks each
+  - Sources: YouTube Audio Library, FreePD, Bensound (with attribution)
+  - Layout: `./music-library/<mood>/manifest.json` + `.mp3` files
+  - Run from Easypanel terminal: `node scripts/seed-music-library.mjs`
+  - Verify in dashboard: open event settings → "Wall music" dropdown shows the playlists
+
 ---
 
 ## 3. User Flow Validation — Manual Test on Real Devices
@@ -83,6 +95,14 @@ Synthetic load tests don't catch device-specific bugs. Run through these flows b
 - [ ] Confirm autoplay works (videos play with no user click required)
 - [ ] Confirm wall stays responsive after 30+ minutes of idle time
 - [ ] Confirm refresh / reconcile (`?reconcile=1`) recovers a stuck wall
+
+**Wall music flow (new in v1.0):**
+- [ ] Pick a playlist for the demo event in dashboard → save
+- [ ] Open the wall → tap the sound button once → music starts
+- [ ] Trigger a video upload from a guest phone → confirm music **ducks** to low volume while video plays, restores after
+- [ ] Run a live poll → confirm music **keeps playing** at normal volume during the poll
+- [ ] Reload the wall → music should resume automatically if "sound on" was previously set (sound preference persists in localStorage)
+- [ ] Switch playlist to "Off" in dashboard → reload wall → music doesn't play
 
 **Account & dashboard flow:**
 - [ ] Create a new event from the host dashboard

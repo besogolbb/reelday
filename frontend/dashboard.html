@@ -1740,6 +1740,15 @@
           <input id="details-time" type="text" maxlength="60"
                  placeholder="e.g. 5:00 PM" />
         </div>
+        <div class="details-field">
+          <label for="details-music">Wall music <span class="opt">(plays in the background)</span></label>
+          <select id="details-music">
+            <option value="">Off — silent wall</option>
+          </select>
+          <p class="details-sub" style="margin-top:6px">
+            Plays on loop on the wall display. Automatically lowers volume when a guest video or voice message plays. Host taps the wall once to start sound.
+          </p>
+        </div>
         <button type="button" class="btn btn-accent details-save" id="btn-save-details">
           Save details
         </button>
@@ -2227,6 +2236,38 @@
       if (msgInput)   msgInput.value   = event.welcome_message ?? '';
       if (venueInput) venueInput.value = event.venue           ?? '';
       if (timeInput)  timeInput.value  = event.event_time      ?? '';
+      // Music playlist picker populates async — current selection applied
+      // once playlists have loaded.
+      loadMusicPicker(event.music_playlist_id);
+    }
+  }
+
+  // ── Wall music picker ────────────────────────────────────
+  // One-shot fetch of available playlists; populated into the <select>
+  // and the host's current pick is preselected. Saving is folded into
+  // the existing event-details PATCH body so we don't add a save button.
+  async function loadMusicPicker(currentPlaylistId) {
+    const sel   = document.getElementById('details-music');
+    const token = localStorage.getItem('reelday_token');
+    if (!sel || !token) return;
+    try {
+      const res = await fetch('/api/music/playlists', {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const { playlists = [] } = await res.json();
+      // Keep the existing "Off" option as index 0 and append the rest.
+      while (sel.options.length > 1) sel.remove(1);
+      for (const p of playlists) {
+        const mins = Math.round((p.total_duration_s || 0) / 60);
+        const opt  = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = `${p.name} (${p.track_count} tracks${mins ? ` · ~${mins} min` : ''})`;
+        sel.appendChild(opt);
+      }
+      sel.value = currentPlaylistId || '';
+    } catch (e) {
+      console.warn('Music picker load failed', e);
     }
   }
 
@@ -2299,6 +2340,8 @@
           welcome_message: document.getElementById('details-message').value,
           venue:           document.getElementById('details-venue').value,
           event_time:      document.getElementById('details-time').value,
+          // '' = "Off — silent wall" (server treats '' as clear-to-null).
+          music_playlist_id: document.getElementById('details-music')?.value ?? undefined,
         }),
       });
       const data = await res.json();
