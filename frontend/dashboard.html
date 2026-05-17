@@ -17,6 +17,13 @@
       --dash-muted: #7f6b62;
       --dash-green: #2d7a4a;
     }
+    /* Horizontal-scroll safety net. Some long inline content (long
+       slug in the polls/esite summary line, the wizard step header on
+       narrow screens, an oversized embed someone pastes in future) was
+       pushing the viewport wider on phones. overflow-x: clip is the
+       modern, sticky-safe way to say "never scroll horizontally". */
+    html, body { max-width: 100%; overflow-x: clip; }
+    img, video, iframe { max-width: 100%; }
     body {
       background:
         radial-gradient(circle at top left, rgba(255,232,214,.8), transparent 26%),
@@ -4646,9 +4653,9 @@
       // ── wizard chrome (modern: dot progress + active step title) ──
       // Active step title + counter (Stripe-checkout style header)
       const stepHeader = document.createElement('div');
-      stepHeader.style.cssText = 'display:flex;align-items:baseline;justify-content:space-between;gap:14px;margin-bottom:10px;';
+      stepHeader.style.cssText = 'display:flex;align-items:baseline;justify-content:space-between;gap:8px 14px;margin-bottom:10px;flex-wrap:wrap;';
       const stepTitle = document.createElement('h4');
-      stepTitle.style.cssText = 'font-family:var(--display);font-size:22px;font-weight:600;color:var(--ink);margin:0;letter-spacing:-.01em;';
+      stepTitle.style.cssText = 'font-family:var(--display);font-size:clamp(18px,5vw,22px);font-weight:600;color:var(--ink);margin:0;letter-spacing:-.01em;min-width:0;';
       const stepCount = document.createElement('span');
       stepCount.style.cssText = 'font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint);white-space:nowrap;';
       stepHeader.appendChild(stepTitle); stepHeader.appendChild(stepCount);
