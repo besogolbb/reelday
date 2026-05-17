@@ -30,25 +30,6 @@
       text-transform: uppercase;
     }
 
-    /* ── Top language toggle (always visible) ─────────── */
-    .es-lang {
-      position: fixed; top: 14px; right: 14px; z-index: 50;
-      display: flex; gap: 2px;
-      background: rgba(255,255,255,.86);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      border: 1px solid rgba(255,255,255,.6);
-      border-radius: 999px; padding: 3px;
-      font-size: 11px; font-family: var(--mono);
-      box-shadow: 0 6px 24px rgba(42,26,20,.10);
-    }
-    .es-lang button {
-      padding: 6px 14px; border-radius: 999px; border: 0;
-      background: transparent; color: var(--ink-soft);
-      letter-spacing: .12em; font-weight: 600;
-    }
-    .es-lang button.on { background: var(--accent); color: #fff; }
-
     /* ── Sticky nav (slides in after the hero) ────────── */
     nav.es-nav {
       position: fixed; top: 0; left: 0; right: 0; z-index: 40;
@@ -204,20 +185,38 @@
       0%, 100% { opacity: 1; transform: scale(1); }
       50%      { opacity: .4; transform: scale(.7); }
     }
+    /* ── Scroll cue ─────────────────────────────────────
+       Beefed up from a hairline + 9 px label to a visible chip:
+       larger label, an outlined circle holding a chevron, both
+       bouncing gently so the eye catches it on a busy cover. */
     .es-hero-scroll {
-      position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%);
-      font-family: var(--mono); font-size: 9px; letter-spacing: .3em;
-      text-transform: uppercase; opacity: .55;
-      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
+      font-family: var(--mono); font-size: 11px; letter-spacing: .4em;
+      text-transform: uppercase; color: #fff;
+      text-shadow: 0 2px 8px rgba(0,0,0,.45);
+      cursor: pointer;
+      z-index: 2;
+    }
+    .es-hero-scroll-circle {
+      width: 42px; height: 42px; border-radius: 50%;
+      border: 1.5px solid rgba(255,255,255,.85);
+      background: rgba(20,12,8,.35);
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+      display: flex; align-items: center; justify-content: center;
       animation: scrollBob 1.8s ease-in-out infinite;
+      box-shadow: 0 6px 20px rgba(0,0,0,.30);
     }
-    .es-hero-scroll::after {
-      content: ''; width: 1px; height: 24px; background: currentColor;
-    }
+    .es-hero-scroll-circle svg { width: 16px; height: 16px; stroke: #fff; }
     @keyframes scrollBob {
-      0%, 100% { transform: translate(-50%, 0); opacity: .55; }
-      50%      { transform: translate(-50%, 6px); opacity: 1; }
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(8px); }
     }
+    .es-hero.no-bg .es-hero-scroll { color: var(--ink); text-shadow: none; }
+    .es-hero.no-bg .es-hero-scroll-circle {
+      border-color: var(--ink); background: var(--paper-2); box-shadow: none;
+    }
+    .es-hero.no-bg .es-hero-scroll-circle svg { stroke: var(--ink); }
 
     @keyframes fadeUp {
       from { opacity: 0; transform: translateY(20px); }
@@ -612,11 +611,6 @@
   </style>
 </head>
 <body>
-  <div class="es-lang" id="langToggle" hidden>
-    <button data-lang="en" class="on">EN</button>
-    <button data-lang="tl">TL</button>
-  </div>
-
   <div id="state" class="es-state">Loading…</div>
   <main id="app" hidden></main>
 
@@ -645,56 +639,32 @@
     var parts = location.pathname.split('/').filter(Boolean); // ['e','<slug>']
     var SLUG = parts[1] ? decodeURIComponent(parts[1]) : '';
 
-    // UI labels only — host content is never translated (by design,
-    // so a host writing in Tagalog isn't auto-translated to broken EN).
+    // UI labels (English-only). Host-supplied content is never translated.
     var L = {
-      en: { story:'Our Story', details:'The Details', when:'When',
-        gallery:'Gallery', seat:'Find Your Seat', seatHint:'Type your full name',
-        seatBtn:'Find my table', rsvp:'RSVP', faq:'Questions',
-        entourage:'The Entourage', goodToKnow:'Good to Know',
-        attending:'Joyfully accepts', notAttending:'Regretfully declines',
-        party:'Number in your party', message:'A note (optional)',
-        send:'Send RSVP', sent:'Thank you! Your RSVP is saved.',
-        noSeat:'We couldn’t find that name — please contact the host or approach the coordinator.',
-        table:'Table', addCal:'Add to calendar', share:'Share',
-        upload:'Share your photos', happening:'Happening now',
-        openWall:'Open the live wall', nameLbl:'Your full name',
-        days:'days', hrs:'hrs', min:'min', sec:'sec',
-        scroll:'Scroll', mapsLink:'Open in Maps',
-        eyebrowStory:'— in their own words —',
-        eyebrowDetails:'— the day, hour by hour —',
-        eyebrowGallery:'— moments, captured —',
-        eyebrowSeat:'— your place at the table —',
-        eyebrowRsvp:'— we hope you can come —',
-        eyebrowFaq:'— things to know —',
-        eyebrowEntourage:'— with us in the celebration —',
-        eyebrowFootInvite:'— we can’t wait —',
-        footTitle:'Save the date.' },
-      tl: { story:'Ang Kuwento Namin', details:'Mga Detalye', when:'Kailan',
-        gallery:'Mga Larawan', seat:'Hanapin ang Upuan', seatHint:'I-type ang buong pangalan',
-        seatBtn:'Hanapin ang mesa ko', rsvp:'RSVP', faq:'Mga Tanong',
-        entourage:'Ang Entourage', goodToKnow:'Mga Dapat Malaman',
-        attending:'Masayang dadalo', notAttending:'Hindi makakadalo',
-        party:'Ilan kayo sa grupo', message:'Mensahe (opsyonal)',
-        send:'Ipadala ang RSVP', sent:'Salamat! Nai-save na ang RSVP.',
-        noSeat:'Hindi namin nahanap ang pangalan — makipag-ugnayan sa host o sa coordinator.',
-        table:'Mesa', addCal:'I-add sa calendar', share:'I-share',
-        upload:'I-share ang litrato', happening:'Nagaganap na ngayon',
-        openWall:'Buksan ang live wall', nameLbl:'Buong pangalan',
-        days:'araw', hrs:'oras', min:'min', sec:'seg',
-        scroll:'Mag-scroll', mapsLink:'Buksan sa Maps',
-        eyebrowStory:'— sa kanilang sariling salita —',
-        eyebrowDetails:'— ang araw, oras-oras —',
-        eyebrowGallery:'— mga sandaling nai-larawan —',
-        eyebrowSeat:'— ang inyong lugar sa hapag —',
-        eyebrowRsvp:'— sana ay makasama kayo —',
-        eyebrowFaq:'— mga dapat malaman —',
-        eyebrowEntourage:'— kasama sa pagdiriwang —',
-        eyebrowFootInvite:'— nasasabik na kami —',
-        footTitle:'I-save ang petsa.' }
+      story:'Our Story', details:'The Details', when:'When',
+      gallery:'Gallery', seat:'Find Your Seat', seatHint:'Type your full name',
+      seatBtn:'Find my table', rsvp:'RSVP', faq:'Questions',
+      entourage:'The Entourage', goodToKnow:'Good to Know',
+      attending:'Joyfully accepts', notAttending:'Regretfully declines',
+      party:'Number in your party', message:'A note (optional)',
+      send:'Send RSVP', sent:'Thank you! Your RSVP is saved.',
+      noSeat:'We couldn’t find that name — please contact the host or approach the coordinator.',
+      table:'Table', addCal:'Add to calendar', share:'Share',
+      upload:'Share your photos', happening:'Happening now',
+      openWall:'Open the live wall', nameLbl:'Your full name',
+      days:'days', hrs:'hrs', min:'min', sec:'sec',
+      scroll:'Scroll', mapsLink:'Open in Maps',
+      eyebrowStory:'— in their own words —',
+      eyebrowDetails:'— the day, hour by hour —',
+      eyebrowGallery:'— moments, captured —',
+      eyebrowSeat:'— your place at the table —',
+      eyebrowRsvp:'— we hope you can come —',
+      eyebrowFaq:'— things to know —',
+      eyebrowEntourage:'— with us in the celebration —',
+      eyebrowFootInvite:'— we can’t wait —',
+      footTitle:'Save the date.'
     };
-    var lang = (localStorage.getItem('reelday_lang') === 'tl') ? 'tl' : 'en';
-    function t(k) { return (L[lang] && L[lang][k]) || L.en[k] || k; }
+    function t(k) { return L[k] || k; }
 
     // ── Safe DOM builders (host text via textContent only) ──
     function el(tag, attrs, kids) {
@@ -718,7 +688,7 @@
     function fmtDate(d) {
       if (!d) return '';
       try {
-        return new Date(d).toLocaleDateString(lang === 'tl' ? 'fil-PH' : 'en-PH',
+        return new Date(d).toLocaleDateString('en-PH',
           { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
       } catch (e) { return String(d); }
     }
@@ -854,7 +824,6 @@
       var app = document.getElementById('app');
       app.textContent = '';
       document.documentElement.setAttribute('data-theme', data.theme || 'wedding');
-      document.getElementById('langToggle').hidden = false;
 
       var nav = el('nav', { class: 'es-nav', id: 'esNav' });
       function addNav(id, label) {
@@ -917,8 +886,25 @@
       heroBottom.appendChild(ctaWrap);
       hero.appendChild(heroBottom);
 
-      var scrollHint = el('div', { class: 'es-hero-scroll', text: t('scroll') });
-      hero.appendChild(scrollHint);
+      // Scroll cue — clickable; jumps past the hero in one tap so a
+       // guest who doesn't realise it's a scroll doesn't get stuck.
+       var scrollHint = el('div', { class: 'es-hero-scroll', role: 'button', tabindex: '0',
+         'aria-label': 'Scroll down' });
+       scrollHint.appendChild(el('span', { text: t('scroll') }));
+       var circ = el('div', { class: 'es-hero-scroll-circle' });
+       circ.innerHTML =
+         '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+         '<polyline points="6 9 12 15 18 9"/></svg>';
+       scrollHint.appendChild(circ);
+       scrollHint.addEventListener('click', function () {
+         var nextSec = document.querySelector('.es-section');
+         if (nextSec) nextSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+         else window.scrollTo({ top: window.innerHeight, behavior: 'smooth' });
+       });
+       scrollHint.addEventListener('keydown', function (e) {
+         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); scrollHint.click(); }
+       });
+       hero.appendChild(scrollHint);
 
       // Countdown / live switch — same as before, just feeds the new chips.
       function tick() {
@@ -1286,17 +1272,6 @@
       }, { threshold: [0, 0.25, 1] });
       heroBottomObs.observe(hero);
     }
-
-    // language toggle
-    document.getElementById('langToggle').addEventListener('click', function (e) {
-      var b = e.target.closest('button'); if (!b) return;
-      lang = b.dataset.lang;
-      try { localStorage.setItem('reelday_lang', lang); } catch (x) {}
-      [].forEach.call(this.querySelectorAll('button'), function (x) {
-        x.classList.toggle('on', x.dataset.lang === lang);
-      });
-      if (window.__esData) render(window.__esData);
-    });
 
     if (!SLUG) { showState('Not found'); return; }
     api('').then(function (r) {
