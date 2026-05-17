@@ -2218,21 +2218,36 @@
   document.addEventListener('touchstart', bumpActivity, { passive: true });
   document.addEventListener('keydown',    bumpActivity);
 
-  // Reset detection state at fullscreen transitions. The transition can
-  // leave the page in a state where mouse events fire spuriously — same
-  // root cause as why "click another window and back" fixes it (blur/focus
-  // clears the runaway state).
+  // Reset detection state at fullscreen transitions and focus changes.
+  // Without this, residual mouse events from the transition (or whatever
+  // makes the page send phantoms) keep the tray visible until the user
+  // blurs/refocuses the window manually.
   function resetMotionState() {
     windowMovePx    = 0;
     windowMoveCount = 0;
     windowFirstTs   = 0;
     lastMoveX = -1; lastMoveY = -1;
-    lastActivityTs  = Date.now();
   }
-  document.addEventListener('fullscreenchange',      resetMotionState);
-  document.addEventListener('webkitfullscreenchange', resetMotionState);
-  window.addEventListener('blur',  resetMotionState);
-  window.addEventListener('focus', resetMotionState);
+  function handleFullscreenChange() {
+    resetMotionState();
+    // On fullscreen entry, force-hide promptly: we can't reliably stop
+    // spurious mouse events from the transition, so we instead pretend
+    // the user has been idle forever. The next polling tick (~250ms)
+    // sees the stale timestamp and removes .show. Real mouse movement
+    // will re-show via bumpActivity → fresh lastActivityTs.
+    if (document.fullscreenElement || document.webkitFullscreenElement) {
+      lastActivityTs = 0;
+    } else {
+      // Exiting fullscreen — give a fresh 3.5s before hiding.
+      lastActivityTs = Date.now();
+    }
+  }
+  document.addEventListener('fullscreenchange',      handleFullscreenChange);
+  document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+  // Window blur/focus also gets a clean baseline (mirrors the original
+  // workaround: click out + click back).
+  window.addEventListener('blur',  () => { resetMotionState(); lastActivityTs = Date.now(); });
+  window.addEventListener('focus', () => { resetMotionState(); lastActivityTs = Date.now(); });
 
   // Poll every 250ms — handles both "promote movement to activity" and
   // "hide if idle". Independent of any individual event firing.
