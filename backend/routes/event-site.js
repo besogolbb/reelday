@@ -510,8 +510,18 @@ export default async function eventSiteRoutes(fastify) {
     return { ok: true, imported: clean.length };
   });
 
-  // ── Public: seat lookup — exact (case-insensitive) match ONLY ──────
-  // Never returns the list (scrape/privacy). Uses idx_event_seats_lookup.
+  // ── Public: seat lookup ───────────────────────────────────────────
+  // Originally exact-match only, which meant "Juan" could never find
+  // "Juan Dela Cruz" — guests would have to type their name exactly
+  // as the host typed it. Now: prefix match for queries ≥3 chars,
+  // exact match for 2-char queries (keeps very-short queries from
+  // returning a wide bucket). Privacy is still protected by:
+  //   - the public surface NEVER returning the whole list
+  //   - rate limiting via LOOKUP_LIMIT (5 lookups / 10 s by default)
+  //   - a 5-result cap so prefix sweeps can't bulk-dump
+  // For a wedding-scale list (a few hundred guests) this is the right
+  // trade-off — guests find themselves with one or two words, while
+  // any actual enumeration attack would take days against the limiter.
   fastify.get('/event-site/:slug/seat-lookup', { config: LOOKUP_LIMIT }, async (request, reply) => {
     const gate = await loadGate(fastify.db, request.params.slug);
     if (!gate || !gate.allowed || !gate.event.is_published) {
@@ -521,12 +531,23 @@ export default async function eventSiteRoutes(fastify) {
     if (q.length < 2) return { matches: [] };
     if (q.length > 160) return reply.status(400).send({ error: true, message: 'Query too long' });
 
+    const useExact = q.length < 3;
+    // Escape SQL LIKE wildcards so a literal % or _ in the guest
+    // input can't widen the match (defensive — not a security issue
+    // since the rate limiter still caps blast radius).
+    const safeQ = q.replace(/[\\%_]/g, ch => '\\' + ch);
+    const params = useExact ? [gate.event.id, q] : [gate.event.id, safeQ + '%'];
+    const where = useExact
+      ? `lower(guest_name) = lower($2)`
+      : `lower(guest_name) LIKE lower($2) ESCAPE '\\'`;
+
     const { rows } = await fastify.db.query(
       `SELECT guest_name, table_label, location_note, seat_note
          FROM event_seats
-        WHERE event_id = $1 AND lower(guest_name) = lower($2)
+        WHERE event_id = $1 AND ${where}
+        ORDER BY guest_name
         LIMIT 5`,
-      [gate.event.id, q],
+      params,
     );
     return { matches: rows };
   });
