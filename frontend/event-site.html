@@ -592,10 +592,16 @@
       margin-top: 14px;
       box-shadow: 0 8px 24px rgba(42,26,20,.06);
     }
+    .es-result .seat-name {
+      font-family: var(--mono); font-size: 11px; letter-spacing: .26em;
+      text-transform: uppercase; color: var(--ink-faint);
+      margin: 0 0 10px;
+    }
     .es-result .tbl {
       font-family: var(--display); font-weight: 500;
       font-size: 2.4rem; color: var(--accent);
       letter-spacing: -.01em;
+      line-height: 1.1;
     }
     .es-result .seat-card p {
       font-family: var(--display); color: var(--ink-soft); margin: 6px 0 0;
@@ -1292,8 +1298,19 @@
             if (j.matches && j.matches.length) {
               j.matches.forEach(function (m) {
                 var card = el('div', { class: 'seat-card' });
+                // Always show the matched guest name first so two
+                // people with the same first/last name (or the same
+                // person on two lists) can tell which card is theirs.
+                if (m.guest_name) {
+                  card.appendChild(el('div', { class: 'seat-name', text: m.guest_name }));
+                }
+                // Strip a leading "Table " from the host's label so
+                // hosts who typed "Table 50" don't get "Table Table 50"
+                // (we always prepend the localized "Table" prefix).
+                var rawLabel = String(m.table_label || '').trim();
+                var cleanLabel = rawLabel.replace(/^table\s+/i, '');
                 card.appendChild(el('div', { class: 'tbl',
-                  text: t('table') + ' ' + (m.table_label || '—') }));
+                  text: t('table') + ' ' + (cleanLabel || '—') }));
                 if (m.location_note) card.appendChild(el('p', { text: m.location_note }));
                 if (m.seat_note) card.appendChild(el('p', { text: m.seat_note }));
                 out.appendChild(card);
