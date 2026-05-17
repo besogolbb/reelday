@@ -674,15 +674,29 @@
       box-shadow: 0 0 0 4px rgba(240,163,122,.25);
     }
 
-    /* Current-slide marker — deep maroon ring with a slow breathing
-       halo so guests can locate "you are here" inside the loop. */
+    /* Current-slide marker — peach ring with a bright breathing halo
+       and a slight scale-up so guests can locate "you are here"
+       inside the loop at a glance. The .next thumb keeps its gold
+       border, but this one outshines it. */
     .upcoming-thumb.active {
-      border: 3px solid #7a1f2b;
+      border: 3px solid #f0a37a;
+      transform: scale(1.10);
       animation: activeThumbPulse 2.2s ease-in-out infinite;
     }
+    .upcoming-thumb.active:hover { transform: scale(1.14); }
     @keyframes activeThumbPulse {
-      0%, 100% { box-shadow: 0 0 0 0 rgba(122,31,43,.55), 0 0 14px rgba(122,31,43,.25); }
-      50%      { box-shadow: 0 0 0 6px rgba(122,31,43,0),  0 0 22px rgba(122,31,43,.40); }
+      0%, 100% {
+        box-shadow:
+          0 0 0 0 rgba(240,163,122,.65),
+          0 0 18px rgba(240,163,122,.45),
+          0 0 36px rgba(240,163,122,.20);
+      }
+      50% {
+        box-shadow:
+          0 0 0 8px rgba(240,163,122,0),
+          0 0 28px rgba(240,163,122,.80),
+          0 0 56px rgba(240,163,122,.40);
+      }
     }
 
     /* Reusable scrim — darkens the bottom of a label so white text
