@@ -7,6 +7,7 @@ dist/
 reelday/
 server-out.txt
 server-err.txt
+.claude/scheduled_tasks.lock
 
 # Music library — keep manifests + folder structure tracked, ignore the actual
 # audio bytes (each MP3 is several MB and would bloat the repo).
