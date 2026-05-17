@@ -2158,20 +2158,25 @@
   // Wall typically lives on a TV — we want the sound + volume + fullscreen
   // controls hidden by default so they don't intrude on the slideshow.
   //
-  // Polling design: events only update `lastActivityTs`; a setInterval
-  // polls and hides on idle. This is more robust than a setTimeout-reset
-  // pattern because in fullscreen some browsers periodically fire spurious
-  // mouse events (cursor auto-hide/reveal) that would keep restarting a
-  // reset-based timer indefinitely. Polling against a real timestamp is
-  // immune to that.
+  // Detection strategy: real human mouse movement produces many continuous
+  // mousemove events. Browser cursor-reveal in fullscreen (after auto-hide)
+  // can fire a SINGLE large teleport-style mousemove that would otherwise
+  // pass any pixel threshold. We require BOTH:
+  //   (a) ≥2 mousemove events within a 1-second sliding window
+  //   (b) cumulative pixel travel ≥ MOVE_PX_THRESH in that window
+  // Together: continuous-and-non-trivial motion. Single events of any size
+  // don't count, micro-jitter doesn't count.
   //
-  // Mouse jitter: a still mouse still fires sub-pixel mousemove events.
-  // Only count a move as activity if cumulative travel >= MOVE_PX_THRESH.
+  // A polling tick checks idle independently of events, so even if events
+  // fire constantly without meeting the criteria, idle still triggers.
   const controlsTray = document.getElementById('controls-tray');
-  const IDLE_HIDE_MS   = 3500;
-  const MOVE_PX_THRESH = 12;
+  const IDLE_HIDE_MS    = 3500;
+  const MOVE_PX_THRESH  = 12;
+  const MOVE_WINDOW_MS  = 1000;
+  const MIN_MOVE_EVENTS = 2;
   let lastActivityTs = Date.now();
   let lastMoveX = -1, lastMoveY = -1;
+  let windowMovePx = 0, windowMoveCount = 0, windowFirstTs = 0;
 
   function bumpActivity() {
     lastActivityTs = Date.now();
@@ -2182,23 +2187,40 @@
     if (lastMoveX < 0) { lastMoveX = e.clientX; lastMoveY = e.clientY; return; }
     const dx = Math.abs(e.clientX - lastMoveX);
     const dy = Math.abs(e.clientY - lastMoveY);
-    if (dx + dy < MOVE_PX_THRESH) return; // ignore sensor jitter
     lastMoveX = e.clientX;
     lastMoveY = e.clientY;
-    bumpActivity();
+
+    const now = Date.now();
+    // Slide the window: reset if the previous window has expired
+    if (now - windowFirstTs > MOVE_WINDOW_MS) {
+      windowFirstTs   = now;
+      windowMovePx    = 0;
+      windowMoveCount = 0;
+    }
+    windowMovePx    += dx + dy;
+    windowMoveCount += 1;
   }, { passive: true });
+
+  // Touch and key are unambiguous human input — count them directly.
   document.addEventListener('touchstart', bumpActivity, { passive: true });
   document.addEventListener('keydown',    bumpActivity);
 
-  // Poll every 500ms — independent of any event source. If real activity
-  // hasn't happened in IDLE_HIDE_MS, hide. Works the same in fullscreen
-  // and windowed.
+  // Poll every 250ms — handles both "promote movement to activity" and
+  // "hide if idle". Independent of any individual event firing.
   setInterval(() => {
     if (!controlsTray) return;
+    // Promote movement to activity if it meets both criteria
+    if (windowMoveCount >= MIN_MOVE_EVENTS && windowMovePx >= MOVE_PX_THRESH) {
+      bumpActivity();
+      windowMovePx    = 0;
+      windowMoveCount = 0;
+      windowFirstTs   = Date.now();
+    }
+    // Hide on idle regardless
     if (Date.now() - lastActivityTs > IDLE_HIDE_MS) {
       controlsTray.classList.remove('show');
     }
-  }, 500);
+  }, 250);
 
   // Show briefly on first paint so the host sees the affordance exists.
   bumpActivity();
