@@ -2294,12 +2294,30 @@
   // polling). The fullscreenchange handler still does its work for
   // exit-fullscreen and as a backstop, but this fires on the click itself.
   document.getElementById('fs-btn')?.addEventListener('click', () => {
+    console.log('[wall.controls] fs-btn click → force-hide');
     if (controlsTray) controlsTray.classList.remove('show');
     lastActivityTs  = 0;
     windowMovePx    = 0;
     windowMoveCount = 0;
     suppressUntil   = Date.now() + FS_SUPPRESS_MS;
   });
+
+  // Expose state to window for live debugging in DevTools console.
+  // Inspect with: wallControls.state()
+  window.wallControls = {
+    state: () => ({
+      hasShow:        controlsTray?.classList.contains('show'),
+      idleForMs:      Date.now() - lastActivityTs,
+      suppressedForMs: Math.max(0, suppressUntil - Date.now()),
+      windowMovePx, windowMoveCount,
+    }),
+    forceHide: () => {
+      controlsTray?.classList.remove('show');
+      lastActivityTs = 0;
+      suppressUntil  = Date.now() + 60000;
+      console.log('[wall.controls] manually force-hidden for 60s');
+    },
+  };
 
   // Show briefly on first paint so the host sees the affordance exists.
   bumpActivity();
