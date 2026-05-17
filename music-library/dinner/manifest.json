@@ -1,44 +1,51 @@
 {
   "name":        "Dinner — Warm Background",
   "mood":        "dinner",
-  "description": "Soft instrumental backdrop for dinner service — present but conversation-friendly.",
+  "description": "Soft jazz cafe and piano lounge — present but conversation-friendly. All from Pixabay Music — free for any use.",
   "cover_color": "#c19a6b",
   "position":    30,
   "tracks": [
     {
-      "file":         "01-REPLACE-ME.mp3",
-      "title":        "REPLACE WITH ACTUAL TRACK TITLE",
-      "artist":       "FreePD",
-      "duration_s":   220,
-      "license_info": "FreePD CC0 — no attribution required"
+      "file":         "amplify_music-romantic-jazz-mocha-midnight-360708.mp3",
+      "title":        "Mocha Midnight (Romantic Jazz)",
+      "artist":       "Amplify Music",
+      "duration_s":   410,
+      "license_info": "Pixabay Music — free for any use"
     },
     {
-      "file":         "02-REPLACE-ME.mp3",
-      "title":        "REPLACE WITH ACTUAL TRACK TITLE",
-      "artist":       "YouTube Audio Library",
-      "duration_s":   195,
-      "license_info": "YouTube Audio Library — free for any use"
+      "file":         "bluelike_u-2-dinner-time-piano-267903.mp3",
+      "title":        "Dinner Time Piano",
+      "artist":       "BlueLike_U",
+      "duration_s":   130,
+      "license_info": "Pixabay Music — free for any use"
     },
     {
-      "file":         "03-REPLACE-ME.mp3",
-      "title":        "REPLACE WITH ACTUAL TRACK TITLE",
-      "artist":       "FreePD",
+      "file":         "denis-pavlov-music-jazz-cafe-relaxing-smooth-cozy-ambience-podcast-484681.mp3",
+      "title":        "Jazz Cafe — Relaxing Smooth Cozy Ambience",
+      "artist":       "Denis Pavlov Music",
+      "duration_s":   1200,
+      "license_info": "Pixabay Music — free for any use"
+    },
+    {
+      "file":         "denis-pavlov-music-jazz-romantic-piano-relax-calm-podcast-instrumental-music-400308.mp3",
+      "title":        "Jazz Romantic Piano — Calm Instrumental",
+      "artist":       "Denis Pavlov Music",
+      "duration_s":   1070,
+      "license_info": "Pixabay Music — free for any use"
+    },
+    {
+      "file":         "the_mountain-restaurant-310096.mp3",
+      "title":        "Restaurant",
+      "artist":       "The Mountain",
       "duration_s":   240,
-      "license_info": "FreePD CC0 — no attribution required"
+      "license_info": "Pixabay Music — free for any use"
     },
     {
-      "file":         "04-REPLACE-ME.mp3",
-      "title":        "REPLACE WITH ACTUAL TRACK TITLE",
-      "artist":       "YouTube Audio Library",
-      "duration_s":   210,
-      "license_info": "YouTube Audio Library — free for any use"
-    },
-    {
-      "file":         "05-REPLACE-ME.mp3",
-      "title":        "REPLACE WITH ACTUAL TRACK TITLE",
-      "artist":       "FreePD",
-      "duration_s":   215,
-      "license_info": "FreePD CC0 — no attribution required"
+      "file":         "tunetank-jazz-relaxed-cafe-restaurant-elevator-romantic-lounge-theme-music-348407.mp3",
+      "title":        "Relaxed Cafe Restaurant Lounge",
+      "artist":       "TuneTank",
+      "duration_s":   295,
+      "license_info": "Pixabay Music — free for any use"
     }
   ]
 }
