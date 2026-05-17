@@ -214,20 +214,21 @@
     .es-dock a, .es-dock button {
       flex: 1; min-width: 0;
       display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-      padding: 14px 12px;
+      padding: 12px 10px;
       border-radius: 16px;
       border: 0;
-      font-family: var(--mono); font-size: 11px; font-weight: 700;
-      letter-spacing: .18em; text-transform: uppercase;
+      font-family: var(--mono); font-size: 13px; font-weight: 700;
+      letter-spacing: .08em; text-transform: uppercase;
+      text-align: center; line-height: 1.1;
       transition: transform .15s, box-shadow .15s, background .15s, color .15s;
-      min-height: 48px;
+      min-height: 52px;
       cursor: pointer;
     }
     /* Compact square hamburger — doesn't take a label, just the icon,
-       so the two text shortcuts still get the breathing room. */
+       so the two text shortcuts get the breathing room. */
     .es-dock .es-dock-menu {
-      flex: 0 0 56px;
-      width: 56px; padding: 0;
+      flex: 0 0 48px;
+      width: 48px; padding: 0;
       background: rgba(255,255,255,.95);
       color: var(--ink);
       border: 1px solid rgba(196,90,58,.30);
@@ -236,24 +237,37 @@
     .es-dock .es-dock-menu:active { transform: translateY(1px); }
     .es-dock .es-dock-menu svg { width: 22px; height: 22px; stroke: var(--ink); stroke-width: 2; }
     .es-dock a .ico {
-      flex: 0 0 18px; width: 18px; height: 18px;
+      flex: 0 0 26px; width: 26px; height: 26px;
       display: inline-flex; align-items: center; justify-content: center;
+      border-radius: 8px;
     }
     .es-dock a .ico svg { width: 16px; height: 16px; stroke-width: 2; }
-    /* Secondary — paper chip with accent stroke. */
+    /* Secondary — paper-warm chip with an inset accent badge holding
+       the icon. Reads as a deliberate second style next to RSVP's
+       solid fill rather than a pale shadow of it. */
     .es-dock .es-dock-secondary {
-      background: rgba(255,255,255,.95);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.96) 0%, rgba(244,234,217,.92) 100%);
       color: var(--ink);
-      border: 1px solid rgba(196,90,58,.30);
-      box-shadow: 0 4px 14px -6px rgba(42,26,20,.20);
+      border: 1.5px solid rgba(196,90,58,.40);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.7),
+        0 6px 18px -8px rgba(196,90,58,.32);
     }
-    .es-dock .es-dock-secondary .ico svg { stroke: var(--accent); }
+    .es-dock .es-dock-secondary .ico {
+      background: var(--accent);
+      box-shadow: 0 4px 10px -4px rgba(196,90,58,.55);
+    }
+    .es-dock .es-dock-secondary .ico svg { stroke: #fff; }
     .es-dock .es-dock-secondary:active { transform: translateY(1px); }
     /* Primary — accent fill, what we want guests to tap. */
     .es-dock .es-dock-primary {
-      background: var(--accent);
+      background: linear-gradient(180deg, var(--accent) 0%, var(--accent-deep) 100%);
       color: #fff;
-      box-shadow: 0 10px 24px -8px rgba(196,90,58,.50);
+      box-shadow: 0 10px 24px -8px rgba(196,90,58,.55);
+    }
+    .es-dock .es-dock-primary .ico {
+      background: rgba(255,255,255,.18);
     }
     .es-dock .es-dock-primary .ico svg { stroke: #fff; }
     .es-dock .es-dock-primary:active { transform: translateY(1px); box-shadow: 0 4px 12px -4px rgba(196,90,58,.45); }
