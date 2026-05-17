@@ -99,10 +99,10 @@
     .es-burger svg { width: 20px; height: 20px; stroke: var(--ink); }
 
     @media (max-width: 720px) {
-      .es-nav-inline { display: none; }
-      .es-nav-brand  { display: block; }
-      .es-burger     { display: inline-flex; }
-      nav.es-nav { padding: 10px 14px; }
+      /* Top nav disappears entirely on phones — the bottom dock
+         carries menu + shortcuts in one fixed-position element so
+         the hero isn't framed by two competing chrome strips. */
+      nav.es-nav { display: none !important; }
     }
 
     /* ── Full-screen menu sheet (mobile only) ──────────
@@ -211,16 +211,30 @@
       box-shadow: 0 -14px 36px -18px rgba(42,26,20,.30);
     }
     .es-dock.show { transform: translateY(0); }
-    .es-dock a {
+    .es-dock a, .es-dock button {
       flex: 1; min-width: 0;
       display: inline-flex; align-items: center; justify-content: center; gap: 8px;
       padding: 14px 12px;
       border-radius: 16px;
+      border: 0;
       font-family: var(--mono); font-size: 11px; font-weight: 700;
       letter-spacing: .18em; text-transform: uppercase;
       transition: transform .15s, box-shadow .15s, background .15s, color .15s;
       min-height: 48px;
+      cursor: pointer;
     }
+    /* Compact square hamburger — doesn't take a label, just the icon,
+       so the two text shortcuts still get the breathing room. */
+    .es-dock .es-dock-menu {
+      flex: 0 0 56px;
+      width: 56px; padding: 0;
+      background: rgba(255,255,255,.95);
+      color: var(--ink);
+      border: 1px solid rgba(196,90,58,.30);
+      box-shadow: 0 4px 14px -6px rgba(42,26,20,.20);
+    }
+    .es-dock .es-dock-menu:active { transform: translateY(1px); }
+    .es-dock .es-dock-menu svg { width: 22px; height: 22px; stroke: var(--ink); stroke-width: 2; }
     .es-dock a .ico {
       flex: 0 0 18px; width: 18px; height: 18px;
       display: inline-flex; align-items: center; justify-content: center;
@@ -2092,43 +2106,50 @@
       // secondary seat. Just one enabled → that one fills the dock.
       var seatOn = cfg.seatEnabled !== false;
       var rsvpOn = cfg.rsvpEnabled !== false;
-      var dockEl = null;
-      if (seatOn || rsvpOn) {
-        // Re-create on every render so language/state changes don't
-        // leave a stale dock from a previous build.
-        var prevDock = document.getElementById('esDock');
-        if (prevDock) prevDock.remove();
-        dockEl = el('div', { class: 'es-dock', id: 'esDock' });
-        function dockBtn(href, label, primary, iconSvg) {
-          var a = el('a', { class: primary ? 'es-dock-primary' : 'es-dock-secondary',
-            href: href });
-          a.addEventListener('click', function (e) {
-            // Smooth-scroll within the same page; preserves browser
-            // history (the hash still updates) so back works as expected.
-            var target = document.querySelector(href);
-            if (target) {
-              e.preventDefault();
-              target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              history.replaceState(null, '', href);
-            }
-          });
-          var ico = el('span', { class: 'ico' });
-          ico.innerHTML = iconSvg;
-          a.appendChild(ico);
-          a.appendChild(document.createTextNode(label));
-          return a;
-        }
-        var seatIcon =
-          '<svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
-          '<path d="M6 21V9a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12"/>' +
-          '<path d="M4 21h16"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/></svg>';
-        var rsvpIcon =
-          '<svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
-          '<path d="M4 7h16v12H4z"/><path d="M4 7l8 6 8-6"/></svg>';
-        if (seatOn) dockEl.appendChild(dockBtn('#seat', t('seat'), !rsvpOn, seatIcon));
-        if (rsvpOn) dockEl.appendChild(dockBtn('#rsvp', t('rsvp'), true,    rsvpIcon));
-        document.body.appendChild(dockEl);
+      // Dock always renders on phones (it now carries the hamburger);
+      // shortcut buttons appear only when their sections are enabled.
+      var prevDock = document.getElementById('esDock');
+      if (prevDock) prevDock.remove();
+      var dockEl = el('div', { class: 'es-dock', id: 'esDock' });
+      // Hamburger — opens the same full-screen menu the (now-hidden)
+      // top nav used to. Reuses openMenu defined above in this scope.
+      var dockMenu = el('button', { type: 'button', class: 'es-dock-menu',
+        'aria-label': 'Open menu', 'aria-controls': 'esMenu' });
+      dockMenu.innerHTML =
+        '<svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" aria-hidden="true">' +
+        '<path d="M4 7h16M4 12h16M4 17h16"/></svg>';
+      dockMenu.addEventListener('click', openMenu);
+      dockEl.appendChild(dockMenu);
+
+      function dockBtn(href, label, primary, iconSvg) {
+        var a = el('a', { class: primary ? 'es-dock-primary' : 'es-dock-secondary',
+          href: href });
+        a.addEventListener('click', function (e) {
+          // Smooth-scroll within the same page; preserves browser
+          // history (the hash still updates) so back works as expected.
+          var target = document.querySelector(href);
+          if (target) {
+            e.preventDefault();
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            history.replaceState(null, '', href);
+          }
+        });
+        var ico = el('span', { class: 'ico' });
+        ico.innerHTML = iconSvg;
+        a.appendChild(ico);
+        a.appendChild(document.createTextNode(label));
+        return a;
       }
+      var seatIcon =
+        '<svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<path d="M6 21V9a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12"/>' +
+        '<path d="M4 21h16"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/></svg>';
+      var rsvpIcon =
+        '<svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<path d="M4 7h16v12H4z"/><path d="M4 7l8 6 8-6"/></svg>';
+      if (seatOn) dockEl.appendChild(dockBtn('#seat', t('seat'), !rsvpOn, seatIcon));
+      if (rsvpOn) dockEl.appendChild(dockBtn('#rsvp', t('rsvp'), true,    rsvpIcon));
+      document.body.appendChild(dockEl);
 
       var heroBottomObs = new IntersectionObserver(function (entries) {
         entries.forEach(function (en) {
