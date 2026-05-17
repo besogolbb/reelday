@@ -272,6 +272,23 @@
       text-transform: uppercase; margin-top: 18px;
       opacity: .85;
     }
+    /* Venue line — italic display serif, mirrors the typographic
+       relationship between date and venue on a printed invitation
+       (small all-caps date, italic place name beneath). */
+    .es-hero-venue {
+      margin-top: 10px;
+      font-family: var(--display); font-style: italic;
+      font-size: clamp(1rem, 1.4vw, 1.15rem);
+      letter-spacing: .01em; opacity: .92;
+      max-width: 92vw; margin-left: auto; margin-right: auto;
+    }
+    .es-hero-venue::before,
+    .es-hero-venue::after {
+      content: ''; display: inline-block;
+      width: 18px; height: 1px; vertical-align: middle;
+      background: currentColor; opacity: .35;
+      margin: 0 12px;
+    }
     .es-hero-rule {
       width: 60px; height: 1px; background: currentColor;
       opacity: .4; margin: 22px auto 0;
@@ -1129,6 +1146,16 @@
       lockup.appendChild(el('div', { class: 'es-hero-rule' }));
       lockup.appendChild(el('div', { class: 'es-hero-date',
         text: [fmtDate(data.event_date), data.event_time].filter(Boolean).join(' · ') }));
+      // Venue — first configured venue's name, rendered as a
+      // separate italic line beneath the date for the classic
+      // wedding-invitation lockup. Falls back to the event's own
+      // venue string for legacy events created before the wizard
+      // tracked multiple venues.
+      var heroVenue = (Array.isArray(cfg.venue) && cfg.venue[0] && cfg.venue[0].name) ||
+        (data.venue || '');
+      if (heroVenue) {
+        lockup.appendChild(el('div', { class: 'es-hero-venue', text: heroVenue }));
+      }
       // Kicker moved beneath the date — reads as a soft closing tag
       // after the couple lockup rather than competing with the names
       // at the top of the hero.
