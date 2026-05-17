@@ -786,15 +786,20 @@
       height: 100%; background: rgba(240,163,122,.8); width: 0;
     }
 
-    /* ── Bottom-right control cluster (sound + fullscreen) ────── */
+    /* ── Bottom-right control cluster (sound + fullscreen) ──────
+       Hidden by default; JS adds .show on user input (mouse, touch,
+       key) and removes it after IDLE_HIDE_MS of inactivity. Hovering
+       the tray itself keeps it visible. */
     .controls-tray {
       position: fixed; bottom: 18px; right: 18px; z-index: 25;
       display: flex; align-items: center; gap: 10px;
       opacity: 0; transition: opacity .3s;
+      pointer-events: none;
     }
-    body:hover .controls-tray,
+    .controls-tray.show,
+    .controls-tray:hover,
     .controls-tray:focus-within,
-    .controls-tray.always-visible { opacity: 1; }
+    .controls-tray.always-visible { opacity: 1; pointer-events: auto; }
 
     .fs-btn {
       width: 44px; height: 44px; border-radius: 50%;
@@ -2034,6 +2039,10 @@
       bgMusic.muted  = !wallSoundOn;
       loadCurrentTrack();
       updateVolumePanelVisibility();
+      // Make sure the sound button is in the DOM even on photo slides
+      // (showSlide may have last toggled it off before music finished
+      // loading).
+      soundBtn?.classList.add('visible');
       if (wallSoundOn) tryStartMusic();
     } catch (e) {
       // Silent failure — wall stays silent, host can investigate via dashboard
@@ -2141,6 +2150,29 @@
   // Kick off the music fetch right after sound state is initialised so
   // the playlist is ready by the time the host taps the sound button.
   loadBackgroundMusic();
+
+  // ── Auto-hide the bottom-right controls when idle ──────────
+  // Wall typically lives on a TV — we want the sound + volume + fullscreen
+  // controls hidden by default so they don't intrude on the slideshow.
+  // Any pointer/key activity bumps them back on; they fade out again after
+  // IDLE_HIDE_MS of inactivity. Hovering the tray keeps it visible (handled
+  // in CSS via :hover so JS doesn't need to track it).
+  const controlsTray = document.getElementById('controls-tray');
+  const IDLE_HIDE_MS = 3500;
+  let controlsIdleTimer = 0;
+  function bumpControls() {
+    if (!controlsTray) return;
+    controlsTray.classList.add('show');
+    clearTimeout(controlsIdleTimer);
+    controlsIdleTimer = setTimeout(() => {
+      controlsTray.classList.remove('show');
+    }, IDLE_HIDE_MS);
+  }
+  document.addEventListener('mousemove',  bumpControls, { passive: true });
+  document.addEventListener('touchstart', bumpControls, { passive: true });
+  document.addEventListener('keydown',    bumpControls);
+  // Show briefly on first paint so the host sees the affordance exists.
+  bumpControls();
 
   soundBtn?.addEventListener('click', () => {
     wallSoundOn = !wallSoundOn;
@@ -2634,8 +2666,10 @@
     // Tag <body> with is-landscape / is-portrait for the current slide.
     applyOrientationClass(item, itemIsVideo ? inVid : null);
 
-    // Show the unmute toggle when there's a video or paired audio on screen.
-    soundBtn?.classList.toggle('visible', itemIsVideo || !!pairedAudioUrl);
+    // Show the unmute toggle whenever there's audible content possible:
+    // a video, paired audio, OR a background-music playlist loaded.
+    soundBtn?.classList.toggle('visible', itemIsVideo || !!pairedAudioUrl || musicLoaded);
+    // Only pulse for video/audio moments — music doesn't need to nag.
     soundBtn?.classList.toggle('attention', (itemIsVideo || !!pairedAudioUrl) && !wallSoundOn);
 
     // Crossfade layers
