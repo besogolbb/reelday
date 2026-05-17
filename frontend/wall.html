@@ -2174,16 +2174,22 @@
   const MOVE_PX_THRESH  = 12;
   const MOVE_WINDOW_MS  = 1000;
   const MIN_MOVE_EVENTS = 2;
+  const FS_SUPPRESS_MS  = 1200; // ignore all input for this long after FS entry
   let lastActivityTs = Date.now();
   let lastMoveX = -1, lastMoveY = -1;
   let windowMovePx = 0, windowMoveCount = 0, windowFirstTs = 0;
+  let suppressUntil  = 0;
 
   function bumpActivity() {
+    if (Date.now() < suppressUntil) return;
     lastActivityTs = Date.now();
     if (controlsTray) controlsTray.classList.add('show');
   }
 
   document.addEventListener('mousemove', (e) => {
+    // Drop all mousemove processing during the post-fullscreen suppression
+    // window — that's when phantom events most aggressively fire.
+    if (Date.now() < suppressUntil) return;
     // Prefer movementX/Y — these report raw mouse-hardware delta. Browser-
     // synthesized mousemove events (cursor auto-hide/reveal in fullscreen,
     // layout shifts from .show animations, etc.) often have hardware
@@ -2200,8 +2206,6 @@
       lastMoveX = e.clientX;
       lastMoveY = e.clientY;
     }
-    // Ignore zero-hardware-movement events outright (these are the
-    // fullscreen-cursor-reveal phantoms that previously kept the tray open)
     if (dx === 0 && dy === 0) return;
 
     const now = Date.now();
@@ -2230,13 +2234,25 @@
   }
   function handleFullscreenChange() {
     resetMotionState();
-    // On fullscreen entry, force-hide promptly: we can't reliably stop
-    // spurious mouse events from the transition, so we instead pretend
-    // the user has been idle forever. The next polling tick (~250ms)
-    // sees the stale timestamp and removes .show. Real mouse movement
-    // will re-show via bumpActivity → fresh lastActivityTs.
-    if (document.fullscreenElement || document.webkitFullscreenElement) {
+    const entering = !!(document.fullscreenElement || document.webkitFullscreenElement);
+    if (entering) {
+      // Three-layer kill switch for the "controls stuck visible after FS
+      // entry" bug:
+      //   1) Force-remove .show right now so the user sees them go away
+      //   2) Pretend the user has been idle forever (lastActivityTs=0)
+      //      so the next polling tick keeps them hidden
+      //   3) Suppress ALL input-driven bumps for FS_SUPPRESS_MS so any
+      //      phantom mouse events from the transition can't re-show
+      if (controlsTray) controlsTray.classList.remove('show');
       lastActivityTs = 0;
+      suppressUntil  = Date.now() + FS_SUPPRESS_MS;
+      // Belt-and-braces: also force-remove .show again at the end of the
+      // suppression window in case any unexpected path snuck it back on.
+      setTimeout(() => {
+        if (controlsTray && Date.now() - lastActivityTs > IDLE_HIDE_MS) {
+          controlsTray.classList.remove('show');
+        }
+      }, FS_SUPPRESS_MS + 50);
     } else {
       // Exiting fullscreen — give a fresh 3.5s before hiding.
       lastActivityTs = Date.now();
