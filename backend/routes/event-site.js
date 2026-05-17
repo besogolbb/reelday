@@ -437,6 +437,16 @@ export default async function eventSiteRoutes(fastify) {
         [r.guest_name, r.email, r.phone, r.attending ? 'Yes' : 'No',
          r.party_size, r.meal_choice, r.message, r.updated_at?.toISOString?.() || r.updated_at]
           .map(esc).join(','));
+      // Empty list — drop in one illustrative row so the host can see
+      // the expected format. Only fires when there are zero real RSVPs;
+      // real exports are never polluted with sample data.
+      if (!lines.length) {
+        lines.push([
+          'Juan Dela Cruz', 'juan@example.com', '+63 917 123 4567',
+          'Yes', 2, 'Chicken', 'So happy for you both!',
+          new Date().toISOString(),
+        ].map(esc).join(','));
+      }
       return reply
         .header('Content-Type', 'text/csv; charset=utf-8')
         .header('Content-Disposition', `attachment; filename="rsvps-${ev.slug}.csv"`)
