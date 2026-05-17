@@ -4363,6 +4363,21 @@
     setCollapsed(localStorage.getItem(COLLAPSE_KEY) !== '0', false); // default collapsed
     toggleBtn.addEventListener('click', () => setCollapsed(bodyEl.style.display !== 'none', true));
 
+    // Scoped readability boost — the dashboard's .details-field labels
+    // default to 10px (fine on a dense panel, too small inside a wizard
+    // step). Bumping size + weight ONLY inside #esite-editor so the main
+    // "Event details" section elsewhere on the page is untouched.
+    if (!document.getElementById('esite-style')) {
+      const st = document.createElement('style');
+      st.id = 'esite-style';
+      st.textContent =
+        '#esite-editor .details-field label{font-size:13px;font-weight:700;color:var(--ink);letter-spacing:.12em;}' +
+        '#esite-editor .details-field label .opt{font-size:12px;font-weight:400;color:var(--ink-faint);letter-spacing:.02em;}' +
+        '#esite-editor .details-field input,#esite-editor .details-field textarea,#esite-editor .details-field select{font-size:15px;}' +
+        '#esite-editor p{font-size:15px;line-height:1.65;}';
+      document.head.appendChild(st);
+    }
+
     const esc = s => String(s == null ? '' : s);
     const get = (o, p, d) => p.split('.').reduce((x, k) => (x && x[k] != null ? x[k] : undefined), o) ?? d;
 
@@ -4444,7 +4459,7 @@
       // events.theme_override is preserved (save() omits the field).
 
       const cstat = document.createElement('div');
-      cstat.style.cssText = 'font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);margin:6px 0 8px;';
+      cstat.style.cssText = 'font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink);margin:6px 0 8px;';
       cstat.textContent = ev.cover_photo_url ? '✓ Cover set' : 'No cover yet';
       const cpick = fileButton('Choose cover photo', 'image/*', false, async ([file]) => {
         cstat.textContent = 'Uploading…';
@@ -4514,7 +4529,7 @@
       // seat import
       const seatArea = area('', 'Juan Dela Cruz, Table 4, Near the stage\nMaria Santos, Table 4, Near the stage', 5);
       const seatStat = document.createElement('div');
-      seatStat.style.cssText = 'font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);margin-top:6px;';
+      seatStat.style.cssText = 'font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink);margin-top:8px;';
       const seatBtn = btn('Import guest list', 'accent');
       seatBtn.style.marginTop = '8px';
       seatBtn.addEventListener('click', async () => {
@@ -4581,7 +4596,7 @@
 
       function txt(t, sm) {
         const d = document.createElement('p');
-        d.style.cssText = `margin:0 0 12px;font-size:14px;line-height:1.5;color:${sm ? 'var(--ink-soft)' : 'var(--ink)'};`;
+        d.style.cssText = `margin:0 0 14px;font-size:15px;line-height:1.65;color:${sm ? 'var(--ink-soft)' : 'var(--ink)'};`;
         d.textContent = t; return d;
       }
 
@@ -4635,7 +4650,7 @@
       const stepTitle = document.createElement('h4');
       stepTitle.style.cssText = 'font-family:var(--display);font-size:22px;font-weight:600;color:var(--ink);margin:0;letter-spacing:-.01em;';
       const stepCount = document.createElement('span');
-      stepCount.style.cssText = 'font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint);white-space:nowrap;';
+      stepCount.style.cssText = 'font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint);white-space:nowrap;';
       stepHeader.appendChild(stepTitle); stepHeader.appendChild(stepCount);
 
       // Pill-dot progress (one per step; click to jump; hover = step name)
@@ -4654,7 +4669,7 @@
       const nextBtn = btn('Next →', 'accent');
       const noteEl = document.createElement('span');
       noteEl.id = 'esite-note';
-      noteEl.style.cssText = 'font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;';
+      noteEl.style.cssText = 'font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;';
       footer.appendChild(backBtn); footer.appendChild(nextBtn); footer.appendChild(noteEl);
       editorEl.appendChild(stepHeader);
       editorEl.appendChild(dots);
