@@ -112,11 +112,12 @@
       gap: 22px;
     }
     .es-hero-kicker {
+      display: inline-block; margin: 24px auto 0;
       font-family: var(--mono); font-size: 11px; letter-spacing: .42em;
       text-transform: uppercase; opacity: .82;
       padding: 8px 16px; border: 1px solid currentColor;
       border-radius: 999px;
-      animation: fadeUp .9s .1s both;
+      animation: fadeUp .9s .35s both;
     }
     .es-hero-lockup {
       animation: fadeUp 1s .25s both;
@@ -849,8 +850,6 @@
       }
 
       var heroTop = el('div', { class: 'es-hero-top' });
-      heroTop.appendChild(el('div', { class: 'es-hero-kicker',
-        text: (cfg.hero && cfg.hero.kicker) || "You're invited" }));
       var lockup = el('div', { class: 'es-hero-lockup' });
       var h1 = el('h1', { class: 'es-hero-names' });
       h1.appendChild(buildCoupleNode(data.couple_names));
@@ -858,6 +857,11 @@
       lockup.appendChild(el('div', { class: 'es-hero-rule' }));
       lockup.appendChild(el('div', { class: 'es-hero-date',
         text: [fmtDate(data.event_date), data.event_time].filter(Boolean).join(' · ') }));
+      // Kicker moved beneath the date — reads as a soft closing tag
+      // after the couple lockup rather than competing with the names
+      // at the top of the hero.
+      lockup.appendChild(el('div', { class: 'es-hero-kicker',
+        text: (cfg.hero && cfg.hero.kicker) || "You're invited" }));
       heroTop.appendChild(lockup);
       hero.appendChild(heroTop);
 
