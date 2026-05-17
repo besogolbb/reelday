@@ -1,44 +1,93 @@
 {
   "name":        "Ceremony — Soft & Reverent",
   "mood":        "ceremony",
-  "description": "Slow piano and strings for the processional, vows, and intimate moments. No vocals.",
+  "description": "Slow piano and emotional instrumentals for the processional, vows, and intimate moments. All from Pixabay Music — free for any use.",
   "cover_color": "#a8c3d4",
   "position":    10,
   "tracks": [
     {
-      "file":         "01-REPLACE-ME.mp3",
-      "title":        "REPLACE WITH ACTUAL TRACK TITLE",
-      "artist":       "FreePD",
-      "duration_s":   180,
-      "license_info": "FreePD CC0 — no attribution required"
+      "file":         "backgroundmusicforvideos-soft-piano-music-432727.mp3",
+      "title":        "Soft Piano Music",
+      "artist":       "BackgroundMusicForVideos",
+      "duration_s":   295,
+      "license_info": "Pixabay Music — free for any use"
     },
     {
-      "file":         "02-REPLACE-ME.mp3",
-      "title":        "REPLACE WITH ACTUAL TRACK TITLE",
-      "artist":       "YouTube Audio Library",
-      "duration_s":   200,
-      "license_info": "YouTube Audio Library — free for any use"
+      "file":         "hitslab-background-music-piano-soft-380590.mp3",
+      "title":        "Background Music Piano Soft",
+      "artist":       "HitsLab",
+      "duration_s":   140,
+      "license_info": "Pixabay Music — free for any use"
     },
     {
-      "file":         "03-REPLACE-ME.mp3",
-      "title":        "REPLACE WITH ACTUAL TRACK TITLE",
-      "artist":       "FreePD",
-      "duration_s":   210,
-      "license_info": "FreePD CC0 — no attribution required"
+      "file":         "leberch-invitation-wedding-375839.mp3",
+      "title":        "Invitation Wedding",
+      "artist":       "Leberch",
+      "duration_s":   220,
+      "license_info": "Pixabay Music — free for any use"
     },
     {
-      "file":         "04-REPLACE-ME.mp3",
-      "title":        "REPLACE WITH ACTUAL TRACK TITLE",
-      "artist":       "YouTube Audio Library",
-      "duration_s":   180,
-      "license_info": "YouTube Audio Library — free for any use"
+      "file":         "leberch-wedding-romantic-262606.mp3",
+      "title":        "Wedding Romantic",
+      "artist":       "Leberch",
+      "duration_s":   170,
+      "license_info": "Pixabay Music — free for any use"
     },
     {
-      "file":         "05-REPLACE-ME.mp3",
-      "title":        "REPLACE WITH ACTUAL TRACK TITLE",
-      "artist":       "FreePD",
-      "duration_s":   240,
-      "license_info": "FreePD CC0 — no attribution required"
+      "file":         "paulyudin-piano-music-piano-485929.mp3",
+      "title":        "Piano Music",
+      "artist":       "Paul Yudin",
+      "duration_s":   195,
+      "license_info": "Pixabay Music — free for any use"
+    },
+    {
+      "file":         "paulyudin-piano-valentine-wedding-164824.mp3",
+      "title":        "Piano Valentine Wedding",
+      "artist":       "Paul Yudin",
+      "duration_s":   310,
+      "license_info": "Pixabay Music — free for any use"
+    },
+    {
+      "file":         "paulyudin-romantic-wedding-piano-160698.mp3",
+      "title":        "Romantic Wedding Piano",
+      "artist":       "Paul Yudin",
+      "duration_s":   290,
+      "license_info": "Pixabay Music — free for any use"
+    },
+    {
+      "file":         "paulyudin-soft-piano-emotional-156896.mp3",
+      "title":        "Soft Piano Emotional",
+      "artist":       "Paul Yudin",
+      "duration_s":   235,
+      "license_info": "Pixabay Music — free for any use"
+    },
+    {
+      "file":         "paulyudin-wedding-music-valentines-day-182505.mp3",
+      "title":        "Wedding Music — Valentine's Day",
+      "artist":       "Paul Yudin",
+      "duration_s":   235,
+      "license_info": "Pixabay Music — free for any use"
+    },
+    {
+      "file":         "paulyudin-wedding-piano-162472.mp3",
+      "title":        "Wedding Piano",
+      "artist":       "Paul Yudin",
+      "duration_s":   260,
+      "license_info": "Pixabay Music — free for any use"
+    },
+    {
+      "file":         "paulyudin-wedding-sentimental-piano-375998.mp3",
+      "title":        "Wedding Sentimental Piano",
+      "artist":       "Paul Yudin",
+      "duration_s":   305,
+      "license_info": "Pixabay Music — free for any use"
+    },
+    {
+      "file":         "the_mountain-wedding-455512.mp3",
+      "title":        "Wedding",
+      "artist":       "The Mountain",
+      "duration_s":   280,
+      "license_info": "Pixabay Music — free for any use"
     }
   ]
 }
