@@ -506,6 +506,62 @@
       background: var(--paper-3);
     }
 
+    /* ── Nearby stays ─────────────────────────────────
+       Three deep-link cards under each venue map. Each is a real
+       <a> that opens the booking site in a new tab, pre-filtered
+       to the venue. No API, no host config — auto-built from the
+       venue's address / name / mapQuery. */
+    .es-stays {
+      padding: 20px 24px 24px;
+      border-top: 1px solid var(--line);
+      background: linear-gradient(180deg, transparent 0%, rgba(244,234,217,.4) 100%);
+    }
+    .es-stays-title {
+      font-family: var(--mono); font-size: 10px; letter-spacing: .3em;
+      text-transform: uppercase; color: var(--accent);
+      margin: 0 0 14px;
+    }
+    .es-stays-list {
+      display: grid; gap: 10px;
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 520px) { .es-stays-list { grid-template-columns: 1fr 1fr 1fr; } }
+    .es-stay {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 14px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      color: var(--ink);
+      transition: transform .15s, box-shadow .15s, border-color .15s;
+    }
+    .es-stay:hover {
+      transform: translateY(-2px);
+      border-color: rgba(196,90,58,.30);
+      box-shadow: 0 10px 22px -12px rgba(42,26,20,.20);
+    }
+    .es-stay .brand {
+      flex: 0 0 32px; width: 32px; height: 32px; border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--display); font-size: 14px; font-weight: 700;
+      color: #fff;
+    }
+    .es-stay .brand.booking { background: #003580; }
+    .es-stay .brand.agoda   { background: #ff385c; }
+    .es-stay .brand.google  { background: #1a73e8; }
+    .es-stay .body { flex: 1; min-width: 0; }
+    .es-stay .name {
+      font-family: var(--display); font-size: 1rem; color: var(--ink);
+      line-height: 1.15; margin: 0;
+    }
+    .es-stay .sub {
+      font-family: var(--mono); font-size: 9.5px; letter-spacing: .14em;
+      text-transform: uppercase; color: var(--ink-faint);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      display: block; margin-top: 2px;
+    }
+    .es-stay .chev { flex: 0 0 auto; color: var(--accent); font-family: var(--mono); font-weight: 700; }
+
     /* ── Dress code & parking strips ──────────────────── */
     .es-note-grid {
       display: grid; gap: 18px; margin-top: 32px;
@@ -1189,6 +1245,44 @@
       });
     }
 
+    // ─────────────────────────────────────────────────────
+    // Nearby stays — deep links into the major booking sites
+    // pre-filtered to the venue. No API: we just hand them the
+    // search query (the venue name or address) and let the
+    // booking site render its real inventory. Works for any
+    // venue worldwide; no host configuration required.
+    // ─────────────────────────────────────────────────────
+    function buildNearbyStays(displayName, query) {
+      var q = String(query || displayName || '').trim();
+      if (!q) return document.createDocumentFragment();
+      var enc = encodeURIComponent(q);
+      var sites = [
+        { brand: 'booking', name: 'Booking.com',
+          url: 'https://www.booking.com/searchresults.html?ss=' + enc, mark: 'B' },
+        { brand: 'agoda',   name: 'Agoda',
+          url: 'https://www.agoda.com/search?textToSearch=' + enc, mark: 'A' },
+        { brand: 'google',  name: 'Google Hotels',
+          url: 'https://www.google.com/travel/hotels?q=' + enc, mark: 'G' },
+      ];
+      var wrap = el('div', { class: 'es-stays' });
+      wrap.appendChild(el('div', { class: 'es-stays-title',
+        text: '— Nearby stays —' }));
+      var list = el('div', { class: 'es-stays-list' });
+      sites.forEach(function (s) {
+        var a = el('a', { class: 'es-stay', href: s.url,
+          target: '_blank', rel: 'noopener noreferrer' });
+        a.appendChild(el('div', { class: 'brand ' + s.brand, text: s.mark }));
+        var body = el('div', { class: 'body' });
+        body.appendChild(el('div', { class: 'name', text: s.name }));
+        body.appendChild(el('div', { class: 'sub',  text: 'Stays near ' + displayName }));
+        a.appendChild(body);
+        a.appendChild(el('div', { class: 'chev', text: '→' }));
+        list.appendChild(a);
+      });
+      wrap.appendChild(list);
+      return wrap;
+    }
+
     // ── render ──
     function render(data) {
       var cfg = data.config || {};
@@ -1445,6 +1539,9 @@
                 referrerpolicy: 'no-referrer-when-downgrade',
                 src: 'https://www.google.com/maps?q=' + encodeURIComponent(q) + '&output=embed' });
               card.appendChild(f);
+              // Nearby stays — auto-built deep links into the major
+              // booking sites pre-filtered to this venue.
+              card.appendChild(buildNearbyStays(v.name || v.address || q, q));
             }
             venues.appendChild(card);
           });
