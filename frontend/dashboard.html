@@ -4503,7 +4503,10 @@
 
       const heroKicker = input(get(cfg, 'hero.kicker', ''), "You're invited");
       const storyLabel = input(get(cfg, 'story.label', ''), 'Our Story');
-      const storyBody  = area(get(cfg, 'story.body', '') || ev.welcome_message || '', 'How you met, the journey, a message to guests.', 6);
+      // Story body is the wedding/event narrative — distinct from
+       // welcome_message (which is the QR upload-page greeting). Don't
+       // cross-pollinate; let the placeholder guide a fresh write.
+      const storyBody  = area(get(cfg, 'story.body', ''), 'How you met, the journey, a message to guests.', 6);
       const sched = area((cfg.schedule || []).map(s => `${esc(s.time)} | ${esc(s.label)}`).join('\n'),
         '3:00 PM | Ceremony\n5:00 PM | Cocktails\n7:00 PM | Reception', 5);
       const venues = area((cfg.venue || []).map(v => `${esc(v.name)} | ${esc(v.address || v.mapQuery || '')}`).join('\n'),
