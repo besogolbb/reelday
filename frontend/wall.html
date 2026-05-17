@@ -855,6 +855,43 @@
       50%      { box-shadow: 0 0 0 10px rgba(196,90,58,0), 0 4px 16px rgba(0,0,0,.5); }
     }
 
+    /* ── Music volume slider ──
+       Sits next to the sound button while background music is playing.
+       Hidden when sound is off or when the event has no music playlist. */
+    .music-volume {
+      display: none;
+      align-items: center; gap: 8px;
+      background: rgba(0,0,0,.55);
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: 999px;
+      padding: 9px 14px;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      color: #fff;
+      font-family: var(--mono); font-size: 11px; font-weight: 700;
+      letter-spacing: .14em; text-transform: uppercase;
+    }
+    .music-volume.visible { display: inline-flex; }
+    .music-volume .vol-icon { font-size: 14px; }
+    .music-volume input[type="range"] {
+      -webkit-appearance: none; appearance: none;
+      width: 96px; height: 4px;
+      background: rgba(255,255,255,.25);
+      border-radius: 999px; outline: none;
+      cursor: pointer;
+    }
+    .music-volume input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 14px; height: 14px; border-radius: 50%;
+      background: #fff; cursor: pointer;
+      box-shadow: 0 1px 3px rgba(0,0,0,.4);
+    }
+    .music-volume input[type="range"]::-moz-range-thumb {
+      width: 14px; height: 14px; border: 0; border-radius: 50%;
+      background: #fff; cursor: pointer;
+      box-shadow: 0 1px 3px rgba(0,0,0,.4);
+    }
+
     /* ── Live poll overlay ──────────────────────────────────
        Full-screen takeover that pauses the photo slideshow when the
        host runs a poll. Slideshow + emoji + caption all stay alive
@@ -1535,6 +1572,11 @@
     <span class="icon" id="sound-icon">🔇</span>
     <span class="label" id="sound-label">Tap for sound</span>
   </button>
+  <div class="music-volume" id="music-volume" title="Background music volume">
+    <span class="vol-icon">🎵</span>
+    <input id="music-volume-slider" type="range" min="0" max="100" step="1" value="55"
+           aria-label="Background music volume" />
+  </div>
   <button class="fs-btn" id="fs-btn" type="button" aria-label="Toggle fullscreen" title="Fullscreen (F)">
     <svg id="fs-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>
@@ -1951,18 +1993,29 @@
   // ── Background music (Phase 1) ──────────────────────────────
   // Streams a curated playlist from R2 via the public bucket URL — no
   // backend involvement after the initial /api/events/:slug/music fetch.
-  // Ducks to a low volume during guest video/audio playback so it stays
-  // present but never competes with the moment on screen. Polls have no
-  // audio so music keeps playing at normal volume during them.
-  const bgMusic = document.getElementById('bg-music');
-  const MUSIC_VOL_NORMAL = 0.55;
-  const MUSIC_VOL_DUCKED = 0.08;
+  // Ducks during guest video/audio playback so it stays present but never
+  // competes with the moment on screen. Ducking is proportional (15% of
+  // the host's chosen base) so it stays balanced if the host turned the
+  // music down. Polls have no audio — music keeps playing at base volume.
+  const bgMusic    = document.getElementById('bg-music');
+  const volPanel   = document.getElementById('music-volume');
+  const volSlider  = document.getElementById('music-volume-slider');
+  const MUSIC_DUCK_RATIO   = 0.15;  // ducked = base * ratio (with a 0.02 floor)
   const MUSIC_DUCK_FADE_MS = 300;
   let   musicTracks  = [];
   let   musicIdx     = 0;
   let   musicLoaded  = false;
   let   musicDucked  = false;
   let   musicFadeId  = 0;
+  // Persist the host's chosen volume so refreshes don't reset it.
+  let   musicBaseVol = (() => {
+    const stored = parseInt(localStorage.getItem('reelday_wall_music_vol'), 10);
+    return Number.isFinite(stored) && stored >= 0 && stored <= 100
+      ? stored / 100
+      : 0.55;
+  })();
+  const targetMusicVol = () =>
+    musicDucked ? Math.max(0.02, musicBaseVol * MUSIC_DUCK_RATIO) : musicBaseVol;
 
   async function loadBackgroundMusic() {
     if (!slug || !bgMusic) return;
@@ -1977,9 +2030,10 @@
       musicTracks = tracks.slice().sort(() => Math.random() - 0.5);
       musicIdx    = 0;
       musicLoaded = true;
-      bgMusic.volume = MUSIC_VOL_NORMAL;
+      bgMusic.volume = targetMusicVol();
       bgMusic.muted  = !wallSoundOn;
       loadCurrentTrack();
+      updateVolumePanelVisibility();
       if (wallSoundOn) tryStartMusic();
     } catch (e) {
       // Silent failure — wall stays silent, host can investigate via dashboard
@@ -2020,7 +2074,28 @@
     if (!musicLoaded) return;
     if (ducked === musicDucked) return;
     musicDucked = ducked;
-    fadeMusicTo(ducked ? MUSIC_VOL_DUCKED : MUSIC_VOL_NORMAL);
+    fadeMusicTo(targetMusicVol());
+  }
+
+  // Slider only matters when music is actually loaded AND sound is on.
+  // Hide it otherwise so the controls tray doesn't feel cluttered for
+  // events without music.
+  function updateVolumePanelVisibility() {
+    if (!volPanel) return;
+    const show = musicLoaded && wallSoundOn;
+    volPanel.classList.toggle('visible', show);
+  }
+
+  // Wire the slider — instant volume change (no fade), persist on input.
+  // We bypass fadeMusicTo here so dragging feels responsive.
+  if (volSlider) {
+    volSlider.value = String(Math.round(musicBaseVol * 100));
+    volSlider.addEventListener('input', () => {
+      const v = Math.max(0, Math.min(100, parseInt(volSlider.value, 10) || 0));
+      musicBaseVol = v / 100;
+      localStorage.setItem('reelday_wall_music_vol', String(v));
+      if (bgMusic) bgMusic.volume = targetMusicVol();
+    });
   }
 
   // Advance through the playlist on each track end; loop forever.
@@ -2058,6 +2133,7 @@
       if (wallSoundOn) tryStartMusic();
       else { try { bgMusic.pause(); } catch {} }
     }
+    updateVolumePanelVisibility();
     if (wallSoundOn) soundBtn?.classList.remove('attention');
   }
   applySoundState();
