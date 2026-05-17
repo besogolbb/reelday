@@ -256,6 +256,12 @@
     }
     body[data-tier="tala"] #emoji-container { display: none !important; }
 
+    /* White-label: premium tiers hide the "Powered by Reelday"
+       credit in the corner frame. Marketing-promised differentiator
+       for Dalisay (weddings) and Hiraya (organisers/venues). */
+    body[data-tier="dalisay"] .reelday-credit,
+    body[data-tier="hiraya"]  .reelday-credit { display: none !important; }
+
     /* Dalisay / Hiraya (premium): a fixed ~10px blur on the
        OUTGOING layer turns the standard opacity crossfade into
        a "focus pull" — the leaving frame defocuses while the
@@ -1567,7 +1573,7 @@
   <div class="corner">
     <div class="names" id="corner-names"></div>
     <div class="guest-badge" id="guest-badge">👥 <span id="guest-count">0</span> guests here</div>
-    <div>&#9733; Powered by Reelday</div>
+    <div class="reelday-credit">&#9733; Powered by Reelday</div>
   </div>
 </div>
 
