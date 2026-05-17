@@ -29,9 +29,10 @@
 
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { dirname, join, extname } from 'path';
+import { randomUUID } from 'crypto';
 import { gzipSync } from 'zlib';
-import { resolvePlan, planHasFeature } from '../lib/plans.js';
+import { planHasFeature } from '../lib/plans.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TEMPLATE_PATH = join(__dirname, '..', '..', 'frontend', 'event-site.html');
@@ -340,6 +341,42 @@ export default async function eventSiteRoutes(fastify) {
 
     bustSlug(ev.slug); // instant freshness — no stale public read
     return { ok: true, is_published: isPublished };
+  });
+
+  // ── Owner: upload a site image (hero/prenup) ──────────────────────
+  // Stored at an exact event-site/<event_id>/ key via putFile — NO
+  // uploads row, so it never reaches the wall. Owner-only, image-only,
+  // size-capped. The returned URL is what the host saves into config.
+  fastify.post('/event-site/:slug/image', { preHandler: fastify.authenticate }, async (request, reply) => {
+    const ev = await ownedEvent(request.params.slug, request.user.id);
+    if (!ev) return reply.status(404).send({ error: true, message: 'Event not found' });
+
+    let buf = null, mime = null, ext = '.jpg';
+    for await (const part of request.parts()) {
+      if (part.type === 'file') {
+        if (!part.mimetype || !part.mimetype.startsWith('image/')) {
+          for await (const _ of part.file) { /* drain so Fastify doesn't hang */ }
+          return reply.status(400).send({ error: true, message: 'Images only' });
+        }
+        const chunks = [];
+        let size = 0;
+        for await (const c of part.file) {
+          size += c.length;
+          if (size > 15 * 1024 * 1024) { // 15 MB cap for site imagery
+            return reply.status(413).send({ error: true, message: 'Image too large (max 15 MB)' });
+          }
+          chunks.push(c);
+        }
+        buf = Buffer.concat(chunks);
+        mime = part.mimetype;
+        ext = extname(part.filename || '') || '.jpg';
+      }
+    }
+    if (!buf) return reply.status(400).send({ error: true, message: 'No file' });
+
+    const key = `event-site/${ev.id}/${randomUUID()}${ext}`;
+    const url = await fastify.putFile(key, buf, mime);
+    return { url };
   });
 
   // ── Public: submit/update RSVP (rate-limited, upsert per device) ────

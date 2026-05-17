@@ -1631,6 +1631,23 @@
       </div>
     </div>
 
+    <!-- ── Event Website panel (Dalisay/Hiraya) ──────────────────
+         Self-contained: filled by an isolated <script type="module">
+         at the end of <body> so it shares NO scope with the main
+         dashboard module (no duplicate-declaration blank-page risk). -->
+    <div class="panel" id="esite-panel" style="display:none; margin-bottom:18px;">
+      <div class="panel-head">
+        <div class="panel-head-copy">
+          <h3 style="margin:0;">Event Website</h3>
+          <p style="font-size:.9rem;opacity:.65;margin:4px 0 0;">A guest microsite at <code id="esite-url-hint">/e/&lt;slug&gt;</code> — details, gallery, RSVP &amp; seat finder.</p>
+        </div>
+      </div>
+      <div id="esite-locked" style="display:none;padding:14px 0;">
+        The Event Website is unlocked on the <strong>Dalisay</strong> plan. <a href="/#pricing">Upgrade →</a>
+      </div>
+      <div id="esite-body" style="display:none;"></div>
+    </div>
+
     <div class="panel">
       <div class="panel-head">
         <div class="stream-tabs-3d" id="stream-tabs-3d">
@@ -4307,6 +4324,301 @@
   setInterval(refreshUploads, 10000);
   refreshWallErrors();
   setInterval(refreshWallErrors, 5000);
+</script>
+
+<!-- ════════════════════════════════════════════════════════════════
+     Event Website editor — ISOLATED MODULE.
+     Its own module scope: declares nothing in the main dashboard
+     module's scope, so the duplicate-declaration blank-page footgun
+     (commit 992812b) cannot occur here. Self-derives slug + token.
+═════════════════════════════════════════════════════════════════ -->
+<script type="module">
+  const slug  = new URLSearchParams(location.search).get('slug');
+  const panel = document.getElementById('esite-panel');
+  if (slug && panel) {
+    const token = localStorage.getItem('reelday_token');
+    const AH = token ? { 'Authorization': `Bearer ${token}` } : {};
+    const lockedEl = document.getElementById('esite-locked');
+    const bodyEl   = document.getElementById('esite-body');
+    document.getElementById('esite-url-hint').textContent = `/e/${slug}`;
+
+    const esc = s => String(s == null ? '' : s);
+    const get = (o, p, d) => p.split('.').reduce((x, k) => (x && x[k] != null ? x[k] : undefined), o) ?? d;
+
+    function field(label, hint) {
+      const wrap = document.createElement('label');
+      wrap.style.cssText = 'display:block;margin:14px 0 0;font-size:.85rem;font-weight:600;';
+      wrap.appendChild(document.createTextNode(label));
+      if (hint) {
+        const h = document.createElement('span');
+        h.style.cssText = 'display:block;font-weight:400;opacity:.55;font-size:.78rem;margin:2px 0 6px;';
+        h.textContent = hint;
+        wrap.appendChild(h);
+      }
+      return wrap;
+    }
+    function input(value, ph) {
+      const i = document.createElement('input');
+      i.type = 'text'; i.value = esc(value); if (ph) i.placeholder = ph;
+      i.style.cssText = 'width:100%;padding:10px 12px;border:1px solid var(--line,#ccc);border-radius:8px;margin-top:4px;';
+      return i;
+    }
+    function area(value, ph, rows) {
+      const t = document.createElement('textarea');
+      t.value = esc(value); if (ph) t.placeholder = ph; t.rows = rows || 3;
+      t.style.cssText = 'width:100%;padding:10px 12px;border:1px solid var(--line,#ccc);border-radius:8px;margin-top:4px;font:inherit;';
+      return t;
+    }
+    function btn(text, primary) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.textContent = text;
+      b.style.cssText = `margin:6px 8px 0 0;padding:10px 18px;border-radius:8px;font-weight:600;border:1px solid var(--accent,#c45a3a);${primary ? 'background:var(--accent,#c45a3a);color:#fff;' : 'background:transparent;color:var(--accent,#c45a3a);'}`;
+      return b;
+    }
+    function note(msg, ok) {
+      const n = document.getElementById('esite-note');
+      if (n) { n.textContent = msg; n.style.color = ok ? 'var(--sage,#2d6a4a)' : '#b4413a'; }
+    }
+
+    async function uploadImage(file) {
+      const fd = new FormData(); fd.append('file', file);
+      const r = await fetch(`/api/event-site/${slug}/image`, { method: 'POST', headers: AH, body: fd });
+      if (!r.ok) throw new Error('upload failed');
+      return (await r.json()).url;
+    }
+
+    function buildEditor(state) {
+      const cfg = state.config || {};
+      const ev  = state.event || {};
+      bodyEl.textContent = '';
+
+      // Publish row
+      const top = document.createElement('div');
+      top.style.cssText = 'display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:6px 0 12px;border-bottom:1px solid var(--line,#eee);';
+      const pubLbl = document.createElement('label');
+      pubLbl.style.cssText = 'display:flex;align-items:center;gap:8px;font-weight:600;';
+      const pub = document.createElement('input'); pub.type = 'checkbox'; pub.checked = !!state.is_published;
+      pubLbl.appendChild(pub); pubLbl.appendChild(document.createTextNode('Published (live to guests)'));
+      const viewLink = document.createElement('a');
+      viewLink.href = `/e/${slug}`; viewLink.target = '_blank'; viewLink.rel = 'noopener';
+      viewLink.textContent = 'View site ↗'; viewLink.style.cssText = 'font-weight:600;color:var(--accent,#c45a3a);';
+      top.appendChild(pubLbl); top.appendChild(viewLink);
+      bodyEl.appendChild(top);
+
+      // Theme override
+      const themes = ['', 'wedding', 'debut', 'birthday', 'baptism', 'reunion', 'corporate', 'memorial', 'seventh_birthday'];
+      const tf = field('Theme', `Auto from event type (${esc(ev.event_type) || 'wedding'}) unless overridden.`);
+      const tsel = document.createElement('select');
+      tsel.style.cssText = 'width:100%;padding:10px 12px;border:1px solid var(--line,#ccc);border-radius:8px;margin-top:4px;';
+      themes.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = v || 'Auto (from event type)'; tsel.appendChild(o); });
+      tsel.value = esc(ev.theme_override || '');
+      tf.appendChild(tsel); bodyEl.appendChild(tf);
+
+      // Cover / hero image (reuses existing event cover_photo_url so OG works)
+      const cf = field('Cover photo', 'Used as the hero background and the Viber/Messenger share card.');
+      const cstat = document.createElement('div'); cstat.style.cssText = 'font-size:.8rem;opacity:.7;margin:4px 0;';
+      cstat.textContent = ev.cover_photo_url ? 'A cover is set.' : 'No cover yet.';
+      const cin = document.createElement('input'); cin.type = 'file'; cin.accept = 'image/*';
+      cin.addEventListener('change', async () => {
+        if (!cin.files[0]) return;
+        cstat.textContent = 'Uploading…';
+        try {
+          const url = await uploadImage(cin.files[0]);
+          await fetch(`/api/events/${slug}`, { method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', ...AH },
+            body: JSON.stringify({ cover_photo_url: url }) });
+          ev.cover_photo_url = url; cstat.textContent = 'Cover updated ✓';
+        } catch { cstat.textContent = 'Upload failed — try again.'; }
+      });
+      cf.appendChild(cstat); cf.appendChild(cin); bodyEl.appendChild(cf);
+
+      // Text sections
+      const heroKicker = input(get(cfg, 'hero.kicker', ''), "You're invited");
+      bodyEl.appendChild(field('Hero kicker').appendChild(heroKicker).parentNode);
+
+      const storyLabel = input(get(cfg, 'story.label', ''), 'Our Story');
+      bodyEl.appendChild(field('Story heading').appendChild(storyLabel).parentNode);
+      const storyBody = area(get(cfg, 'story.body', '') || ev.welcome_message || '', 'How you met, the proposal…', 5);
+      bodyEl.appendChild(field('Story').appendChild(storyBody).parentNode);
+
+      const sched = area((cfg.schedule || []).map(s => `${esc(s.time)} | ${esc(s.label)}`).join('\n'),
+        '3:00 PM | Ceremony\n5:00 PM | Cocktails\n7:00 PM | Reception', 4);
+      bodyEl.appendChild(field('Order of the day', 'One per line: TIME | LABEL').appendChild(sched).parentNode);
+
+      const venues = area((cfg.venue || []).map(v => `${esc(v.name)} | ${esc(v.address || v.mapQuery || '')}`).join('\n'),
+        'Manila Cathedral | Intramuros, Manila', 3);
+      if (!venues.value && ev.venue) venues.value = `${ev.venue} | ${ev.venue}`;
+      bodyEl.appendChild(field('Venues', 'One per line: NAME | ADDRESS (address powers the map)').appendChild(venues).parentNode);
+
+      const dcNote = input(get(cfg, 'dressCode.note', ''), 'Formal / Filipiniana');
+      bodyEl.appendChild(field('Dress code').appendChild(dcNote).parentNode);
+      const dcSw = input((get(cfg, 'dressCode.swatches', []) || []).join(', '), '#7a3b2e, #d8a05a');
+      bodyEl.appendChild(field('Dress code colors', 'Comma-separated hex').appendChild(dcSw).parentNode);
+
+      const parking = area(get(cfg, 'parking.note', ''), 'Where to park, valet info, drop-off point…', 2);
+      bodyEl.appendChild(field('Parking & directions').appendChild(parking).parentNode);
+
+      const faq = area((cfg.faq || []).map(f => `${esc(f.q)} || ${esc(f.a)}`).join('\n'),
+        'Is there a shuttle? || Yes, from the hotel lobby at 2 PM.', 4);
+      bodyEl.appendChild(field('FAQ', 'One per line: QUESTION || ANSWER').appendChild(faq).parentNode);
+
+      const ent = area((cfg.entourage || []).map(g => `${esc(g.group)}: ${(g.people || []).join(', ')}`).join('\n'),
+        'Principal Sponsors: Mr. & Mrs. Cruz, Mr. & Mrs. Reyes', 3);
+      bodyEl.appendChild(field('Entourage', 'One per line: GROUP: name, name, name').appendChild(ent).parentNode);
+
+      const gtk = area(esc(cfg.goodToKnow || ''), 'Anything else guests might ask — accessibility, kids, gifts…', 4);
+      bodyEl.appendChild(field('Good to know').appendChild(gtk).parentNode);
+
+      // Toggles
+      const tg = document.createElement('div'); tg.style.cssText = 'margin-top:14px;display:flex;gap:18px;flex-wrap:wrap;';
+      const mk = (lbl, val) => { const l = document.createElement('label'); l.style.cssText = 'display:flex;gap:7px;align-items:center;font-size:.9rem;'; const c = document.createElement('input'); c.type = 'checkbox'; c.checked = val !== false; l.appendChild(c); l.appendChild(document.createTextNode(lbl)); tg.appendChild(l); return c; };
+      const seatOn = mk('Enable seat finder', cfg.seatEnabled);
+      const rsvpOn = mk('Enable RSVP', cfg.rsvpEnabled);
+      bodyEl.appendChild(tg);
+
+      // Prenup gallery
+      const gf = field('Prenup / gallery photos');
+      const gwrap = document.createElement('div'); gwrap.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin:6px 0;';
+      let gallery = (get(cfg, 'gallery.images', []) || []).slice();
+      function drawGallery() {
+        gwrap.textContent = '';
+        gallery.forEach((u, i) => {
+          const box = document.createElement('div'); box.style.cssText = 'position:relative;';
+          const im = document.createElement('img'); im.src = u; im.style.cssText = 'width:74px;height:74px;object-fit:cover;border-radius:6px;';
+          const x = document.createElement('button'); x.type = 'button'; x.textContent = '×';
+          x.style.cssText = 'position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:#b4413a;color:#fff;font-weight:700;';
+          x.addEventListener('click', () => { gallery.splice(i, 1); drawGallery(); });
+          box.appendChild(im); box.appendChild(x); gwrap.appendChild(box);
+        });
+      }
+      drawGallery();
+      const gin = document.createElement('input'); gin.type = 'file'; gin.accept = 'image/*'; gin.multiple = true;
+      gin.addEventListener('change', async () => {
+        for (const f of Array.from(gin.files)) {
+          try { gallery.push(await uploadImage(f)); drawGallery(); } catch { note('An image failed to upload.', false); }
+        }
+        gin.value = '';
+      });
+      gf.appendChild(gwrap); gf.appendChild(gin); bodyEl.appendChild(gf);
+
+      // Seat import
+      const sf = field('Seat plan import', 'Paste from Excel/Sheets or CSV — one guest per line: NAME, TABLE, LOCATION');
+      const seatArea = area('', 'Juan Dela Cruz, Table 4, Near the stage\nMaria Santos, Table 4, Near the stage', 4);
+      const seatStat = document.createElement('div'); seatStat.style.cssText = 'font-size:.8rem;opacity:.7;margin-top:4px;';
+      const seatBtn = btn('Import guest list');
+      seatBtn.addEventListener('click', async () => {
+        const rows = seatArea.value.split('\n').map(l => l.trim()).filter(Boolean).map(l => {
+          const c = l.split(/\t|,/).map(x => x.trim());
+          return { guest_name: c[0], table_label: c[1] || '', location_note: c[2] || '', seat_note: c[3] || '' };
+        }).filter(r => r.guest_name);
+        if (!rows.length) { seatStat.textContent = 'Nothing to import.'; return; }
+        seatStat.textContent = 'Importing…';
+        try {
+          const r = await fetch(`/api/event-site/${slug}/seats/import`, { method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...AH }, body: JSON.stringify({ seats: rows }) });
+          const j = await r.json();
+          seatStat.textContent = r.ok ? `Imported ${j.imported} guests ✓ (replaces previous list)` : (j.message || 'Import failed');
+        } catch { seatStat.textContent = 'Import failed — try again.'; }
+      });
+      sf.appendChild(seatArea); sf.appendChild(seatBtn); sf.appendChild(seatStat); bodyEl.appendChild(sf);
+
+      // RSVP list
+      const rf = field('RSVPs');
+      const rOut = document.createElement('div'); rOut.style.cssText = 'font-size:.85rem;margin-top:6px;max-height:220px;overflow:auto;';
+      const rBtn = btn('Load RSVPs');
+      const rCsv = document.createElement('a'); rCsv.textContent = 'Download CSV';
+      rCsv.href = `/api/event-site/${slug}/rsvps?format=csv`; rCsv.style.cssText = 'margin-left:14px;font-weight:600;color:var(--accent,#c45a3a);';
+      rCsv.addEventListener('click', e => {
+        // CSV route needs the auth header — fetch as blob instead of nav.
+        e.preventDefault();
+        fetch(rCsv.href, { headers: AH }).then(r => r.blob()).then(b => {
+          const a = document.createElement('a'); a.href = URL.createObjectURL(b);
+          a.download = `rsvps-${slug}.csv`; a.click(); URL.revokeObjectURL(a.href);
+        });
+      });
+      rBtn.addEventListener('click', async () => {
+        rOut.textContent = 'Loading…';
+        try {
+          const r = await fetch(`/api/event-site/${slug}/rsvps`, { headers: AH });
+          const j = await r.json();
+          rOut.textContent = '';
+          const sum = document.createElement('div'); sum.style.fontWeight = '700';
+          sum.textContent = `${j.attending}/${j.count} attending · ${j.headcount} total heads`;
+          rOut.appendChild(sum);
+          (j.rsvps || []).forEach(x => {
+            const row = document.createElement('div');
+            row.style.cssText = 'padding:5px 0;border-bottom:1px solid var(--line,#eee);';
+            row.textContent = `${x.attending ? '✓' : '✗'} ${x.guest_name} · ${x.party_size} · ${x.meal_choice || ''} ${x.message ? '— ' + x.message : ''}`;
+            rOut.appendChild(row);
+          });
+        } catch { rOut.textContent = 'Could not load RSVPs.'; }
+      });
+      rf.appendChild(rBtn); rf.appendChild(rCsv); rf.appendChild(rOut); bodyEl.appendChild(rf);
+
+      // Save bar
+      const bar = document.createElement('div');
+      bar.style.cssText = 'position:sticky;bottom:0;background:var(--paper,#fff);padding:14px 0 4px;margin-top:18px;border-top:1px solid var(--line,#eee);';
+      const saveBtn = btn('Save & apply', true);
+      const noteEl = document.createElement('span'); noteEl.id = 'esite-note'; noteEl.style.cssText = 'margin-left:14px;font-size:.85rem;';
+      bar.appendChild(saveBtn); bar.appendChild(noteEl); bodyEl.appendChild(bar);
+
+      function parseList(txt, sep, keys) {
+        return txt.split('\n').map(l => l.trim()).filter(Boolean).map(l => {
+          const p = l.split(sep); const o = {};
+          keys.forEach((k, i) => o[k] = (p[i] || '').trim());
+          return o;
+        });
+      }
+      saveBtn.addEventListener('click', async () => {
+        const config = {
+          hero: { kicker: heroKicker.value.trim() },
+          story: { label: storyLabel.value.trim(), body: storyBody.value },
+          schedule: parseList(sched.value, '|', ['time', 'label']),
+          venue: parseList(venues.value, '|', ['name', 'address']).map(v => ({ name: v.name, address: v.address, mapQuery: v.address })),
+          dressCode: { note: dcNote.value.trim(), swatches: dcSw.value.split(',').map(s => s.trim()).filter(Boolean) },
+          parking: { note: parking.value },
+          gallery: { images: gallery },
+          faq: parseList(faq.value, '||', ['q', 'a']),
+          entourage: ent.value.split('\n').map(l => l.trim()).filter(Boolean).map(l => {
+            const i = l.indexOf(':');
+            return i < 0 ? { group: l, people: [] }
+              : { group: l.slice(0, i).trim(), people: l.slice(i + 1).split(',').map(s => s.trim()).filter(Boolean) };
+          }),
+          goodToKnow: gtk.value,
+          seatEnabled: seatOn.checked,
+          rsvpEnabled: rsvpOn.checked,
+        };
+        saveBtn.disabled = true; note('Saving…', true);
+        try {
+          const r = await fetch(`/api/event-site/${slug}`, { method: 'PUT',
+            headers: { 'Content-Type': 'application/json', ...AH },
+            body: JSON.stringify({ config, is_published: pub.checked, theme_override: tsel.value || null }) });
+          note(r.ok ? 'Saved — your site is up to date.' : 'Save failed.', r.ok);
+        } catch { note('Save failed — try again.', false); }
+        finally { saveBtn.disabled = false; }
+      });
+    }
+
+    (async () => {
+      try {
+        // Gate on the owner's effective tier (same source the rest of the
+        // dashboard uses): plan_info.features.website.
+        const er = await fetch(`/api/events/${slug}`, { headers: AH });
+        const ej = await er.json();
+        const allowed = !!(ej && ej.plan_info && ej.plan_info.features && ej.plan_info.features.website);
+        panel.style.display = '';
+        if (!allowed) { lockedEl.style.display = ''; return; }
+        const r = await fetch(`/api/event-site/${slug}/admin`, { headers: AH });
+        if (!r.ok) { lockedEl.style.display = ''; lockedEl.textContent = 'Could not load the editor.'; return; }
+        buildEditor(await r.json());
+        bodyEl.style.display = '';
+      } catch (e) {
+        // Never let this optional panel break the rest of the dashboard.
+        panel.style.display = 'none';
+        console.warn('[event-site editor] init failed', e);
+      }
+    })();
+  }
 </script>
 
 </body>
