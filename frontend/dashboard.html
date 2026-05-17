@@ -4594,17 +4594,36 @@
         }
       });
 
-      // seat import
-      const SEAT_SAMPLE = 'Juan Dela Cruz, Table 4, Near the stage\nMaria Santos, Table 4, Near the stage';
-      const seatArea = area('', SEAT_SAMPLE, 5);
+      // ── Seat plan ──────────────────────────────────────────────
+      // Two supported paste shapes — both parsed by the same row split:
+      //   1. Excel / Sheets — paste preserves \t separators (no commas)
+      //   2. Hand-typed — comma separated
+      // Sample uses real TAB chars so when "Use sample" loads it, the
+      // textarea visually mirrors what an Excel paste looks like, and
+      // hosts immediately see they don't need to add commas.
+      const SEAT_SAMPLE =
+        'Juan Dela Cruz\tTable 4\tNear the stage\n' +
+        'Maria Santos\tTable 4\tNear the stage\n' +
+        'Anna Reyes\tTable 7\tBeside the bar';
+      const seatArea = area('', SEAT_SAMPLE, 6);
+      // Monospaced + tab-friendly so pasted Excel rows visually line up
+      // into columns instead of looking like a jumbled string.
+      seatArea.style.cssText = (seatArea.style.cssText || '') +
+        ';font-family:var(--mono);font-size:13px;line-height:1.55;tab-size:18;-moz-tab-size:18;white-space:pre;overflow-x:auto;';
+
       const seatStat = document.createElement('div');
       seatStat.style.cssText = 'font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink);margin-top:8px;';
-      const seatBtn = btn('Import guest list', 'accent');
+
+      // Primary action — "Save guest list". Previously "Import guest
+      // list", which read like a separate import step (and made hosts
+      // wonder where the corresponding "save" was).
+      const seatBtn = btn('Save guest list', 'accent');
       seatBtn.style.marginTop = '8px';
-      // Companion "use sample" link — the placeholder shows the format but
-      // looks identical to real content, so hosts saw two grey rows and
-      // assumed clicking Import would import them. One click here actually
-      // copies the sample into the textarea, making the import behaviour
+
+      // Companion "use sample" link — the placeholder shows the format
+      // but looks identical to real content, so hosts saw rows and
+      // assumed clicking Save would save them. One click here actually
+      // copies the sample into the textarea, making the behaviour
       // honest.
       const seatSampleBtn = document.createElement('button');
       seatSampleBtn.type = 'button';
@@ -4613,9 +4632,12 @@
       seatSampleBtn.addEventListener('click', () => {
         seatArea.value = SEAT_SAMPLE;
         seatArea.focus();
-        seatStat.textContent = 'Sample loaded — edit, then click Import.';
+        seatStat.textContent = 'Sample loaded — edit, then click Save.';
       });
+
       seatBtn.addEventListener('click', async () => {
+        // Split on TAB or comma — Excel/Sheets paste, hand-typed CSV,
+        // and mixed input all parse the same way.
         const rows = seatArea.value.split('\n').map(l => l.trim()).filter(Boolean).map(l => {
           const c = l.split(/\t|,/).map(x => x.trim());
           return { guest_name: c[0], table_label: c[1] || '', location_note: c[2] || '', seat_note: c[3] || '' };
@@ -4624,13 +4646,13 @@
           seatStat.textContent = 'Type guests first, or click "Use sample data".';
           return;
         }
-        seatStat.textContent = 'Importing…';
+        seatStat.textContent = 'Saving…';
         try {
           const r = await fetch(`/api/event-site/${slug}/seats/import`, { method: 'POST',
             headers: { 'Content-Type': 'application/json', ...AH }, body: JSON.stringify({ seats: rows }) });
           const j = await r.json();
-          seatStat.textContent = r.ok ? `✓ Imported ${j.imported} guests (replaces previous list)` : (j.message || 'Import failed');
-        } catch { seatStat.textContent = 'Import failed — try again.'; }
+          seatStat.textContent = r.ok ? `✓ Saved ${j.imported} guests (replaces previous list)` : (j.message || 'Save failed');
+        } catch { seatStat.textContent = 'Save failed — try again.'; }
       });
 
       // RSVP viewer
@@ -4711,7 +4733,7 @@
           (() => { const w = document.createElement('div'); w.style.marginBottom = '14px'; w.appendChild(gpick); return w; })(),
         ]},
         { title: 'Guests', nodes: [
-          row('Seat plan import', 'Paste from Excel/Sheets — one guest per line: NAME, TABLE, LOCATION', seatArea),
+          row('Seat plan', 'One guest per line — columns: NAME, TABLE, LOCATION. Paste from Excel/Sheets (tabs between columns) or type with commas.', seatArea),
           (() => {
             const w = document.createElement('div');
             w.style.cssText = 'display:flex;flex-wrap:wrap;align-items:center;margin-bottom:6px;';
