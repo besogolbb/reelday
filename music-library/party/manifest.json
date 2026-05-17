@@ -1,64 +1,50 @@
 {
   "name":        "Party — Upbeat & Fun",
   "mood":        "party",
-  "description": "Upbeat saxophone, acoustic guitar, and indie instrumentals for dancing, cake-cutting, and reception peak. All from Pixabay Music — free for any use.",
+  "description": "Upbeat pop and happy instrumentals for dancing, cake-cutting, and reception peak. All from Pixabay Music — free for any use.",
   "cover_color": "#e85a8a",
   "position":    40,
   "tracks": [
     {
-      "file":         "anton_vlasov-nice-day-saxophone-groove-15592.mp3",
-      "title":        "Nice Day Saxophone Groove",
-      "artist":       "Anton Vlasov",
-      "duration_s":   150,
+      "file":         "ikoliks_aj-upbeat-pop-music-423118.mp3",
+      "title":        "Upbeat Pop Music",
+      "artist":       "Ikoliks AJ",
+      "duration_s":   300,
       "license_info": "Pixabay Music — free for any use"
     },
     {
-      "file":         "freemusicforvideo-acoustic-guitar-music-504891.mp3",
-      "title":        "Acoustic Guitar Music",
-      "artist":       "FreeMusicForVideo",
+      "file":         "joyinsound-upbeat-waves-of-ocean-495981.mp3",
+      "title":        "Upbeat Waves of Ocean",
+      "artist":       "JoyInSound",
+      "duration_s":   60,
+      "license_info": "Pixabay Music — free for any use"
+    },
+    {
+      "file":         "lightbeatsmusic-happy-pop-upbeat-mood-513945.mp3",
+      "title":        "Happy Pop — Upbeat Mood",
+      "artist":       "LightBeatsMusic",
+      "duration_s":   235,
+      "license_info": "Pixabay Music — free for any use"
+    },
+    {
+      "file":         "lightbeatsmusic-positive-dream-upbeat-pop-513937.mp3",
+      "title":        "Positive Dream — Upbeat Pop",
+      "artist":       "LightBeatsMusic",
+      "duration_s":   300,
+      "license_info": "Pixabay Music — free for any use"
+    },
+    {
+      "file":         "starostin-pop-upbeat-pop-music-486272.mp3",
+      "title":        "Pop Upbeat",
+      "artist":       "Starostin",
       "duration_s":   280,
       "license_info": "Pixabay Music — free for any use"
     },
     {
-      "file":         "freemusicforvideo-instrumental-acoustic-guitar-music-504896.mp3",
-      "title":        "Instrumental Acoustic Guitar",
-      "artist":       "FreeMusicForVideo",
-      "duration_s":   280,
-      "license_info": "Pixabay Music — free for any use"
-    },
-    {
-      "file":         "moonpub-guitar-and-sax-play-upbeat-jazz-469946.mp3",
-      "title":        "Guitar and Sax Upbeat Jazz",
-      "artist":       "MoonPub",
-      "duration_s":   190,
-      "license_info": "Pixabay Music — free for any use"
-    },
-    {
-      "file":         "moonpub-smooth-jazz-saxophone-piece-485790.mp3",
-      "title":        "Smooth Jazz Saxophone Piece",
-      "artist":       "MoonPub",
-      "duration_s":   230,
-      "license_info": "Pixabay Music — free for any use"
-    },
-    {
-      "file":         "onaldin_music-inspire-indie-acoustic-distant-skyline-333168.mp3",
-      "title":        "Distant Skyline (Indie Acoustic)",
-      "artist":       "Onaldin Music",
-      "duration_s":   315,
-      "license_info": "Pixabay Music — free for any use"
-    },
-    {
-      "file":         "saxorphine-footloose-party-upbeat-party-saxophone-trumpets-406213.mp3",
-      "title":        "Footloose Party — Saxophone & Trumpets",
-      "artist":       "Saxorphine",
-      "duration_s":   540,
-      "license_info": "Pixabay Music — free for any use"
-    },
-    {
-      "file":         "tunetank-upbeat-acoustic-guitar-347972.mp3",
-      "title":        "Upbeat Acoustic Guitar",
-      "artist":       "TuneTank",
-      "duration_s":   340,
+      "file":         "starostin-upbeat-fun-background-music-523691.mp3",
+      "title":        "Upbeat Fun Background",
+      "artist":       "Starostin",
+      "duration_s":   285,
       "license_info": "Pixabay Music — free for any use"
     }
   ]
