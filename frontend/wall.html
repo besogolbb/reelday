@@ -796,8 +796,11 @@
       opacity: 0; transition: opacity .3s;
       pointer-events: none;
     }
+    /* Visibility is driven entirely by JS adding/removing .show. We
+       deliberately do NOT include :hover here — the JS already bumps on
+       mousemove, so hover is covered. Including :hover used to "stick"
+       the tray visible whenever the cursor was parked over it. */
     .controls-tray.show,
-    .controls-tray:hover,
     .controls-tray:focus-within,
     .controls-tray.always-visible { opacity: 1; pointer-events: auto; }
 
@@ -2162,7 +2165,7 @@
   // never fires. We require ≥6px of cumulative travel to count as motion.
   const controlsTray = document.getElementById('controls-tray');
   const IDLE_HIDE_MS  = 3500;
-  const MOVE_PX_THRESH = 6;
+  const MOVE_PX_THRESH = 12;
   let controlsIdleTimer = 0;
   let lastMoveX = -1, lastMoveY = -1;
 
