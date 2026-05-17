@@ -31,41 +31,80 @@
     }
 
     /* ── Sticky nav (slides in after the hero) ──────────
-       Bigger labels + stronger glass + accent hairline so the
-       bar reads as a deliberate top-chrome element rather than
-       disappearing into the page. Hover/focus get an animated
-       underline so the active jump-target is obvious. */
+       Chip-based design: each link is a small pill so the bar
+       feels like an intentional element with proper tap targets
+       and clear separation between items — was just raw text in
+       a glass strip, which read as plain on mobile. Desktop keeps
+       a sweep-in underline on hover; mobile flips the active chip
+       to the accent fill. */
     nav.es-nav {
       position: fixed; top: 0; left: 0; right: 0; z-index: 40;
-      display: flex; gap: 32px; justify-content: center;
-      padding: 20px 28px;
-      background: rgba(251,247,238,.94);
+      display: flex; gap: 8px; justify-content: center;
+      padding: 14px 18px;
+      background:
+        linear-gradient(180deg, rgba(251,247,238,.96) 0%, rgba(244,234,217,.92) 100%);
       backdrop-filter: saturate(140%) blur(18px);
       -webkit-backdrop-filter: saturate(140%) blur(18px);
-      border-bottom: 1px solid rgba(196,90,58,.18);
-      box-shadow: 0 12px 30px -18px rgba(42,26,20,.18);
-      font-family: var(--mono); font-size: 13px; letter-spacing: .18em;
-      font-weight: 600;
-      text-transform: uppercase; overflow-x: auto;
+      border-bottom: 1px solid rgba(196,90,58,.22);
+      box-shadow: 0 14px 32px -22px rgba(42,26,20,.30);
+      overflow-x: auto;
       transform: translateY(-110%); transition: transform .4s ease;
+      -webkit-overflow-scrolling: touch;
     }
     nav.es-nav.show { transform: translateY(0); }
     nav.es-nav a {
       position: relative;
-      color: var(--ink); white-space: nowrap; opacity: .78;
-      padding: 4px 2px;
-      transition: opacity .15s, color .15s;
+      flex: 0 0 auto;
+      display: inline-flex; align-items: center;
+      padding: 9px 16px;
+      background: rgba(255,255,255,.6);
+      border: 1px solid rgba(196,90,58,.18);
+      border-radius: 999px;
+      color: var(--ink); white-space: nowrap;
+      font-family: var(--mono); font-size: 12px; font-weight: 600;
+      letter-spacing: .14em; text-transform: uppercase;
+      transition: background .18s, color .18s, border-color .18s, transform .18s, box-shadow .18s;
     }
-    nav.es-nav a::after {
-      content: ''; position: absolute; left: 50%; right: 50%; bottom: -3px;
-      height: 2px; background: var(--accent); border-radius: 2px;
-      transition: left .25s ease, right .25s ease;
+    nav.es-nav a:hover,
+    nav.es-nav a:focus-visible {
+      background: var(--accent); color: #fff;
+      border-color: var(--accent);
+      transform: translateY(-1px);
+      box-shadow: 0 8px 18px -6px rgba(196,90,58,.45);
+      outline: none;
     }
-    nav.es-nav a:hover { opacity: 1; color: var(--accent); }
-    nav.es-nav a:hover::after { left: 0; right: 0; }
+    nav.es-nav a:active { transform: translateY(0); }
     nav.es-nav::-webkit-scrollbar { display: none; }
+    nav.es-nav { scrollbar-width: none; }
+
+    /* Mobile — chips stay readable, container background darkens
+       slightly so the pills lift off it instead of blending in. */
     @media (max-width: 640px) {
-      nav.es-nav { gap: 22px; padding: 16px 18px; font-size: 12px; letter-spacing: .14em; }
+      nav.es-nav {
+        gap: 6px;
+        padding: 12px 14px;
+        background:
+          linear-gradient(180deg, rgba(42,26,20,.88) 0%, rgba(42,26,20,.78) 100%);
+        border-bottom-color: rgba(255,255,255,.10);
+      }
+      nav.es-nav a {
+        background: rgba(255,255,255,.92);
+        color: var(--ink);
+        border-color: transparent;
+        padding: 8px 14px;
+        font-size: 11px; letter-spacing: .12em;
+      }
+      nav.es-nav a:hover,
+      nav.es-nav a:focus-visible {
+        background: var(--accent); color: #fff;
+        box-shadow: 0 6px 14px -4px rgba(0,0,0,.45);
+      }
+      /* Soft edge fades at the scroll ends so it reads as
+         horizontally scrollable rather than truncated. */
+      nav.es-nav {
+        mask-image: linear-gradient(90deg, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%);
+        -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%);
+      }
     }
 
     /* ── Hero ──────────────────────────────────────────
