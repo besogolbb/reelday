@@ -2293,13 +2293,16 @@
   // firing reliably (timing varies across browsers and can race with
   // polling). The fullscreenchange handler still does its work for
   // exit-fullscreen and as a backstop, but this fires on the click itself.
-  document.getElementById('fs-btn')?.addEventListener('click', () => {
-    console.log('[wall.controls] fs-btn click → force-hide');
+  document.getElementById('fs-btn')?.addEventListener('click', (e) => {
     if (controlsTray) controlsTray.classList.remove('show');
     lastActivityTs  = 0;
     windowMovePx    = 0;
     windowMoveCount = 0;
     suppressUntil   = Date.now() + FS_SUPPRESS_MS;
+    // Critical: blur the button to defeat the .controls-tray:focus-within
+    // CSS rule, which would otherwise keep the tray visible because the
+    // button still has focus after the click.
+    try { e.currentTarget?.blur(); } catch {}
   });
 
   // Expose state to window for live debugging in DevTools console.
