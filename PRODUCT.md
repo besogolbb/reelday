@@ -114,6 +114,45 @@ Lets internal staff:
   payment (also flips the linked event back to unpaid).
 - **Events** — list every event, deactivate them.
 
+### 3.6 The event website (`/e/<slug>`) — Dalisay & Hiraya
+
+A per-event guest microsite — the "4 months before" companion to the
+wall's "4 hours during". Gated to the **Dalisay/Hiraya** tiers via the
+`website` plan feature flag (owner's *effective* tier, not the cached
+`events.plan`). Unpublished or not-entitled → bare 404 (no leak).
+
+- **Served from `server.js`** at `/e/:slug` (sibling of `/wall/:slug`).
+  It's not a plain `sendFile`: the handler injects Open Graph / theme /
+  `noindex` meta into the initial HTML so Viber / Messenger / FB
+  crawlers (which don't run JS) render the cover card. The injected
+  page is cached per slug and busted on owner edit, so a popular event
+  is a buffer send with zero DB. The body then hydrates client-side
+  from `GET /api/event-site/:slug` — same static-page + JSON pattern as
+  the wall/upload pages. No SPA framework, no new npm deps.
+- **Sections** (all from one `event_sites.config` JSONB, ordered by an
+  event-type preset, host-overridable): hero + live countdown that
+  flips to "Happening now → open the live wall" at event time, story,
+  details (order-of-the-day, venue cards, keyless Google Maps embed,
+  dress code, parking), prenup/gallery, **find-your-seat** (type your
+  name → your table; server-side exact match only, rate-limited — never
+  the whole list, an anti-scrape decision), RSVP, FAQ, entourage,
+  "good to know", footer (.ics + Google Calendar, Web Share, link into
+  `/upload/<slug>`). EN/Tagalog toggle is UI-labels-only by design.
+- **Performance**: the public read reuses the reactions.js 5s
+  slug→event TTL cache shape (so a guest burst can't drain the pg pool)
+  plus single-flight + a pre-built gzip buffer, invalidated on owner
+  write for instant freshness.
+- **Host editing** lives in a plan-gated "Event Website" panel on the
+  dashboard, implemented as an isolated `<script type="module">` so it
+  shares no scope with the main dashboard module. Autofills from the
+  event row; structured fields; cover/prenup upload via an owner-only
+  image endpoint that uses `putFile` (no `uploads` row → never on the
+  wall); seat paste-import; RSVP list + CSV export.
+
+Parked for later: Memorial preset (sensitive tone), an AI concierge
+over a plain-text knowledge blob, RSVP analytics (V2); Hiraya custom
+domains (V3). See `docs/event-website-plan.md`.
+
 ---
 
 ## 4. The core flows, end-to-end
@@ -367,5 +406,9 @@ uploads, poll votes, wall-error beacons).
 | Admin endpoints | `backend/routes/admin.js` |
 | Transcode webhook | `backend/routes/webhooks.js` |
 | Plan definitions | `backend/lib/plans.js`, `frontend/js/plans.js` |
+| Event website (guest) | `frontend/event-site.html`, `/e/:slug` in `backend/server.js` |
+| Event website (API) | `backend/routes/event-site.js` |
+| Event website (host editor) | isolated module at end of `frontend/dashboard.html` |
+| Event website plan/scope | `docs/event-website-plan.md` |
 | Lambda transcoder | `lambda/index.mjs` |
 | DB schema + migrations | `backend/plugins/database.js` |
