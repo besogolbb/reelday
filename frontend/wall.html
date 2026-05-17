@@ -2269,6 +2269,13 @@
   // "hide if idle". Independent of any individual event firing.
   setInterval(() => {
     if (!controlsTray) return;
+    // During the suppression window (set by fullscreen entry), force-hide
+    // on every tick and skip everything else. Anything trying to call
+    // bumpActivity is already gated by the same suppressUntil check.
+    if (Date.now() < suppressUntil) {
+      controlsTray.classList.remove('show');
+      return;
+    }
     // Promote movement to activity if it meets both criteria
     if (windowMoveCount >= MIN_MOVE_EVENTS && windowMovePx >= MOVE_PX_THRESH) {
       bumpActivity();
@@ -2281,6 +2288,18 @@
       controlsTray.classList.remove('show');
     }
   }, 250);
+
+  // Deterministic hide on fs-btn click — don't depend on fullscreenchange
+  // firing reliably (timing varies across browsers and can race with
+  // polling). The fullscreenchange handler still does its work for
+  // exit-fullscreen and as a backstop, but this fires on the click itself.
+  document.getElementById('fs-btn')?.addEventListener('click', () => {
+    if (controlsTray) controlsTray.classList.remove('show');
+    lastActivityTs  = 0;
+    windowMovePx    = 0;
+    windowMoveCount = 0;
+    suppressUntil   = Date.now() + FS_SUPPRESS_MS;
+  });
 
   // Show briefly on first paint so the host sees the affordance exists.
   bumpActivity();
