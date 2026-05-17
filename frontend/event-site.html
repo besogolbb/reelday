@@ -2141,10 +2141,14 @@
         a.addEventListener('click', function (e) {
           // Smooth-scroll within the same page; preserves browser
           // history (the hash still updates) so back works as expected.
+          // block:'center' lands the section in the middle of the
+          // viewport (was 'start', which left short sections like the
+          // seat finder sitting awkwardly at the top edge with the
+          // next section's eyebrow already showing below).
           var target = document.querySelector(href);
           if (target) {
             e.preventDefault();
-            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
             history.replaceState(null, '', href);
           }
         });
