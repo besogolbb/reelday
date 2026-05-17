@@ -174,17 +174,17 @@
       }
 
       container.innerHTML = `<div class="events-grid">${events.map(ev => {
+        // Pending (unpaid, non-free) shows no badge — payment state is
+        // surfaced inside the dashboard, not as a card-corner label.
         const isPending = !ev.is_paid && ev.plan !== 'libre';
-        const [badgeClass, badgeText] = isPending
-          ? ['badge-pending', 'PENDING']
-          : (PLAN_LABELS[ev.plan] || PLAN_LABELS.libre);
+        const [badgeClass, badgeText] = PLAN_LABELS[ev.plan] || PLAN_LABELS.libre;
         const typeLabel = TYPE_MAP[ev.event_type] || ev.event_type;
         const dateStr   = fmtDate(ev.event_date);
         return `
           <div class="event-card">
             <div class="ec-top">
               <div class="ec-names">${esc(ev.couple_names)}</div>
-              <span class="ec-badge ${badgeClass}">${badgeText}</span>
+              ${isPending ? '' : `<span class="ec-badge ${badgeClass}">${badgeText}</span>`}
             </div>
             <div class="ec-meta">
               <span class="ec-type">${typeLabel}</span>
