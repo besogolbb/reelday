@@ -32,10 +32,131 @@ import { fileURLToPath } from 'url';
 import { dirname, join, extname } from 'path';
 import { randomUUID } from 'crypto';
 import { gzipSync } from 'zlib';
+import { Resend } from 'resend';
 import { planHasFeature } from '../lib/plans.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TEMPLATE_PATH = join(__dirname, '..', '..', 'frontend', 'event-site.html');
+
+// ── Email helper (matches auth.js Resend pattern) ──────────────────
+// Lazily instantiated so a missing RESEND_API_KEY doesn't fail the
+// module load — instead the helper logs and skips. RSVPs still save;
+// only the notification is lost. Same 10 s timeout race used in
+// auth.js so a hanging Resend call can't slow the response chain.
+function _resend() {
+  return new Resend(process.env.RESEND_API_KEY || '');
+}
+function _withTimeout(promise, ms, label) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(
+      () => reject(new Error(`${label} timed out after ${ms}ms`)),
+      ms,
+    )),
+  ]);
+}
+async function sendMail({ to, subject, html }) {
+  const key = process.env.RESEND_API_KEY || '';
+  if (key.length < 10 || key.startsWith('re_XXXX')) return; // disabled
+  if (!to || !subject || !html) return;
+  await _withTimeout(_resend().emails.send({
+    from: 'Reelday <noreply@reelday.ph>',
+    to, subject, html,
+  }), 10_000, 'Resend (rsvp)');
+}
+// HTML escape for embedding host-supplied text in email bodies.
+const _esc = (s) => String(s ?? '')
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+// Send the host-notification + (optional) guest-confirmation emails
+// for a single RSVP. Both sends are wrapped in their own try/catch so
+// one failure doesn't block the other; the outer caller logs any
+// rejection. Looks up the host email via the event's user_id — if the
+// event has no owner (legacy anon events) the host email is skipped.
+async function sendRsvpEmails(fastify, event, rsvp) {
+  const appUrl =
+    (process.env.APP_URL ||
+     (process.env.APP_PUBLIC_HOST
+       ? `https://${process.env.APP_PUBLIC_HOST}`
+       : 'https://reelday.ph')).replace(/\/+$/, '');
+
+  const couple    = event.couple_names || 'your event';
+  const attending = rsvp.attending;
+  const partyTxt  = attending ? `Party of ${rsvp.party || 1}` : 'Regretfully declines';
+  const statusEm  = attending ? '✓ Attending' : '✗ Not attending';
+  const safeMsg   = rsvp.message ? _esc(rsvp.message) : null;
+
+  // ── 1. Host notification ─────────────────────────────────────────
+  if (event.user_id) {
+    try {
+      const { rows } = await fastify.db.query(
+        'SELECT email, full_name FROM users WHERE id = $1', [event.user_id]);
+      const hostEmail = rows[0]?.email;
+      if (hostEmail) {
+        const dashUrl = `${appUrl}/dashboard?slug=${encodeURIComponent(event.slug)}`;
+        await sendMail({
+          to: hostEmail,
+          subject: `New RSVP from ${rsvp.name} — ${couple}`,
+          html: `
+            <div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;max-width:520px;margin:0 auto;padding:2rem;color:#2a1a14">
+              <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#c45a3a;margin-bottom:8px">— new rsvp —</div>
+              <h2 style="font-family:Fraunces,Georgia,serif;font-weight:500;font-size:1.6rem;margin:0 0 1.5rem;color:#2a1a14">${_esc(rsvp.name)} ${attending ? 'is coming' : 'can’t make it'}</h2>
+              <table style="width:100%;border-collapse:collapse;font-size:14px;line-height:1.55">
+                <tr><td style="padding:8px 0;color:#8a7468">Event</td><td style="padding:8px 0;text-align:right;font-weight:600">${_esc(couple)}</td></tr>
+                <tr><td style="padding:8px 0;color:#8a7468;border-top:1px solid #ebdec6">Status</td><td style="padding:8px 0;text-align:right;font-weight:600;border-top:1px solid #ebdec6">${statusEm}</td></tr>
+                ${attending ? `<tr><td style="padding:8px 0;color:#8a7468;border-top:1px solid #ebdec6">Party size</td><td style="padding:8px 0;text-align:right;font-weight:600;border-top:1px solid #ebdec6">${rsvp.party || 1}</td></tr>` : ''}
+                ${rsvp.email ? `<tr><td style="padding:8px 0;color:#8a7468;border-top:1px solid #ebdec6">Email</td><td style="padding:8px 0;text-align:right;border-top:1px solid #ebdec6"><a href="mailto:${_esc(rsvp.email)}" style="color:#c45a3a;text-decoration:none">${_esc(rsvp.email)}</a></td></tr>` : ''}
+              </table>
+              ${safeMsg ? `
+                <div style="margin-top:1.5rem;padding:14px 16px;background:#fbf3e2;border-left:3px solid #c45a3a;border-radius:6px;font-style:italic;color:#5a443a">
+                  &ldquo;${safeMsg}&rdquo;
+                </div>` : ''}
+              <a href="${dashUrl}" style="display:inline-block;margin-top:1.75rem;padding:.75rem 1.5rem;background:#c45a3a;color:#fff;border-radius:999px;text-decoration:none;font-weight:600;font-size:13px;letter-spacing:.06em">Open dashboard →</a>
+              <p style="font-size:11px;color:#8a7468;margin-top:2rem;letter-spacing:.12em;text-transform:uppercase">reelday.ph</p>
+            </div>`,
+        });
+      }
+    } catch (err) {
+      fastify.log.warn({ err: err?.message || err, slug: event.slug },
+        '[rsvp] host email failed');
+    }
+  }
+
+  // ── 2. Guest confirmation ────────────────────────────────────────
+  if (rsvp.email) {
+    try {
+      const siteUrl = `${appUrl}/e/${encodeURIComponent(event.slug)}`;
+      await sendMail({
+        to: rsvp.email,
+        subject: attending
+          ? `RSVP confirmed — ${couple}`
+          : `RSVP received — ${couple}`,
+        html: `
+          <div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;max-width:480px;margin:0 auto;padding:2rem;color:#2a1a14">
+            <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#c45a3a;margin-bottom:8px">— rsvp confirmation —</div>
+            <h2 style="font-family:Fraunces,Georgia,serif;font-weight:500;font-size:1.5rem;margin:0 0 1rem">${_esc(couple)}</h2>
+            <p style="font-size:15px;line-height:1.6;color:#5a443a;margin:0 0 1.5rem">
+              ${attending
+                ? `Thank you, ${_esc(rsvp.name)} — we have you down as joining us. Your RSVP is saved.`
+                : `Thank you for letting us know, ${_esc(rsvp.name)}. We'll miss you. Your RSVP is saved.`}
+            </p>
+            <table style="width:100%;border-collapse:collapse;font-size:14px;line-height:1.55;background:#fbf3e2;border-radius:12px;padding:8px">
+              <tr><td style="padding:14px 16px 8px;color:#8a7468">Name</td><td style="padding:14px 16px 8px;text-align:right;font-weight:600">${_esc(rsvp.name)}</td></tr>
+              <tr><td style="padding:6px 16px;color:#8a7468">Status</td><td style="padding:6px 16px;text-align:right;font-weight:600">${statusEm}</td></tr>
+              ${attending ? `<tr><td style="padding:6px 16px 14px;color:#8a7468">Party</td><td style="padding:6px 16px 14px;text-align:right;font-weight:600">${rsvp.party || 1}</td></tr>` : ''}
+            </table>
+            ${safeMsg ? `<p style="margin-top:1.5rem;font-style:italic;color:#8a7468;font-size:14px">Your note: &ldquo;${safeMsg}&rdquo;</p>` : ''}
+            <a href="${siteUrl}" style="display:inline-block;margin-top:1.75rem;padding:.75rem 1.5rem;background:#c45a3a;color:#fff;border-radius:999px;text-decoration:none;font-weight:600;font-size:13px;letter-spacing:.06em">View event page →</a>
+            <p style="font-size:11px;color:#8a7468;margin-top:2rem;letter-spacing:.12em;text-transform:uppercase">Need to change your RSVP? Reopen the event page and submit again — we'll update your entry.</p>
+          </div>`,
+      });
+    } catch (err) {
+      fastify.log.warn({ err: err?.message || err, slug: event.slug, to: rsvp.email },
+        '[rsvp] guest email failed');
+    }
+  }
+}
 
 // ── Module-level caches (shared by the plugin + the exported renderer) ──
 const GATE_TTL_MS = 5_000;
@@ -477,6 +598,20 @@ export default async function eventSiteRoutes(fastify) {
              updated_at  = NOW()`,
       [gate.event.id, guestId, name, email, phone, attending, party, meal, message],
     );
+
+    // Fire-and-forget email notifications — failures are logged but
+    // never block the RSVP success response. Two emails go out:
+    //   1. Host (event owner) — always, if their account email is on
+    //      file. Acts as a "new RSVP" inbox notification.
+    //   2. Guest — only if they provided an email; gives them a
+    //      confirmation record they can reference later.
+    sendRsvpEmails(fastify, gate.event, {
+      name, email, attending, party, message,
+    }).catch((err) => {
+      fastify.log.warn({ err: err?.message || err, slug: gate.event.slug },
+        '[rsvp] notification email failed');
+    });
+
     return reply.status(201).send({ ok: true });
   });
 

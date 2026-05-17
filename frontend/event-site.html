@@ -1160,6 +1160,7 @@
       table:'Table', addCal:'Add to calendar', share:'Share',
       upload:'Share your photos', happening:'Happening now',
       openWall:'Open the live wall', nameLbl:'Your full name',
+      emailLbl:'Your email (optional — we’ll send a confirmation)',
       noteHint:'Song request, dietary notes, or a message (optional)',
       rsvpBy:'Please RSVP by',
       rsvpClosed:'RSVPs are closed',
@@ -1814,6 +1815,12 @@
       function buildRsvpForm(deadlineDate) {
         var form = el('div', { class: 'es-form-wrap' });
         var name = el('input', { class: 'es-field', type: 'text', placeholder: t('nameLbl') });
+        // Optional email — when provided the backend mails the guest a
+        // confirmation. The host always gets notified regardless; this
+        // is purely for the guest's own records.
+        var emailIn = el('input', { class: 'es-field', type: 'email',
+          inputmode: 'email', autocomplete: 'email',
+          placeholder: t('emailLbl') });
         var attRow = el('div', { class: 'es-field-row' });
         var att = el('select', { class: 'es-field' });
         att.appendChild(el('option', { value: 'yes', text: t('attending') }));
@@ -1835,6 +1842,7 @@
 
         function resetForm() {
           name.value = '';
+          emailIn.value = '';
           att.value = 'yes';
           party.value = '1';
           msg.value  = '';
@@ -1851,7 +1859,7 @@
           // single clear "saved" surface instead of seeing the form
           // still sitting there, which makes it unclear whether it
           // saved or whether they need to click again.
-          [name, attRow, msg, send].forEach(function (n) { n.style.display = 'none'; });
+          [name, emailIn, attRow, msg, send].forEach(function (n) { n.style.display = 'none'; });
 
           var box = el('div', { class: 'es-rsvp-success' });
           var check = el('div', { class: 'check' });
@@ -1864,7 +1872,7 @@
           var again = el('button', { type: 'button', class: 'again', text: 'Add another RSVP' });
           again.addEventListener('click', function () {
             successWrap.textContent = '';
-            [name, attRow, msg, send].forEach(function (n) { n.style.display = ''; });
+            [name, emailIn, attRow, msg, send].forEach(function (n) { n.style.display = ''; });
             name.focus();
           });
           box.appendChild(again);
@@ -1881,8 +1889,11 @@
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              guest_name: nm, attending: att.value === 'yes',
-              party_size: parseInt(party.value, 10) || 1, message: msg.value.trim()
+              guest_name: nm,
+              email: emailIn.value.trim() || undefined,
+              attending: att.value === 'yes',
+              party_size: parseInt(party.value, 10) || 1,
+              message: msg.value.trim()
             })
           }).then(function (r) {
             if (r.ok) { showSuccess(); return; }
@@ -1902,6 +1913,7 @@
           }).finally(function () { /* send.disabled handled per-branch */ });
         });
         form.appendChild(name);
+        form.appendChild(emailIn);
         form.appendChild(attRow);
         form.appendChild(msg);
         form.appendChild(send);
