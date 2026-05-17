@@ -8,118 +8,529 @@
   <link rel="stylesheet" href="/css/shared.css" />
   <!--EVENT_SITE_HEAD-->
   <style>
-    /* Layout specifics only — palette/type come from shared.css tokens. */
-    .es-wrap { max-width: 880px; margin: 0 auto; padding: 0 22px; }
+    /* ─────────────────────────────────────────────────────────────────
+       Event site — editorial magazine layout.
+       Palette/typography from shared.css tokens (per-theme accent).
+       Host content is rendered via textContent only; no innerHTML for
+       host data ever reaches the DOM.
+       ───────────────────────────────────────────────────────────────── */
+
+    html { scroll-behavior: smooth; }
+    body { margin: 0; background: var(--paper); color: var(--ink); overflow-x: hidden; }
+    a { color: inherit; text-decoration: none; }
+    button { font: inherit; cursor: pointer; }
+    img { display: block; max-width: 100%; }
+
+    /* ── Loading + state ───────────────────────────────── */
+    .es-state {
+      min-height: 70vh; display: flex; align-items: center;
+      justify-content: center; text-align: center;
+      color: var(--ink-faint); padding: 40px;
+      font-family: var(--mono); font-size: 13px; letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    /* ── Top language toggle (always visible) ─────────── */
+    .es-lang {
+      position: fixed; top: 14px; right: 14px; z-index: 50;
+      display: flex; gap: 2px;
+      background: rgba(255,255,255,.86);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,.6);
+      border-radius: 999px; padding: 3px;
+      font-size: 11px; font-family: var(--mono);
+      box-shadow: 0 6px 24px rgba(42,26,20,.10);
+    }
+    .es-lang button {
+      padding: 6px 14px; border-radius: 999px; border: 0;
+      background: transparent; color: var(--ink-soft);
+      letter-spacing: .12em; font-weight: 600;
+    }
+    .es-lang button.on { background: var(--accent); color: #fff; }
+
+    /* ── Sticky nav (slides in after the hero) ────────── */
+    nav.es-nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 40;
+      display: flex; gap: 26px; justify-content: center;
+      padding: 14px 22px;
+      background: rgba(251,247,238,.88);
+      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+      border-bottom: 1px solid rgba(42,26,20,.06);
+      font-family: var(--mono); font-size: 11px; letter-spacing: .22em;
+      text-transform: uppercase; overflow-x: auto;
+      transform: translateY(-110%); transition: transform .4s ease;
+    }
+    nav.es-nav.show { transform: translateY(0); }
+    nav.es-nav a { color: var(--ink-soft); white-space: nowrap; opacity: .68; transition: opacity .15s, color .15s; }
+    nav.es-nav a:hover { opacity: 1; color: var(--accent); }
+    nav.es-nav::-webkit-scrollbar { display: none; }
+
+    /* ── Hero ──────────────────────────────────────────
+       Full-bleed cover image with a slow Ken-Burns zoom and a
+       generous bottom gradient so the lockup stays legible no
+       matter what the host uploaded. Background-color placeholder
+       paints instantly so the hero is never empty paper. */
     .es-hero {
-      min-height: 88vh; display: flex; flex-direction: column;
-      align-items: center; justify-content: center; text-align: center;
-      padding: 80px 22px 64px; position: relative; overflow: hidden;
+      position: relative; min-height: 100dvh;
+      display: grid; grid-template-rows: 1fr auto;
+      padding: 80px 28px 60px;
+      color: #fff;
+      background:
+        linear-gradient(180deg, rgba(20,12,8,.10) 0%, rgba(20,12,8,.18) 35%, rgba(20,12,8,.78) 100%),
+        radial-gradient(120% 80% at 50% 40%, #2a1a14 0%, #120a08 100%);
+      overflow: hidden;
+      isolation: isolate;
     }
     .es-hero-bg {
-      position: absolute; inset: 0; background-size: cover;
-      background-position: center; filter: brightness(.62);
-      z-index: 0;
+      position: absolute; inset: -3% -3% -3% -3%; z-index: -1;
+      background-size: cover; background-position: center;
+      animation: heroZoom 24s ease-in-out infinite alternate;
+      opacity: 0; transition: opacity 1.2s ease;
     }
-    .es-hero-bg::after {
-      content: ""; position: absolute; inset: 0;
-      background: linear-gradient(180deg, rgba(42,26,20,.15), rgba(42,26,20,.55));
+    .es-hero-bg.loaded { opacity: 1; }
+    @keyframes heroZoom {
+      from { transform: scale(1.04) translateY(0); }
+      to   { transform: scale(1.12) translateY(-2%); }
     }
-    .es-hero > * { position: relative; z-index: 1; }
-    .es-hero.has-bg, .es-hero.has-bg .es-kicker { color: #fff; }
-    .es-kicker {
+    /* A vignette so the centre stays readable on busy photos. */
+    .es-hero::before {
+      content: ''; position: absolute; inset: 0; z-index: -1;
+      background: radial-gradient(120% 70% at 50% 55%, transparent 0%, rgba(0,0,0,.45) 100%);
+      pointer-events: none;
+    }
+    /* No-cover fallback: pure paper, ink text. */
+    .es-hero.no-bg {
+      background: var(--paper);
+      color: var(--ink);
+    }
+    .es-hero.no-bg::before { display: none; }
+
+    .es-hero-top {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; text-align: center;
+      gap: 22px;
+    }
+    .es-hero-kicker {
+      font-family: var(--mono); font-size: 11px; letter-spacing: .42em;
+      text-transform: uppercase; opacity: .82;
+      padding: 8px 16px; border: 1px solid currentColor;
+      border-radius: 999px;
+      animation: fadeUp .9s .1s both;
+    }
+    .es-hero-lockup {
+      animation: fadeUp 1s .25s both;
+    }
+    .es-hero-names {
+      font-family: var(--display); font-weight: 400;
+      font-size: clamp(3.2rem, 11vw, 7.5rem); line-height: 1;
+      letter-spacing: -.02em; margin: 0;
+    }
+    .es-hero-names .amp {
+      font-style: italic; font-weight: 300;
+      color: var(--accent-soft);
+      padding: 0 .1em;
+    }
+    .es-hero.no-bg .es-hero-names .amp { color: var(--accent); }
+    .es-hero-date {
       font-family: var(--mono); font-size: 12px; letter-spacing: .32em;
-      text-transform: uppercase; opacity: .8; margin-bottom: 20px;
+      text-transform: uppercase; margin-top: 18px;
+      opacity: .85;
     }
-    .es-names {
-      font-family: var(--display); font-weight: 600;
-      font-size: clamp(2.6rem, 9vw, 5.4rem); line-height: 1.02;
-      letter-spacing: -.01em; margin: 0 0 18px;
+    .es-hero-rule {
+      width: 60px; height: 1px; background: currentColor;
+      opacity: .4; margin: 22px auto 0;
     }
-    .es-date { font-size: 1.05rem; letter-spacing: .04em; opacity: .92; }
+
+    .es-hero-bottom {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 22px; text-align: center;
+      animation: fadeUp 1s .55s both;
+    }
     .es-count {
-      display: flex; gap: 14px; justify-content: center; margin-top: 36px;
-      flex-wrap: wrap;
+      display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;
     }
-    .es-count div {
-      min-width: 72px; background: rgba(255,255,255,.14);
-      border: 1px solid rgba(255,255,255,.22); border-radius: var(--r);
-      padding: 12px 8px; backdrop-filter: blur(4px);
+    .es-count > div {
+      min-width: 64px; padding: 10px 6px 8px;
+      background: rgba(255,255,255,.10);
+      border: 1px solid rgba(255,255,255,.22);
+      border-radius: 12px;
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
     }
-    .es-hero:not(.has-bg) .es-count div {
-      background: var(--paper-2); border-color: var(--line);
+    .es-hero.no-bg .es-count > div {
+      background: var(--paper-2);
+      border-color: var(--line);
     }
-    .es-count b { display: block; font-family: var(--display); font-size: 1.7rem; }
-    .es-count span { font-size: 10px; text-transform: uppercase; letter-spacing: .16em; opacity: .7; }
+    .es-count b { display: block; font-family: var(--display); font-size: 1.6rem; font-weight: 500; }
+    .es-count span { font-size: 9px; text-transform: uppercase; letter-spacing: .22em; opacity: .65; }
     .es-cta {
-      display: inline-flex; align-items: center; gap: 8px; margin-top: 30px;
-      background: var(--accent); color: #fff; padding: 14px 26px;
-      border-radius: 999px; font-weight: 600; font-size: .95rem;
-      box-shadow: var(--shadow-card);
+      display: inline-flex; align-items: center; gap: 10px;
+      padding: 14px 28px; border-radius: 999px;
+      background: var(--accent); color: #fff;
+      font-family: var(--mono); font-size: 12px; font-weight: 700;
+      letter-spacing: .2em; text-transform: uppercase;
+      box-shadow: 0 12px 32px rgba(196,90,58,.32);
+      transition: transform .2s, box-shadow .2s;
     }
-    nav.es-nav {
-      position: sticky; top: 0; z-index: 20; background: var(--paper);
-      border-bottom: 1px solid var(--line); display: flex; gap: 18px;
-      justify-content: center; padding: 13px 16px; overflow-x: auto;
-      font-size: 12px; letter-spacing: .14em; text-transform: uppercase;
+    .es-cta:hover { transform: translateY(-2px); box-shadow: 0 16px 40px rgba(196,90,58,.42); }
+    .es-cta.live { background: #d12d2d; box-shadow: 0 12px 32px rgba(209,45,45,.45); }
+    .es-cta.live::before {
+      content: ''; width: 8px; height: 8px; border-radius: 50%;
+      background: #fff; animation: pulse 1.2s ease-in-out infinite;
     }
-    nav.es-nav a { white-space: nowrap; opacity: .62; }
-    nav.es-nav a:hover { opacity: 1; color: var(--accent); }
-    section.es-sec { padding: 64px 0; border-bottom: 1px solid var(--line); }
-    .es-sec h2 {
-      font-family: var(--display); font-weight: 600;
-      font-size: clamp(1.6rem, 5vw, 2.4rem); text-align: center;
-      margin: 0 0 8px;
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%      { opacity: .4; transform: scale(.7); }
     }
-    .es-sec .es-sub {
-      text-align: center; opacity: .6; font-size: .9rem;
-      margin-bottom: 34px; letter-spacing: .04em;
+    .es-hero-scroll {
+      position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%);
+      font-family: var(--mono); font-size: 9px; letter-spacing: .3em;
+      text-transform: uppercase; opacity: .55;
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      animation: scrollBob 1.8s ease-in-out infinite;
     }
-    .es-prose { max-width: 620px; margin: 0 auto; text-align: center;
-      font-size: 1.08rem; line-height: 1.75; color: var(--ink-soft); white-space: pre-wrap; }
-    .es-timeline { max-width: 480px; margin: 0 auto; }
-    .es-timeline div {
-      display: flex; gap: 18px; padding: 14px 0;
-      border-bottom: 1px dashed var(--line);
+    .es-hero-scroll::after {
+      content: ''; width: 1px; height: 24px; background: currentColor;
     }
-    .es-timeline b { font-family: var(--mono); min-width: 86px; color: var(--accent); }
-    .es-cards { display: grid; gap: 16px; }
-    .es-card {
-      background: var(--paper-2); border: 1px solid var(--line);
-      border-radius: var(--r-lg); padding: 22px;
+    @keyframes scrollBob {
+      0%, 100% { transform: translate(-50%, 0); opacity: .55; }
+      50%      { transform: translate(-50%, 6px); opacity: 1; }
     }
-    .es-card h3 { font-family: var(--display); font-size: 1.2rem; margin: 0 0 6px; }
-    .es-card p { color: var(--ink-soft); font-size: .95rem; }
-    .es-map { width: 100%; aspect-ratio: 16/10; border: 0; border-radius: var(--r);
-      margin-top: 14px; background: var(--paper-3); }
-    .es-swatches { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 10px; }
-    .es-swatch { width: 38px; height: 38px; border-radius: 50%; border: 2px solid #fff; box-shadow: var(--shadow-soft); }
-    .es-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px,1fr)); gap: 10px; }
-    .es-gallery img { width: 100%; height: 100%; aspect-ratio: 1; object-fit: cover; border-radius: var(--r-sm); cursor: zoom-in; }
-    .es-field { width: 100%; padding: 14px 16px; border: 1px solid var(--line-2);
-      border-radius: var(--r); background: var(--paper); margin-bottom: 12px; }
-    .es-btn { background: var(--accent); color: #fff; padding: 14px 22px;
-      border-radius: var(--r); font-weight: 600; width: 100%; }
-    .es-btn.ghost { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
-    .es-form, .es-seat { max-width: 460px; margin: 0 auto; }
-    .es-result { text-align: center; margin-top: 22px; }
-    .es-result .tbl { font-family: var(--display); font-size: 2.4rem; color: var(--accent); }
-    .es-faq details { border-bottom: 1px solid var(--line); padding: 14px 0; max-width: 620px; margin: 0 auto; }
-    .es-faq summary { cursor: pointer; font-weight: 600; }
-    .es-faq p { color: var(--ink-soft); margin-top: 10px; }
-    .es-entourage { display: grid; gap: 24px; max-width: 620px; margin: 0 auto; text-align: center; }
-    .es-entourage h4 { font-family: var(--mono); font-size: 11px; letter-spacing: .22em;
-      text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
-    .es-foot { text-align: center; padding: 54px 22px 70px; }
-    .es-foot a.share { display: inline-block; margin: 8px; }
-    .es-lang { position: fixed; top: 12px; right: 12px; z-index: 30;
-      display: flex; gap: 4px; background: var(--paper); border: 1px solid var(--line);
-      border-radius: 999px; padding: 4px; font-size: 12px; }
-    .es-lang button { padding: 5px 12px; border-radius: 999px; }
-    .es-lang button.on { background: var(--accent); color: #fff; }
-    .es-state { min-height: 70vh; display: flex; align-items: center;
-      justify-content: center; text-align: center; color: var(--ink-faint); padding: 40px; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Section frame ─────────────────────────────────── */
+    .es-section {
+      max-width: 1080px; margin: 0 auto;
+      padding: 110px 28px;
+      opacity: 0; transform: translateY(30px);
+      transition: opacity .9s ease, transform .9s ease;
+    }
+    .es-section.in { opacity: 1; transform: translateY(0); }
+    .es-section + .es-section { border-top: 1px solid var(--line); }
+
+    .es-eyebrow {
+      font-family: var(--mono); font-size: 11px; letter-spacing: .32em;
+      text-transform: uppercase; color: var(--accent);
+      text-align: center; margin: 0 0 14px;
+    }
+    .es-heading {
+      font-family: var(--display); font-weight: 400;
+      font-size: clamp(2rem, 6vw, 3.4rem); line-height: 1.05;
+      letter-spacing: -.01em; text-align: center;
+      margin: 0 0 50px; color: var(--ink);
+    }
+    .es-heading-rule {
+      display: block; width: 38px; height: 1px;
+      background: var(--accent);
+      margin: 22px auto 0;
+    }
+
+    /* ── Story (asymmetric two-column on desktop) ───── */
+    .es-story-grid {
+      display: grid; gap: 40px;
+      grid-template-columns: 1fr;
+      max-width: 760px; margin: 0 auto;
+    }
+    @media (min-width: 880px) {
+      .es-story-grid { grid-template-columns: 1fr 2fr; gap: 56px; align-items: start; }
+    }
+    .es-story-side {
+      font-family: var(--display); font-style: italic;
+      font-size: 1.4rem; color: var(--accent);
+      line-height: 1.4;
+      border-left: 2px solid var(--accent);
+      padding-left: 22px;
+    }
+    .es-story-body {
+      font-family: var(--display); font-size: 1.15rem; line-height: 1.85;
+      color: var(--ink-soft);
+      white-space: pre-wrap;
+    }
+    .es-story-body p:first-child::first-letter {
+      font-family: var(--display); font-size: 4.2rem; font-weight: 500;
+      color: var(--accent); float: left; line-height: .85;
+      margin: 6px 12px 0 0;
+    }
+
+    /* ── Timeline ──────────────────────────────────────── */
+    .es-timeline {
+      max-width: 580px; margin: 0 auto;
+      position: relative;
+    }
+    .es-timeline::before {
+      content: ''; position: absolute;
+      left: 88px; top: 6px; bottom: 6px; width: 1px;
+      background: var(--line-2);
+    }
+    .es-tl-row {
+      display: grid; grid-template-columns: 88px 1fr; gap: 0;
+      padding: 18px 0;
+      position: relative;
+    }
+    .es-tl-row::after {
+      content: ''; position: absolute;
+      left: 84px; top: 26px; width: 9px; height: 9px;
+      background: var(--paper); border: 2px solid var(--accent);
+      border-radius: 50%;
+    }
+    .es-tl-time {
+      font-family: var(--mono); font-size: 12px; letter-spacing: .14em;
+      text-transform: uppercase; color: var(--accent); font-weight: 700;
+      padding-top: 4px;
+    }
+    .es-tl-body { padding-left: 26px; }
+    .es-tl-title {
+      font-family: var(--display); font-size: 1.15rem; color: var(--ink);
+      margin: 0 0 2px;
+    }
+    .es-tl-sub {
+      font-family: var(--display); font-style: italic; font-size: .95rem;
+      color: var(--ink-faint); margin: 0;
+    }
+
+    /* ── Venue ─────────────────────────────────────────── */
+    .es-venues { display: grid; gap: 26px; }
+    @media (min-width: 760px) {
+      .es-venues.two { grid-template-columns: 1fr 1fr; }
+    }
+    .es-venue {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 18px; overflow: hidden;
+      box-shadow: 0 12px 36px rgba(42,26,20,.06);
+    }
+    .es-venue-head {
+      padding: 22px 24px 18px;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .es-venue-name {
+      font-family: var(--display); font-size: 1.45rem; color: var(--ink);
+      margin: 0; letter-spacing: -.005em;
+    }
+    .es-venue-addr {
+      font-family: var(--mono); font-size: 11.5px; letter-spacing: .1em;
+      text-transform: uppercase; color: var(--ink-faint); margin: 0;
+    }
+    .es-map {
+      width: 100%; aspect-ratio: 16/9; border: 0;
+      background: var(--paper-3);
+    }
+
+    /* ── Dress code & parking strips ──────────────────── */
+    .es-note-grid {
+      display: grid; gap: 18px; margin-top: 32px;
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 760px) { .es-note-grid.two { grid-template-columns: 1fr 1fr; } }
+    .es-note {
+      background: var(--paper-2);
+      border-radius: 18px;
+      padding: 26px 26px 28px;
+      border: 1px solid var(--line);
+    }
+    .es-note h3 {
+      font-family: var(--mono); font-size: 11px; letter-spacing: .28em;
+      text-transform: uppercase; color: var(--accent); margin: 0 0 10px;
+    }
+    .es-note p {
+      font-family: var(--display); font-size: 1.05rem; line-height: 1.55;
+      color: var(--ink-soft); margin: 0;
+    }
+    .es-swatches { display: flex; gap: 12px; margin-top: 16px; }
+    .es-swatch {
+      width: 44px; height: 44px; border-radius: 50%;
+      border: 3px solid #fff;
+      box-shadow: 0 0 0 1px var(--line), 0 6px 18px rgba(42,26,20,.12);
+    }
+
+    /* ── Gallery (varied-aspect masonry) ──────────────── */
+    .es-gallery {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 8px;
+    }
+    .es-gallery a {
+      display: block; overflow: hidden; border-radius: 6px;
+      background: var(--paper-2);
+      position: relative;
+    }
+    .es-gallery img {
+      width: 100%; height: 100%; object-fit: cover;
+      transition: transform .8s ease;
+    }
+    .es-gallery a:hover img { transform: scale(1.06); }
+    /* Editorial pattern: 6-col grid with featured tiles. */
+    .es-gallery a:nth-child(6n+1) { grid-column: span 3; aspect-ratio: 4/5; }
+    .es-gallery a:nth-child(6n+2) { grid-column: span 3; aspect-ratio: 4/5; }
+    .es-gallery a:nth-child(6n+3) { grid-column: span 2; aspect-ratio: 1; }
+    .es-gallery a:nth-child(6n+4) { grid-column: span 2; aspect-ratio: 1; }
+    .es-gallery a:nth-child(6n+5) { grid-column: span 2; aspect-ratio: 1; }
+    .es-gallery a:nth-child(6n+6) { grid-column: span 6; aspect-ratio: 21/9; }
+    @media (max-width: 720px) {
+      .es-gallery { grid-template-columns: repeat(2, 1fr); }
+      .es-gallery a:nth-child(n) {
+        grid-column: span 1; aspect-ratio: 1;
+      }
+      .es-gallery a:nth-child(5n+1) { grid-column: span 2; aspect-ratio: 16/10; }
+    }
+
+    /* ── Forms (seat + RSVP) ──────────────────────────── */
+    .es-form-wrap { max-width: 460px; margin: 0 auto; }
+    .es-field {
+      width: 100%; padding: 16px 18px;
+      background: #fff;
+      border: 1px solid var(--line-2);
+      border-radius: 14px;
+      font-family: var(--display); font-size: 1rem;
+      color: var(--ink); outline: none;
+      margin-bottom: 12px;
+      transition: border-color .15s, box-shadow .15s;
+      box-sizing: border-box;
+    }
+    .es-field:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px rgba(196,90,58,.14);
+    }
+    .es-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .es-field-row .es-field { margin-bottom: 12px; }
+    .es-btn {
+      width: 100%; padding: 16px 22px;
+      background: var(--accent); color: #fff;
+      border: 0; border-radius: 14px;
+      font-family: var(--mono); font-size: 12px; font-weight: 700;
+      letter-spacing: .22em; text-transform: uppercase;
+      box-shadow: 0 10px 28px rgba(196,90,58,.28);
+      transition: transform .15s, box-shadow .15s;
+    }
+    .es-btn:hover { transform: translateY(-1px); box-shadow: 0 14px 36px rgba(196,90,58,.36); }
+    .es-btn.ghost {
+      background: transparent; color: var(--accent);
+      border: 1.5px solid var(--accent); box-shadow: none;
+    }
+    .es-btn.ghost:hover { background: var(--accent); color: #fff; }
+    .es-btn[disabled] { opacity: .5; cursor: not-allowed; transform: none; }
+
+    .es-result { text-align: center; margin-top: 22px; min-height: 24px; }
+    .es-result .seat-card {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 22px;
+      margin-top: 14px;
+      box-shadow: 0 8px 24px rgba(42,26,20,.06);
+    }
+    .es-result .tbl {
+      font-family: var(--display); font-weight: 500;
+      font-size: 2.4rem; color: var(--accent);
+      letter-spacing: -.01em;
+    }
+    .es-result .seat-card p {
+      font-family: var(--display); color: var(--ink-soft); margin: 6px 0 0;
+      font-size: 1rem;
+    }
+    .es-note-line {
+      font-family: var(--mono); font-size: 11px; letter-spacing: .14em;
+      text-transform: uppercase; color: var(--ink-faint); margin-top: 12px;
+    }
+
+    /* ── FAQ accordion ─────────────────────────────────── */
+    .es-faq { max-width: 720px; margin: 0 auto; }
+    .es-faq details {
+      border-bottom: 1px solid var(--line);
+      padding: 22px 4px;
+    }
+    .es-faq details summary {
+      cursor: pointer; list-style: none;
+      font-family: var(--display); font-size: 1.1rem; color: var(--ink);
+      display: flex; align-items: center; gap: 14px;
+    }
+    .es-faq details summary::-webkit-details-marker { display: none; }
+    .es-faq details summary::after {
+      content: '+'; margin-left: auto;
+      font-family: var(--mono); font-size: 1.4rem; color: var(--accent);
+      transition: transform .25s;
+    }
+    .es-faq details[open] summary::after { content: '\2013'; }
+    .es-faq details p {
+      font-family: var(--display); color: var(--ink-soft);
+      font-size: 1rem; line-height: 1.65; margin: 14px 0 0;
+    }
+
+    /* ── Good to know cards ────────────────────────────── */
+    .es-gtk {
+      display: grid; gap: 14px;
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 640px) { .es-gtk { grid-template-columns: 1fr 1fr; } }
+    @media (min-width: 960px) { .es-gtk { grid-template-columns: 1fr 1fr 1fr; } }
+    .es-gtk-card {
+      background: var(--paper-2);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 22px;
+    }
+    .es-gtk-card h4 {
+      font-family: var(--mono); font-size: 10.5px; letter-spacing: .22em;
+      text-transform: uppercase; color: var(--accent);
+      margin: 0 0 10px;
+    }
+    .es-gtk-card p {
+      font-family: var(--display); font-size: .98rem; line-height: 1.55;
+      color: var(--ink-soft); margin: 0;
+    }
+
+    /* ── Entourage ──────────────────────────────────────
+       Two-column grid of role blocks (Maid of Honor, etc.). */
+    .es-entourage {
+      display: grid; gap: 36px;
+      grid-template-columns: 1fr;
+      max-width: 760px; margin: 0 auto;
+    }
+    @media (min-width: 720px) { .es-entourage { grid-template-columns: 1fr 1fr; } }
+    .es-ent-group {
+      text-align: center;
+    }
+    .es-ent-group h4 {
+      font-family: var(--mono); font-size: 10.5px; letter-spacing: .26em;
+      text-transform: uppercase; color: var(--accent);
+      margin: 0 0 14px;
+    }
+    .es-ent-group .person {
+      font-family: var(--display); font-size: 1.1rem; color: var(--ink);
+      margin: 4px 0;
+    }
+
+    /* ── Footer ────────────────────────────────────────── */
+    .es-foot {
+      text-align: center; padding: 80px 28px 100px;
+      background: #fff;
+      border-top: 1px solid var(--line);
+    }
+    .es-foot-eyebrow {
+      font-family: var(--mono); font-size: 11px; letter-spacing: .32em;
+      text-transform: uppercase; color: var(--accent);
+      margin-bottom: 12px;
+    }
+    .es-foot-title {
+      font-family: var(--display); font-size: clamp(1.6rem, 4vw, 2.4rem);
+      color: var(--ink); margin: 0 0 30px;
+    }
+    .es-foot-actions {
+      display: flex; gap: 10px; flex-wrap: wrap;
+      justify-content: center; max-width: 520px; margin: 0 auto 36px;
+    }
+    .es-foot-actions .es-btn { flex: 1 1 200px; }
+    .es-foot-credit {
+      font-family: var(--mono); font-size: 10px; letter-spacing: .24em;
+      text-transform: uppercase; color: var(--ink-faint);
+    }
+    .es-foot-credit a { color: var(--accent); }
+
     [hidden] { display: none !important; }
-    @media (min-width: 640px) { .es-cards { grid-template-columns: 1fr 1fr; } }
   </style>
 </head>
 <body>
@@ -135,8 +546,9 @@
   (function () {
     "use strict";
 
-    // Same localStorage key as the upload page so a guest who already
-    // shared photos keeps one identity (RSVP dedupe + rate-limit bucket).
+    // Stable guest identity — same key as the upload page so an RSVP
+    // dedupes with the same person's prior uploads, and so the rate
+    // limiter buckets them as one client.
     function guestId() {
       try {
         var id = localStorage.getItem('reelday_guest_id');
@@ -155,50 +567,73 @@
     var parts = location.pathname.split('/').filter(Boolean); // ['e','<slug>']
     var SLUG = parts[1] ? decodeURIComponent(parts[1]) : '';
 
-    // UI-labels-only i18n (host content is never translated — by design).
+    // UI labels only — host content is never translated (by design,
+    // so a host writing in Tagalog isn't auto-translated to broken EN).
     var L = {
       en: { story:'Our Story', details:'The Details', when:'When',
         gallery:'Gallery', seat:'Find Your Seat', seatHint:'Type your full name',
         seatBtn:'Find my table', rsvp:'RSVP', faq:'Good to Know',
-        entourage:'The Entourage', goodToKnow:'Good to Know', attending:'Joyfully accepts',
-        notAttending:'Regretfully declines', party:'Number in your party',
-        message:'A note (optional)', send:'Send RSVP', sent:'Thank you! Your RSVP is saved.',
+        entourage:'The Entourage', goodToKnow:'Good to Know',
+        attending:'Joyfully accepts', notAttending:'Regretfully declines',
+        party:'Number in your party', message:'A note (optional)',
+        send:'Send RSVP', sent:'Thank you! Your RSVP is saved.',
         noSeat:'We couldn’t find that name — please contact the host or approach the coordinator.',
-        table:'Table', addCal:'Add to calendar', share:'Share', upload:'Share your photos',
-        happening:'Happening now', openWall:'Open the live wall', nameLbl:'Your full name',
-        days:'days', hrs:'hrs', min:'min', sec:'sec' },
+        table:'Table', addCal:'Add to calendar', share:'Share',
+        upload:'Share your photos', happening:'Happening now',
+        openWall:'Open the live wall', nameLbl:'Your full name',
+        days:'days', hrs:'hrs', min:'min', sec:'sec',
+        scroll:'Scroll', mapsLink:'Open in Maps',
+        eyebrowStory:'— in their own words —',
+        eyebrowDetails:'— the day, hour by hour —',
+        eyebrowGallery:'— moments, captured —',
+        eyebrowSeat:'— your place at the table —',
+        eyebrowRsvp:'— we hope you can come —',
+        eyebrowFaq:'— things to know —',
+        eyebrowEntourage:'— with us in the celebration —',
+        eyebrowFootInvite:'— we can’t wait —',
+        footTitle:'Save the date.' },
       tl: { story:'Ang Kuwento Namin', details:'Mga Detalye', when:'Kailan',
         gallery:'Mga Larawan', seat:'Hanapin ang Upuan', seatHint:'I-type ang buong pangalan',
         seatBtn:'Hanapin ang mesa ko', rsvp:'RSVP', faq:'Mga Dapat Malaman',
-        entourage:'Ang Entourage', goodToKnow:'Mga Dapat Malaman', attending:'Masayang dadalo',
-        notAttending:'Hindi makakadalo', party:'Ilan kayo sa grupo',
-        message:'Mensahe (opsyonal)', send:'Ipadala ang RSVP', sent:'Salamat! Nai-save na ang RSVP.',
+        entourage:'Ang Entourage', goodToKnow:'Mga Dapat Malaman',
+        attending:'Masayang dadalo', notAttending:'Hindi makakadalo',
+        party:'Ilan kayo sa grupo', message:'Mensahe (opsyonal)',
+        send:'Ipadala ang RSVP', sent:'Salamat! Nai-save na ang RSVP.',
         noSeat:'Hindi namin nahanap ang pangalan — makipag-ugnayan sa host o sa coordinator.',
-        table:'Mesa', addCal:'I-add sa calendar', share:'I-share', upload:'I-share ang litrato',
-        happening:'Nagaganap na ngayon', openWall:'Buksan ang live wall', nameLbl:'Buong pangalan',
-        days:'araw', hrs:'oras', min:'min', sec:'seg' }
+        table:'Mesa', addCal:'I-add sa calendar', share:'I-share',
+        upload:'I-share ang litrato', happening:'Nagaganap na ngayon',
+        openWall:'Buksan ang live wall', nameLbl:'Buong pangalan',
+        days:'araw', hrs:'oras', min:'min', sec:'seg',
+        scroll:'Mag-scroll', mapsLink:'Buksan sa Maps',
+        eyebrowStory:'— sa kanilang sariling salita —',
+        eyebrowDetails:'— ang araw, oras-oras —',
+        eyebrowGallery:'— mga sandaling nai-larawan —',
+        eyebrowSeat:'— ang inyong lugar sa hapag —',
+        eyebrowRsvp:'— sana ay makasama kayo —',
+        eyebrowFaq:'— mga dapat malaman —',
+        eyebrowEntourage:'— kasama sa pagdiriwang —',
+        eyebrowFootInvite:'— nasasabik na kami —',
+        footTitle:'I-save ang petsa.' }
     };
     var lang = (localStorage.getItem('reelday_lang') === 'tl') ? 'tl' : 'en';
     function t(k) { return (L[lang] && L[lang][k]) || L.en[k] || k; }
 
-    // ── safe DOM builders (host text only ever via textContent) ──
+    // ── Safe DOM builders (host text via textContent only) ──
     function el(tag, attrs, kids) {
       var n = document.createElement(tag);
       if (attrs) Object.keys(attrs).forEach(function (k) {
         if (k === 'text') n.textContent = attrs[k];
-        else if (k === 'html') { /* intentionally unused for host data */ }
+        else if (k === 'style') n.setAttribute('style', attrs[k]);
         else n.setAttribute(k, attrs[k]);
       });
       (kids || []).forEach(function (c) { if (c) n.appendChild(c); });
       return n;
     }
-    function section(id, title, sub, body) {
-      var s = el('section', { class: 'es-sec', id: id });
-      var w = el('div', { class: 'es-wrap' });
-      if (title) w.appendChild(el('h2', { text: title }));
-      if (sub) w.appendChild(el('div', { class: 'es-sub', text: sub }));
-      w.appendChild(body);
-      s.appendChild(w);
+    function section(id, eyebrow, title, body) {
+      var s = el('section', { class: 'es-section', id: id });
+      if (eyebrow) s.appendChild(el('div', { class: 'es-eyebrow', text: eyebrow }));
+      if (title)   s.appendChild(el('h2',  { class: 'es-heading', text: title }));
+      if (body)    s.appendChild(body);
       return s;
     }
 
@@ -222,6 +657,93 @@
       document.getElementById('app').hidden = true;
     }
 
+    // Render couple names with the ampersand styled separately.
+    function buildCoupleNode(name) {
+      var frag = document.createDocumentFragment();
+      var parts = String(name || '—').split(/\s*&\s*/);
+      parts.forEach(function (p, i) {
+        if (i > 0) {
+          var amp = el('span', { class: 'amp', text: '&' });
+          frag.appendChild(amp);
+        }
+        frag.appendChild(document.createTextNode(p));
+      });
+      return frag;
+    }
+
+    // ─────────────────────────────────────────────────────
+    // Tolerant schedule parser.
+    //
+    // The wizard previously took every textarea line as its own row,
+    // so an event saved as
+    //   2:30 PM
+    //   Guest Arrival
+    //   Welcome drinks & seating
+    // became three {time, label:''} rows. Detect that pattern (all
+    // labels empty AND row count divisible by 2 or 3) and reshape it.
+    // Otherwise treat rows as already-correct {time, label} pairs.
+    // Output: array of { time, title, sub }.
+    // ─────────────────────────────────────────────────────
+    function parseSchedule(raw) {
+      if (!Array.isArray(raw) || !raw.length) return [];
+
+      var looksWell = raw.some(function (r) { return r && r.label && String(r.label).trim(); });
+      if (looksWell) {
+        return raw.filter(function (r) { return r && (r.time || r.label); })
+          .map(function (r) { return { time: String(r.time || '').trim(), title: String(r.label || '').trim(), sub: '' }; });
+      }
+
+      // Flatten to ordered non-empty strings.
+      var flat = [];
+      raw.forEach(function (r) {
+        if (r && r.time && String(r.time).trim()) flat.push(String(r.time).trim());
+        if (r && r.label && String(r.label).trim()) flat.push(String(r.label).trim());
+      });
+      if (!flat.length) return [];
+
+      // Heuristic: any token that starts with a number+colon or contains "AM/PM"
+      // is a time stamp. Walk the list; each time stamp opens a new entry, the
+      // next 0–2 non-time tokens are its title and subtitle.
+      var TIME_RE = /^\s*(\d{1,2}(:\d{2})?\s*(am|pm|AM|PM))|^\s*(\d{1,2}:\d{2})\b/;
+      var out = [];
+      var cur = null;
+      flat.forEach(function (tok) {
+        if (TIME_RE.test(tok)) {
+          if (cur) out.push(cur);
+          cur = { time: tok, title: '', sub: '' };
+        } else if (cur) {
+          if (!cur.title) cur.title = tok;
+          else if (!cur.sub) cur.sub = tok;
+          else cur.sub += ' · ' + tok;
+        } else {
+          // No leading time — emit as a title-only entry.
+          out.push({ time: '', title: tok, sub: '' });
+        }
+      });
+      if (cur) out.push(cur);
+      return out;
+    }
+
+    // ─────────────────────────────────────────────────────
+    // Good-to-know parser. Hosts write blocks like:
+    //   Arrival Time || Please arrive 30 minutes early.
+    //
+    //   Venue Address || The Manila Hotel, Manila.
+    // Split into items on blank lines, then split each on `||`.
+    // ─────────────────────────────────────────────────────
+    function parseGoodToKnow(raw) {
+      if (!raw || typeof raw !== 'string') return [];
+      var blocks = String(raw).split(/\n\s*\n+/).map(function (s) { return s.trim(); }).filter(Boolean);
+      return blocks.map(function (b) {
+        var i = b.indexOf('||');
+        if (i === -1) return { title: '', body: b };
+        return {
+          title: b.slice(0, i).trim(),
+          body:  b.slice(i + 2).trim(),
+        };
+      });
+    }
+
     // ── render ──
     function render(data) {
       var cfg = data.config || {};
@@ -230,26 +752,54 @@
       document.documentElement.setAttribute('data-theme', data.theme || 'wedding');
       document.getElementById('langToggle').hidden = false;
 
-      // Hero
+      var nav = el('nav', { class: 'es-nav', id: 'esNav' });
+      function addNav(id, label) {
+        var a = el('a', { href: '#' + id, text: label });
+        nav.appendChild(a);
+      }
+
+      // ── Hero ────────────────────────────────────────
       var hero = el('section', { class: 'es-hero' });
       if (data.cover_photo_url) {
-        hero.classList.add('has-bg');
         var bg = el('div', { class: 'es-hero-bg' });
-        bg.style.backgroundImage = 'url("' + encodeURI(data.cover_photo_url) + '")';
+        // Preload the image so the fade-in only fires after it's
+        // actually painted. Until then the gradient + colour wash holds
+        // the layout — the hero is never empty paper.
+        var pre = new Image();
+        pre.onload = function () {
+          bg.style.backgroundImage = 'url("' + encodeURI(data.cover_photo_url) + '")';
+          bg.classList.add('loaded');
+        };
+        pre.src = data.cover_photo_url;
         hero.appendChild(bg);
+      } else {
+        hero.classList.add('no-bg');
       }
-      hero.appendChild(el('div', { class: 'es-kicker',
-        text: (cfg.hero && cfg.hero.kicker) || "You're invited" }));
-      hero.appendChild(el('h1', { class: 'es-names', text: data.couple_names || '' }));
-      hero.appendChild(el('div', { class: 'es-date',
-        text: [fmtDate(data.event_date), data.event_time].filter(Boolean).join(' · ') }));
-      var count = el('div', { class: 'es-count' });
-      hero.appendChild(count);
-      var ctaWrap = el('div');
-      hero.appendChild(ctaWrap);
-      app.appendChild(hero);
 
-      // Countdown / live switch
+      var heroTop = el('div', { class: 'es-hero-top' });
+      heroTop.appendChild(el('div', { class: 'es-hero-kicker',
+        text: (cfg.hero && cfg.hero.kicker) || "You're invited" }));
+      var lockup = el('div', { class: 'es-hero-lockup' });
+      var h1 = el('h1', { class: 'es-hero-names' });
+      h1.appendChild(buildCoupleNode(data.couple_names));
+      lockup.appendChild(h1);
+      lockup.appendChild(el('div', { class: 'es-hero-rule' }));
+      lockup.appendChild(el('div', { class: 'es-hero-date',
+        text: [fmtDate(data.event_date), data.event_time].filter(Boolean).join(' · ') }));
+      heroTop.appendChild(lockup);
+      hero.appendChild(heroTop);
+
+      var heroBottom = el('div', { class: 'es-hero-bottom' });
+      var count = el('div', { class: 'es-count' });
+      heroBottom.appendChild(count);
+      var ctaWrap = el('div');
+      heroBottom.appendChild(ctaWrap);
+      hero.appendChild(heroBottom);
+
+      var scrollHint = el('div', { class: 'es-hero-scroll', text: t('scroll') });
+      hero.appendChild(scrollHint);
+
+      // Countdown / live switch — same as before, just feeds the new chips.
       function tick() {
         var target = data.event_date ? new Date(data.event_date) : null;
         if (data.event_time && target) {
@@ -267,8 +817,8 @@
           if (!ctaWrap.dataset.live) {
             ctaWrap.dataset.live = '1';
             ctaWrap.textContent = '';
-            var live = el('a', { class: 'es-cta', href: '/wall/' + SLUG });
-            live.textContent = '● ' + t('happening') + ' — ' + t('openWall');
+            var live = el('a', { class: 'es-cta live', href: '/wall/' + SLUG });
+            live.appendChild(document.createTextNode(t('happening') + ' — ' + t('openWall')));
             ctaWrap.appendChild(live);
           }
           return;
@@ -289,100 +839,122 @@
         });
       }
       tick();
-      // Clear any prior timer so repeated language re-renders don't stack.
       if (window.__esTimer) clearInterval(window.__esTimer);
       window.__esTimer = setInterval(tick, 1000);
 
-      // jump nav
-      var nav = el('nav', { class: 'es-nav' });
+      app.appendChild(hero);
       app.appendChild(nav);
-      function addNav(id, label) {
-        var a = el('a', { href: '#' + id, text: label });
-        nav.appendChild(a);
-      }
 
-      // Story
+      // ── Story ──────────────────────────────────────
       if (cfg.story && (cfg.story.body || cfg.story.label)) {
         addNav('story', cfg.story.label || t('story'));
-        var p = el('div', { class: 'es-prose', text: cfg.story.body || '' });
-        app.appendChild(section('story', cfg.story.label || t('story'), '', p));
+        var grid = el('div', { class: 'es-story-grid' });
+        var side = el('div', { class: 'es-story-side',
+          text: cfg.story.label || t('story') });
+        var body = el('div', { class: 'es-story-body' });
+        // Paragraph-split so the drop-cap only hits the first paragraph.
+        String(cfg.story.body || '').split(/\n\s*\n/).forEach(function (para) {
+          if (para.trim()) body.appendChild(el('p', { text: para.trim() }));
+        });
+        grid.appendChild(side);
+        grid.appendChild(body);
+        app.appendChild(section('story', t('eyebrowStory'), cfg.story.label || t('story'), grid));
       }
 
-      // Details: schedule + venues + dress code + parking
-      if (cfg.schedule || cfg.venue || cfg.dressCode || cfg.parking) {
+      // ── Details: schedule, venues, dress code, parking ──
+      var hasDetails = (cfg.schedule || cfg.venue || cfg.dressCode || cfg.parking);
+      if (hasDetails) {
         addNav('details', t('details'));
         var box = el('div');
-        if (Array.isArray(cfg.schedule) && cfg.schedule.length) {
+
+        // Schedule (tolerant parser)
+        var sched = parseSchedule(cfg.schedule);
+        if (sched.length) {
           var tl = el('div', { class: 'es-timeline' });
-          cfg.schedule.forEach(function (s) {
-            var row = el('div');
-            row.appendChild(el('b', { text: s.time || '' }));
-            row.appendChild(el('span', { text: s.label || '' }));
+          sched.forEach(function (s) {
+            var row = el('div', { class: 'es-tl-row' });
+            row.appendChild(el('div', { class: 'es-tl-time', text: s.time || '—' }));
+            var b = el('div', { class: 'es-tl-body' });
+            if (s.title) b.appendChild(el('div', { class: 'es-tl-title', text: s.title }));
+            if (s.sub)   b.appendChild(el('div', { class: 'es-tl-sub',   text: s.sub }));
+            row.appendChild(b);
             tl.appendChild(row);
           });
           box.appendChild(tl);
         }
+
+        // Venues
         if (Array.isArray(cfg.venue) && cfg.venue.length) {
-          var cards = el('div', { class: 'es-cards' });
-          cards.style.marginTop = '26px';
+          var venues = el('div', { class: 'es-venues' + (cfg.venue.length > 1 ? ' two' : '') });
+          venues.style.marginTop = sched.length ? '50px' : '0';
           cfg.venue.forEach(function (v) {
-            var c = el('div', { class: 'es-card' });
-            c.appendChild(el('h3', { text: v.name || '' }));
-            if (v.address) c.appendChild(el('p', { text: v.address }));
-            var q = v.mapQuery || v.address;
+            var card = el('div', { class: 'es-venue' });
+            var head = el('div', { class: 'es-venue-head' });
+            if (v.name)    head.appendChild(el('div', { class: 'es-venue-name', text: v.name }));
+            if (v.address) head.appendChild(el('div', { class: 'es-venue-addr', text: v.address }));
+            card.appendChild(head);
+            var q = v.mapQuery || v.address || v.name;
             if (q) {
               var f = el('iframe', { class: 'es-map', loading: 'lazy',
                 referrerpolicy: 'no-referrer-when-downgrade',
                 src: 'https://www.google.com/maps?q=' + encodeURIComponent(q) + '&output=embed' });
-              c.appendChild(f);
+              card.appendChild(f);
             }
-            cards.appendChild(c);
+            venues.appendChild(card);
           });
-          box.appendChild(cards);
+          box.appendChild(venues);
         }
-        if (cfg.dressCode && (cfg.dressCode.note || (cfg.dressCode.swatches || []).length)) {
-          var dc = el('div', { class: 'es-card' });
-          dc.style.marginTop = '20px';
-          dc.appendChild(el('h3', { text: 'Dress code' }));
-          if (cfg.dressCode.note) dc.appendChild(el('p', { text: cfg.dressCode.note }));
-          if (Array.isArray(cfg.dressCode.swatches) && cfg.dressCode.swatches.length) {
-            var sw = el('div', { class: 'es-swatches' });
-            cfg.dressCode.swatches.forEach(function (hex) {
-              var s = el('div', { class: 'es-swatch' });
-              // colour value is host input; assigned via style, never HTML
-              s.style.background = String(hex).slice(0, 24);
-              sw.appendChild(s);
-            });
-            dc.appendChild(sw);
+
+        // Dress code + parking strip
+        var hasDress  = cfg.dressCode && (cfg.dressCode.note || (cfg.dressCode.swatches || []).length);
+        var hasPark   = cfg.parking && cfg.parking.note;
+        if (hasDress || hasPark) {
+          var ng = el('div', { class: 'es-note-grid' + ((hasDress && hasPark) ? ' two' : '') });
+          if (hasDress) {
+            var d = el('div', { class: 'es-note' });
+            d.appendChild(el('h3', { text: 'Dress code' }));
+            if (cfg.dressCode.note) d.appendChild(el('p', { text: cfg.dressCode.note }));
+            if (Array.isArray(cfg.dressCode.swatches) && cfg.dressCode.swatches.length) {
+              var sw = el('div', { class: 'es-swatches' });
+              cfg.dressCode.swatches.forEach(function (hex) {
+                var c = el('div', { class: 'es-swatch' });
+                // hex is host input; assigned via style only, never raw HTML.
+                c.style.background = String(hex).slice(0, 24);
+                sw.appendChild(c);
+              });
+              d.appendChild(sw);
+            }
+            ng.appendChild(d);
           }
-          box.appendChild(dc);
+          if (hasPark) {
+            var pk = el('div', { class: 'es-note' });
+            pk.appendChild(el('h3', { text: 'Parking & directions' }));
+            pk.appendChild(el('p', { text: cfg.parking.note }));
+            ng.appendChild(pk);
+          }
+          box.appendChild(ng);
         }
-        if (cfg.parking && cfg.parking.note) {
-          var pk = el('div', { class: 'es-card' });
-          pk.style.marginTop = '20px';
-          pk.appendChild(el('h3', { text: 'Parking & directions' }));
-          pk.appendChild(el('p', { text: cfg.parking.note }));
-          box.appendChild(pk);
-        }
-        app.appendChild(section('details', t('details'), '', box));
+
+        app.appendChild(section('details', t('eyebrowDetails'), t('details'), box));
       }
 
-      // Gallery
+      // ── Gallery ──────────────────────────────────────
       if (cfg.gallery && Array.isArray(cfg.gallery.images) && cfg.gallery.images.length) {
         addNav('gallery', cfg.gallery.label || t('gallery'));
         var g = el('div', { class: 'es-gallery' });
         cfg.gallery.images.forEach(function (u) {
+          var a = el('a', { href: u, target: '_blank', rel: 'noopener' });
           var img = el('img', { loading: 'lazy', alt: '', src: u });
-          img.addEventListener('click', function () { window.open(u, '_blank', 'noopener'); });
-          g.appendChild(img);
+          a.appendChild(img);
+          g.appendChild(a);
         });
-        app.appendChild(section('gallery', cfg.gallery.label || t('gallery'), '', g));
+        app.appendChild(section('gallery', t('eyebrowGallery'), cfg.gallery.label || t('gallery'), g));
       }
 
-      // Find your seat
+      // ── Find your seat ───────────────────────────────
       if (cfg.seatEnabled !== false) {
         addNav('seat', t('seat'));
-        var sw2 = el('div', { class: 'es-seat' });
+        var sw2 = el('div', { class: 'es-form-wrap' });
         var inp = el('input', { class: 'es-field', type: 'text',
           placeholder: t('seatHint'), 'aria-label': t('nameLbl') });
         var btn = el('button', { class: 'es-btn', text: t('seatBtn') });
@@ -397,8 +969,7 @@
             out.textContent = '';
             if (j.matches && j.matches.length) {
               j.matches.forEach(function (m) {
-                var card = el('div', { class: 'es-card' });
-                card.style.marginTop = '14px';
+                var card = el('div', { class: 'seat-card' });
                 card.appendChild(el('div', { class: 'tbl',
                   text: t('table') + ' ' + (m.table_label || '—') }));
                 if (m.location_note) card.appendChild(el('p', { text: m.location_note }));
@@ -406,29 +977,31 @@
                 out.appendChild(card);
               });
             } else {
-              out.appendChild(el('p', { text: t('noSeat') }));
+              out.appendChild(el('div', { class: 'es-note-line', text: t('noSeat') }));
             }
           }).finally(function () { btn.disabled = false; });
         }
         btn.addEventListener('click', lookup);
         inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') lookup(); });
         sw2.appendChild(inp); sw2.appendChild(btn); sw2.appendChild(out);
-        app.appendChild(section('seat', t('seat'), '', sw2));
+        app.appendChild(section('seat', t('eyebrowSeat'), t('seat'), sw2));
       }
 
-      // RSVP
+      // ── RSVP ─────────────────────────────────────────
       if (cfg.rsvpEnabled !== false) {
         addNav('rsvp', t('rsvp'));
-        var form = el('div', { class: 'es-form' });
+        var form = el('div', { class: 'es-form-wrap' });
         var name = el('input', { class: 'es-field', type: 'text', placeholder: t('nameLbl') });
+        var attRow = el('div', { class: 'es-field-row' });
         var att = el('select', { class: 'es-field' });
         att.appendChild(el('option', { value: 'yes', text: t('attending') }));
-        att.appendChild(el('option', { value: 'no', text: t('notAttending') }));
+        att.appendChild(el('option', { value: 'no',  text: t('notAttending') }));
         var party = el('input', { class: 'es-field', type: 'number', min: '1', value: '1',
           'aria-label': t('party'), placeholder: t('party') });
+        attRow.appendChild(att); attRow.appendChild(party);
         var msg = el('textarea', { class: 'es-field', rows: '3', placeholder: t('message') });
         var send = el('button', { class: 'es-btn', text: t('send') });
-        var note = el('div', { class: 'es-sub' });
+        var note = el('div', { class: 'es-note-line' });
         send.addEventListener('click', function () {
           var nm = name.value.trim();
           if (!nm) { name.focus(); return; }
@@ -445,11 +1018,15 @@
           }).catch(function () { note.textContent = 'Hmm, please try again.'; })
             .finally(function () { send.disabled = false; });
         });
-        [name, att, party, msg, send, note].forEach(function (n) { form.appendChild(n); });
-        app.appendChild(section('rsvp', t('rsvp'), '', form));
+        form.appendChild(name);
+        form.appendChild(attRow);
+        form.appendChild(msg);
+        form.appendChild(send);
+        form.appendChild(note);
+        app.appendChild(section('rsvp', t('eyebrowRsvp'), t('rsvp'), form));
       }
 
-      // FAQ
+      // ── FAQ ─────────────────────────────────────────
       if (Array.isArray(cfg.faq) && cfg.faq.length) {
         addNav('faq', t('faq'));
         var fq = el('div', { class: 'es-faq' });
@@ -459,38 +1036,49 @@
           d.appendChild(el('p', { text: item.a || '' }));
           fq.appendChild(d);
         });
-        app.appendChild(section('faq', t('faq'), '', fq));
+        app.appendChild(section('faq', t('eyebrowFaq'), t('faq'), fq));
       }
 
-      // Entourage
+      // ── Entourage ───────────────────────────────────
       if (Array.isArray(cfg.entourage) && cfg.entourage.length) {
         addNav('entourage', t('entourage'));
         var ent = el('div', { class: 'es-entourage' });
         cfg.entourage.forEach(function (grp) {
-          var blk = el('div');
+          var blk = el('div', { class: 'es-ent-group' });
           blk.appendChild(el('h4', { text: grp.group || '' }));
           (grp.people || []).forEach(function (person) {
-            blk.appendChild(el('div', { text: person }));
+            blk.appendChild(el('div', { class: 'person', text: person }));
           });
           ent.appendChild(blk);
         });
-        app.appendChild(section('entourage', t('entourage'), '', ent));
+        app.appendChild(section('entourage', t('eyebrowEntourage'), t('entourage'), ent));
       }
 
-      // Good to know
-      if (cfg.goodToKnow && String(cfg.goodToKnow).trim()) {
+      // ── Good to know (parsed `||` items as a card grid) ──
+      var gtk = parseGoodToKnow(cfg.goodToKnow);
+      if (gtk.length) {
         addNav('good', t('goodToKnow'));
-        app.appendChild(section('good', t('goodToKnow'), '',
-          el('div', { class: 'es-prose', text: String(cfg.goodToKnow) })));
+        var gw = el('div', { class: 'es-gtk' });
+        gtk.forEach(function (item) {
+          var c = el('div', { class: 'es-gtk-card' });
+          if (item.title) c.appendChild(el('h4', { text: item.title }));
+          if (item.body)  c.appendChild(el('p',  { text: item.body }));
+          gw.appendChild(c);
+        });
+        app.appendChild(section('good', t('eyebrowFaq'), t('goodToKnow'), gw));
       }
 
-      // Footer: add-to-calendar (.ics + Google), share, upload link
+      // ── Footer (share / calendar / upload) ──────────
       var foot = el('div', { class: 'es-foot' });
+      foot.appendChild(el('div', { class: 'es-foot-eyebrow', text: t('eyebrowFootInvite') }));
+      foot.appendChild(el('div', { class: 'es-foot-title', text: t('footTitle') }));
+
       function pad(n) { return (n < 10 ? '0' : '') + n; }
       function icsStamp(dt) {
         return dt.getUTCFullYear() + pad(dt.getUTCMonth() + 1) + pad(dt.getUTCDate()) +
           'T' + pad(dt.getUTCHours()) + pad(dt.getUTCMinutes()) + '00Z';
       }
+      var actions = el('div', { class: 'es-foot-actions' });
       var start = data.event_date ? new Date(data.event_date) : null;
       if (start && data.event_time) {
         var mm = String(data.event_time).match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
@@ -502,7 +1090,7 @@
       }
       if (start && !isNaN(start.getTime())) {
         var end = new Date(start.getTime() + 4 * 3600 * 1000);
-        var cal = el('a', { class: 'es-btn ghost share', text: t('addCal') });
+        var cal = el('a', { class: 'es-btn ghost', text: t('addCal') });
         var ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'BEGIN:VEVENT',
           'DTSTART:' + icsStamp(start), 'DTEND:' + icsStamp(end),
           'SUMMARY:' + (data.couple_names || 'Celebration'),
@@ -510,28 +1098,51 @@
           'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
         cal.href = 'data:text/calendar;charset=utf-8,' + encodeURIComponent(ics);
         cal.setAttribute('download', 'event.ics');
-        foot.appendChild(cal);
-        var gcal = el('a', { class: 'es-btn ghost share', text: 'Google Calendar',
+        actions.appendChild(cal);
+        var gcal = el('a', { class: 'es-btn ghost', text: 'Google Calendar',
           target: '_blank', rel: 'noopener' });
         gcal.href = 'https://www.google.com/calendar/render?action=TEMPLATE&text=' +
           encodeURIComponent(data.couple_names || 'Celebration') +
           '&dates=' + icsStamp(start) + '/' + icsStamp(end);
-        foot.appendChild(gcal);
+        actions.appendChild(gcal);
       }
-      var shareBtn = el('button', { class: 'es-btn ghost share', text: t('share') });
+      var shareBtn = el('button', { class: 'es-btn ghost', text: t('share') });
       shareBtn.addEventListener('click', function () {
         var u = location.href;
         if (navigator.share) navigator.share({ title: data.couple_names || 'Reelday', url: u });
-        else { navigator.clipboard && navigator.clipboard.writeText(u); shareBtn.textContent = '✓'; }
+        else if (navigator.clipboard) { navigator.clipboard.writeText(u); shareBtn.textContent = '✓'; }
       });
-      foot.appendChild(shareBtn);
-      var up = el('a', { class: 'es-cta', href: '/upload/' + SLUG, text: t('upload') });
-      up.style.marginTop = '24px'; up.style.display = 'inline-flex';
-      foot.appendChild(el('div', {}, [up]));
+      actions.appendChild(shareBtn);
+      var up = el('a', { class: 'es-btn', href: '/upload/' + SLUG, text: t('upload') });
+      actions.appendChild(up);
+      foot.appendChild(actions);
+
+      foot.appendChild(el('div', { class: 'es-foot-credit', text: 'reelday.ph' }));
       app.appendChild(foot);
 
       document.getElementById('state').hidden = true;
       app.hidden = false;
+
+      // Reveal sections on scroll (single observer, no per-section listeners).
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) {
+          if (en.isIntersecting) {
+            en.target.classList.add('in');
+            io.unobserve(en.target);
+          }
+        });
+      }, { threshold: 0.12 });
+      document.querySelectorAll('.es-section').forEach(function (s) { io.observe(s); });
+
+      // Show sticky nav once the hero is mostly out of view.
+      var navEl = nav;
+      var heroBottomObs = new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) {
+          if (en.intersectionRatio < 0.25) navEl.classList.add('show');
+          else navEl.classList.remove('show');
+        });
+      }, { threshold: [0, 0.25, 1] });
+      heroBottomObs.observe(hero);
     }
 
     // language toggle

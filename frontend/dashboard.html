@@ -4507,8 +4507,37 @@
        // welcome_message (which is the QR upload-page greeting). Don't
        // cross-pollinate; let the placeholder guide a fresh write.
       const storyBody  = area(get(cfg, 'story.body', ''), 'How you met, the journey, a message to guests.', 6);
-      const sched = area((cfg.schedule || []).map(s => `${esc(s.time)} | ${esc(s.label)}`).join('\n'),
-        '3:00 PM | Ceremony\n5:00 PM | Cocktails\n7:00 PM | Reception', 5);
+      // Normalize the saved schedule before showing it in the textarea.
+       // Earlier wizard versions saved each line of a multi-line paste as
+       // its own {time, label:''} row; reading that back verbatim would
+       // re-save the same broken shape. We detect "no row has a label"
+       // and walk the entries to regroup TIME / TITLE pairs (the same
+       // heuristic the public renderer uses), then format as TIME | LABEL.
+       const normalizedSched = (() => {
+         const raw = Array.isArray(cfg.schedule) ? cfg.schedule : [];
+         if (!raw.length) return '';
+         const hasLabels = raw.some(s => s && s.label && String(s.label).trim());
+         if (hasLabels) return raw.map(s => `${esc(s.time)} | ${esc(s.label)}`).join('\n');
+         const TIME_RE = /^\s*(\d{1,2}(:\d{2})?\s*(am|pm|AM|PM))|^\s*(\d{1,2}:\d{2})\b/;
+         const out = [];
+         let cur = null;
+         raw.forEach(s => {
+           const tok = String(s?.time || '').trim();
+           if (!tok) return;
+           if (TIME_RE.test(tok)) {
+             if (cur) out.push(cur);
+             cur = { time: tok, label: '' };
+           } else if (cur) {
+             cur.label = cur.label ? cur.label + ' — ' + tok : tok;
+           } else {
+             out.push({ time: '', label: tok });
+           }
+         });
+         if (cur) out.push(cur);
+         return out.map(s => `${esc(s.time)} | ${esc(s.label)}`).join('\n');
+       })();
+       const sched = area(normalizedSched,
+         '3:00 PM | Ceremony\n5:00 PM | Cocktails\n7:00 PM | Reception', 5);
       const venues = area((cfg.venue || []).map(v => `${esc(v.name)} | ${esc(v.address || v.mapQuery || '')}`).join('\n'),
         'Manila Cathedral | Intramuros, Manila', 4);
       if (!venues.value && ev.venue) venues.value = `${ev.venue} | ${ev.venue}`;
@@ -4518,7 +4547,14 @@
         'Is there a shuttle? || Yes, from the hotel lobby at 2 PM.', 4);
       const ent = area((cfg.entourage || []).map(g => `${esc(g.group)}: ${(g.people || []).join(', ')}`).join('\n'),
         'Principal Sponsors: Mr. & Mrs. Cruz, Mr. & Mrs. Reyes', 3);
-      const gtk = area(esc(cfg.goodToKnow || ''), 'Accessibility, kids, gifts, anything guests ask…', 4);
+      // Good-to-know is free-form prose, but if the host uses the
+       // `Title || Body` shape (blank line between items) the public
+       // renderer turns it into a card grid. Placeholder shows that
+       // shape so it actually gets used.
+       const gtk = area(esc(cfg.goodToKnow || ''),
+         'Dress code || Formal / Filipiniana — neutral tones please.\n\n' +
+         'Parking || Free parking is available at the venue.\n\n' +
+         'Children || Adults-preferred celebration.', 6);
 
       // toggles
       const togRow = document.createElement('div');
@@ -4770,10 +4806,46 @@
             return o;
           });
         }
+        // Schedule parser — accepts both shapes:
+        //   "3:00 PM | Ceremony"  (proper, one entry per line)
+        //   "3:00 PM\nCeremony\nProcessional…"  (each on its own line —
+        //   common when hosts paste from a planner doc)
+        // For the second shape, time-looking tokens open a new entry
+        // and following non-time lines become its label. Mirrors the
+        // public renderer's parseSchedule so wizard input and live page
+        // agree.
+        function parseScheduleInput(txt2) {
+          const lines = txt2.split('\n').map(l => l.trim()).filter(Boolean);
+          if (!lines.length) return [];
+          if (lines.some(l => l.includes('|'))) {
+            // At least one explicit separator — treat the whole input as
+            // pipe-delimited and trust the host.
+            return lines.map(l => {
+              const p = l.split('|');
+              return { time: (p[0] || '').trim(), label: (p[1] || '').trim() };
+            });
+          }
+          // No pipes anywhere — walk and group by time-stamps.
+          const TIME_RE = /^\s*(\d{1,2}(:\d{2})?\s*(am|pm|AM|PM))|^\s*(\d{1,2}:\d{2})\b/;
+          const out = [];
+          let cur = null;
+          lines.forEach(tok => {
+            if (TIME_RE.test(tok)) {
+              if (cur) out.push(cur);
+              cur = { time: tok, label: '' };
+            } else if (cur) {
+              cur.label = cur.label ? cur.label + ' — ' + tok : tok;
+            } else {
+              out.push({ time: '', label: tok });
+            }
+          });
+          if (cur) out.push(cur);
+          return out;
+        }
         return {
           hero: { kicker: heroKicker.value.trim() },
           story: { label: storyLabel.value.trim(), body: storyBody.value },
-          schedule: parseList(sched.value, '|', ['time', 'label']),
+          schedule: parseScheduleInput(sched.value),
           venue: parseList(venues.value, '|', ['name', 'address']).map(v => ({ name: v.name, address: v.address, mapQuery: v.address })),
           dressCode: { note: dcNote.value.trim() },
           parking: { note: parking.value },
