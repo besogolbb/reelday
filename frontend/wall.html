@@ -2184,14 +2184,27 @@
   }
 
   document.addEventListener('mousemove', (e) => {
-    if (lastMoveX < 0) { lastMoveX = e.clientX; lastMoveY = e.clientY; return; }
-    const dx = Math.abs(e.clientX - lastMoveX);
-    const dy = Math.abs(e.clientY - lastMoveY);
-    lastMoveX = e.clientX;
-    lastMoveY = e.clientY;
+    // Prefer movementX/Y — these report raw mouse-hardware delta. Browser-
+    // synthesized mousemove events (cursor auto-hide/reveal in fullscreen,
+    // layout shifts from .show animations, etc.) often have hardware
+    // movement of 0 even when clientX/Y change. Falling back to client-
+    // delta only if movementX/Y are undefined (very old browsers).
+    let dx, dy;
+    if (typeof e.movementX === 'number' || typeof e.movementY === 'number') {
+      dx = Math.abs(e.movementX || 0);
+      dy = Math.abs(e.movementY || 0);
+    } else {
+      if (lastMoveX < 0) { lastMoveX = e.clientX; lastMoveY = e.clientY; return; }
+      dx = Math.abs(e.clientX - lastMoveX);
+      dy = Math.abs(e.clientY - lastMoveY);
+      lastMoveX = e.clientX;
+      lastMoveY = e.clientY;
+    }
+    // Ignore zero-hardware-movement events outright (these are the
+    // fullscreen-cursor-reveal phantoms that previously kept the tray open)
+    if (dx === 0 && dy === 0) return;
 
     const now = Date.now();
-    // Slide the window: reset if the previous window has expired
     if (now - windowFirstTs > MOVE_WINDOW_MS) {
       windowFirstTs   = now;
       windowMovePx    = 0;
@@ -2204,6 +2217,22 @@
   // Touch and key are unambiguous human input — count them directly.
   document.addEventListener('touchstart', bumpActivity, { passive: true });
   document.addEventListener('keydown',    bumpActivity);
+
+  // Reset detection state at fullscreen transitions. The transition can
+  // leave the page in a state where mouse events fire spuriously — same
+  // root cause as why "click another window and back" fixes it (blur/focus
+  // clears the runaway state).
+  function resetMotionState() {
+    windowMovePx    = 0;
+    windowMoveCount = 0;
+    windowFirstTs   = 0;
+    lastMoveX = -1; lastMoveY = -1;
+    lastActivityTs  = Date.now();
+  }
+  document.addEventListener('fullscreenchange',      resetMotionState);
+  document.addEventListener('webkitfullscreenchange', resetMotionState);
+  window.addEventListener('blur',  resetMotionState);
+  window.addEventListener('focus', resetMotionState);
 
   // Poll every 250ms — handles both "promote movement to activity" and
   // "hide if idle". Independent of any individual event firing.
