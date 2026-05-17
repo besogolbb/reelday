@@ -313,6 +313,48 @@ export default async function eventSiteRoutes(fastify) {
     const config = (body.config && typeof body.config === 'object') ? body.config : {};
     const isPublished = typeof body.is_published === 'boolean' ? body.is_published : false;
 
+    // ── Registry section hygiene ──
+    // Caps + light shape coercion so a buggy wizard, malicious paste,
+    // or stale config from an older client can't bloat the row, smuggle
+    // odd protocols into a "link", or stash megabytes of QR URLs.
+    // Soft-fails to a clean empty section rather than rejecting — keeps
+    // the rest of the save working.
+    if (config.registry && typeof config.registry === 'object') {
+      const r = config.registry;
+      const safeStr = (v, max) => String(v == null ? '' : v).slice(0, max);
+      // Only http(s) URLs survive — guards against javascript:, data:,
+      // file:, mailto: tricks that would render as a clickable card.
+      const safeHttpUrl = (v) => {
+        const s = safeStr(v, 800).trim();
+        if (!s) return '';
+        try {
+          const u = new URL(s);
+          return (u.protocol === 'http:' || u.protocol === 'https:') ? u.toString() : '';
+        } catch { return ''; }
+      };
+      config.registry = {
+        enabled: r.enabled !== false,
+        message: safeStr(r.message, 600),
+        links: Array.isArray(r.links) ? r.links.slice(0, 20).map(l => ({
+          label: safeStr(l?.label, 80),
+          url:   safeHttpUrl(l?.url),
+        })).filter(l => l.url) : [],
+        cashFunds: Array.isArray(r.cashFunds) ? r.cashFunds.slice(0, 20).map(f => ({
+          type:    safeStr(f?.type, 30).toLowerCase(),
+          label:   safeStr(f?.label, 60),
+          account: safeStr(f?.account, 80),
+          name:    safeStr(f?.name, 120),
+          qrUrl:   safeHttpUrl(f?.qrUrl) || null,
+        })).filter(f => f.account) : [],
+        honeymoon: (r.honeymoon && typeof r.honeymoon === 'object' &&
+                    (r.honeymoon.title || r.honeymoon.blurb)) ? {
+          title:   safeStr(r.honeymoon.title, 120),
+          blurb:   safeStr(r.honeymoon.blurb, 600),
+          fundRef: safeStr(r.honeymoon.fundRef, 30).toLowerCase(),
+        } : null,
+      };
+    }
+
     // Bound the stored JSON so a pathological config can't bloat the row
     // or the cached gzip payload.
     const serialized = JSON.stringify(config);
