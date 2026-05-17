@@ -893,6 +893,21 @@
       vertical-align: -.12em;
     }
 
+    /* Luminance-adaptive watermark — JS samples the bottom-right
+       region and toggles .on-light-bg on .corner. On bright photos
+       (skies, white walls, wedding dress) the ivory ink would wash
+       out, so flip names to dark with a soft light haze and shift
+       the ampersand to the deeper brand coral so it still reads
+       peach without losing contrast. */
+    .corner.on-light-bg .names {
+      color: rgba(15,8,4,.85);
+      text-shadow: 0 1px 2px rgba(255,255,255,.55);
+    }
+    .corner.on-light-bg .names em {
+      color: #c45a3a;
+      opacity: .65;
+    }
+
     .guest-badge {
       font-family: var(--mono); font-size: 10px; letter-spacing: .15em;
       text-transform: uppercase; color: rgba(255,255,255,.45);
@@ -2605,6 +2620,7 @@
   const capUploader = document.getElementById('caption-uploader');
   const capQuote    = document.getElementById('caption-quote');
   const cornerNames = document.getElementById('corner-names');
+  const cornerEl    = document.querySelector('.corner');
   const tickerName  = document.getElementById('ticker-name');
   const tickerStats = document.getElementById('ticker-stats');
   const qrBadge     = document.getElementById('qr-badge');
@@ -3287,8 +3303,8 @@
   const _lumCtx = _lumCanvas.getContext('2d', { willReadFrequently: true });
   let   _lumToken = 0; // incremented each slide to discard stale callbacks
 
-  function _sampleSource(source, w, h) {
-    // Crop: left 35% × bottom 40% of the media — where caption text lives
+  // Sample the bottom-LEFT 35% × 40% (caption text area).
+  function _sampleBottomLeft(source, w, h) {
     const sx = 0;
     const sy = Math.round(h * 0.60);
     const sw = Math.max(1, Math.round(w * 0.35));
@@ -3297,22 +3313,43 @@
     const d = _lumCtx.getImageData(0, 0, 1, 1).data;
     return 0.299 * d[0] + 0.587 * d[1] + 0.114 * d[2];
   }
+  // Sample the bottom-RIGHT 35% × 40% (event watermark area).
+  function _sampleBottomRight(source, w, h) {
+    const sw = Math.max(1, Math.round(w * 0.35));
+    const sh = Math.max(1, Math.round(h * 0.40));
+    const sx = w - sw;
+    const sy = h - sh;
+    _lumCtx.drawImage(source, sx, sy, sw, sh, 0, 0, 1, 1);
+    const d = _lumCtx.getImageData(0, 0, 1, 1).data;
+    return 0.299 * d[0] + 0.587 * d[1] + 0.114 * d[2];
+  }
 
   function applyBgLuminanceClass(imageUrl) {
     const token = ++_lumToken;
 
-    function apply(lum) {
-      if (token !== _lumToken) return; // slide changed — ignore
-      const bright = lum > 140;
-      caption.classList.toggle('on-light-bg', bright);
-      document.body.classList.toggle('on-light-bg', bright);
+    function applyBoth(source, w, h) {
+      if (token !== _lumToken) return;
+      const lumBL = _sampleBottomLeft(source, w, h);
+      const lumBR = _sampleBottomRight(source, w, h);
+      const brightBL = lumBL > 140;
+      const brightBR = lumBR > 140;
+      caption.classList.toggle('on-light-bg', brightBL);
+      document.body.classList.toggle('on-light-bg', brightBL);
+      cornerEl?.classList.toggle('on-light-bg', brightBR);
+    }
+
+    function clear() {
+      if (token !== _lumToken) return;
+      caption.classList.remove('on-light-bg');
+      document.body.classList.remove('on-light-bg');
+      cornerEl?.classList.remove('on-light-bg');
     }
 
     // For video slides, try sampling the current frame first
     if (currentIsVideo) {
       const vid = activeLayer === 'A' ? vidA : vidB;
       if (vid && vid.readyState >= 2 && vid.videoWidth > 0) {
-        try { apply(_sampleSource(vid, vid.videoWidth, vid.videoHeight)); return; } catch {}
+        try { applyBoth(vid, vid.videoWidth, vid.videoHeight); return; } catch {}
       }
       // Video frame not ready yet — fall through to poster image URL
     }
@@ -3325,13 +3362,13 @@
     img.onload = () => {
       if (token !== _lumToken) return;
       try {
-        apply(_sampleSource(img, img.naturalWidth, img.naturalHeight));
+        applyBoth(img, img.naturalWidth, img.naturalHeight);
       } catch {
         // CORS / tainted canvas — default to dark-friendly (no class)
-        if (token === _lumToken) { caption.classList.remove('on-light-bg'); document.body.classList.remove('on-light-bg'); }
+        clear();
       }
     };
-    img.onerror = () => { if (token === _lumToken) { caption.classList.remove('on-light-bg'); document.body.classList.remove('on-light-bg'); } };
+    img.onerror = clear;
     img.src = imageUrl;
   }
 
