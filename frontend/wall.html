@@ -239,6 +239,39 @@
       to   { transform: scale(1.00) translate(1%,       0);     }
     }
 
+    /* ── Plan-tier visual branches ───────────────────────────
+       The active tier is mirrored onto <body data-tier="…">
+       by init() once /api/events/:slug responds. Each tier
+       below tweaks the wall's motion / polish so the price
+       tag is visible on screen. Runtime gates for reactions,
+       polls and audio playback live in JS (see planFeatures). */
+
+    /* Tala (free): no Ken Burns drift, no emoji storm overlay.
+       Static slideshow on cheap TVs — the entire layer paints
+       once and stays put. Net perf gain vs. the cinematic tier. */
+    body[data-tier="tala"] .layer .pic,
+    body[data-tier="tala"] .layer .vid {
+      animation: none !important;
+      transform: none !important;
+    }
+    body[data-tier="tala"] #emoji-container { display: none !important; }
+
+    /* Dalisay / Hiraya (premium): a fixed ~10px blur on the
+       OUTGOING layer turns the standard opacity crossfade into
+       a "focus pull" — the leaving frame defocuses while the
+       incoming one stays sharp. Compositor-only (no per-frame
+       filter re-rasterisation) so cheap HDMI sticks survive.
+       Respects prefers-reduced-motion for accessibility. */
+    @media (prefers-reduced-motion: no-preference) {
+      body[data-tier="dalisay"] .layer.out .pic,
+      body[data-tier="hiraya"]  .layer.out .pic,
+      body[data-tier="dalisay"] .layer.out .vid,
+      body[data-tier="hiraya"]  .layer.out .vid {
+        filter: blur(10px);
+        transition: filter 1.6s ease, opacity 1.6s ease;
+      }
+    }
+
     .layer .vignette {
       position: absolute; inset: 0;
       background:
@@ -1700,6 +1733,13 @@
     return new URLSearchParams(location.search).get('slug') || parts.pop() || null;
   })();
 
+  // Plan-gating state — populated by init() from /api/events/:slug.
+  // Default to a permissive shape so the wall keeps working if the
+  // endpoint ever omits plan_info (older DBs / demo mode). Tier-specific
+  // CSS keys off <body data-tier>; runtime feature gates read planFeatures.
+  let planTierId   = null;
+  let planFeatures = { videoUpload: true, audioNotes: true, reactions: true, polls: true };
+
   /* Read uploads saved by upload.html into localStorage (same-origin) */
   function readLocalUploads() {
     if (!slug) return [];
@@ -2456,6 +2496,17 @@
     }
 
     const unpairedAudio = audios.filter(u => !pairedAudioIds.has(u.id));
+
+    // Tier gate: if the event's plan doesn't include audio notes, strip
+    // all audio out — both the standalone Talking Photo slides and the
+    // per-photo paired audio overlay. Belt + braces; uploads.js already
+    // refuses audio at the API edge, but legacy events from before that
+    // gate landed may still have rows in the DB.
+    if (planFeatures && planFeatures.audioNotes === false) {
+      audioUrlById.clear();
+      return media;
+    }
+
     return [...media, ...unpairedAudio];
   }
   const frame       = document.getElementById('frame');
@@ -2642,9 +2693,12 @@
     const posterUrl = isVideoItem(item) ? (videoPosterUrl(item, 1280) || videoPreThumb || immediateVisual) : mediaUrl;
     const itemIsVideo = isReadyVideo(item) && !!mediaUrl;
     const itemIsProcessingVideo = isProcessingVideo(item);
-    const itemIsAudio = isAudioItem(item);
-    // Paired audio URL (if companion voice message was uploaded alongside this photo/video)
-    const pairedAudioUrl = itemIsAudio ? null : (audioUrlById.get(item.id) || null);
+    const audioAllowed = planFeatures?.audioNotes !== false;
+    const itemIsAudio = isAudioItem(item) && audioAllowed;
+    // Paired audio URL (if companion voice message was uploaded alongside this photo/video).
+    // Gated by audioNotes — Tala/Sinag events render the photo silently even if
+    // a legacy audio file is paired in the DB.
+    const pairedAudioUrl = (itemIsAudio || !audioAllowed) ? null : (audioUrlById.get(item.id) || null);
     const posterBackground = posterUrl ? `url('${posterUrl}')` : `url('${wallFallbackUrl(item, 'Loading moment')}')`;
 
     // ── Talking Photo branch — audio slides skip the normal pic/video path ──
@@ -3785,6 +3839,8 @@
   function stopFireworks()  { fireworksFx.stop(); }
 
   async function pollPolls() {
+    // Tier gate: Live polls/games are a Dalisay+ feature.
+    if (planFeatures && planFeatures.polls === false) return;
     try {
       const res = await fetch(`/api/events/${slug}/polls/active`, { cache: 'no-store' });
       if (!res.ok) return;
@@ -3872,6 +3928,9 @@
   let reactionsSince = new Date().toISOString();
   let reactionDropFrame = false;
   async function pollReactions() {
+    // Tier gate: Tala doesn't include live reactions, so don't even
+    // hit the endpoint — keeps the wall quiet and the network log clean.
+    if (planFeatures && planFeatures.reactions === false) return;
     try {
       const url = `/api/reactions/${slug}?since=${encodeURIComponent(reactionsSince)}`;
       const res = await fetch(url, { cache: 'no-store' });
@@ -4234,6 +4293,15 @@
         const ej = await eventRes.json();
         apiEvent = ej.event;
         apiLocks = ej.locks || null;
+        // Snapshot the plan so CSS branches + runtime gates know the tier.
+        // The tier is the visible price tag on screen (no Ken Burns on
+        // Tala, focus-pull blur on Dalisay/Hiraya), so this needs to run
+        // before startSlideshow() kicks the first slide.
+        if (ej.plan_info) {
+          planTierId   = ej.plan_info.id || null;
+          planFeatures = ej.plan_info.features || planFeatures;
+          if (planTierId) document.body.dataset.tier = planTierId;
+        }
       }
       if (uploadsRes.ok) apiUploads = (await uploadsRes.json()).uploads || [];
     } catch { /* offline / demo mode — fall back to localStorage */ }
