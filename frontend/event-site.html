@@ -611,6 +611,58 @@
       font-family: var(--mono); font-size: 11px; letter-spacing: .14em;
       text-transform: uppercase; color: var(--ink-faint); margin-top: 12px;
     }
+    /* RSVP success — promoted from the dim mono caps note to a real
+       confirmation card so the host can see at a glance that a guest
+       was saved (and the guest gets a thank-you that feels earned). */
+    .es-rsvp-success {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 14px;
+      margin-top: 18px; padding: 26px 22px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.85) 0%, rgba(244,234,217,.7) 100%);
+      border: 1px solid rgba(196,90,58,.30);
+      border-radius: 18px;
+      box-shadow: 0 12px 28px -16px rgba(196,90,58,.30);
+      text-align: center;
+      animation: rsvpSuccessIn .45s ease both;
+    }
+    @keyframes rsvpSuccessIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .es-rsvp-success .check {
+      width: 52px; height: 52px; border-radius: 50%;
+      background: var(--accent); color: #fff;
+      display: inline-flex; align-items: center; justify-content: center;
+      box-shadow: 0 10px 24px -8px rgba(196,90,58,.55);
+    }
+    .es-rsvp-success .check svg { width: 26px; height: 26px; stroke: #fff; }
+    .es-rsvp-success .msg {
+      font-family: var(--display); font-size: 1.4rem; line-height: 1.35;
+      color: var(--ink); margin: 0;
+    }
+    .es-rsvp-success .sub {
+      font-family: var(--mono); font-size: 11px; letter-spacing: .22em;
+      text-transform: uppercase; color: var(--ink-faint);
+    }
+    .es-rsvp-success .again {
+      margin-top: 6px;
+      padding: 10px 18px; border-radius: 999px;
+      background: transparent; color: var(--accent);
+      border: 1px solid var(--accent);
+      font-family: var(--mono); font-size: 11px; font-weight: 700;
+      letter-spacing: .18em; text-transform: uppercase;
+      cursor: pointer;
+    }
+    .es-rsvp-success .again:hover { background: var(--accent); color: #fff; }
+    .es-rsvp-error {
+      margin-top: 14px; padding: 12px 16px;
+      background: rgba(176,48,34,.08);
+      border: 1px solid rgba(176,48,34,.25);
+      border-radius: 12px;
+      font-family: var(--display); font-size: 1rem; color: #7a2418;
+      text-align: center;
+    }
 
     /* ── FAQ accordion ─────────────────────────────────── */
     .es-faq { max-width: 720px; margin: 0 auto; }
@@ -1371,11 +1423,57 @@
         attRow.appendChild(att); attRow.appendChild(party);
         var msg = el('textarea', { class: 'es-field', rows: '3', placeholder: t('message') });
         var send = el('button', { class: 'es-btn', text: t('send') });
-        var note = el('div', { class: 'es-note-line' });
+        // Two slots: a quiet error line below the button (validation /
+        // network failures) and a swap area for the prominent success
+        // card. Kept separate so an error doesn't tear down the form.
+        var errLine = el('div', { class: 'es-rsvp-error' });
+        errLine.style.display = 'none';
+        var successWrap = el('div');
+
+        function resetForm() {
+          name.value = '';
+          att.value = 'yes';
+          party.value = '1';
+          msg.value  = '';
+        }
+        function showError(text) {
+          successWrap.textContent = '';
+          errLine.textContent = text;
+          errLine.style.display = 'block';
+        }
+        function showSuccess() {
+          errLine.style.display = 'none';
+          resetForm();
+          // Hide the form fields and the send button — guest gets a
+          // single clear "saved" surface instead of seeing the form
+          // still sitting there, which makes it unclear whether it
+          // saved or whether they need to click again.
+          [name, attRow, msg, send].forEach(function (n) { n.style.display = 'none'; });
+
+          var box = el('div', { class: 'es-rsvp-success' });
+          var check = el('div', { class: 'check' });
+          check.innerHTML =
+            '<svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+            '<path d="M5 12l5 5L20 7"/></svg>';
+          box.appendChild(check);
+          box.appendChild(el('div', { class: 'msg', text: t('sent') }));
+          box.appendChild(el('div', { class: 'sub', text: 'Salamat — see you there!' }));
+          var again = el('button', { type: 'button', class: 'again', text: 'Add another RSVP' });
+          again.addEventListener('click', function () {
+            successWrap.textContent = '';
+            [name, attRow, msg, send].forEach(function (n) { n.style.display = ''; });
+            name.focus();
+          });
+          box.appendChild(again);
+          successWrap.textContent = '';
+          successWrap.appendChild(box);
+        }
+
         send.addEventListener('click', function () {
           var nm = name.value.trim();
           if (!nm) { name.focus(); return; }
           send.disabled = true;
+          errLine.style.display = 'none';
           api('/rsvp', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1384,15 +1482,18 @@
               party_size: parseInt(party.value, 10) || 1, message: msg.value.trim()
             })
           }).then(function (r) {
-            note.textContent = r.ok ? t('sent') : 'Hmm, please try again.';
-          }).catch(function () { note.textContent = 'Hmm, please try again.'; })
-            .finally(function () { send.disabled = false; });
+            if (r.ok) showSuccess();
+            else showError('Hmm, that didn’t go through. Please try again.');
+          }).catch(function () {
+            showError('Hmm, that didn’t go through. Please try again.');
+          }).finally(function () { send.disabled = false; });
         });
         form.appendChild(name);
         form.appendChild(attRow);
         form.appendChild(msg);
         form.appendChild(send);
-        form.appendChild(note);
+        form.appendChild(errLine);
+        form.appendChild(successWrap);
         app.appendChild(section('rsvp', t('eyebrowRsvp'), t('rsvp'), form));
       }
 
