@@ -1257,6 +1257,37 @@
         app.appendChild(section('details', t('eyebrowDetails'), t('details'), box));
       }
 
+      // ── Entourage (rendered inside a paper-style card) ──
+      // Sits right after Details so guests read the schedule then
+      // immediately see who's standing up with the couple — the two
+      // sections together act as the "programme" half of the page,
+      // with Gallery / RSVP / FAQ following as guest-action surfaces.
+      if (Array.isArray(cfg.entourage) && cfg.entourage.length) {
+        addNav('entourage', t('entourage'));
+        var card = el('div', { class: 'es-entourage-card' });
+        card.appendChild(el('div', { class: 'es-entourage-title', text: t('entourage') }));
+        // Small ornamental flourish — pure SVG (no extra deps) so the
+        // card feels like a printed programme rather than a div.
+        var flourish = el('div', { class: 'es-entourage-flourish' });
+        flourish.innerHTML =
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">' +
+          '<path d="M12 3v6m0 6v6M3 12h6m6 0h6"/>' +
+          '<circle cx="12" cy="12" r="2"/>' +
+          '</svg>';
+        card.appendChild(flourish);
+        var ent = el('div', { class: 'es-entourage' });
+        cfg.entourage.forEach(function (grp) {
+          var blk = el('div', { class: 'es-ent-group' });
+          blk.appendChild(el('h4', { text: grp.group || '' }));
+          (grp.people || []).forEach(function (person) {
+            blk.appendChild(el('div', { class: 'person', text: person }));
+          });
+          ent.appendChild(blk);
+        });
+        card.appendChild(ent);
+        app.appendChild(section('entourage', t('eyebrowEntourage'), t('entourage'), card));
+      }
+
       // ── Gallery ──────────────────────────────────────
       // Each tile pulls a CDN-transformed variant; lightbox link still
       // points at the original. Sizes hint matches the 6-col editorial
@@ -1378,32 +1409,6 @@
         app.appendChild(section('faq', t('eyebrowFaq'), t('faq'), fq));
       }
 
-      // ── Entourage (rendered inside a paper-style card) ──
-      if (Array.isArray(cfg.entourage) && cfg.entourage.length) {
-        addNav('entourage', t('entourage'));
-        var card = el('div', { class: 'es-entourage-card' });
-        card.appendChild(el('div', { class: 'es-entourage-title', text: t('entourage') }));
-        // Small ornamental flourish — pure SVG (no extra deps) so the
-        // card feels like a printed programme rather than a div.
-        var flourish = el('div', { class: 'es-entourage-flourish' });
-        flourish.innerHTML =
-          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">' +
-          '<path d="M12 3v6m0 6v6M3 12h6m6 0h6"/>' +
-          '<circle cx="12" cy="12" r="2"/>' +
-          '</svg>';
-        card.appendChild(flourish);
-        var ent = el('div', { class: 'es-entourage' });
-        cfg.entourage.forEach(function (grp) {
-          var blk = el('div', { class: 'es-ent-group' });
-          blk.appendChild(el('h4', { text: grp.group || '' }));
-          (grp.people || []).forEach(function (person) {
-            blk.appendChild(el('div', { class: 'person', text: person }));
-          });
-          ent.appendChild(blk);
-        });
-        card.appendChild(ent);
-        app.appendChild(section('entourage', t('eyebrowEntourage'), t('entourage'), card));
-      }
 
       // ── Good to know (parsed `||` items as a card grid) ──
       var gtk = parseGoodToKnow(cfg.goodToKnow);
