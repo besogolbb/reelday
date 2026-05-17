@@ -2154,12 +2154,18 @@
   // ── Auto-hide the bottom-right controls when idle ──────────
   // Wall typically lives on a TV — we want the sound + volume + fullscreen
   // controls hidden by default so they don't intrude on the slideshow.
-  // Any pointer/key activity bumps them back on; they fade out again after
-  // IDLE_HIDE_MS of inactivity. Hovering the tray keeps it visible (handled
-  // in CSS via :hover so JS doesn't need to track it).
+  // Real activity bumps them back on; they fade after IDLE_HIDE_MS.
+  // Hovering the tray keeps it visible (CSS :hover, no JS tracking).
+  //
+  // Mouse jitter note: a still mouse hand still fires sub-pixel mousemove
+  // events constantly (sensor noise). Without a threshold the idle timer
+  // never fires. We require ≥6px of cumulative travel to count as motion.
   const controlsTray = document.getElementById('controls-tray');
-  const IDLE_HIDE_MS = 3500;
+  const IDLE_HIDE_MS  = 3500;
+  const MOVE_PX_THRESH = 6;
   let controlsIdleTimer = 0;
+  let lastMoveX = -1, lastMoveY = -1;
+
   function bumpControls() {
     if (!controlsTray) return;
     controlsTray.classList.add('show');
@@ -2168,7 +2174,16 @@
       controlsTray.classList.remove('show');
     }, IDLE_HIDE_MS);
   }
-  document.addEventListener('mousemove',  bumpControls, { passive: true });
+
+  document.addEventListener('mousemove', (e) => {
+    if (lastMoveX < 0) { lastMoveX = e.clientX; lastMoveY = e.clientY; return; }
+    const dx = Math.abs(e.clientX - lastMoveX);
+    const dy = Math.abs(e.clientY - lastMoveY);
+    if (dx + dy < MOVE_PX_THRESH) return; // ignore sensor jitter
+    lastMoveX = e.clientX;
+    lastMoveY = e.clientY;
+    bumpControls();
+  }, { passive: true });
   document.addEventListener('touchstart', bumpControls, { passive: true });
   document.addEventListener('keydown',    bumpControls);
   // Show briefly on first paint so the host sees the affordance exists.
