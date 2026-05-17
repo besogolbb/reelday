@@ -30,22 +30,43 @@
       text-transform: uppercase;
     }
 
-    /* ── Sticky nav (slides in after the hero) ────────── */
+    /* ── Sticky nav (slides in after the hero) ──────────
+       Bigger labels + stronger glass + accent hairline so the
+       bar reads as a deliberate top-chrome element rather than
+       disappearing into the page. Hover/focus get an animated
+       underline so the active jump-target is obvious. */
     nav.es-nav {
       position: fixed; top: 0; left: 0; right: 0; z-index: 40;
-      display: flex; gap: 26px; justify-content: center;
-      padding: 14px 22px;
-      background: rgba(251,247,238,.88);
-      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-      border-bottom: 1px solid rgba(42,26,20,.06);
-      font-family: var(--mono); font-size: 11px; letter-spacing: .22em;
+      display: flex; gap: 32px; justify-content: center;
+      padding: 20px 28px;
+      background: rgba(251,247,238,.94);
+      backdrop-filter: saturate(140%) blur(18px);
+      -webkit-backdrop-filter: saturate(140%) blur(18px);
+      border-bottom: 1px solid rgba(196,90,58,.18);
+      box-shadow: 0 12px 30px -18px rgba(42,26,20,.18);
+      font-family: var(--mono); font-size: 13px; letter-spacing: .18em;
+      font-weight: 600;
       text-transform: uppercase; overflow-x: auto;
       transform: translateY(-110%); transition: transform .4s ease;
     }
     nav.es-nav.show { transform: translateY(0); }
-    nav.es-nav a { color: var(--ink-soft); white-space: nowrap; opacity: .68; transition: opacity .15s, color .15s; }
+    nav.es-nav a {
+      position: relative;
+      color: var(--ink); white-space: nowrap; opacity: .78;
+      padding: 4px 2px;
+      transition: opacity .15s, color .15s;
+    }
+    nav.es-nav a::after {
+      content: ''; position: absolute; left: 50%; right: 50%; bottom: -3px;
+      height: 2px; background: var(--accent); border-radius: 2px;
+      transition: left .25s ease, right .25s ease;
+    }
     nav.es-nav a:hover { opacity: 1; color: var(--accent); }
+    nav.es-nav a:hover::after { left: 0; right: 0; }
     nav.es-nav::-webkit-scrollbar { display: none; }
+    @media (max-width: 640px) {
+      nav.es-nav { gap: 22px; padding: 16px 18px; font-size: 12px; letter-spacing: .14em; }
+    }
 
     /* ── Hero ──────────────────────────────────────────
        Full-bleed cover image with a slow Ken-Burns zoom and a
@@ -55,7 +76,10 @@
     .es-hero {
       position: relative; min-height: 100dvh;
       display: grid; grid-template-rows: 1fr auto;
-      padding: 80px 28px 60px;
+      /* Generous bottom padding reserves space for the absolute scroll
+         cue beneath the countdown so the two never overlap on short
+         viewports (was 60px → countdown ended up touching SCROLL). */
+      padding: 80px 28px 130px;
       color: #fff;
       background:
         linear-gradient(180deg, rgba(20,12,8,.10) 0%, rgba(20,12,8,.18) 35%, rgba(20,12,8,.78) 100%),
@@ -190,7 +214,7 @@
        larger label, an outlined circle holding a chevron, both
        bouncing gently so the eye catches it on a busy cover. */
     .es-hero-scroll {
-      position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+      position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%);
       display: flex; flex-direction: column; align-items: center; gap: 10px;
       font-family: var(--mono); font-size: 11px; letter-spacing: .4em;
       text-transform: uppercase; color: #fff;
