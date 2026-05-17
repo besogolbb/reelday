@@ -17,13 +17,30 @@
       --dash-muted: #7f6b62;
       --dash-green: #2d7a4a;
     }
-    /* Horizontal-scroll safety net. Some long inline content (long
-       slug in the polls/esite summary line, the wizard step header on
-       narrow screens, an oversized embed someone pastes in future) was
+    /* Horizontal-scroll safety net. Some long inline content was
        pushing the viewport wider on phones. overflow-x: clip is the
        modern, sticky-safe way to say "never scroll horizontally". */
     html, body { max-width: 100%; overflow-x: clip; }
     img, video, iframe { max-width: 100%; }
+    /* Mobile shrink fix: flex/grid children default to min-width:auto
+       which means "won't shrink below intrinsic content size". On
+       narrow viewports that lets one long token (a URL, a label, a
+       photo cell) bully the whole row out past the viewport — which
+       overflow-x: clip then hides. Telling .body/.panel and their
+       common descendants min-width: 0 lets the layout actually shrink
+       instead of getting clipped. */
+    .body, .body > *, .panel, .panel-head, .panel-head-copy,
+    .tab-row, .photo-grid, .polls-body, .polls-head-main { min-width: 0; }
+    /* Long words (URLs, slugs in copy) should wrap, not blow the row. */
+    .panel-head-copy p, .polls-summary { overflow-wrap: anywhere; }
+    /* The "Select" button used margin-left:auto inside a wrapping
+       flex; when forced onto its own line at narrow widths it could
+       still get nudged past the right edge by sub-pixel rounding.
+       Letting the tab row align to flex-start makes it deterministic. */
+    @media (max-width: 640px) {
+      .tab-row { justify-content: flex-start; }
+      #btn-select-mode { margin-left: 0 !important; }
+    }
     body {
       background:
         radial-gradient(circle at top left, rgba(255,232,214,.8), transparent 26%),
