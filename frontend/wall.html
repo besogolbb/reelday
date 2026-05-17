@@ -669,11 +669,6 @@
 
     .upcoming-thumb:hover { transform: scale(1.06); }
 
-    .upcoming-thumb.next {
-      border-color: var(--gold);
-      box-shadow: 0 0 0 4px rgba(240,163,122,.25);
-    }
-
     /* Current-slide marker — peach ring with a bright breathing halo
        and a slight scale-up so guests can locate "you are here"
        inside the loop at a glance. The .next thumb keeps its gold
@@ -3371,10 +3366,7 @@
     for (let i = 0; i < count; i++) {
       const item = items[(idx + i) % items.length];
       const div  = document.createElement('div');
-      let cls = 'upcoming-thumb';
-      if (i === 0) cls += ' active';
-      else if (i === 1) cls += ' next';
-      div.className = cls;
+      div.className = 'upcoming-thumb' + (i === 0 ? ' active' : '');
       const mediaUrl = upcomingThumbUrl(item, 320);
       div.style.backgroundImage = mediaUrl ? `url('${mediaUrl}')` : 'none';
       const target = idx + i;
