@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="wedding">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=5" />
+  <link rel="shortcut icon" href="/favicon.ico?v=5" />
+  <link rel="stylesheet" href="/css/shared.css" />
+  <!--EVENT_SITE_HEAD-->
+  <style>
+    /* Layout specifics only — palette/type come from shared.css tokens. */
+    .es-wrap { max-width: 880px; margin: 0 auto; padding: 0 22px; }
+    .es-hero {
+      min-height: 88vh; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; text-align: center;
+      padding: 80px 22px 64px; position: relative; overflow: hidden;
+    }
+    .es-hero-bg {
+      position: absolute; inset: 0; background-size: cover;
+      background-position: center; filter: brightness(.62);
+      z-index: 0;
+    }
+    .es-hero-bg::after {
+      content: ""; position: absolute; inset: 0;
+      background: linear-gradient(180deg, rgba(42,26,20,.15), rgba(42,26,20,.55));
+    }
+    .es-hero > * { position: relative; z-index: 1; }
+    .es-hero.has-bg, .es-hero.has-bg .es-kicker { color: #fff; }
+    .es-kicker {
+      font-family: var(--mono); font-size: 12px; letter-spacing: .32em;
+      text-transform: uppercase; opacity: .8; margin-bottom: 20px;
+    }
+    .es-names {
+      font-family: var(--display); font-weight: 600;
+      font-size: clamp(2.6rem, 9vw, 5.4rem); line-height: 1.02;
+      letter-spacing: -.01em; margin: 0 0 18px;
+    }
+    .es-date { font-size: 1.05rem; letter-spacing: .04em; opacity: .92; }
+    .es-count {
+      display: flex; gap: 14px; justify-content: center; margin-top: 36px;
+      flex-wrap: wrap;
+    }
+    .es-count div {
+      min-width: 72px; background: rgba(255,255,255,.14);
+      border: 1px solid rgba(255,255,255,.22); border-radius: var(--r);
+      padding: 12px 8px; backdrop-filter: blur(4px);
+    }
+    .es-hero:not(.has-bg) .es-count div {
+      background: var(--paper-2); border-color: var(--line);
+    }
+    .es-count b { display: block; font-family: var(--display); font-size: 1.7rem; }
+    .es-count span { font-size: 10px; text-transform: uppercase; letter-spacing: .16em; opacity: .7; }
+    .es-cta {
+      display: inline-flex; align-items: center; gap: 8px; margin-top: 30px;
+      background: var(--accent); color: #fff; padding: 14px 26px;
+      border-radius: 999px; font-weight: 600; font-size: .95rem;
+      box-shadow: var(--shadow-card);
+    }
+    nav.es-nav {
+      position: sticky; top: 0; z-index: 20; background: var(--paper);
+      border-bottom: 1px solid var(--line); display: flex; gap: 18px;
+      justify-content: center; padding: 13px 16px; overflow-x: auto;
+      font-size: 12px; letter-spacing: .14em; text-transform: uppercase;
+    }
+    nav.es-nav a { white-space: nowrap; opacity: .62; }
+    nav.es-nav a:hover { opacity: 1; color: var(--accent); }
+    section.es-sec { padding: 64px 0; border-bottom: 1px solid var(--line); }
+    .es-sec h2 {
+      font-family: var(--display); font-weight: 600;
+      font-size: clamp(1.6rem, 5vw, 2.4rem); text-align: center;
+      margin: 0 0 8px;
+    }
+    .es-sec .es-sub {
+      text-align: center; opacity: .6; font-size: .9rem;
+      margin-bottom: 34px; letter-spacing: .04em;
+    }
+    .es-prose { max-width: 620px; margin: 0 auto; text-align: center;
+      font-size: 1.08rem; line-height: 1.75; color: var(--ink-soft); white-space: pre-wrap; }
+    .es-timeline { max-width: 480px; margin: 0 auto; }
+    .es-timeline div {
+      display: flex; gap: 18px; padding: 14px 0;
+      border-bottom: 1px dashed var(--line);
+    }
+    .es-timeline b { font-family: var(--mono); min-width: 86px; color: var(--accent); }
+    .es-cards { display: grid; gap: 16px; }
+    .es-card {
+      background: var(--paper-2); border: 1px solid var(--line);
+      border-radius: var(--r-lg); padding: 22px;
+    }
+    .es-card h3 { font-family: var(--display); font-size: 1.2rem; margin: 0 0 6px; }
+    .es-card p { color: var(--ink-soft); font-size: .95rem; }
+    .es-map { width: 100%; aspect-ratio: 16/10; border: 0; border-radius: var(--r);
+      margin-top: 14px; background: var(--paper-3); }
+    .es-swatches { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 10px; }
+    .es-swatch { width: 38px; height: 38px; border-radius: 50%; border: 2px solid #fff; box-shadow: var(--shadow-soft); }
+    .es-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px,1fr)); gap: 10px; }
+    .es-gallery img { width: 100%; height: 100%; aspect-ratio: 1; object-fit: cover; border-radius: var(--r-sm); cursor: zoom-in; }
+    .es-field { width: 100%; padding: 14px 16px; border: 1px solid var(--line-2);
+      border-radius: var(--r); background: var(--paper); margin-bottom: 12px; }
+    .es-btn { background: var(--accent); color: #fff; padding: 14px 22px;
+      border-radius: var(--r); font-weight: 600; width: 100%; }
+    .es-btn.ghost { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+    .es-form, .es-seat { max-width: 460px; margin: 0 auto; }
+    .es-result { text-align: center; margin-top: 22px; }
+    .es-result .tbl { font-family: var(--display); font-size: 2.4rem; color: var(--accent); }
+    .es-faq details { border-bottom: 1px solid var(--line); padding: 14px 0; max-width: 620px; margin: 0 auto; }
+    .es-faq summary { cursor: pointer; font-weight: 600; }
+    .es-faq p { color: var(--ink-soft); margin-top: 10px; }
+    .es-entourage { display: grid; gap: 24px; max-width: 620px; margin: 0 auto; text-align: center; }
+    .es-entourage h4 { font-family: var(--mono); font-size: 11px; letter-spacing: .22em;
+      text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+    .es-foot { text-align: center; padding: 54px 22px 70px; }
+    .es-foot a.share { display: inline-block; margin: 8px; }
+    .es-lang { position: fixed; top: 12px; right: 12px; z-index: 30;
+      display: flex; gap: 4px; background: var(--paper); border: 1px solid var(--line);
+      border-radius: 999px; padding: 4px; font-size: 12px; }
+    .es-lang button { padding: 5px 12px; border-radius: 999px; }
+    .es-lang button.on { background: var(--accent); color: #fff; }
+    .es-state { min-height: 70vh; display: flex; align-items: center;
+      justify-content: center; text-align: center; color: var(--ink-faint); padding: 40px; }
+    [hidden] { display: none !important; }
+    @media (min-width: 640px) { .es-cards { grid-template-columns: 1fr 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="es-lang" id="langToggle" hidden>
+    <button data-lang="en" class="on">EN</button>
+    <button data-lang="tl">TL</button>
+  </div>
+
+  <div id="state" class="es-state">Loading…</div>
+  <main id="app" hidden></main>
+
+  <script>
+  (function () {
+    "use strict";
+
+    // Same localStorage key as the upload page so a guest who already
+    // shared photos keeps one identity (RSVP dedupe + rate-limit bucket).
+    function guestId() {
+      try {
+        var id = localStorage.getItem('reelday_guest_id');
+        if (!id) {
+          id = (crypto.randomUUID && crypto.randomUUID()) ||
+               (Date.now().toString(36) + Math.random().toString(36).slice(2, 10));
+          localStorage.setItem('reelday_guest_id', id);
+        }
+        return id;
+      } catch (e) {
+        return Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+      }
+    }
+    var GUEST_ID = guestId();
+
+    var parts = location.pathname.split('/').filter(Boolean); // ['e','<slug>']
+    var SLUG = parts[1] ? decodeURIComponent(parts[1]) : '';
+
+    // UI-labels-only i18n (host content is never translated — by design).
+    var L = {
+      en: { story:'Our Story', details:'The Details', when:'When',
+        gallery:'Gallery', seat:'Find Your Seat', seatHint:'Type your full name',
+        seatBtn:'Find my table', rsvp:'RSVP', faq:'Good to Know',
+        entourage:'The Entourage', goodToKnow:'Good to Know', attending:'Joyfully accepts',
+        notAttending:'Regretfully declines', party:'Number in your party',
+        message:'A note (optional)', send:'Send RSVP', sent:'Thank you! Your RSVP is saved.',
+        noSeat:'We couldn’t find that name — please contact the host or approach the coordinator.',
+        table:'Table', addCal:'Add to calendar', share:'Share', upload:'Share your photos',
+        happening:'Happening now', openWall:'Open the live wall', nameLbl:'Your full name',
+        days:'days', hrs:'hrs', min:'min', sec:'sec' },
+      tl: { story:'Ang Kuwento Namin', details:'Mga Detalye', when:'Kailan',
+        gallery:'Mga Larawan', seat:'Hanapin ang Upuan', seatHint:'I-type ang buong pangalan',
+        seatBtn:'Hanapin ang mesa ko', rsvp:'RSVP', faq:'Mga Dapat Malaman',
+        entourage:'Ang Entourage', goodToKnow:'Mga Dapat Malaman', attending:'Masayang dadalo',
+        notAttending:'Hindi makakadalo', party:'Ilan kayo sa grupo',
+        message:'Mensahe (opsyonal)', send:'Ipadala ang RSVP', sent:'Salamat! Nai-save na ang RSVP.',
+        noSeat:'Hindi namin nahanap ang pangalan — makipag-ugnayan sa host o sa coordinator.',
+        table:'Mesa', addCal:'I-add sa calendar', share:'I-share', upload:'I-share ang litrato',
+        happening:'Nagaganap na ngayon', openWall:'Buksan ang live wall', nameLbl:'Buong pangalan',
+        days:'araw', hrs:'oras', min:'min', sec:'seg' }
+    };
+    var lang = (localStorage.getItem('reelday_lang') === 'tl') ? 'tl' : 'en';
+    function t(k) { return (L[lang] && L[lang][k]) || L.en[k] || k; }
+
+    // ── safe DOM builders (host text only ever via textContent) ──
+    function el(tag, attrs, kids) {
+      var n = document.createElement(tag);
+      if (attrs) Object.keys(attrs).forEach(function (k) {
+        if (k === 'text') n.textContent = attrs[k];
+        else if (k === 'html') { /* intentionally unused for host data */ }
+        else n.setAttribute(k, attrs[k]);
+      });
+      (kids || []).forEach(function (c) { if (c) n.appendChild(c); });
+      return n;
+    }
+    function section(id, title, sub, body) {
+      var s = el('section', { class: 'es-sec', id: id });
+      var w = el('div', { class: 'es-wrap' });
+      if (title) w.appendChild(el('h2', { text: title }));
+      if (sub) w.appendChild(el('div', { class: 'es-sub', text: sub }));
+      w.appendChild(body);
+      s.appendChild(w);
+      return s;
+    }
+
+    function fmtDate(d) {
+      if (!d) return '';
+      try {
+        return new Date(d).toLocaleDateString(lang === 'tl' ? 'fil-PH' : 'en-PH',
+          { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+      } catch (e) { return String(d); }
+    }
+
+    function api(path, opts) {
+      opts = opts || {};
+      opts.headers = Object.assign({ 'X-Guest-Id': GUEST_ID }, opts.headers || {});
+      return fetch('/api/event-site/' + encodeURIComponent(SLUG) + path, opts);
+    }
+
+    function showState(msg) {
+      var s = document.getElementById('state');
+      s.textContent = msg; s.hidden = false;
+      document.getElementById('app').hidden = true;
+    }
+
+    // ── render ──
+    function render(data) {
+      var cfg = data.config || {};
+      var app = document.getElementById('app');
+      app.textContent = '';
+      document.documentElement.setAttribute('data-theme', data.theme || 'wedding');
+      document.getElementById('langToggle').hidden = false;
+
+      // Hero
+      var hero = el('section', { class: 'es-hero' });
+      if (data.cover_photo_url) {
+        hero.classList.add('has-bg');
+        var bg = el('div', { class: 'es-hero-bg' });
+        bg.style.backgroundImage = 'url("' + encodeURI(data.cover_photo_url) + '")';
+        hero.appendChild(bg);
+      }
+      hero.appendChild(el('div', { class: 'es-kicker',
+        text: (cfg.hero && cfg.hero.kicker) || "You're invited" }));
+      hero.appendChild(el('h1', { class: 'es-names', text: data.couple_names || '' }));
+      hero.appendChild(el('div', { class: 'es-date',
+        text: [fmtDate(data.event_date), data.event_time].filter(Boolean).join(' · ') }));
+      var count = el('div', { class: 'es-count' });
+      hero.appendChild(count);
+      var ctaWrap = el('div');
+      hero.appendChild(ctaWrap);
+      app.appendChild(hero);
+
+      // Countdown / live switch
+      function tick() {
+        var target = data.event_date ? new Date(data.event_date) : null;
+        if (data.event_time && target) {
+          var m = String(data.event_time).match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
+          if (m) {
+            var h = parseInt(m[1], 10) % 12;
+            if (/pm/i.test(m[3] || '')) h += 12;
+            target.setHours(h, m[2] ? parseInt(m[2], 10) : 0, 0, 0);
+          }
+        }
+        if (!target || isNaN(target.getTime())) { count.hidden = true; return; }
+        var diff = target.getTime() - Date.now();
+        if (diff <= 0) {
+          count.hidden = true;
+          if (!ctaWrap.dataset.live) {
+            ctaWrap.dataset.live = '1';
+            ctaWrap.textContent = '';
+            var live = el('a', { class: 'es-cta', href: '/wall/' + SLUG });
+            live.textContent = '● ' + t('happening') + ' — ' + t('openWall');
+            ctaWrap.appendChild(live);
+          }
+          return;
+        }
+        var s = Math.floor(diff / 1000);
+        var parts2 = [
+          [Math.floor(s / 86400), t('days')],
+          [Math.floor(s / 3600) % 24, t('hrs')],
+          [Math.floor(s / 60) % 60, t('min')],
+          [s % 60, t('sec')]
+        ];
+        count.textContent = '';
+        parts2.forEach(function (p) {
+          var d = el('div');
+          d.appendChild(el('b', { text: String(p[0]) }));
+          d.appendChild(el('span', { text: p[1] }));
+          count.appendChild(d);
+        });
+      }
+      tick();
+      // Clear any prior timer so repeated language re-renders don't stack.
+      if (window.__esTimer) clearInterval(window.__esTimer);
+      window.__esTimer = setInterval(tick, 1000);
+
+      // jump nav
+      var nav = el('nav', { class: 'es-nav' });
+      app.appendChild(nav);
+      function addNav(id, label) {
+        var a = el('a', { href: '#' + id, text: label });
+        nav.appendChild(a);
+      }
+
+      // Story
+      if (cfg.story && (cfg.story.body || cfg.story.label)) {
+        addNav('story', cfg.story.label || t('story'));
+        var p = el('div', { class: 'es-prose', text: cfg.story.body || '' });
+        app.appendChild(section('story', cfg.story.label || t('story'), '', p));
+      }
+
+      // Details: schedule + venues + dress code + parking
+      if (cfg.schedule || cfg.venue || cfg.dressCode || cfg.parking) {
+        addNav('details', t('details'));
+        var box = el('div');
+        if (Array.isArray(cfg.schedule) && cfg.schedule.length) {
+          var tl = el('div', { class: 'es-timeline' });
+          cfg.schedule.forEach(function (s) {
+            var row = el('div');
+            row.appendChild(el('b', { text: s.time || '' }));
+            row.appendChild(el('span', { text: s.label || '' }));
+            tl.appendChild(row);
+          });
+          box.appendChild(tl);
+        }
+        if (Array.isArray(cfg.venue) && cfg.venue.length) {
+          var cards = el('div', { class: 'es-cards' });
+          cards.style.marginTop = '26px';
+          cfg.venue.forEach(function (v) {
+            var c = el('div', { class: 'es-card' });
+            c.appendChild(el('h3', { text: v.name || '' }));
+            if (v.address) c.appendChild(el('p', { text: v.address }));
+            var q = v.mapQuery || v.address;
+            if (q) {
+              var f = el('iframe', { class: 'es-map', loading: 'lazy',
+                referrerpolicy: 'no-referrer-when-downgrade',
+                src: 'https://www.google.com/maps?q=' + encodeURIComponent(q) + '&output=embed' });
+              c.appendChild(f);
+            }
+            cards.appendChild(c);
+          });
+          box.appendChild(cards);
+        }
+        if (cfg.dressCode && (cfg.dressCode.note || (cfg.dressCode.swatches || []).length)) {
+          var dc = el('div', { class: 'es-card' });
+          dc.style.marginTop = '20px';
+          dc.appendChild(el('h3', { text: 'Dress code' }));
+          if (cfg.dressCode.note) dc.appendChild(el('p', { text: cfg.dressCode.note }));
+          if (Array.isArray(cfg.dressCode.swatches) && cfg.dressCode.swatches.length) {
+            var sw = el('div', { class: 'es-swatches' });
+            cfg.dressCode.swatches.forEach(function (hex) {
+              var s = el('div', { class: 'es-swatch' });
+              // colour value is host input; assigned via style, never HTML
+              s.style.background = String(hex).slice(0, 24);
+              sw.appendChild(s);
+            });
+            dc.appendChild(sw);
+          }
+          box.appendChild(dc);
+        }
+        if (cfg.parking && cfg.parking.note) {
+          var pk = el('div', { class: 'es-card' });
+          pk.style.marginTop = '20px';
+          pk.appendChild(el('h3', { text: 'Parking & directions' }));
+          pk.appendChild(el('p', { text: cfg.parking.note }));
+          box.appendChild(pk);
+        }
+        app.appendChild(section('details', t('details'), '', box));
+      }
+
+      // Gallery
+      if (cfg.gallery && Array.isArray(cfg.gallery.images) && cfg.gallery.images.length) {
+        addNav('gallery', cfg.gallery.label || t('gallery'));
+        var g = el('div', { class: 'es-gallery' });
+        cfg.gallery.images.forEach(function (u) {
+          var img = el('img', { loading: 'lazy', alt: '', src: u });
+          img.addEventListener('click', function () { window.open(u, '_blank', 'noopener'); });
+          g.appendChild(img);
+        });
+        app.appendChild(section('gallery', cfg.gallery.label || t('gallery'), '', g));
+      }
+
+      // Find your seat
+      if (cfg.seatEnabled !== false) {
+        addNav('seat', t('seat'));
+        var sw2 = el('div', { class: 'es-seat' });
+        var inp = el('input', { class: 'es-field', type: 'text',
+          placeholder: t('seatHint'), 'aria-label': t('nameLbl') });
+        var btn = el('button', { class: 'es-btn', text: t('seatBtn') });
+        var out = el('div', { class: 'es-result' });
+        function lookup() {
+          var q = inp.value.trim();
+          if (q.length < 2) return;
+          btn.disabled = true;
+          api('/seat-lookup?q=' + encodeURIComponent(q)).then(function (r) {
+            return r.ok ? r.json() : { matches: [] };
+          }).then(function (j) {
+            out.textContent = '';
+            if (j.matches && j.matches.length) {
+              j.matches.forEach(function (m) {
+                var card = el('div', { class: 'es-card' });
+                card.style.marginTop = '14px';
+                card.appendChild(el('div', { class: 'tbl',
+                  text: t('table') + ' ' + (m.table_label || '—') }));
+                if (m.location_note) card.appendChild(el('p', { text: m.location_note }));
+                if (m.seat_note) card.appendChild(el('p', { text: m.seat_note }));
+                out.appendChild(card);
+              });
+            } else {
+              out.appendChild(el('p', { text: t('noSeat') }));
+            }
+          }).finally(function () { btn.disabled = false; });
+        }
+        btn.addEventListener('click', lookup);
+        inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') lookup(); });
+        sw2.appendChild(inp); sw2.appendChild(btn); sw2.appendChild(out);
+        app.appendChild(section('seat', t('seat'), '', sw2));
+      }
+
+      // RSVP
+      if (cfg.rsvpEnabled !== false) {
+        addNav('rsvp', t('rsvp'));
+        var form = el('div', { class: 'es-form' });
+        var name = el('input', { class: 'es-field', type: 'text', placeholder: t('nameLbl') });
+        var att = el('select', { class: 'es-field' });
+        att.appendChild(el('option', { value: 'yes', text: t('attending') }));
+        att.appendChild(el('option', { value: 'no', text: t('notAttending') }));
+        var party = el('input', { class: 'es-field', type: 'number', min: '1', value: '1',
+          'aria-label': t('party'), placeholder: t('party') });
+        var msg = el('textarea', { class: 'es-field', rows: '3', placeholder: t('message') });
+        var send = el('button', { class: 'es-btn', text: t('send') });
+        var note = el('div', { class: 'es-sub' });
+        send.addEventListener('click', function () {
+          var nm = name.value.trim();
+          if (!nm) { name.focus(); return; }
+          send.disabled = true;
+          api('/rsvp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              guest_name: nm, attending: att.value === 'yes',
+              party_size: parseInt(party.value, 10) || 1, message: msg.value.trim()
+            })
+          }).then(function (r) {
+            note.textContent = r.ok ? t('sent') : 'Hmm, please try again.';
+          }).catch(function () { note.textContent = 'Hmm, please try again.'; })
+            .finally(function () { send.disabled = false; });
+        });
+        [name, att, party, msg, send, note].forEach(function (n) { form.appendChild(n); });
+        app.appendChild(section('rsvp', t('rsvp'), '', form));
+      }
+
+      // FAQ
+      if (Array.isArray(cfg.faq) && cfg.faq.length) {
+        addNav('faq', t('faq'));
+        var fq = el('div', { class: 'es-faq' });
+        cfg.faq.forEach(function (item) {
+          var d = el('details');
+          d.appendChild(el('summary', { text: item.q || '' }));
+          d.appendChild(el('p', { text: item.a || '' }));
+          fq.appendChild(d);
+        });
+        app.appendChild(section('faq', t('faq'), '', fq));
+      }
+
+      // Entourage
+      if (Array.isArray(cfg.entourage) && cfg.entourage.length) {
+        addNav('entourage', t('entourage'));
+        var ent = el('div', { class: 'es-entourage' });
+        cfg.entourage.forEach(function (grp) {
+          var blk = el('div');
+          blk.appendChild(el('h4', { text: grp.group || '' }));
+          (grp.people || []).forEach(function (person) {
+            blk.appendChild(el('div', { text: person }));
+          });
+          ent.appendChild(blk);
+        });
+        app.appendChild(section('entourage', t('entourage'), '', ent));
+      }
+
+      // Good to know
+      if (cfg.goodToKnow && String(cfg.goodToKnow).trim()) {
+        addNav('good', t('goodToKnow'));
+        app.appendChild(section('good', t('goodToKnow'), '',
+          el('div', { class: 'es-prose', text: String(cfg.goodToKnow) })));
+      }
+
+      // Footer: add-to-calendar (.ics + Google), share, upload link
+      var foot = el('div', { class: 'es-foot' });
+      function pad(n) { return (n < 10 ? '0' : '') + n; }
+      function icsStamp(dt) {
+        return dt.getUTCFullYear() + pad(dt.getUTCMonth() + 1) + pad(dt.getUTCDate()) +
+          'T' + pad(dt.getUTCHours()) + pad(dt.getUTCMinutes()) + '00Z';
+      }
+      var start = data.event_date ? new Date(data.event_date) : null;
+      if (start && data.event_time) {
+        var mm = String(data.event_time).match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
+        if (mm) {
+          var hh = parseInt(mm[1], 10) % 12;
+          if (/pm/i.test(mm[3] || '')) hh += 12;
+          start.setHours(hh, mm[2] ? parseInt(mm[2], 10) : 0, 0, 0);
+        }
+      }
+      if (start && !isNaN(start.getTime())) {
+        var end = new Date(start.getTime() + 4 * 3600 * 1000);
+        var cal = el('a', { class: 'es-btn ghost share', text: t('addCal') });
+        var ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'BEGIN:VEVENT',
+          'DTSTART:' + icsStamp(start), 'DTEND:' + icsStamp(end),
+          'SUMMARY:' + (data.couple_names || 'Celebration'),
+          'LOCATION:' + (((cfg.venue || [])[0] || {}).name || ''),
+          'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
+        cal.href = 'data:text/calendar;charset=utf-8,' + encodeURIComponent(ics);
+        cal.setAttribute('download', 'event.ics');
+        foot.appendChild(cal);
+        var gcal = el('a', { class: 'es-btn ghost share', text: 'Google Calendar',
+          target: '_blank', rel: 'noopener' });
+        gcal.href = 'https://www.google.com/calendar/render?action=TEMPLATE&text=' +
+          encodeURIComponent(data.couple_names || 'Celebration') +
+          '&dates=' + icsStamp(start) + '/' + icsStamp(end);
+        foot.appendChild(gcal);
+      }
+      var shareBtn = el('button', { class: 'es-btn ghost share', text: t('share') });
+      shareBtn.addEventListener('click', function () {
+        var u = location.href;
+        if (navigator.share) navigator.share({ title: data.couple_names || 'Reelday', url: u });
+        else { navigator.clipboard && navigator.clipboard.writeText(u); shareBtn.textContent = '✓'; }
+      });
+      foot.appendChild(shareBtn);
+      var up = el('a', { class: 'es-cta', href: '/upload/' + SLUG, text: t('upload') });
+      up.style.marginTop = '24px'; up.style.display = 'inline-flex';
+      foot.appendChild(el('div', {}, [up]));
+      app.appendChild(foot);
+
+      document.getElementById('state').hidden = true;
+      app.hidden = false;
+    }
+
+    // language toggle
+    document.getElementById('langToggle').addEventListener('click', function (e) {
+      var b = e.target.closest('button'); if (!b) return;
+      lang = b.dataset.lang;
+      try { localStorage.setItem('reelday_lang', lang); } catch (x) {}
+      [].forEach.call(this.querySelectorAll('button'), function (x) {
+        x.classList.toggle('on', x.dataset.lang === lang);
+      });
+      if (window.__esData) render(window.__esData);
+    });
+
+    if (!SLUG) { showState('Not found'); return; }
+    api('').then(function (r) {
+      if (!r.ok) throw new Error('unavailable');
+      return r.json();
+    }).then(function (data) {
+      window.__esData = data;
+      render(data);
+    }).catch(function () {
+      showState('This event page isn’t available yet.');
+    });
+  })();
+  </script>
+</body>
+</html>
