@@ -448,11 +448,10 @@
     }
     .ticker .stats span { display: inline-flex; align-items: center; }
 
-    /* Highlighted counts — pill-wrapped, larger bold numerals so the
-       moment / guest counts pop against the wall imagery instead of
-       blending into the rest of the ticker text. A gentle breathing
-       pulse on the glow makes the wall feel actively live rather than
-       a static stat readout. */
+    /* Highlighted counts — glass-pill aesthetic. Translucent white
+       fill + backdrop blur so the wall imagery softens through the
+       pill instead of being covered by a coral plate; reads as
+       "invisible UI" rather than a loud stat readout. */
     .ticker .stats em {
       color: #fff;
       font-style: normal;
@@ -462,25 +461,12 @@
       padding: 5px 14px;
       margin-right: 8px;
       border-radius: 999px;
-      background: linear-gradient(135deg, rgba(240,163,122,.95), rgba(196,90,58,.95));
-      box-shadow: 0 2px 8px rgba(196,90,58,.35);
+      background: rgba(255,255,255,.1);
+      -webkit-backdrop-filter: blur(10px);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,.14);
       display: inline-block;
       line-height: 1.1;
-      animation: statPulse 2.4s ease-in-out infinite;
-    }
-    /* Offset the guests pulse so the two pills aren't perfectly in
-       sync — staggered breathing feels more "alive", less metronome. */
-    .ticker .stats span:nth-child(2) em { animation-delay: 1.2s; }
-
-    @keyframes statPulse {
-      0%, 100% {
-        box-shadow: 0 2px 8px rgba(196,90,58,.35);
-        transform: scale(1);
-      }
-      50% {
-        box-shadow: 0 2px 14px rgba(240,163,122,.75), 0 0 22px rgba(240,163,122,.35);
-        transform: scale(1.06);
-      }
     }
 
     /* ── QR badge ────────────────────────────────────────────
@@ -691,10 +677,13 @@
     body.is-landscape.on-light-bg .bottom-scrim,
     body.is-portrait.on-light-bg  .bottom-scrim { opacity: 0; }
 
-    /* ── Caption frame ──────────────────────────────────────── */
+    /* ── Caption frame ────────────────────────────────────────
+       60px horizontal padding keeps the guest caption (bottom-left)
+       and the event watermark (bottom-right) inside the broadcast
+       safe zone, so they read as framed UI rather than corner clutter. */
     .frame {
       position: fixed; bottom: 0; left: 0; right: 0; z-index: 10;
-      padding: 0 56px 48px;
+      padding: 0 60px 48px;
       display: none; justify-content: space-between; align-items: flex-end; gap: 32px;
       pointer-events: none;
     }
