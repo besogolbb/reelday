@@ -17,7 +17,12 @@ export function logout() {
   clearAuth();
   // Land on the homepage — users logging out are leaving the app, not
   // switching accounts. The homepage CTA covers re-login if they need it.
-  location.href = '/';
+  // If we're already on '/', setting location.href='/' is a no-op in
+  // most browsers (same URL, no reload) so the nav would still show the
+  // logged-in state. Force a reload in that case.
+  const onHome = location.pathname === '/' || location.pathname === '/index.html';
+  if (onHome) location.reload();
+  else location.href = '/';
 }
 export function authHeaders() {
   const token = getToken();
