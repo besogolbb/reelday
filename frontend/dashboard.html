@@ -1615,7 +1615,7 @@
           <span class="polls-h2">Live Questions &amp; Poll</span>
           <span class="polls-summary" id="polls-summary">Tap to expand</span>
         </span>
-        <span class="polls-chevron" aria-hidden="true">▾</span>
+        <span class="polls-chevron" aria-hidden="true" style="font-size:24px;line-height:1;color:var(--accent);font-weight:700;width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;border-radius:999px;background:rgba(196,90,58,.10);">▾</span>
       </button>
       <div class="polls-body" id="polls-body">
         <div class="polls-sub">Polls collect opinions; questions reveal a correct answer on the wall. Pick the type when you create one — guests vote from their phones either way.</div>
@@ -4439,10 +4439,9 @@
       setSummary(state.is_published ? 'Published' : 'Draft — tap to set up');
 
       // ── controls (created up front, grouped into steps below) ──
-      const tsel = selectEl(
-        [['', 'Auto (from event type)'], ['wedding','wedding'], ['debut','debut'], ['birthday','birthday'],
-         ['baptism','baptism'], ['reunion','reunion'], ['corporate','corporate'], ['memorial','memorial'], ['seventh_birthday','seventh_birthday']],
-        ev.theme_override || '');
+      // Theme is auto-derived server-side from events.event_type — not
+      // surfaced in the editor (was redundant + confusing). Any existing
+      // events.theme_override is preserved (save() omits the field).
 
       const cstat = document.createElement('div');
       cstat.style.cssText = 'font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);margin:6px 0 8px;';
@@ -4467,37 +4466,6 @@
         'Manila Cathedral | Intramuros, Manila', 4);
       if (!venues.value && ev.venue) venues.value = `${ev.venue} | ${ev.venue}`;
       const dcNote = input(get(cfg, 'dressCode.note', ''), 'Formal / Filipiniana');
-      // Dress-code colors — visual picker (no hex typing). Same swatches[]
-      // shape persists, so the public page renders identically.
-      let swatches = (get(cfg, 'dressCode.swatches', []) || []).slice();
-      const dcSw = document.createElement('div');
-      dcSw.style.cssText = 'display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:2px;';
-      function drawSwatches() {
-        dcSw.textContent = '';
-        swatches.forEach((hex, i) => {
-          const wrap = document.createElement('span');
-          wrap.style.cssText = 'position:relative;display:inline-block;';
-          const pick = document.createElement('input');
-          pick.type = 'color'; pick.value = hex || '#c45a3a';
-          pick.title = 'Tap to change colour';
-          // Make the native color input render as a clean round chip.
-          pick.style.cssText = 'width:44px;height:44px;border:2px solid #fff;border-radius:50%;cursor:pointer;padding:0;box-shadow:0 1px 2px rgba(42,26,20,.15),0 0 0 1px var(--line);background:transparent;';
-          pick.addEventListener('input', e => { swatches[i] = e.target.value; });
-          const rm = document.createElement('button');
-          rm.type = 'button'; rm.textContent = '×';
-          rm.title = 'Remove this colour';
-          rm.style.cssText = 'position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:#b03022;color:#fff;font-weight:700;border:0;cursor:pointer;line-height:1;font-size:14px;';
-          rm.addEventListener('click', () => { swatches.splice(i, 1); drawSwatches(); });
-          wrap.appendChild(pick); wrap.appendChild(rm); dcSw.appendChild(wrap);
-        });
-        const add = document.createElement('button');
-        add.type = 'button'; add.textContent = '+ Add colour';
-        add.className = 'btn btn-ghost';
-        add.style.cssText += ';padding:8px 14px;font-size:13px;';
-        add.addEventListener('click', () => { swatches.push('#c45a3a'); drawSwatches(); });
-        dcSw.appendChild(add);
-      }
-      drawSwatches();
       const parking = area(get(cfg, 'parking.note', ''), 'Where to park, valet, drop-off point…', 3);
       const faq = area((cfg.faq || []).map(f => `${esc(f.q)} || ${esc(f.a)}`).join('\n'),
         'Is there a shuttle? || Yes, from the hotel lobby at 2 PM.', 4);
@@ -4624,7 +4592,6 @@
           row('Cover photo', 'Hero background + the Viber/Messenger share card', cstat),
           (() => { const w = document.createElement('div'); w.style.marginBottom = '14px'; w.appendChild(cpick); return w; })(),
           row('Hero kicker', '', heroKicker),
-          row('Theme', `Auto from event type (${esc(ev.event_type) || 'wedding'}) unless overridden`, tsel),
         ]},
         { title: 'Story', nodes: [
           row('Story heading', '', storyLabel),
@@ -4636,7 +4603,6 @@
         ]},
         { title: 'Details', nodes: [
           row('Dress code', '', dcNote),
-          row('Dress code colours', 'Tap each chip to pick a shade — guests see these on the site', dcSw),
           row('Parking & directions', '', parking),
         ]},
         { title: 'Gallery', nodes: [
@@ -4738,7 +4704,7 @@
           story: { label: storyLabel.value.trim(), body: storyBody.value },
           schedule: parseList(sched.value, '|', ['time', 'label']),
           venue: parseList(venues.value, '|', ['name', 'address']).map(v => ({ name: v.name, address: v.address, mapQuery: v.address })),
-          dressCode: { note: dcNote.value.trim(), swatches: swatches.slice() },
+          dressCode: { note: dcNote.value.trim() },
           parking: { note: parking.value },
           gallery: { images: gallery },
           faq: parseList(faq.value, '||', ['q', 'a']),
@@ -4757,7 +4723,9 @@
         try {
           const r = await fetch(`/api/event-site/${slug}`, { method: 'PUT',
             headers: { 'Content-Type': 'application/json', ...AH },
-            body: JSON.stringify({ config: gather(), is_published: pub.checked, theme_override: tsel.value || null }) });
+            // theme_override omitted on purpose — backend only updates it
+            // when present, so any existing override is preserved untouched.
+            body: JSON.stringify({ config: gather(), is_published: pub.checked }) });
           if (r.ok) { setSummary(pub.checked ? 'Published' : 'Draft — tap to set up'); }
           note(r.ok ? (pub.checked ? '✓ Saved & live' : '✓ Saved (draft)') : 'Save failed.', r.ok);
         } catch { note('Save failed — try again.', false); }
