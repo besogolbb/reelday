@@ -713,7 +713,10 @@
           <td>${e.upload_count}</td>
           <td style="font-size:.8rem;color:var(--ink-faint)">${fmtDate(e.created_at)}</td>
           <td>
-            ${e.is_active ? `<button class="btn-deactivate" onclick="deactivate('${esc(e.slug)}', this)">🔒 Deactivate</button>` : '<span style="color:var(--ink-faint);font-size:.8rem">Inactive</span>'}
+            <div class="action-btns">
+              ${e.is_active ? `<button class="btn-deactivate" onclick="deactivate('${esc(e.slug)}', this)">🔒 Deactivate</button>` : '<span style="color:var(--ink-faint);font-size:.8rem">Inactive</span>'}
+              <button class="btn-reject" onclick="deleteEvent('${esc(e.slug)}')" title="Permanently delete this event and all its uploads">🗑 Delete</button>
+            </div>
           </td>
         </tr>`).join('');
     } catch {
@@ -739,6 +742,25 @@
       if (!r.ok) throw new Error();
       await Promise.all([loadStats(), loadPayments()]);
     } catch { alert('Failed to reject payment.'); }
+  }
+
+  // Hard-delete. Requires typing the slug to confirm — a single click
+  // shouldn't wipe a real wedding's uploads. Cascades server-side to
+  // uploads, video messages, polls, RSVPs, seats, music, website.
+  async function deleteEvent(slug) {
+    const typed = prompt(
+      `PERMANENT DELETE\n\nThis wipes "${slug}" and ALL its uploads, video messages, polls, RSVPs, and website content. Payment history is kept.\n\nType the slug to confirm:`
+    );
+    if (typed == null) return;
+    if (typed.trim() !== slug) { alert('Slug did not match. Nothing deleted.'); return; }
+    try {
+      const r = await adminFetch(`/api/admin/events/${encodeURIComponent(slug)}`, { method: 'DELETE' });
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        throw new Error(d.message || 'Failed');
+      }
+      await Promise.all([loadStats(), loadEvents(), loadPayments(), loadUsers()]);
+    } catch (e) { alert('Failed to delete event: ' + (e.message || '')); }
   }
 
   async function deactivate(slug, btn) {

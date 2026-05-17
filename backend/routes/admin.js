@@ -274,6 +274,37 @@ export default async function adminRoutes(fastify) {
     return { success: true };
   });
 
+  // DELETE /api/admin/events/:slug — hard-delete an event row. Child tables
+  // (uploads, video_messages, reactions, polls, event_websites, event_rsvps,
+  // event_seats, music_tracks) all have ON DELETE CASCADE so they vanish
+  // automatically. Payments do NOT cascade — we null out their event_id
+  // first so the payment audit trail survives a wiped event. The actual
+  // file objects in storage are NOT removed here; they're orphaned and can
+  // be reaped separately if needed. Prefer /deactivate over this for
+  // anything other than spam / test data.
+  fastify.delete('/admin/events/:slug', async (request, reply) => {
+    const { slug } = request.params;
+    const client = await fastify.db.connect();
+    try {
+      await client.query('BEGIN');
+      const { rows } = await client.query('SELECT id FROM events WHERE slug = $1', [slug]);
+      if (!rows.length) {
+        await client.query('ROLLBACK');
+        return reply.status(404).send({ error: true, message: 'Event not found' });
+      }
+      const eventId = rows[0].id;
+      await client.query('UPDATE payments SET event_id = NULL WHERE event_id = $1', [eventId]);
+      await client.query('DELETE FROM events WHERE id = $1', [eventId]);
+      await client.query('COMMIT');
+      return { success: true };
+    } catch (err) {
+      try { await client.query('ROLLBACK'); } catch {}
+      throw err;
+    } finally {
+      client.release();
+    }
+  });
+
   // POST /api/admin/events/:slug/extend
   // Recovery tool for the "upload window already closed" case (see
   // payments.js — historically the recompute anchored on payment time
