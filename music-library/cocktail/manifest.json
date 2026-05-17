@@ -1,44 +1,58 @@
 {
   "name":        "Cocktail Hour — Light Jazz",
   "mood":        "cocktail",
-  "description": "Light jazz and acoustic instrumentals for arrival, mingling, and cocktail service.",
+  "description": "Smooth jazz, saxophone, and instrumental grooves for arrival, mingling, and cocktail service. All from Pixabay Music — free for any use.",
   "cover_color": "#d4af37",
   "position":    20,
   "tracks": [
     {
-      "file":         "01-REPLACE-ME.mp3",
-      "title":        "REPLACE WITH ACTUAL TRACK TITLE",
-      "artist":       "FreePD",
-      "duration_s":   195,
-      "license_info": "FreePD CC0 — no attribution required"
+      "file":         "artmanzh-jazz-funk-groove-instrumental-222618.mp3",
+      "title":        "Jazz Funk Groove Instrumental",
+      "artist":       "ArtmanZh",
+      "duration_s":   575,
+      "license_info": "Pixabay Music — free for any use"
     },
     {
-      "file":         "02-REPLACE-ME.mp3",
-      "title":        "REPLACE WITH ACTUAL TRACK TITLE",
-      "artist":       "YouTube Audio Library",
-      "duration_s":   210,
-      "license_info": "YouTube Audio Library — free for any use"
+      "file":         "free_audio_library-royalty-free-jazz-chardonnay-dreams-355585.mp3",
+      "title":        "Chardonnay Dreams",
+      "artist":       "Free Audio Library",
+      "duration_s":   185,
+      "license_info": "Pixabay Music — free for any use"
     },
     {
-      "file":         "03-REPLACE-ME.mp3",
-      "title":        "REPLACE WITH ACTUAL TRACK TITLE",
-      "artist":       "FreePD",
-      "duration_s":   180,
-      "license_info": "FreePD CC0 — no attribution required"
+      "file":         "free_audio_library-royalty-free-jazz-sunset-reverie-360384.mp3",
+      "title":        "Sunset Reverie",
+      "artist":       "Free Audio Library",
+      "duration_s":   400,
+      "license_info": "Pixabay Music — free for any use"
     },
     {
-      "file":         "04-REPLACE-ME.mp3",
-      "title":        "REPLACE WITH ACTUAL TRACK TITLE",
-      "artist":       "YouTube Audio Library",
-      "duration_s":   225,
-      "license_info": "YouTube Audio Library — free for any use"
+      "file":         "hitslab-smooth-instrumental-jazz-music-360498.mp3",
+      "title":        "Smooth Instrumental Jazz",
+      "artist":       "HitsLab",
+      "duration_s":   155,
+      "license_info": "Pixabay Music — free for any use"
     },
     {
-      "file":         "05-REPLACE-ME.mp3",
-      "title":        "REPLACE WITH ACTUAL TRACK TITLE",
-      "artist":       "FreePD",
-      "duration_s":   200,
-      "license_info": "FreePD CC0 — no attribution required"
+      "file":         "nickpanekaiassets-smooth-jazz-saxophone-solo-with-a-lofi-vibe-253950.mp3",
+      "title":        "Smooth Jazz Saxophone Solo (Lo-fi Vibe)",
+      "artist":       "NickPanekAIAssets",
+      "duration_s":   370,
+      "license_info": "Pixabay Music — free for any use"
+    },
+    {
+      "file":         "tunetank-smooth-instrumental-jazz-music-349777.mp3",
+      "title":        "Smooth Instrumental Jazz",
+      "artist":       "TuneTank",
+      "duration_s":   330,
+      "license_info": "Pixabay Music — free for any use"
+    },
+    {
+      "file":         "usefulpix-smooth-evening-saxophone-jazz-background-music-for-youtube-345557.mp3",
+      "title":        "Smooth Evening Saxophone Jazz",
+      "artist":       "UsefulPix",
+      "duration_s":   310,
+      "license_info": "Pixabay Music — free for any use"
     }
   ]
 }
