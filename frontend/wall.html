@@ -2033,7 +2033,13 @@
   async function loadBackgroundMusic() {
     if (!slug || !bgMusic) return;
     try {
-      const r = await fetch(`/api/events/${slug}/music`, { credentials: 'same-origin' });
+      // cache: 'no-store' so a host changing the playlist in the dashboard
+      // is immediately reflected on the next wall reload (instead of being
+      // hidden by a stale browser-cached copy for up to 5 min).
+      const r = await fetch(`/api/events/${slug}/music`, {
+        credentials: 'same-origin',
+        cache: 'no-store',
+      });
       if (!r.ok) return;
       const data = await r.json();
       const tracks = data?.playlist?.tracks;

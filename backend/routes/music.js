@@ -100,7 +100,8 @@ export default async function musicRoutes(fastify) {
       [event.id],
     );
     if (customRows.length) {
-      reply.header('Cache-Control', 'private, max-age=60');
+      // no-store so dashboard changes are reflected on the next wall reload
+      reply.header('Cache-Control', 'no-store');
       return {
         playlist: {
           id:          'custom-' + event.id,
@@ -140,7 +141,10 @@ export default async function musicRoutes(fastify) {
       [playlist.id],
     );
 
-    reply.header('Cache-Control', 'private, max-age=300');
+    // no-store so dashboard changes (switching playlist, turning off) are
+    // reflected on the next wall reload — the bandwidth cost of an extra
+    // ~3KB JSON fetch per wall load is trivial.
+    reply.header('Cache-Control', 'no-store');
     return {
       playlist: {
         id:          playlist.id,
