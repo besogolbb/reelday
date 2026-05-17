@@ -1761,7 +1761,7 @@
       <div class="url" id="qr-url">reelday.ph/e/andrea-jm</div>
       <div class="actions-stack">
         <a class="btn btn-accent" id="btn-open-upload" href="#" target="_blank" rel="noopener">Open upload page →</a>
-        <a class="btn btn-ghost" href="#">Download poster .pdf</a>
+        <a class="btn btn-ghost" id="btn-poster" href="#" target="_blank" rel="noopener">Download poster .pdf</a>
       </div>
     </div>
 
@@ -2700,6 +2700,11 @@
 
     const openBtn = $('btn-open-upload');
     if (openBtn) openBtn.href = uploadUrl;
+
+    // Poster page — opens in a new tab and auto-launches the OS print
+    // dialog so the host can "Save as PDF" or print straight to paper.
+    const posterBtn = $('btn-poster');
+    if (posterBtn && slug) posterBtn.href = `/poster/${encodeURIComponent(slug)}`;
   }
 
   // ── Render stats ──────────────────────────────────────

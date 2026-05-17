@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="wedding">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex" />
+  <title>Event poster — Reelday</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=5" />
+  <link rel="stylesheet" href="/css/shared.css" />
+  <style>
+    /* The poster is sized in mm so it maps 1:1 to the printed page.
+       On screen we render it on a soft "paper" background; on print
+       we strip everything except the page itself. */
+    :root { --poster-w: 210mm; --poster-h: 297mm; }
+
+    html, body { background: #ece4d4; }
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 80px;
+      font-family: var(--display);
+      color: var(--ink);
+    }
+
+    /* ── On-screen chrome (hidden when printing) ── */
+    .screen-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      max-width: var(--poster-w);
+      width: 100%;
+      margin: 0 auto 18px;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--ink-soft);
+      letter-spacing: .04em;
+    }
+    .screen-bar .spacer { flex: 1; }
+    .screen-bar .btn {
+      padding: 10px 18px;
+      border-radius: 999px;
+      border: 1px solid var(--line-2);
+      background: #fff;
+      color: var(--ink);
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .screen-bar .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    .screen-bar .btn:hover { opacity: .85; }
+    .screen-hint {
+      max-width: var(--poster-w);
+      width: 100%;
+      margin: 0 auto 14px;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--ink-faint);
+      letter-spacing: .04em;
+      line-height: 1.5;
+    }
+
+    /* ── The poster sheet itself ── */
+    .poster {
+      width: var(--poster-w);
+      height: var(--poster-h);
+      background: #fbf7ee;
+      box-shadow: 0 30px 80px rgba(42,26,20,.18), 0 8px 24px rgba(42,26,20,.10);
+      position: relative;
+      overflow: hidden;
+      /* On-screen scale-down so the full A4 fits narrower viewports */
+    }
+
+    /* The decorative inner frame — a single hairline, inset 12mm. */
+    .frame {
+      position: absolute;
+      inset: 12mm;
+      border: 0.4mm solid var(--accent);
+      border-radius: 4mm;
+      padding: 14mm 14mm 12mm;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+    /* A second, even softer inner outline — gives the "engraved" feel
+       of a printed wedding invitation without going full ornate. */
+    .frame::before {
+      content: '';
+      position: absolute;
+      inset: 1.6mm;
+      border: 0.18mm solid var(--accent);
+      border-radius: 3mm;
+      opacity: .35;
+      pointer-events: none;
+    }
+
+    .eyebrow {
+      font-family: var(--mono);
+      font-size: 10pt;
+      letter-spacing: .32em;
+      text-transform: uppercase;
+      color: var(--accent-deep);
+      margin-bottom: 10mm;
+    }
+    .eyebrow .dash { color: var(--ink-faint); margin: 0 .5em; }
+
+    .couple {
+      font-family: var(--display);
+      font-weight: 400;
+      font-size: 58pt;
+      line-height: 1.02;
+      color: var(--ink);
+      letter-spacing: -.01em;
+      margin: 0 0 7mm;
+      max-width: 100%;
+    }
+    .couple .amp {
+      font-style: italic;
+      color: var(--accent);
+      font-weight: 300;
+      margin: 0 .15em;
+    }
+
+    .divider {
+      width: 28mm;
+      height: 0;
+      border-top: 0.4mm solid var(--accent);
+      margin: 0 auto 7mm;
+      opacity: .8;
+    }
+
+    .date {
+      font-family: var(--mono);
+      font-size: 12pt;
+      letter-spacing: .35em;
+      text-transform: uppercase;
+      color: var(--ink-soft);
+      margin: 0 0 3mm;
+    }
+    .venue {
+      font-family: var(--display);
+      font-size: 14pt;
+      font-style: italic;
+      color: var(--ink-soft);
+      margin: 0 0 8mm;
+      line-height: 1.3;
+      max-width: 140mm;
+    }
+    .venue .sep { color: var(--accent); margin: 0 .5em; font-style: normal; }
+
+    .welcome {
+      font-family: var(--display);
+      font-style: italic;
+      font-size: 11.5pt;
+      color: var(--ink-faint);
+      margin: 0 0 8mm;
+      max-width: 130mm;
+      line-height: 1.45;
+      quotes: "\201C" "\201D";
+    }
+    .welcome::before { content: open-quote; color: var(--accent); margin-right: .15em; }
+    .welcome::after  { content: close-quote; color: var(--accent); margin-left: .15em; }
+
+    .qr-block {
+      margin-top: auto;
+      margin-bottom: 6mm;
+      padding: 5mm;
+      background: #fff;
+      border-radius: 3mm;
+      box-shadow: 0 0 0 0.3mm var(--line);
+    }
+    .qr-block img {
+      display: block;
+      width: 72mm;
+      height: 72mm;
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: crisp-edges;
+    }
+
+    .scan-cta {
+      font-family: var(--display);
+      font-size: 18pt;
+      color: var(--ink);
+      margin: 0 0 2mm;
+      letter-spacing: -.005em;
+    }
+    .scan-sub {
+      font-family: var(--mono);
+      font-size: 9pt;
+      color: var(--ink-faint);
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      margin: 0 0 5mm;
+    }
+    .url {
+      font-family: var(--mono);
+      font-size: 11pt;
+      color: var(--accent-deep);
+      letter-spacing: .04em;
+      margin: 0 0 1mm;
+      word-break: break-all;
+    }
+    .url .host { color: var(--ink-faint); }
+
+    .footer {
+      position: absolute;
+      bottom: 6mm;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-family: var(--mono);
+      font-size: 8pt;
+      color: var(--ink-faint);
+      letter-spacing: .25em;
+      text-transform: uppercase;
+    }
+    .footer .dot { color: var(--accent); margin: 0 .6em; }
+
+    /* Small screens: scale the poster down so it fits the viewport. */
+    @media (max-width: 880px) {
+      .poster { transform: scale(.65); transform-origin: top center; margin-bottom: -110mm; }
+    }
+    @media (max-width: 580px) {
+      .poster { transform: scale(.46); margin-bottom: -160mm; }
+      .screen-bar { flex-wrap: wrap; }
+    }
+
+    /* ── Print rules ────────────────────────────────────────
+       Strip the screen chrome, kill the drop shadow, and let the
+       poster sit on the actual page. @page margin:0 means the
+       hairline frame defines the printed margin. */
+    @page {
+      size: A4 portrait;
+      margin: 0;
+    }
+    @media print {
+      html, body { background: #fff; }
+      body {
+        padding: 0;
+        display: block;
+      }
+      .screen-bar, .screen-hint { display: none !important; }
+      .poster {
+        box-shadow: none;
+        width: 210mm;
+        height: 297mm;
+        transform: none !important;
+        margin: 0 !important;
+      }
+      /* Force colour printing — many browsers strip colours by default. */
+      * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- On-screen toolbar — hidden when printing -->
+  <div class="screen-bar">
+    <span>POSTER PREVIEW</span>
+    <span class="spacer"></span>
+    <a class="btn" href="#" id="btn-back">← Back to dashboard</a>
+    <button class="btn btn-primary" id="btn-print" type="button">Save / print PDF</button>
+  </div>
+  <p class="screen-hint">
+    Tip — in the print dialog, choose <strong>"Save as PDF"</strong> as the destination, set margins to <strong>None</strong>,
+    and enable <strong>Background graphics</strong> for the cleanest result. A4 portrait, ready for the venue easel.
+  </p>
+
+  <!-- The poster itself -->
+  <article class="poster" id="poster" aria-label="Event poster">
+    <div class="frame">
+      <div class="eyebrow"><span class="dash">—</span><span id="p-eyebrow">scan to share the day</span><span class="dash">—</span></div>
+
+      <h1 class="couple" id="p-couple">—</h1>
+
+      <div class="divider"></div>
+
+      <div class="date" id="p-date" style="display:none"></div>
+      <div class="venue" id="p-venue" style="display:none"></div>
+      <p class="welcome" id="p-welcome" style="display:none"></p>
+
+      <div class="qr-block">
+        <img id="p-qr" alt="QR code — scan with your phone camera" />
+      </div>
+
+      <div class="scan-cta">Scan to share photos &amp; videos</div>
+      <div class="scan-sub">no app required</div>
+
+      <div class="url"><span class="host">reelday.ph/upload/</span><span id="p-slug">—</span></div>
+
+      <div class="footer">
+        <span>powered by</span><span class="dot">·</span><span>reelday.ph</span>
+      </div>
+    </div>
+  </article>
+
+<script>
+  // The slug can come either from the path (/poster/<slug>) or, as a
+  // fallback for static hosting, from ?slug=<slug>. We tolerate both
+  // so the page works even before the backend route is wired.
+  const pathSlug = location.pathname.match(/^\/poster\/([^/]+)/)?.[1];
+  const slug = pathSlug || new URLSearchParams(location.search).get('slug');
+
+  const $ = (id) => document.getElementById(id);
+
+  const THEME_MAP = {
+    wedding:          { theme: 'wedding',          eyebrow: 'scan to share the day' },
+    debut:            { theme: 'debut',            eyebrow: 'scan to share the night' },
+    birthday:         { theme: 'birthday',         eyebrow: 'scan to share the party' },
+    seventh_birthday: { theme: 'seventh_birthday', eyebrow: 'scan to share the party' },
+    baptism:          { theme: 'baptism',          eyebrow: 'scan to share the day' },
+    reunion:          { theme: 'reunion',          eyebrow: 'scan to share the day' },
+    corporate:        { theme: 'corporate',        eyebrow: 'scan to share the event' },
+    memorial:         { theme: 'memorial',         eyebrow: 'scan to share a memory' },
+  };
+
+  // Renders "Andrea & JM" with the ampersand styled as a italic accent —
+  // splits on the first " & " so "Andrea Cruz & JM Santos" still works.
+  function renderCouple(name) {
+    const parts = String(name || '').split(/\s*&\s*/);
+    if (parts.length < 2) return escapeHtml(name || '—');
+    return parts.map(escapeHtml).join('<span class="amp">&amp;</span>');
+  }
+  function escapeHtml(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // Date format: "MAY 17 · 2026" — calm uppercase mono, looks intentional
+  // next to the display serif name. Locale-agnostic so any language for
+  // the OS still gets the same poster.
+  const MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  function formatDate(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    return `${MONTHS[d.getMonth()]} ${d.getDate()} · ${d.getFullYear()}`;
+  }
+
+  $('btn-back').href = slug ? `/dashboard?slug=${encodeURIComponent(slug)}` : '/my-events';
+
+  // Manual print button — same call as the autostart, but the user can
+  // re-trigger if they dismissed the dialog or want a second copy.
+  $('btn-print').addEventListener('click', () => window.print());
+
+  async function load() {
+    if (!slug) {
+      $('p-couple').textContent = 'Event not found';
+      return;
+    }
+    try {
+      const [evRes, qrRes] = await Promise.all([
+        fetch(`/api/events/${encodeURIComponent(slug)}`),
+        fetch(`/api/events/${encodeURIComponent(slug)}/qr`),
+      ]);
+      const evJson = evRes.ok ? await evRes.json() : null;
+      const qrJson = qrRes.ok ? await qrRes.json() : null;
+      const ev = evJson?.event;
+      if (!ev) {
+        $('p-couple').textContent = 'Event not found';
+        return;
+      }
+
+      // Theme — drives accent colour for frame, divider, ampersand, dots.
+      const theme = THEME_MAP[ev.event_type] || THEME_MAP.wedding;
+      document.documentElement.setAttribute('data-theme', theme.theme);
+      $('p-eyebrow').textContent = theme.eyebrow;
+
+      // Couple name (or whatever the host put in — "Andrea & JM", "Sofia's 7th", etc.)
+      $('p-couple').innerHTML = renderCouple(ev.couple_names);
+
+      // Date
+      const dateStr = formatDate(ev.event_date);
+      if (dateStr) { $('p-date').textContent = dateStr; $('p-date').style.display = 'block'; }
+
+      // Venue · Time — combined into one italic line if both present
+      const venueBits = [];
+      if (ev.venue)      venueBits.push(escapeHtml(ev.venue));
+      if (ev.event_time) venueBits.push(escapeHtml(ev.event_time));
+      if (venueBits.length) {
+        $('p-venue').innerHTML = venueBits.join('<span class="sep">·</span>');
+        $('p-venue').style.display = 'block';
+      }
+
+      // Welcome message — only render if it'll fit gracefully. Long
+      // hosted messages collapse the QR; cap at ~140 chars so the layout
+      // stays printable.
+      if (ev.welcome_message && ev.welcome_message.trim().length <= 140) {
+        $('p-welcome').textContent = ev.welcome_message.trim();
+        $('p-welcome').style.display = 'block';
+      }
+
+      // Slug & QR
+      $('p-slug').textContent = ev.slug || slug;
+      if (qrJson?.qr_code) {
+        const img = $('p-qr');
+        await new Promise((resolve) => {
+          img.onload = resolve;
+          img.onerror = resolve;
+          img.src = qrJson.qr_code;
+        });
+      }
+
+      document.title = `${ev.couple_names || 'Event'} — Reelday poster`;
+
+      // Auto-open the print dialog once everything is laid out + fonts
+      // settled. The rAF dance lets the browser paint at least one frame
+      // first; otherwise Chrome occasionally prints a half-rendered page.
+      if (!location.hash.includes('noprint')) {
+        await (document.fonts?.ready ?? Promise.resolve());
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          setTimeout(() => window.print(), 150);
+        }));
+      }
+    } catch (err) {
+      console.warn('[poster] load failed', err);
+      $('p-couple').textContent = 'Could not load event';
+    }
+  }
+  load();
+</script>
+</body>
+</html>

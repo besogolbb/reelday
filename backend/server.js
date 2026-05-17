@@ -195,6 +195,12 @@ fastify.get('/wall/:slug', (_request, reply) => {
   reply.sendFile('wall.html');
 });
 
+// Printable QR poster — host opens this in a new tab from the dashboard;
+// the page auto-triggers window.print() so "Save as PDF" is two clicks.
+fastify.get('/poster/:slug', (_request, reply) => {
+  reply.sendFile('poster.html');
+});
+
 // Event Website (Dalisay/Hiraya) — /e/:slug. Not a plain sendFile: the
 // page needs OG/theme/noindex injected into the initial HTML so Viber/
 // Messenger/FB crawlers (which don't run JS) see the cover card. The
