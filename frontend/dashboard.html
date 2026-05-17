@@ -4570,6 +4570,23 @@
       const seatOn = mk('Enable seat finder', cfg.seatEnabled);
       const rsvpOn = mk('Enable RSVP', cfg.rsvpEnabled);
 
+      // RSVP deadline — stored in cfg.rsvpDeadline as YYYY-MM-DD. The
+      // public site shows the date below the form and locks submissions
+      // (also enforced server-side) once it passes, so a guest who
+      // lingers on the page can't sneak in late acceptances after the
+      // host has finalised headcount.
+      const rsvpDeadlineInput = document.createElement('input');
+      rsvpDeadlineInput.type = 'date';
+      rsvpDeadlineInput.style.cssText = 'padding:.55rem .75rem;border:1px solid var(--line-2);border-radius:var(--r);font-family:inherit;font-size:.9rem;background:#fff;color:var(--ink);outline:none;max-width:240px;';
+      // Pre-fill from the existing config — accept either ISO datetime
+      // or plain YYYY-MM-DD, normalise to YYYY-MM-DD for the input.
+      if (cfg.rsvpDeadline) {
+        const raw = String(cfg.rsvpDeadline);
+        rsvpDeadlineInput.value = /^\d{4}-\d{2}-\d{2}$/.test(raw)
+          ? raw
+          : raw.slice(0, 10);
+      }
+
       // gallery
       const gwrap = document.createElement('div');
       gwrap.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin:8px 0;';
@@ -4743,6 +4760,7 @@
           })(),
           seatStat,
           (() => { const w = document.createElement('div'); w.style.margin = '16px 0'; w.appendChild(togRow); return w; })(),
+          row('RSVP deadline', 'After this date, guests can’t submit the RSVP form. Leave blank for no deadline.', rsvpDeadlineInput),
           row('RSVPs', '', rBtnRow),
           rOut,
         ]},
@@ -4881,6 +4899,7 @@
           goodToKnow: gtk.value,
           seatEnabled: seatOn.checked,
           rsvpEnabled: rsvpOn.checked,
+          rsvpDeadline: rsvpDeadlineInput.value || null,
         };
       }
       async function save() {

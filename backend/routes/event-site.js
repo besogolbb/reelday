@@ -386,6 +386,31 @@ export default async function eventSiteRoutes(fastify) {
       return reply.status(404).send({ error: true, message: 'Event site not found' });
     }
 
+    // Reject submissions past the host-configured deadline so a guest
+    // who lingers on the page can't accept after the host has finalised
+    // headcount. Stored as ISO date string in config.rsvpDeadline; we
+    // treat the deadline as end-of-day local-Manila for forgiveness.
+    const deadlineRaw = gate.event.config?.rsvpDeadline;
+    if (deadlineRaw) {
+      const d = new Date(deadlineRaw);
+      if (!Number.isNaN(d.getTime())) {
+        // If the host only stored YYYY-MM-DD it parses to UTC midnight;
+        // push to end-of-day so a deadline of "May 31" stays open until
+        // 23:59 Manila on that date rather than dying at 08:00 local.
+        if (/^\d{4}-\d{2}-\d{2}$/.test(String(deadlineRaw))) {
+          d.setUTCHours(23, 59, 59, 999);
+        }
+        if (Date.now() > d.getTime()) {
+          return reply.status(410).send({
+            error: true,
+            code: 'rsvp_closed',
+            message: 'RSVPs are closed for this event.',
+            deadline: d.toISOString(),
+          });
+        }
+      }
+    }
+
     const b = request.body ?? {};
     const name = String(b.guest_name || '').trim();
     if (!name) return reply.status(400).send({ error: true, message: 'Name is required' });

@@ -680,6 +680,42 @@
       font-family: var(--display); font-size: 1rem; color: #7a2418;
       text-align: center;
     }
+    /* Deadline notice — small line under the RSVP form when one is set. */
+    .es-rsvp-deadline {
+      margin-top: 14px; text-align: center;
+      font-family: var(--mono); font-size: 11px; letter-spacing: .22em;
+      text-transform: uppercase; color: var(--ink-faint);
+    }
+    .es-rsvp-deadline strong { color: var(--accent); font-weight: 700; }
+    /* Closed state — replaces the form once the deadline has passed. */
+    .es-rsvp-closed {
+      margin: 0 auto; max-width: 460px;
+      padding: 30px 26px; text-align: center;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.85) 0%, rgba(244,234,217,.7) 100%);
+      border: 1px solid rgba(196,90,58,.30);
+      border-radius: 18px;
+      box-shadow: 0 12px 28px -16px rgba(196,90,58,.30);
+    }
+    .es-rsvp-closed .lock {
+      width: 48px; height: 48px; margin: 0 auto 14px;
+      border-radius: 50%;
+      background: var(--paper-2); color: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      border: 1px solid rgba(196,90,58,.30);
+    }
+    .es-rsvp-closed .lock svg { width: 20px; height: 20px; stroke: currentColor; }
+    .es-rsvp-closed .title {
+      font-family: var(--display); font-size: 1.4rem; color: var(--ink); margin: 0 0 8px;
+    }
+    .es-rsvp-closed .sub {
+      font-family: var(--display); font-size: 1rem; color: var(--ink-soft); margin: 0 0 10px;
+      line-height: 1.45;
+    }
+    .es-rsvp-closed .when {
+      font-family: var(--mono); font-size: 11px; letter-spacing: .22em;
+      text-transform: uppercase; color: var(--ink-faint);
+    }
 
     /* ── FAQ accordion ─────────────────────────────────── */
     .es-faq { max-width: 720px; margin: 0 auto; }
@@ -875,6 +911,10 @@
       table:'Table', addCal:'Add to calendar', share:'Share',
       upload:'Share your photos', happening:'Happening now',
       openWall:'Open the live wall', nameLbl:'Your full name',
+      noteHint:'Song request, dietary notes, or a message (optional)',
+      rsvpBy:'Please RSVP by',
+      rsvpClosed:'RSVPs are closed',
+      rsvpClosedSub:'The deadline has passed — please contact the host directly.',
       days:'days', hrs:'hrs', min:'min', sec:'sec',
       scroll:'Scroll', mapsLink:'Open in Maps',
       eyebrowStory:'— in their own words —',
@@ -1439,6 +1479,44 @@
       // ── RSVP ─────────────────────────────────────────
       if (cfg.rsvpEnabled !== false) {
         addNav('rsvp', t('rsvp'));
+
+        // Deadline gate — if config.rsvpDeadline is set and past,
+        // replace the entire form with a "closed" card so guests
+        // don't even see input fields they can't submit. Backend
+        // enforces this too (returns 410), this is just the UX
+        // layer so it fails honestly client-side.
+        var deadlineRaw = cfg.rsvpDeadline || '';
+        var deadlineDate = null;
+        if (deadlineRaw) {
+          deadlineDate = new Date(deadlineRaw);
+          if (Number.isNaN(deadlineDate.getTime())) deadlineDate = null;
+          // YYYY-MM-DD parses to UTC midnight — bump to end-of-day so
+          // a deadline of "May 31" stays open through the day.
+          else if (/^\d{4}-\d{2}-\d{2}$/.test(String(deadlineRaw))) {
+            deadlineDate.setUTCHours(23, 59, 59, 999);
+          }
+        }
+        var deadlinePassed = deadlineDate && Date.now() > deadlineDate.getTime();
+
+        if (deadlinePassed) {
+          var closed = el('div', { class: 'es-rsvp-closed' });
+          var lock = el('div', { class: 'lock' });
+          lock.innerHTML =
+            '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+            '<rect x="5" y="11" width="14" height="9" rx="2"/>' +
+            '<path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
+          closed.appendChild(lock);
+          closed.appendChild(el('div', { class: 'title', text: t('rsvpClosed') }));
+          closed.appendChild(el('div', { class: 'sub', text: t('rsvpClosedSub') }));
+          closed.appendChild(el('div', { class: 'when',
+            text: t('rsvpBy') + ' ' + fmtDate(deadlineDate.toISOString()) }));
+          app.appendChild(section('rsvp', t('eyebrowRsvp'), t('rsvp'), closed));
+        } else {
+          buildRsvpForm(deadlineDate);
+        }
+      }
+
+      function buildRsvpForm(deadlineDate) {
         var form = el('div', { class: 'es-form-wrap' });
         var name = el('input', { class: 'es-field', type: 'text', placeholder: t('nameLbl') });
         var attRow = el('div', { class: 'es-field-row' });
@@ -1448,7 +1526,10 @@
         var party = el('input', { class: 'es-field', type: 'number', min: '1', value: '1',
           'aria-label': t('party'), placeholder: t('party') });
         attRow.appendChild(att); attRow.appendChild(party);
-        var msg = el('textarea', { class: 'es-field', rows: '3', placeholder: t('message') });
+        // Note placeholder bumped from generic "A note (optional)" to
+        // a concrete prompt — song requests are the most common ask
+        // hosts get and naming it raises response quality.
+        var msg = el('textarea', { class: 'es-field', rows: '3', placeholder: t('noteHint') });
         var send = el('button', { class: 'es-btn', text: t('send') });
         // Two slots: a quiet error line below the button (validation /
         // network failures) and a swap area for the prominent success
@@ -1509,17 +1590,36 @@
               party_size: parseInt(party.value, 10) || 1, message: msg.value.trim()
             })
           }).then(function (r) {
-            if (r.ok) showSuccess();
-            else showError('Hmm, that didn’t go through. Please try again.');
+            if (r.ok) { showSuccess(); return; }
+            // Backend returns 410 when the deadline has passed
+            // between page load and submit — swap to the closed
+            // state so the guest doesn't keep retrying.
+            if (r.status === 410) {
+              return r.json().catch(function () { return {}; }).then(function (j) {
+                showError('RSVPs are closed' +
+                  (j && j.deadline ? ' (deadline was ' + fmtDate(j.deadline) + ').' : '.'));
+                send.disabled = true;
+              });
+            }
+            showError('Hmm, that didn’t go through. Please try again.');
           }).catch(function () {
             showError('Hmm, that didn’t go through. Please try again.');
-          }).finally(function () { send.disabled = false; });
+          }).finally(function () { /* send.disabled handled per-branch */ });
         });
         form.appendChild(name);
         form.appendChild(attRow);
         form.appendChild(msg);
         form.appendChild(send);
         form.appendChild(errLine);
+        // Deadline line — only rendered when the host configured one
+        // and we're still inside it. The closed-state branch above
+        // handles the past-deadline case with a bigger card.
+        if (deadlineDate) {
+          var dl = el('div', { class: 'es-rsvp-deadline' });
+          dl.appendChild(document.createTextNode(t('rsvpBy') + ' '));
+          dl.appendChild(el('strong', { text: fmtDate(deadlineDate.toISOString()) }));
+          form.appendChild(dl);
+        }
         form.appendChild(successWrap);
         app.appendChild(section('rsvp', t('eyebrowRsvp'), t('rsvp'), form));
       }
