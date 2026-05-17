@@ -4467,7 +4467,37 @@
         'Manila Cathedral | Intramuros, Manila', 4);
       if (!venues.value && ev.venue) venues.value = `${ev.venue} | ${ev.venue}`;
       const dcNote = input(get(cfg, 'dressCode.note', ''), 'Formal / Filipiniana');
-      const dcSw   = input((get(cfg, 'dressCode.swatches', []) || []).join(', '), '#7a3b2e, #d8a05a');
+      // Dress-code colors — visual picker (no hex typing). Same swatches[]
+      // shape persists, so the public page renders identically.
+      let swatches = (get(cfg, 'dressCode.swatches', []) || []).slice();
+      const dcSw = document.createElement('div');
+      dcSw.style.cssText = 'display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:2px;';
+      function drawSwatches() {
+        dcSw.textContent = '';
+        swatches.forEach((hex, i) => {
+          const wrap = document.createElement('span');
+          wrap.style.cssText = 'position:relative;display:inline-block;';
+          const pick = document.createElement('input');
+          pick.type = 'color'; pick.value = hex || '#c45a3a';
+          pick.title = 'Tap to change colour';
+          // Make the native color input render as a clean round chip.
+          pick.style.cssText = 'width:44px;height:44px;border:2px solid #fff;border-radius:50%;cursor:pointer;padding:0;box-shadow:0 1px 2px rgba(42,26,20,.15),0 0 0 1px var(--line);background:transparent;';
+          pick.addEventListener('input', e => { swatches[i] = e.target.value; });
+          const rm = document.createElement('button');
+          rm.type = 'button'; rm.textContent = '×';
+          rm.title = 'Remove this colour';
+          rm.style.cssText = 'position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:#b03022;color:#fff;font-weight:700;border:0;cursor:pointer;line-height:1;font-size:14px;';
+          rm.addEventListener('click', () => { swatches.splice(i, 1); drawSwatches(); });
+          wrap.appendChild(pick); wrap.appendChild(rm); dcSw.appendChild(wrap);
+        });
+        const add = document.createElement('button');
+        add.type = 'button'; add.textContent = '+ Add colour';
+        add.className = 'btn btn-ghost';
+        add.style.cssText += ';padding:8px 14px;font-size:13px;';
+        add.addEventListener('click', () => { swatches.push('#c45a3a'); drawSwatches(); });
+        dcSw.appendChild(add);
+      }
+      drawSwatches();
       const parking = area(get(cfg, 'parking.note', ''), 'Where to park, valet, drop-off point…', 3);
       const faq = area((cfg.faq || []).map(f => `${esc(f.q)} || ${esc(f.a)}`).join('\n'),
         'Is there a shuttle? || Yes, from the hotel lobby at 2 PM.', 4);
@@ -4606,7 +4636,7 @@
         ]},
         { title: 'Details', nodes: [
           row('Dress code', '', dcNote),
-          row('Dress code colors', 'Comma-separated hex codes', dcSw),
+          row('Dress code colours', 'Tap each chip to pick a shade — guests see these on the site', dcSw),
           row('Parking & directions', '', parking),
         ]},
         { title: 'Gallery', nodes: [
@@ -4708,7 +4738,7 @@
           story: { label: storyLabel.value.trim(), body: storyBody.value },
           schedule: parseList(sched.value, '|', ['time', 'label']),
           venue: parseList(venues.value, '|', ['name', 'address']).map(v => ({ name: v.name, address: v.address, mapQuery: v.address })),
-          dressCode: { note: dcNote.value.trim(), swatches: dcSw.value.split(',').map(s => s.trim()).filter(Boolean) },
+          dressCode: { note: dcNote.value.trim(), swatches: swatches.slice() },
           parking: { note: parking.value },
           gallery: { images: gallery },
           faq: parseList(faq.value, '||', ['q', 'a']),
