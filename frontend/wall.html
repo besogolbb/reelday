@@ -3256,7 +3256,7 @@
   }
 
   function updateCaption(item) {
-    const name = (item.uploader_name || 'Panauhin').toUpperCase();
+    const name = item.uploader_name || 'Panauhin';
     let html = `<span class="uploader-name">${name}</span>`;
     const t = formatTime(item.created_at);
     if (t) html += `<span class="uploader-sep"> • </span><span class="uploader-time">${t}</span>`;
