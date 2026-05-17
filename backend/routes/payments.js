@@ -78,23 +78,34 @@ async function applyTierUpgrade(db, { userId, tier, slug }) {
   await db.query(updateSql, params);
 
   if (slug) {
-    // Re-stamp the event with the new plan's expiry windows.
+    // Re-stamp the event with the new plan's expiry windows. Anchor on
+    // the event's actual date — NOT payment time. Otherwise an event
+    // scheduled 30 days out gets a window that closes ~days after
+    // payment (e.g. Dalisay's 7-day window expires 23 days before the
+    // celebration). Falls back to NOW only when the event has no date
+    // set, which preserves the original behaviour for date-less events.
     // The WHERE clause includes user_id so a crafted webhook payload
     // (or metadata.slug pointing at someone else's event) can't upgrade
     // an event the buyer doesn't actually own.
-    const stampDate          = new Date();
-    const galleryExpiresAt   = galleryExpiryFor(plan.id, stampDate);
-    const uploadWindowEndsAt = uploadWindowEndFor(plan.id, stampDate);
-
-    await db.query(
-      `UPDATE events
-         SET is_paid               = true,
-             plan                  = $2,
-             gallery_expires_at    = $3,
-             upload_window_ends_at = $4
-       WHERE slug = $1 AND user_id = $5`,
-      [slug, plan.id, galleryExpiresAt, uploadWindowEndsAt, userId],
+    const { rows: evRows } = await db.query(
+      `SELECT event_date FROM events WHERE slug = $1 AND user_id = $2`,
+      [slug, userId],
     );
+    if (evRows.length) {
+      const stampDate          = evRows[0].event_date || new Date();
+      const galleryExpiresAt   = galleryExpiryFor(plan.id, stampDate);
+      const uploadWindowEndsAt = uploadWindowEndFor(plan.id, stampDate);
+
+      await db.query(
+        `UPDATE events
+           SET is_paid               = true,
+               plan                  = $2,
+               gallery_expires_at    = $3,
+               upload_window_ends_at = $4
+         WHERE slug = $1 AND user_id = $5`,
+        [slug, plan.id, galleryExpiresAt, uploadWindowEndsAt, userId],
+      );
+    }
   }
 }
 

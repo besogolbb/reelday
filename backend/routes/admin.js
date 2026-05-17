@@ -1,4 +1,5 @@
 import { timingSafeEqual } from 'crypto';
+import { resolvePlan, galleryExpiryFor, uploadWindowEndFor } from '../lib/plans.js';
 
 // Admin gate: every /admin/* route must present `Authorization: Bearer <ADMIN_TOKEN>`
 // matching the env var. Compared via timingSafeEqual to defeat timing oracles.
@@ -271,6 +272,98 @@ export default async function adminRoutes(fastify) {
     }
 
     return { success: true };
+  });
+
+  // POST /api/admin/events/:slug/extend
+  // Recovery tool for the "upload window already closed" case (see
+  // payments.js — historically the recompute anchored on payment time
+  // rather than event_date, so many paid events ended up with windows
+  // that closed before the celebration). Four mutually-exclusive modes:
+  //   { restamp:true } — re-stamp from the owner's CURRENT plan, anchored
+  //     to event_date (or NOW if absent). The magic-bullet fix for events
+  //     stuck with stale stamps; updates events.plan too.
+  //   { until:'2026-12-31T23:59:59Z' } — set the chosen stamp(s) to this
+  //     absolute timestamp.
+  //   { days:N } — set the chosen stamp(s) to event_date + N days
+  //     (or NOW + N days if event_date is null).
+  //   { clear:true } — NULL the chosen stamp(s); the gate then skips
+  //     entirely (effectively "no expiry").
+  // `mode` ('window' | 'gallery' | 'both', default 'both') chooses which
+  // column(s) the until/days/clear actions touch; `restamp` always
+  // updates both, since it's a re-stamp.
+  //
+  // NOTE: uploads.js caches the event-validation lookup for ~10s
+  // per slug. Effects on guest uploads can lag by that much. Acceptable
+  // for a manual admin action; revisit if it ever feels too slow.
+  fastify.post('/admin/events/:slug/extend', async (request, reply) => {
+    const { slug } = request.params;
+    const body = request.body ?? {};
+    const mode = body.mode || 'both';
+    if (!['window', 'gallery', 'both'].includes(mode)) {
+      return reply.status(400).send({ error: true, message: 'mode must be window | gallery | both' });
+    }
+
+    // ── Mode A: re-stamp from owner's current plan ──
+    if (body.restamp === true) {
+      const { rows } = await fastify.db.query(
+        `SELECT e.id, e.event_date, COALESCE(u.subscription_tier, 'tala') AS tier
+           FROM events e LEFT JOIN users u ON u.id = e.user_id
+          WHERE e.slug = $1`,
+        [slug],
+      );
+      if (!rows.length) return reply.status(404).send({ error: true, message: 'Event not found' });
+      const plan      = resolvePlan(rows[0].tier);
+      const stampDate = rows[0].event_date || new Date();
+      const win       = uploadWindowEndFor(plan.id, stampDate);
+      const gal       = galleryExpiryFor(plan.id, stampDate);
+      const { rows: out } = await fastify.db.query(
+        `UPDATE events
+            SET plan                  = $2,
+                upload_window_ends_at = $3,
+                gallery_expires_at    = $4
+          WHERE slug = $1
+          RETURNING slug, plan, event_date, upload_window_ends_at, gallery_expires_at`,
+        [slug, plan.id, win, gal],
+      );
+      return { success: true, event: out[0], applied: { restamp: true, plan: plan.id } };
+    }
+
+    // ── Mode B/C/D: until / days / clear ──
+    let target;
+    if (body.clear === true) {
+      target = null;
+    } else if (typeof body.until === 'string') {
+      const d = new Date(body.until);
+      if (Number.isNaN(d.getTime())) {
+        return reply.status(400).send({ error: true, message: 'until must be a valid ISO date' });
+      }
+      target = d.toISOString();
+    } else if (Number.isInteger(body.days) && body.days > 0) {
+      const { rows } = await fastify.db.query(`SELECT event_date FROM events WHERE slug = $1`, [slug]);
+      if (!rows.length) return reply.status(404).send({ error: true, message: 'Event not found' });
+      const base = rows[0].event_date ? new Date(rows[0].event_date) : new Date();
+      base.setUTCDate(base.getUTCDate() + body.days);
+      target = base.toISOString();
+    } else {
+      return reply.status(400).send({
+        error: true,
+        message: 'Provide one of: restamp:true, until (ISO string), days (positive integer), or clear:true',
+      });
+    }
+
+    const cols = [];
+    if (mode === 'window' || mode === 'both') cols.push('upload_window_ends_at');
+    if (mode === 'gallery' || mode === 'both') cols.push('gallery_expires_at');
+    const sets = cols.map((c, i) => `${c} = $${i + 2}`).join(', ');
+    const params = [slug, ...cols.map(() => target)];
+
+    const { rows } = await fastify.db.query(
+      `UPDATE events SET ${sets} WHERE slug = $1
+       RETURNING slug, event_date, upload_window_ends_at, gallery_expires_at`,
+      params,
+    );
+    if (!rows.length) return reply.status(404).send({ error: true, message: 'Event not found' });
+    return { success: true, event: rows[0], applied: { mode, target } };
   });
 
   // ── Users ───────────────────────────────────────────────
