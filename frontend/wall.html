@@ -653,6 +653,17 @@
       box-shadow: 0 0 0 4px rgba(240,163,122,.25);
     }
 
+    /* Current-slide marker — deep maroon ring with a slow breathing
+       halo so guests can locate "you are here" inside the loop. */
+    .upcoming-thumb.active {
+      border: 3px solid #7a1f2b;
+      animation: activeThumbPulse 2.2s ease-in-out infinite;
+    }
+    @keyframes activeThumbPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(122,31,43,.55), 0 0 14px rgba(122,31,43,.25); }
+      50%      { box-shadow: 0 0 0 6px rgba(122,31,43,0),  0 0 22px rgba(122,31,43,.40); }
+    }
+
     /* Reusable scrim — darkens the bottom of a label so white text
        stays readable on bright/busy media. Bottom-to-top gradient so
        the top edge fades cleanly into the photo without a hard line. */
@@ -688,7 +699,19 @@
       pointer-events: none;
     }
 
-    .caption { flex: 1 1 auto; min-width: 0; max-width: none; padding-right: 24px; }
+    .caption { flex: 1 1 auto; min-width: 0; max-width: 500px; padding-right: 24px; }
+
+    /* Long messages (>100 chars) get a softer scale-down so they wrap
+       cleanly inside the 500px column instead of barreling across the
+       subject's face. Line-clamp still caps at 3 lines downstream.
+       Body-scoped to outrank the body.is-portrait / is-landscape rules
+       below that also set caption blockquote font-size. */
+    body.is-portrait  .caption.cap-long blockquote,
+    body.is-landscape .caption.cap-long blockquote,
+    .caption.cap-long blockquote {
+      font-size: clamp(1.8rem, 2vw, 2.6rem);
+      line-height: 1.3;
+    }
 
     /* ── Guest name / timestamp — naked small-caps sans-serif ───────── */
     .caption .uploader {
@@ -701,7 +724,7 @@
       text-shadow:
         0 1px 3px rgba(0,0,0,.85),
         0 2px 10px rgba(0,0,0,.60);
-      transition: opacity .5s ease;
+      transition: opacity .6s ease, transform .6s cubic-bezier(.2,.8,.2,1);
     }
     .caption .uploader .uploader-name {
       font-size: clamp(24px, 2.6vw, 38px);
@@ -731,7 +754,7 @@
         0 3px 14px rgba(0,0,0,.85),
         0 8px 32px rgba(0,0,0,.70);
       margin: 0; padding-bottom: .15em;
-      transition: opacity .5s ease;
+      transition: opacity .6s ease, transform .6s cubic-bezier(.2,.8,.2,1);
       display: -webkit-box;
       -webkit-line-clamp: 3;
       -webkit-box-orient: vertical;
@@ -739,7 +762,7 @@
     }
 
     .caption.fade .uploader,
-    .caption.fade blockquote { opacity: 0; }
+    .caption.fade blockquote { opacity: 0; transform: translateY(14px); }
 
     /* ── Portrait + Landscape: explicit shadows so both modes render identically ── */
     body.is-portrait .caption .uploader,
@@ -2736,9 +2759,14 @@
       tryPlayAudio(inAud);
       currentIsAudio = true;
       currentIsVideo = false;
-      // Caption still shows name even for audio
+      // Caption still shows name even for audio. Swap text early but
+      // hold the fade-up until the media has had a moment to read, so
+      // the words rise after the moment rather than landing on top of it.
       caption.classList.add('fade');
-      setTimeout(() => { updateCaption(item); caption.classList.remove('fade'); }, 500);
+      setTimeout(() => {
+        updateCaption(item);
+        setTimeout(() => caption.classList.remove('fade'), 500);
+      }, 500);
       if (!reuseActive) {
         outLayer.classList.add('out');
         activeLayer = activeLayer === 'A' ? 'B' : 'A';
@@ -2928,11 +2956,13 @@
       outLayer.classList.add('out');
     }
 
-    // Fade caption out, swap text, fade in
+    // Fade caption out, swap text, then hold an extra beat before
+    // letting the new text fade-up — so the photo lands first and
+    // the caption rises after, instead of arriving simultaneously.
     caption.classList.add('fade');
     setTimeout(() => {
       updateCaption(item);
-      caption.classList.remove('fade');
+      setTimeout(() => caption.classList.remove('fade'), 500);
     }, 500);
 
     // Update upcoming strip
@@ -3183,12 +3213,13 @@
     const msg = (item.message || '').trim();
     capQuote.textContent = msg;
 
-    caption.classList.remove('cap-meaningful', 'cap-subtle', 'no-caption');
+    caption.classList.remove('cap-meaningful', 'cap-subtle', 'no-caption', 'cap-long');
     if (!msg) {
       caption.classList.add('no-caption');
     } else {
       const cls = captionEmphasis(msg);
       if (cls) caption.classList.add(cls);
+      if (msg.length > 100) caption.classList.add('cap-long');
     }
   }
 
@@ -3291,15 +3322,20 @@
   function updateUpcoming(idx) {
     if (items.length < 2) { upcomingCol.innerHTML = ''; return; }
 
-    const count = Math.min(4, items.length - 1);
+    // Strip now shows the CURRENT slide first (marked .active) so guests
+    // can see "you are here" in the loop, followed by the next 3.
+    const count = Math.min(4, items.length);
     upcomingCol.innerHTML = '';
     for (let i = 0; i < count; i++) {
-      const item = items[(idx + 1 + i) % items.length];
+      const item = items[(idx + i) % items.length];
       const div  = document.createElement('div');
-      div.className = 'upcoming-thumb' + (i === 0 ? ' next' : '');
+      let cls = 'upcoming-thumb';
+      if (i === 0) cls += ' active';
+      else if (i === 1) cls += ' next';
+      div.className = cls;
       const mediaUrl = upcomingThumbUrl(item, 320);
       div.style.backgroundImage = mediaUrl ? `url('${mediaUrl}')` : 'none';
-      const target = idx + 1 + i;
+      const target = idx + i;
       div.onclick = (e) => {
         e.stopPropagation();
         goTo(target);
