@@ -521,11 +521,14 @@
       text-transform: uppercase; color: var(--accent);
       margin: 0 0 14px;
     }
+    /* auto-fit so the column count matches the *card's* width, not
+       the viewport. With two venues side-by-side each card is ~480 px
+       and the previous 3-col viewport breakpoint clipped the third
+       link. Now: cards are at least 160 px and as many fit as can. */
     .es-stays-list {
       display: grid; gap: 10px;
-      grid-template-columns: 1fr;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
     }
-    @media (min-width: 520px) { .es-stays-list { grid-template-columns: 1fr 1fr 1fr; } }
     .es-stay {
       display: flex; align-items: center; gap: 12px;
       padding: 12px 14px;
