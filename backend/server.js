@@ -23,6 +23,7 @@ import webhookRoutes from './routes/webhooks.js';
 import authRoutes from './routes/auth.js';
 import adminRoutes from './routes/admin.js';
 import presenceRoutes from './routes/presence.js';
+import eventSiteRoutes, { renderEventSitePage } from './routes/event-site.js';
 import { reconcilePendingTranscodes } from './lib/videoTranscode.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -165,6 +166,7 @@ await fastify.register(paymentRoutes, { prefix: '/api' });
 await fastify.register(webhookRoutes, { prefix: '/api' });
 await fastify.register(authRoutes,    { prefix: '/api' });
 await fastify.register(adminRoutes,   { prefix: '/api' });
+await fastify.register(eventSiteRoutes,{ prefix: '/api' });
 await fastify.register(presenceRoutes,{ prefix: '' });
 
 // Serve index.html at root
@@ -191,6 +193,26 @@ fastify.get('/upload/:slug', (_request, reply) => {
 // Serve wall.html for any /wall/:slug path
 fastify.get('/wall/:slug', (_request, reply) => {
   reply.sendFile('wall.html');
+});
+
+// Event Website (Dalisay/Hiraya) — /e/:slug. Not a plain sendFile: the
+// page needs OG/theme/noindex injected into the initial HTML so Viber/
+// Messenger/FB crawlers (which don't run JS) see the cover card. The
+// render is cached per slug and busted on owner edit (see event-site.js),
+// so a popular event is a buffer send with zero DB. Gate failures return
+// a bare 404 — no leak, no half-render.
+fastify.get('/e/:slug', async (request, reply) => {
+  const res = await renderEventSitePage(fastify.db, request.params.slug);
+  if (res.html) {
+    return reply.type('text/html; charset=utf-8').send(res.html);
+  }
+  if (res.unavailable) {
+    return reply.code(503).type('text/html').send('<h1>Event site temporarily unavailable</h1>');
+  }
+  return reply
+    .code(404)
+    .type('text/html')
+    .send('<!doctype html><meta charset="utf-8"><title>Not found</title><body style="font-family:system-ui;text-align:center;padding:4rem"><h1>This event page isn\'t available</h1><p><a href="/">Go to Reelday</a></p>');
 });
 
 // Serve dashboard.html at /dashboard (slug passed as ?slug=)
