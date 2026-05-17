@@ -756,7 +756,7 @@
       grid-template-columns: 1fr;
     }
     @media (min-width: 720px) { .es-registry-grid { grid-template-columns: 1fr 1fr; } }
-    .es-reg-link, .es-reg-cash, .es-reg-honey {
+    .es-reg-link, .es-reg-cash {
       position: relative;
       background:
         linear-gradient(180deg, rgba(255,255,255,.9) 0%, rgba(244,234,217,.7) 100%);
@@ -841,40 +841,6 @@
       width: 120px; height: 120px;
       object-fit: contain; display: block;
       image-rendering: -webkit-optimize-contrast;
-    }
-
-    /* Honeymoon feature card spans full width */
-    .es-reg-honey {
-      grid-column: 1 / -1;
-      text-align: center;
-      padding: 32px 28px;
-      background:
-        repeating-linear-gradient(135deg, rgba(196,90,58,.025) 0 1px, transparent 1px 14px),
-        radial-gradient(120% 80% at 50% 0%, #fffaf0 0%, #fbf3e2 60%, #f5e9d1 100%);
-      border-color: rgba(196,90,58,.30);
-    }
-    .es-reg-honey .eyebrow {
-      font-family: var(--mono); font-size: 10.5px; letter-spacing: .32em;
-      text-transform: uppercase; color: var(--accent);
-      margin-bottom: 8px;
-    }
-    .es-reg-honey .title {
-      font-family: var(--display); font-size: 1.6rem; color: var(--ink);
-      margin: 0 0 12px; letter-spacing: -.005em;
-    }
-    .es-reg-honey .blurb {
-      max-width: 520px; margin: 0 auto 18px;
-      font-family: var(--display); font-style: italic;
-      color: var(--ink-soft); font-size: 1.05rem; line-height: 1.55;
-    }
-    .es-reg-honey .cta {
-      display: inline-flex; align-items: center; gap: 8px;
-      padding: 12px 26px; border-radius: 999px;
-      background: var(--accent); color: #fff;
-      font-family: var(--mono); font-size: 11px; font-weight: 700;
-      letter-spacing: .2em; text-transform: uppercase;
-      box-shadow: 0 10px 24px -8px rgba(196,90,58,.45);
-      cursor: pointer;
     }
 
     /* ── Good to know cards ────────────────────────────── */
@@ -1057,7 +1023,6 @@
       tapCopy:'Tap to copy',
       copied:'Copied',
       openLink:'Open',
-      contribute:'Contribute',
       days:'days', hrs:'hrs', min:'min', sec:'sec',
       scroll:'Scroll', mapsLink:'Open in Maps',
       eyebrowStory:'— in their own words —',
@@ -1804,8 +1769,7 @@
       if (reg && reg.enabled !== false) {
         var hasLinks = Array.isArray(reg.links) && reg.links.length;
         var hasCash  = Array.isArray(reg.cashFunds) && reg.cashFunds.length;
-        var hasHoney = reg.honeymoon && (reg.honeymoon.title || reg.honeymoon.blurb);
-        if (hasLinks || hasCash || hasHoney) {
+        if (hasLinks || hasCash) {
           addNav('registry', t('registry'));
           var wrap = el('div');
           if (reg.message) {
@@ -1887,32 +1851,6 @@
               }
               grid.appendChild(card);
             });
-          }
-
-          // Honeymoon feature card (full-width).
-          if (hasHoney) {
-            var hc = el('div', { class: 'es-reg-honey' });
-            hc.appendChild(el('div', { class: 'eyebrow', text: 'Honeymoon fund' }));
-            if (reg.honeymoon.title) hc.appendChild(el('div', { class: 'title', text: reg.honeymoon.title }));
-            if (reg.honeymoon.blurb) hc.appendChild(el('div', { class: 'blurb', text: reg.honeymoon.blurb }));
-            // If the host pointed at a cashFund by type, surface its
-            // copy button as the CTA — guests can contribute in one tap.
-            var ref = reg.honeymoon.fundRef &&
-              (reg.cashFunds || []).filter(function (f) { return f && f.type === reg.honeymoon.fundRef; })[0];
-            if (ref && ref.account) {
-              var cta = el('button', { type: 'button', class: 'cta' });
-              cta.appendChild(document.createTextNode(t('contribute') + ' via ' + (ref.label || ref.type)));
-              cta.addEventListener('click', function () {
-                var acct = String(ref.account);
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                  navigator.clipboard.writeText(acct).then(function () {
-                    cta.textContent = t('copied') + ' — ' + acct;
-                  });
-                }
-              });
-              hc.appendChild(cta);
-            }
-            grid.appendChild(hc);
           }
 
           wrap.appendChild(grid);

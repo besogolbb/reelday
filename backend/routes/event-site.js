@@ -346,12 +346,6 @@ export default async function eventSiteRoutes(fastify) {
           name:    safeStr(f?.name, 120),
           qrUrl:   safeHttpUrl(f?.qrUrl) || null,
         })).filter(f => f.account) : [],
-        honeymoon: (r.honeymoon && typeof r.honeymoon === 'object' &&
-                    (r.honeymoon.title || r.honeymoon.blurb)) ? {
-          title:   safeStr(r.honeymoon.title, 120),
-          blurb:   safeStr(r.honeymoon.blurb, 600),
-          fundRef: safeStr(r.honeymoon.fundRef, 30).toLowerCase(),
-        } : null,
       };
     }
 

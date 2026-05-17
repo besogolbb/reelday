@@ -4720,11 +4720,6 @@
         name:    f?.name    || '',
         qrUrl:   f?.qrUrl   || '',
       }));
-      const regHoney = {
-        title:   regInit.honeymoon?.title   || '',
-        blurb:   regInit.honeymoon?.blurb   || '',
-        fundRef: regInit.honeymoon?.fundRef || '',
-      };
 
       // Standalone enable toggle — built locally instead of via mk()
       // because mk() side-effects into the Guests step's togRow.
@@ -4841,7 +4836,6 @@
               f.label = found ? found[1] : f.label;
               labelIn.value = f.label;
             }
-            renderHoneyRefOptions();
           });
           const labelIn = document.createElement('input');
           labelIn.type = 'text'; labelIn.placeholder = 'Display name (e.g. "GCash" or "BPI Savings")';
@@ -4852,7 +4846,7 @@
           chrome.style.cssText = 'display:inline-flex;gap:4px;';
           chrome.appendChild(rowIconBtn('↑', 'Move up',   () => { arr_move(regCash, idx, idx - 1); renderCash(); }));
           chrome.appendChild(rowIconBtn('↓', 'Move down', () => { arr_move(regCash, idx, idx + 1); renderCash(); }));
-          chrome.appendChild(rowIconBtn('×', 'Remove',    () => { regCash.splice(idx, 1); renderCash(); renderHoneyRefOptions(); }));
+          chrome.appendChild(rowIconBtn('×', 'Remove',    () => { regCash.splice(idx, 1); renderCash(); }));
           top.appendChild(typeSel); top.appendChild(labelIn); top.appendChild(chrome);
           row.appendChild(top);
 
@@ -4909,34 +4903,9 @@
       addCashBtn.style.cssText = 'padding:10px 16px;background:transparent;border:1px dashed var(--line-2);border-radius:12px;font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.08em;color:var(--ink-soft);cursor:pointer;align-self:flex-start;';
       addCashBtn.addEventListener('click', () => {
         regCash.push({ type: 'gcash', label: 'GCash', account: '', name: '', qrUrl: '' });
-        renderCash(); renderHoneyRefOptions();
+        renderCash();
       });
       renderCash();
-
-      // ── Honeymoon sub-form ─────────────────────────────
-      const honeyTitle = document.createElement('input');
-      honeyTitle.type = 'text'; honeyTitle.value = regHoney.title;
-      honeyTitle.placeholder = 'e.g. Help us see Japan';
-      honeyTitle.style.cssText = 'padding:.55rem .75rem;border:1px solid var(--line-2);border-radius:var(--r);font-family:inherit;font-size:.9rem;background:#fff;color:var(--ink);outline:none;width:100%;box-sizing:border-box;';
-      const honeyBlurb = area(regHoney.blurb,
-        "A short sentence guests will see — e.g. \"We're saving for our honeymoon in Japan, and your support means the world.\"", 3);
-      const honeyRef = document.createElement('select');
-      honeyRef.style.cssText = 'padding:.55rem .75rem;border:1px solid var(--line-2);border-radius:var(--r);font-family:inherit;font-size:.9rem;background:#fff;color:var(--ink);outline:none;max-width:280px;';
-      function renderHoneyRefOptions() {
-        const prev = honeyRef.value;
-        honeyRef.textContent = '';
-        const none = document.createElement('option'); none.value = ''; none.textContent = '— No contribute button —';
-        honeyRef.appendChild(none);
-        regCash.forEach(f => {
-          if (!f.type) return;
-          const o = document.createElement('option');
-          o.value = f.type;
-          o.textContent = (f.label || f.type) + (f.account ? ' · ' + f.account : '');
-          honeyRef.appendChild(o);
-        });
-        honeyRef.value = prev || regHoney.fundRef || '';
-      }
-      renderHoneyRefOptions();
 
       // publish + view (last step)
       const pubLbl = document.createElement('label');
@@ -5008,9 +4977,6 @@
           (() => { const w = document.createElement('div'); w.style.marginBottom = '16px'; w.appendChild(addLinkBtn); return w; })(),
           row('Cash funds', 'GCash, Maya, bank accounts. Guests tap to copy the number; QR is optional.', cashBox),
           (() => { const w = document.createElement('div'); w.style.marginBottom = '16px'; w.appendChild(addCashBtn); return w; })(),
-          row('Honeymoon fund title', 'Leave blank to skip the honeymoon card.', honeyTitle),
-          row('Honeymoon blurb', '', honeyBlurb),
-          row('Honeymoon — Contribute via', 'Pick the cash fund the "Contribute" button points at.', honeyRef),
         ]},
         { title: 'Review & publish', nodes: [
           txt('Review, then publish. You can come back and edit anytime — saved changes go live immediately.', true),
@@ -5145,8 +5111,7 @@
           rsvpDeadline: rsvpDeadlineInput.value || null,
           registry: (() => {
             // Strip empty rows so a forgotten blank doesn't render as
-            // a hollow card on the public site. Honeymoon collapses to
-            // null when neither title nor blurb is set.
+            // a hollow card on the public site.
             const links = regLinks
               .map(l => ({ label: (l.label || '').trim(), url: (l.url || '').trim() }))
               .filter(l => l.url);
@@ -5159,19 +5124,11 @@
                 qrUrl:   (f.qrUrl   || '').trim() || null,
               }))
               .filter(f => f.account);
-            const ht = honeyTitle.value.trim();
-            const hb = honeyBlurb.value.trim();
-            const honeymoon = (ht || hb) ? {
-              title: ht,
-              blurb: hb,
-              fundRef: honeyRef.value || '',
-            } : null;
             return {
               enabled: regEnable.checked,
               message: regMsg.value.trim(),
               links,
               cashFunds,
-              honeymoon,
             };
           })(),
         };
