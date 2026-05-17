@@ -2352,11 +2352,7 @@
     }
   }
 
-  function escapeHtml(s) {
-    return String(s ?? '')
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-  }
+  // (escapeHtml is already defined earlier in this module — reusing it.)
 
   async function deleteCustomMusic(id) {
     if (!confirm('Remove this track?')) return;
