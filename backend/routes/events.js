@@ -2,14 +2,24 @@ import { generateQR } from '../utils/qr.js';
 import { resolvePlan, galleryExpiryFor, uploadWindowEndFor } from '../lib/plans.js';
 import { verifyToken } from '../plugins/auth.js';
 
-function makeSlug(coupleNames) {
-  const base = coupleNames
+// Sanitised, no-suffix slug from the couple/celebrant names. We try this
+// first; only when it collides with an existing event do we append a
+// random suffix (see the INSERT retry loop below). Empty/all-junk input
+// falls back to "event" so we never insert an empty slug.
+function baseSlug(coupleNames) {
+  const base = (coupleNames || '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')   // non-alphanum → dash
     .replace(/^-+|-+$/g, '')        // trim leading/trailing dashes
     .slice(0, 40);
-  const suffix = Math.random().toString(36).slice(2, 6); // 4 random chars
-  return `${base}-${suffix}`;
+  return base || 'event';
+}
+function randomSuffix() {
+  return Math.random().toString(36).slice(2, 6); // 4 alphanumerics ≈ 1.7M
+}
+// Postgres unique_violation on the slug uniqueness (constraint OR index).
+function isSlugCollision(err) {
+  return err && err.code === '23505' && /slug/i.test(err.constraint || err.detail || '');
 }
 
 /* Best-effort: pull a user from the Authorization header without
@@ -88,26 +98,53 @@ export default async function eventRoutes(fastify) {
     const galleryExpiresAt   = galleryExpiryFor(planForEvent.id, stampDate);
     const uploadWindowEndsAt = uploadWindowEndFor(planForEvent.id, stampDate);
 
-    const slug = makeSlug(couple_names);
-
-    const { rows } = await fastify.db.query(
-      `INSERT INTO events (
-         slug, couple_names, event_type, event_date, plan, user_id,
-         gallery_expires_at, upload_window_ends_at
-       )
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       RETURNING *`,
-      [
-        slug,
-        couple_names,
-        event_type ?? 'wedding',
-        event_date ?? null,
-        planForEvent.id,
-        userId,
-        galleryExpiresAt,
-        uploadWindowEndsAt,
-      ],
-    );
+    // Slug allocation: try the clean name first ("juan-and-maria"); only
+    // append a random suffix when that exact slug already exists. We
+    // attempt the INSERT and react to the Postgres unique_violation
+    // instead of checking-then-inserting, so concurrent creates with the
+    // same name can't both win the race.
+    const base = baseSlug(couple_names);
+    let slug = base;
+    let inserted = null;
+    let lastErr = null;
+    for (let attempt = 0; attempt < 6; attempt++) {
+      try {
+        const { rows } = await fastify.db.query(
+          `INSERT INTO events (
+             slug, couple_names, event_type, event_date, plan, user_id,
+             gallery_expires_at, upload_window_ends_at
+           )
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+           RETURNING *`,
+          [
+            slug,
+            couple_names,
+            event_type ?? 'wedding',
+            event_date ?? null,
+            planForEvent.id,
+            userId,
+            galleryExpiresAt,
+            uploadWindowEndsAt,
+          ],
+        );
+        inserted = rows[0];
+        break;
+      } catch (err) {
+        if (isSlugCollision(err)) {
+          lastErr = err;
+          slug = `${base}-${randomSuffix()}`; // first collision + every subsequent retry
+          continue;
+        }
+        throw err;
+      }
+    }
+    if (!inserted) {
+      fastify.log.warn({ base, lastErr: lastErr?.message }, 'Slug allocation exhausted retries');
+      return reply.status(500).send({
+        error: true,
+        message: 'Could not allocate a unique URL — please try a slightly different name.',
+      });
+    }
 
     // Decrement events_remaining if it's set (paid-tier credit pool)
     if (user.events_remaining !== null && user.events_remaining !== undefined) {
@@ -117,7 +154,7 @@ export default async function eventRoutes(fastify) {
       );
     }
 
-    const event   = rows[0];
+    const event = inserted;
 
     // Same logic as the regen endpoint: pin to APP_PUBLIC_HOST in
     // production so the QR reaches the canonical domain regardless of
