@@ -139,3 +139,15 @@ CREATE INDEX IF NOT EXISTS idx_music_tracks_playlist ON music_tracks(playlist_id
 
 ALTER TABLE events ADD COLUMN IF NOT EXISTS music_playlist_id UUID REFERENCES music_playlists(id);
 ALTER TABLE events ADD COLUMN IF NOT EXISTS music_enabled     BOOLEAN DEFAULT true;
+
+-- ── Per-event custom music (Phase 2) ──
+-- When a host uploads their own tracks via the dashboard, rows get inserted
+-- here with event_id + uploaded_by_user_id set. When both are NULL the row
+-- is a curated-library track (existing behaviour). If an event has ANY
+-- custom tracks, the wall plays those instead of the picked curated
+-- playlist (the dashboard UI says so explicitly).
+ALTER TABLE music_tracks ADD COLUMN IF NOT EXISTS event_id            UUID REFERENCES events(id) ON DELETE CASCADE;
+ALTER TABLE music_tracks ADD COLUMN IF NOT EXISTS uploaded_by_user_id UUID REFERENCES users(id);
+ALTER TABLE music_tracks ADD COLUMN IF NOT EXISTS r2_key              TEXT;          -- needed for delete-from-R2 on track removal
+ALTER TABLE music_tracks ADD COLUMN IF NOT EXISTS original_filename   VARCHAR(255);  -- for display in the dashboard list
+CREATE INDEX IF NOT EXISTS idx_music_tracks_event ON music_tracks(event_id, position);

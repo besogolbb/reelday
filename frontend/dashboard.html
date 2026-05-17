@@ -1749,6 +1749,20 @@
             Plays on loop on the wall display. Automatically lowers volume when a guest video or voice message plays. Host taps the wall once to start sound.
           </p>
         </div>
+
+        <!-- Custom-music upload section (Sinag+ feature) -->
+        <div class="details-field" id="custom-music-section" style="border-top:1px solid #eee;padding-top:14px">
+          <label>Your uploaded music <span class="opt">(takes priority over playlist above)</span></label>
+          <div id="custom-music-list" style="display:flex;flex-direction:column;gap:6px;margin:8px 0"></div>
+          <div id="custom-music-upload-row">
+            <input id="custom-music-input" type="file" accept="audio/mpeg,audio/mp3,audio/mp4,audio/m4a,audio/x-m4a,audio/wav,audio/x-wav,audio/ogg,audio/webm,audio/aac" multiple style="display:none" />
+            <button type="button" class="btn" id="btn-custom-music-pick">+ Add music file</button>
+            <span id="custom-music-status" class="details-sub" style="margin-left:10px"></span>
+          </div>
+          <p class="details-sub" style="margin-top:8px;font-size:11px;line-height:1.4">
+            By uploading, you confirm you own or have rights to use this audio at your event. Max 25 MB per file, up to 20 tracks. Supported: MP3, M4A, WAV, OGG, AAC.
+          </p>
+        </div>
         <button type="button" class="btn btn-accent details-save" id="btn-save-details">
           Save details
         </button>
@@ -2239,6 +2253,7 @@
       // Music playlist picker populates async — current selection applied
       // once playlists have loaded.
       loadMusicPicker(event.music_playlist_id);
+      loadCustomMusicList();
     }
   }
 
@@ -2270,6 +2285,181 @@
       console.warn('Music picker load failed', e);
     }
   }
+
+  // ── Custom-music upload (Sinag+) ─────────────────────────
+  // Lists the host's uploaded tracks for this event, with delete.
+  // Upload flow: presigned URL → PUT to R2 → POST /complete to register
+  // the row. Audio duration probed client-side via an offline <audio>.
+  function fmtDuration(sec) {
+    if (!sec || sec < 1) return '';
+    const m = Math.floor(sec / 60);
+    const s = Math.round(sec % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  }
+
+  async function loadCustomMusicList() {
+    const listEl   = document.getElementById('custom-music-list');
+    const section  = document.getElementById('custom-music-section');
+    const uploadRow = document.getElementById('custom-music-upload-row');
+    const token    = localStorage.getItem('reelday_token');
+    if (!listEl || !token) return;
+    try {
+      const res = await fetch(`/api/events/${slug}/music/uploads`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const { tracks = [], custom_music_unlocked } = await res.json();
+
+      // Plan gate — show the section but disable upload for Tala.
+      if (uploadRow) {
+        if (!custom_music_unlocked) {
+          uploadRow.innerHTML = `
+            <span style="color:#666;font-size:12px">
+              🔒 Upload your own music with a <strong>Sinag plan</strong> or higher.
+              <a href="/account" style="color:#c45a3a">Upgrade</a>
+            </span>
+          `;
+        }
+      }
+
+      listEl.innerHTML = '';
+      if (!tracks.length) {
+        listEl.innerHTML = `<div class="details-sub" style="font-style:italic;color:#999">
+          No custom tracks uploaded yet. Use the playlist above, or add files below.
+        </div>`;
+        return;
+      }
+      for (const t of tracks) {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;background:#f5f5f5;border-radius:6px;font-size:13px';
+        row.innerHTML = `
+          <div style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+            🎵 ${escapeHtml(t.title)}
+            ${t.duration_s ? `<span style="color:#888;margin-left:6px">${fmtDuration(t.duration_s)}</span>` : ''}
+          </div>
+          <button type="button" data-track-id="${t.id}" class="btn-music-delete"
+                  style="background:none;border:none;color:#c00;cursor:pointer;font-size:18px;padding:0 4px"
+                  title="Remove this track">×</button>
+        `;
+        listEl.appendChild(row);
+      }
+      // Wire delete buttons
+      listEl.querySelectorAll('.btn-music-delete').forEach(btn => {
+        btn.addEventListener('click', () => deleteCustomMusic(btn.dataset.trackId));
+      });
+    } catch (e) {
+      console.warn('Custom music list load failed', e);
+    }
+  }
+
+  function escapeHtml(s) {
+    return String(s ?? '')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  async function deleteCustomMusic(id) {
+    if (!confirm('Remove this track?')) return;
+    const token = localStorage.getItem('reelday_token');
+    try {
+      const res = await fetch(`/api/events/${slug}/music/uploads/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!res.ok) { showToast('Could not remove track.'); return; }
+      await loadCustomMusicList();
+    } catch { showToast('Could not remove track.'); }
+  }
+
+  // Probe audio duration locally before sending to server — avoids
+  // making the backend parse audio metadata.
+  function probeAudioDuration(file) {
+    return new Promise(resolve => {
+      const url = URL.createObjectURL(file);
+      const a = new Audio();
+      a.preload = 'metadata';
+      a.src = url;
+      const done = (d) => { URL.revokeObjectURL(url); resolve(d); };
+      a.addEventListener('loadedmetadata', () => done(Math.round(a.duration) || 0), { once: true });
+      a.addEventListener('error', () => done(0), { once: true });
+      setTimeout(() => done(0), 5000); // 5s timeout
+    });
+  }
+
+  async function uploadOneTrack(file) {
+    const token = localStorage.getItem('reelday_token');
+    const statusEl = document.getElementById('custom-music-status');
+    if (file.size > 25 * 1024 * 1024) {
+      throw new Error(`${file.name}: file is too big (max 25 MB)`);
+    }
+    statusEl.textContent = `Uploading ${file.name}…`;
+
+    // 1. Get presigned URL
+    const presRes = await fetch(`/api/events/${slug}/music/upload-url`, {
+      method:  'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ filename: file.name, contentType: file.type || 'audio/mpeg' }),
+    });
+    if (!presRes.ok) {
+      const err = await presRes.json().catch(() => ({}));
+      throw new Error(err.message || `${file.name}: upload URL failed`);
+    }
+    const { uploadUrl, fileKey } = await presRes.json();
+
+    // 2. Upload to R2 directly
+    const putRes = await fetch(uploadUrl, {
+      method:  'PUT',
+      headers: { 'Content-Type': file.type || 'audio/mpeg' },
+      body:    file,
+    });
+    if (!putRes.ok) throw new Error(`${file.name}: R2 upload failed`);
+
+    // 3. Probe duration + register in DB
+    const duration_s = await probeAudioDuration(file);
+    const title = file.name.replace(/\.[^.]+$/, '').slice(0, 160);
+    const compRes = await fetch(`/api/events/${slug}/music/complete`, {
+      method:  'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        fileKey, title, original_filename: file.name, duration_s,
+      }),
+    });
+    if (!compRes.ok) {
+      const err = await compRes.json().catch(() => ({}));
+      throw new Error(err.message || `${file.name}: register failed`);
+    }
+  }
+
+  document.getElementById('btn-custom-music-pick')?.addEventListener('click', () => {
+    document.getElementById('custom-music-input')?.click();
+  });
+
+  document.getElementById('custom-music-input')?.addEventListener('change', async (e) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = ''; // allow re-picking the same file
+    if (!files.length) return;
+    const statusEl  = document.getElementById('custom-music-status');
+    const pickBtn   = document.getElementById('btn-custom-music-pick');
+    if (pickBtn) pickBtn.disabled = true;
+    let okCount = 0, failCount = 0;
+    for (const f of files) {
+      try { await uploadOneTrack(f); okCount++; }
+      catch (err) { failCount++; showToast(err.message || 'Upload failed'); }
+    }
+    if (statusEl) {
+      statusEl.textContent = failCount
+        ? `Uploaded ${okCount} of ${files.length} (${failCount} failed)`
+        : `Uploaded ${okCount} track${okCount === 1 ? '' : 's'}.`;
+    }
+    if (pickBtn) pickBtn.disabled = false;
+    await loadCustomMusicList();
+  });
 
   // ── Video messages burst (now controlled from the Video messages tab) ─
   // Returns the ordered list of video-message uploads (most recent first).

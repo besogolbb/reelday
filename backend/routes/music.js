@@ -1,40 +1,121 @@
 /**
- * Background music for the wall (Phase 1).
+ * Background music for the wall.
  *
- * Public:
- *   GET  /api/events/:slug/music         — wall fetches this once on load
+ * Phase 1 — curated playlists:
+ *   GET  /api/events/:slug/music             — wall fetches this on load
+ *   GET  /api/music/playlists                — dashboard picker options
  *
- * Host (auth required):
- *   GET  /api/music/playlists            — picker options for the dashboard
+ * Phase 2 — per-event uploads (Sinag+):
+ *   POST   /api/events/:slug/music/upload-url    — presigned PUT to R2
+ *   POST   /api/events/:slug/music/complete      — register the track in DB
+ *   GET    /api/events/:slug/music/uploads       — list the host's tracks
+ *   DELETE /api/events/:slug/music/uploads/:id   — remove one
  *
- * The wall calls /events/:slug/music once when it loads and again whenever
- * the host edits the event. Tracks are absolute R2 public URLs; the wall
- * streams them directly from Cloudflare. No backend involvement after the
- * initial JSON payload — keeps perf baselines untouched.
- *
- * Music is intentionally NOT plan-gated in Phase 1: every event gets it for
- * free so the launch wall feels alive. If we later want it to be a Sinag+
- * differentiator, gate the GET endpoint by `plan.features.music`.
+ * When an event has ANY custom uploaded tracks, the wall plays those
+ * instead of the picked curated playlist (the dashboard UI says so
+ * explicitly). This keeps the wall code simple — one playlist per event,
+ * either fully curated or fully custom.
  */
 
-export default async function musicRoutes(fastify) {
-  // Public — wall reads the active playlist for an event.
-  fastify.get('/events/:slug/music', async (request, reply) => {
-    const { slug } = request.params;
+import { randomUUID } from 'crypto';
+import { PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { resolvePlan } from '../lib/plans.js';
 
-    const { rows: eventRows } = await fastify.db.query(
-      `SELECT id, music_playlist_id, music_enabled
-         FROM events
-        WHERE slug = $1 AND is_active = true`,
+const MAX_TRACK_BYTES = 25 * 1024 * 1024;   // 25 MB per track (covers ~25 min of 128 kbps MP3)
+const MAX_TRACKS_PER_EVENT = 20;            // cap so a single event can't fill the bucket
+const ALLOWED_AUDIO_TYPES = new Set([
+  'audio/mpeg', 'audio/mp3',
+  'audio/mp4', 'audio/m4a', 'audio/x-m4a',
+  'audio/wav', 'audio/x-wav',
+  'audio/ogg', 'audio/webm',
+  'audio/aac',
+]);
+
+export default async function musicRoutes(fastify) {
+  function publicMediaUrl(key) {
+    const base = (process.env.R2_PUBLIC_URL || 'https://media.reelday.ph').replace(/\/+$/, '');
+    return `${base}/${String(key).replace(/^\/+/, '')}`;
+  }
+
+  // Load event + owner plan. If `requireOwner`, also asserts request.user.id
+  // owns the event. Returns { event, plan } or sends a response and null.
+  async function loadEvent(slug, request, reply, { requireOwner = false, requireCustomMusic = false } = {}) {
+    const { rows } = await fastify.db.query(
+      `SELECT e.id, e.is_active, e.user_id, e.music_playlist_id, e.music_enabled,
+              u.subscription_tier
+         FROM events e
+         LEFT JOIN users u ON u.id = e.user_id
+        WHERE e.slug = $1`,
       [slug],
     );
-    if (!eventRows.length) {
-      return reply.status(404).send({ error: true, message: 'Event not found' });
+    if (!rows.length || rows[0].is_active === false) {
+      reply.status(404).send({ error: true, message: 'Event not found' });
+      return null;
     }
-    const event = eventRows[0];
+    const event = rows[0];
+    const plan  = resolvePlan(event.subscription_tier || 'tala');
 
-    // No playlist picked, or host explicitly disabled music for this event.
-    if (!event.music_playlist_id || event.music_enabled === false) {
+    if (requireOwner) {
+      if (!request.user?.id) {
+        reply.status(401).send({ error: true, message: 'Authentication required' });
+        return null;
+      }
+      if (event.user_id !== request.user.id) {
+        reply.status(403).send({ error: true, message: 'Not your event' });
+        return null;
+      }
+    }
+    if (requireCustomMusic && !plan.features?.customMusic) {
+      reply.status(403).send({
+        error: true,
+        code: 'custom_music_locked',
+        message: 'Upload your own music with a Sinag plan or higher.',
+      });
+      return null;
+    }
+    return { event, plan };
+  }
+
+  // ── PHASE 1: curated playlists ────────────────────────────────
+
+  // Public — wall reads the active playlist for an event. When custom
+  // uploaded tracks exist, those take precedence over the curated pick.
+  fastify.get('/events/:slug/music', async (request, reply) => {
+    const ctx = await loadEvent(request.params.slug, request, reply, {});
+    if (!ctx) return;
+    const { event } = ctx;
+
+    if (event.music_enabled === false) {
+      reply.header('Cache-Control', 'no-store');
+      return { playlist: null };
+    }
+
+    // First: do we have ANY custom tracks for this event? If yes, use them.
+    const { rows: customRows } = await fastify.db.query(
+      `SELECT id, title, artist, file_url, duration_s, license_info
+         FROM music_tracks
+        WHERE event_id = $1
+        ORDER BY position ASC, created_at ASC`,
+      [event.id],
+    );
+    if (customRows.length) {
+      reply.header('Cache-Control', 'private, max-age=60');
+      return {
+        playlist: {
+          id:          'custom-' + event.id,
+          name:        'Your Uploaded Music',
+          mood:        'custom',
+          cover_color: '#7a4ad6',
+          description: 'Tracks you uploaded for this event',
+          tracks:      customRows,
+          is_custom:   true,
+        },
+      };
+    }
+
+    // Otherwise fall through to the curated playlist (if picked).
+    if (!event.music_playlist_id) {
       reply.header('Cache-Control', 'no-store');
       return { playlist: null };
     }
@@ -54,14 +135,11 @@ export default async function musicRoutes(fastify) {
     const { rows: trackRows } = await fastify.db.query(
       `SELECT id, title, artist, file_url, duration_s, license_info
          FROM music_tracks
-        WHERE playlist_id = $1
+        WHERE playlist_id = $1 AND event_id IS NULL
         ORDER BY position ASC, created_at ASC`,
       [playlist.id],
     );
 
-    // Cache for 5 min on the client — the wall only refetches on full reload,
-    // and playlist content rarely changes mid-event. Saves a few round-trips
-    // if the wall reloads.
     reply.header('Cache-Control', 'private, max-age=300');
     return {
       playlist: {
@@ -86,12 +164,145 @@ export default async function musicRoutes(fastify) {
            SELECT COUNT(*)::int AS track_count,
                   COALESCE(SUM(duration_s), 0)::int AS total_duration_s
              FROM music_tracks
-            WHERE playlist_id = p.id
+            WHERE playlist_id = p.id AND event_id IS NULL
          ) t ON true
         WHERE p.is_active = true
         ORDER BY p.position ASC, p.name ASC`,
     );
     reply.header('Cache-Control', 'private, max-age=60');
     return { playlists: rows };
+  });
+
+  // ── PHASE 2: per-event custom uploads ─────────────────────────
+
+  // Presigned PUT URL for the host to upload a music file directly to R2.
+  fastify.post('/events/:slug/music/upload-url', { preHandler: fastify.authenticate }, async (request, reply) => {
+    const ctx = await loadEvent(request.params.slug, request, reply, {
+      requireOwner: true, requireCustomMusic: true,
+    });
+    if (!ctx) return;
+
+    const { filename, contentType } = request.body ?? {};
+    if (!filename || typeof filename !== 'string') {
+      return reply.status(400).send({ error: true, message: 'filename is required' });
+    }
+    if (!contentType || !ALLOWED_AUDIO_TYPES.has(String(contentType).toLowerCase())) {
+      return reply.status(400).send({
+        error: true,
+        message: 'Only audio files are allowed (MP3, M4A, WAV, OGG, AAC).',
+      });
+    }
+
+    // Enforce track count cap before issuing a URL
+    const { rows: countRows } = await fastify.db.query(
+      `SELECT COUNT(*)::int AS n FROM music_tracks WHERE event_id = $1`,
+      [ctx.event.id],
+    );
+    if (countRows[0].n >= MAX_TRACKS_PER_EVENT) {
+      return reply.status(403).send({
+        error: true,
+        code: 'music_track_limit',
+        message: `Max ${MAX_TRACKS_PER_EVENT} custom tracks per event.`,
+      });
+    }
+
+    // Sanitise filename; keep extension so the browser MIME-sniffs correctly
+    const safeName = filename.replace(/[^a-zA-Z0-9._-]+/g, '-').slice(0, 80) || 'track';
+    const fileKey = `music/custom/${ctx.event.id}/${Date.now()}-${randomUUID().slice(0, 8)}-${safeName}`;
+
+    const command = new PutObjectCommand({
+      Bucket:      process.env.R2_BUCKET_NAME,
+      Key:         fileKey,
+      ContentType: contentType,
+    });
+    const uploadUrl = await getSignedUrl(fastify.storage, command, { expiresIn: 300 });
+    return { uploadUrl, fileKey };
+  });
+
+  // Confirm the R2 PUT happened and create the DB row.
+  fastify.post('/events/:slug/music/complete', { preHandler: fastify.authenticate }, async (request, reply) => {
+    const ctx = await loadEvent(request.params.slug, request, reply, {
+      requireOwner: true, requireCustomMusic: true,
+    });
+    if (!ctx) return;
+
+    const { fileKey, title, original_filename, duration_s } = request.body ?? {};
+    if (!fileKey || typeof fileKey !== 'string' || !fileKey.startsWith(`music/custom/${ctx.event.id}/`)) {
+      return reply.status(400).send({ error: true, message: 'fileKey is required and must belong to this event' });
+    }
+    const cleanTitle = (title || original_filename || 'Uploaded track').toString().trim().slice(0, 160);
+    const cleanFilename = (original_filename || '').toString().trim().slice(0, 255) || null;
+    const dur = Math.max(0, Math.min(60 * 30, parseInt(duration_s, 10) || 0)); // cap at 30 min
+
+    // Find next position
+    const { rows: posRows } = await fastify.db.query(
+      `SELECT COALESCE(MAX(position), -1) + 1 AS next_pos
+         FROM music_tracks WHERE event_id = $1`,
+      [ctx.event.id],
+    );
+    const nextPos = posRows[0].next_pos;
+
+    const { rows } = await fastify.db.query(
+      `INSERT INTO music_tracks
+         (event_id, uploaded_by_user_id, title, file_url, duration_s, position,
+          r2_key, original_filename, license_info)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       RETURNING id, title, file_url, duration_s, position, original_filename, created_at`,
+      [
+        ctx.event.id, request.user.id, cleanTitle, publicMediaUrl(fileKey),
+        dur, nextPos, fileKey, cleanFilename,
+        'Uploaded by event host (host confirmed they have rights to use this audio)',
+      ],
+    );
+    return reply.status(201).send({ track: rows[0] });
+  });
+
+  // List the host's custom tracks for this event (dashboard).
+  fastify.get('/events/:slug/music/uploads', { preHandler: fastify.authenticate }, async (request, reply) => {
+    const ctx = await loadEvent(request.params.slug, request, reply, { requireOwner: true });
+    if (!ctx) return;
+
+    const { rows } = await fastify.db.query(
+      `SELECT id, title, original_filename, duration_s, position, created_at
+         FROM music_tracks
+        WHERE event_id = $1
+        ORDER BY position ASC, created_at ASC`,
+      [ctx.event.id],
+    );
+    reply.header('Cache-Control', 'no-store');
+    return { tracks: rows, custom_music_unlocked: !!ctx.plan.features?.customMusic };
+  });
+
+  // Remove one custom track + its R2 object.
+  fastify.delete('/events/:slug/music/uploads/:id', { preHandler: fastify.authenticate }, async (request, reply) => {
+    const ctx = await loadEvent(request.params.slug, request, reply, { requireOwner: true });
+    if (!ctx) return;
+    const { id } = request.params;
+
+    const { rows } = await fastify.db.query(
+      `SELECT id, r2_key FROM music_tracks
+        WHERE id = $1 AND event_id = $2`,
+      [id, ctx.event.id],
+    );
+    if (!rows.length) {
+      return reply.status(404).send({ error: true, message: 'Track not found' });
+    }
+
+    if (rows[0].r2_key && process.env.R2_BUCKET_NAME) {
+      try {
+        await fastify.storage.send(new DeleteObjectCommand({
+          Bucket: process.env.R2_BUCKET_NAME,
+          Key:    rows[0].r2_key,
+        }));
+      } catch (err) {
+        // Don't block the DB delete on a storage hiccup — the row is the
+        // source of truth and a stray R2 object is recoverable later.
+        request.log.warn({ err: err.message, track_id: id, key: rows[0].r2_key },
+                         'music track R2 delete failed');
+      }
+    }
+
+    await fastify.db.query('DELETE FROM music_tracks WHERE id = $1', [id]);
+    return { success: true };
   });
 }

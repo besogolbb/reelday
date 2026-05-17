@@ -21,6 +21,7 @@ export const PLANS = {
       videoMessage: false,
       reactions:    false,
       polls:        false,
+      customMusic:  false,
       website:      false,
       customDomain: false,
     },
@@ -40,6 +41,7 @@ export const PLANS = {
       // Live Questions & Poll is a Dalisay/Hiraya feature — kept off Sinag
       // so the trivia/quiz experience stays on the higher tiers.
       polls:        false,
+      customMusic:  true,
       website:      false,
       customDomain: false,
     },
@@ -57,6 +59,7 @@ export const PLANS = {
       videoMessage: true,
       reactions:    true,
       polls:        true,
+      customMusic:  true,
       website:      true,
       customDomain: false,
     },
@@ -74,6 +77,7 @@ export const PLANS = {
       videoMessage: true,
       reactions:    true,
       polls:        true,
+      customMusic:  true,
       website:      true,
       customDomain: true,
     },
