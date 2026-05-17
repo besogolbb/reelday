@@ -150,19 +150,35 @@
     .es-count {
       display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;
     }
+    /* Darker tile so the white numbers stay legible no matter what the
+       host's cover photo looks like — relying on a translucent white
+       wash leaves them invisible on bright photos. */
     .es-count > div {
-      min-width: 64px; padding: 10px 6px 8px;
-      background: rgba(255,255,255,.10);
-      border: 1px solid rgba(255,255,255,.22);
-      border-radius: 12px;
-      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      min-width: 78px; padding: 12px 10px 10px;
+      background: rgba(20,12,8,.55);
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: 14px;
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      box-shadow: 0 8px 24px rgba(0,0,0,.25);
     }
     .es-hero.no-bg .es-count > div {
       background: var(--paper-2);
       border-color: var(--line);
+      box-shadow: none;
     }
-    .es-count b { display: block; font-family: var(--display); font-size: 1.6rem; font-weight: 500; }
-    .es-count span { font-size: 9px; text-transform: uppercase; letter-spacing: .22em; opacity: .65; }
+    .es-count b {
+      display: block; font-family: var(--display);
+      font-size: 2rem; font-weight: 500; line-height: 1;
+      color: #fff; letter-spacing: -.01em;
+    }
+    .es-hero.no-bg .es-count b { color: var(--ink); }
+    .es-count span {
+      display: block; margin-top: 4px;
+      font-family: var(--mono); font-size: 9.5px;
+      text-transform: uppercase; letter-spacing: .26em;
+      color: rgba(255,255,255,.78);
+    }
+    .es-hero.no-bg .es-count span { color: var(--ink-faint); }
     .es-cta {
       display: inline-flex; align-items: center; gap: 10px;
       padding: 14px 28px; border-radius: 999px;
