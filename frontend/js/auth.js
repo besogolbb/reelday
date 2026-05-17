@@ -15,7 +15,9 @@ export function clearAuth() {
 }
 export function logout() {
   clearAuth();
-  location.href = '/login';
+  // Land on the homepage — users logging out are leaving the app, not
+  // switching accounts. The homepage CTA covers re-login if they need it.
+  location.href = '/';
 }
 export function authHeaders() {
   const token = getToken();
