@@ -30,16 +30,14 @@
       text-transform: uppercase;
     }
 
-    /* ── Sticky nav (slides in after the hero) ──────────
-       Chip-based design: each link is a small pill so the bar
-       feels like an intentional element with proper tap targets
-       and clear separation between items — was just raw text in
-       a glass strip, which read as plain on mobile. Desktop keeps
-       a sweep-in underline on hover; mobile flips the active chip
-       to the accent fill. */
+    /* ── Sticky nav (desktop: chip row, mobile: hamburger) ──
+       Desktop keeps chip-based links inline. Mobile collapses to
+       a glass top-bar with a hamburger button that opens a full-
+       screen sheet (.es-menu) — same content, way better tap
+       targets, no edge-clipping or horizontal-scroll confusion. */
     nav.es-nav {
       position: fixed; top: 0; left: 0; right: 0; z-index: 40;
-      display: flex; gap: 8px; justify-content: center;
+      display: flex; align-items: center; gap: 8px;
       padding: 14px 18px;
       background:
         linear-gradient(180deg, rgba(251,247,238,.96) 0%, rgba(244,234,217,.92) 100%);
@@ -47,14 +45,17 @@
       -webkit-backdrop-filter: saturate(140%) blur(18px);
       border-bottom: 1px solid rgba(196,90,58,.22);
       box-shadow: 0 14px 32px -22px rgba(42,26,20,.30);
-      overflow-x: auto;
       transform: translateY(-110%); transition: transform .4s ease;
-      -webkit-overflow-scrolling: touch;
     }
     nav.es-nav.show { transform: translateY(0); }
-    nav.es-nav a {
-      position: relative;
-      flex: 0 0 auto;
+    .es-nav-inline {
+      display: flex; gap: 8px; flex: 1; justify-content: center;
+      overflow-x: auto; -webkit-overflow-scrolling: touch;
+    }
+    .es-nav-inline::-webkit-scrollbar { display: none; }
+    .es-nav-inline { scrollbar-width: none; }
+    .es-nav-inline a {
+      position: relative; flex: 0 0 auto;
       display: inline-flex; align-items: center;
       padding: 9px 16px;
       background: rgba(255,255,255,.6);
@@ -65,47 +66,131 @@
       letter-spacing: .14em; text-transform: uppercase;
       transition: background .18s, color .18s, border-color .18s, transform .18s, box-shadow .18s;
     }
-    nav.es-nav a:hover,
-    nav.es-nav a:focus-visible {
+    .es-nav-inline a:hover,
+    .es-nav-inline a:focus-visible {
       background: var(--accent); color: #fff;
       border-color: var(--accent);
       transform: translateY(-1px);
       box-shadow: 0 8px 18px -6px rgba(196,90,58,.45);
       outline: none;
     }
-    nav.es-nav a:active { transform: translateY(0); }
-    nav.es-nav::-webkit-scrollbar { display: none; }
-    nav.es-nav { scrollbar-width: none; }
+    .es-nav-inline a:active { transform: translateY(0); }
 
-    /* Mobile — chips stay readable, container background darkens
-       slightly so the pills lift off it instead of blending in. */
-    @media (max-width: 640px) {
-      nav.es-nav {
-        gap: 6px;
-        padding: 12px 14px;
-        background:
-          linear-gradient(180deg, rgba(42,26,20,.88) 0%, rgba(42,26,20,.78) 100%);
-        border-bottom-color: rgba(255,255,255,.10);
-      }
-      nav.es-nav a {
-        background: rgba(255,255,255,.92);
-        color: var(--ink);
-        border-color: transparent;
-        padding: 8px 14px;
-        font-size: 11px; letter-spacing: .12em;
-      }
-      nav.es-nav a:hover,
-      nav.es-nav a:focus-visible {
-        background: var(--accent); color: #fff;
-        box-shadow: 0 6px 14px -4px rgba(0,0,0,.45);
-      }
-      /* Soft edge fades at the scroll ends so it reads as
-         horizontally scrollable rather than truncated. */
-      nav.es-nav {
-        mask-image: linear-gradient(90deg, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%);
-        -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%);
-      }
+    /* Hamburger button — visible on mobile only. */
+    .es-nav-brand {
+      font-family: var(--display); font-size: 17px; color: var(--ink);
+      letter-spacing: -.005em; font-weight: 500;
+      margin-right: auto; display: none;
+      max-width: 60vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
+    .es-burger {
+      display: none;
+      width: 44px; height: 44px;
+      border-radius: 14px; border: 1px solid rgba(196,90,58,.25);
+      background: linear-gradient(180deg, #fff 0%, var(--paper-2) 100%);
+      box-shadow: 0 4px 12px -4px rgba(42,26,20,.20),
+                  inset 0 1px 0 rgba(255,255,255,.7);
+      cursor: pointer;
+      align-items: center; justify-content: center;
+      transition: transform .15s, box-shadow .15s;
+    }
+    .es-burger:hover { transform: translateY(-1px); box-shadow: 0 8px 18px -6px rgba(42,26,20,.25); }
+    .es-burger:active { transform: translateY(0); }
+    .es-burger svg { width: 20px; height: 20px; stroke: var(--ink); }
+
+    @media (max-width: 720px) {
+      .es-nav-inline { display: none; }
+      .es-nav-brand  { display: block; }
+      .es-burger     { display: inline-flex; }
+      nav.es-nav { padding: 10px 14px; }
+    }
+
+    /* ── Full-screen menu sheet (mobile only) ──────────
+       Slides in from the right. Paper background with a faint
+       grain. Each row is a real button with display-serif label
+       and a chevron — feels like a printed table of contents
+       rather than a list of links. */
+    .es-menu {
+      position: fixed; inset: 0; z-index: 60;
+      background:
+        repeating-linear-gradient(135deg, rgba(196,90,58,.02) 0 1px, transparent 1px 14px),
+        radial-gradient(140% 90% at 50% 0%, #fffaf0 0%, #fbf3e2 60%, #f5e9d1 100%);
+      transform: translateX(100%);
+      transition: transform .35s cubic-bezier(.4,0,.2,1);
+      display: flex; flex-direction: column;
+      padding: 22px 22px 32px;
+      overflow-y: auto;
+    }
+    .es-menu.open { transform: translateX(0); }
+    .es-menu-head {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    .es-menu-eyebrow {
+      font-family: var(--mono); font-size: 10.5px; letter-spacing: .32em;
+      text-transform: uppercase; color: var(--accent);
+    }
+    .es-menu-close {
+      width: 44px; height: 44px;
+      border-radius: 14px; border: 1px solid rgba(196,90,58,.30);
+      background: rgba(255,255,255,.7);
+      display: inline-flex; align-items: center; justify-content: center;
+      cursor: pointer;
+    }
+    .es-menu-close svg { width: 18px; height: 18px; stroke: var(--ink); }
+    .es-menu-list { display: flex; flex-direction: column; gap: 10px; flex: 1; }
+    .es-menu-list a {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 22px;
+      background: rgba(255,255,255,.7);
+      border: 1px solid rgba(196,90,58,.18);
+      border-radius: 18px;
+      color: var(--ink);
+      box-shadow: 0 6px 18px -10px rgba(42,26,20,.20),
+                  inset 0 1px 0 rgba(255,255,255,.8);
+      transition: transform .18s, background .18s, color .18s, border-color .18s;
+      opacity: 0; transform: translateY(12px);
+      animation: menuRowIn .45s ease forwards;
+    }
+    .es-menu-list a span.lbl {
+      font-family: var(--display); font-size: 1.25rem; font-weight: 500;
+      letter-spacing: -.005em;
+    }
+    .es-menu-list a span.arr {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--accent); color: #fff;
+      font-family: var(--mono); font-size: 14px; font-weight: 700;
+    }
+    .es-menu-list a:active,
+    .es-menu-list a:focus-visible {
+      background: var(--accent); color: #fff; border-color: var(--accent);
+      transform: translateY(-1px);
+      outline: none;
+    }
+    .es-menu-list a:active span.arr,
+    .es-menu-list a:focus-visible span.arr {
+      background: #fff; color: var(--accent);
+    }
+    @keyframes menuRowIn {
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .es-menu-list a:nth-child(1) { animation-delay: .04s; }
+    .es-menu-list a:nth-child(2) { animation-delay: .08s; }
+    .es-menu-list a:nth-child(3) { animation-delay: .12s; }
+    .es-menu-list a:nth-child(4) { animation-delay: .16s; }
+    .es-menu-list a:nth-child(5) { animation-delay: .20s; }
+    .es-menu-list a:nth-child(6) { animation-delay: .24s; }
+    .es-menu-list a:nth-child(7) { animation-delay: .28s; }
+    .es-menu-list a:nth-child(8) { animation-delay: .32s; }
+    .es-menu-list a:nth-child(9) { animation-delay: .36s; }
+    .es-menu-foot {
+      margin-top: 22px;
+      font-family: var(--mono); font-size: 10px; letter-spacing: .24em;
+      text-transform: uppercase; color: var(--ink-faint);
+      text-align: center;
+    }
+    body.menu-open { overflow: hidden; }
 
     /* ── Hero ──────────────────────────────────────────
        Full-bleed cover image with a slow Ken-Burns zoom and a
@@ -888,11 +973,63 @@
       app.textContent = '';
       document.documentElement.setAttribute('data-theme', data.theme || 'wedding');
 
-      var nav = el('nav', { class: 'es-nav', id: 'esNav' });
-      function addNav(id, label) {
-        var a = el('a', { href: '#' + id, text: label });
-        nav.appendChild(a);
-      }
+      // Nav structure — on desktop the chip row carries the links;
+       // on mobile a hamburger opens the full-screen sheet built
+       // below. Both lists are populated by addNav() so they stay
+       // in sync no matter which sections the host enabled.
+       var nav = el('nav', { class: 'es-nav', id: 'esNav' });
+       var navBrand = el('div', { class: 'es-nav-brand', text: data.couple_names || '' });
+       var navInline = el('div', { class: 'es-nav-inline' });
+       var burger = el('button', { class: 'es-burger', type: 'button',
+         'aria-label': 'Open menu', 'aria-controls': 'esMenu', 'aria-expanded': 'false' });
+       burger.innerHTML =
+         '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" aria-hidden="true">' +
+         '<path d="M4 7h16M4 12h16M4 17h16"/></svg>';
+       nav.appendChild(navBrand);
+       nav.appendChild(navInline);
+       nav.appendChild(burger);
+
+       // Full-screen mobile menu sheet
+       var menu = el('div', { class: 'es-menu', id: 'esMenu', 'aria-hidden': 'true' });
+       var menuHead = el('div', { class: 'es-menu-head' });
+       menuHead.appendChild(el('div', { class: 'es-menu-eyebrow', text: 'Menu' }));
+       var menuClose = el('button', { class: 'es-menu-close', type: 'button',
+         'aria-label': 'Close menu' });
+       menuClose.innerHTML =
+         '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" aria-hidden="true">' +
+         '<path d="M6 6l12 12M18 6l-12 12"/></svg>';
+       menuHead.appendChild(menuClose);
+       menu.appendChild(menuHead);
+       var menuList = el('div', { class: 'es-menu-list' });
+       menu.appendChild(menuList);
+       menu.appendChild(el('div', { class: 'es-menu-foot', text: 'reelday.ph' }));
+
+       function openMenu() {
+         menu.classList.add('open');
+         menu.setAttribute('aria-hidden', 'false');
+         burger.setAttribute('aria-expanded', 'true');
+         document.body.classList.add('menu-open');
+       }
+       function closeMenu() {
+         menu.classList.remove('open');
+         menu.setAttribute('aria-hidden', 'true');
+         burger.setAttribute('aria-expanded', 'false');
+         document.body.classList.remove('menu-open');
+       }
+       burger.addEventListener('click', openMenu);
+       menuClose.addEventListener('click', closeMenu);
+       document.addEventListener('keydown', function (e) {
+         if (e.key === 'Escape' && menu.classList.contains('open')) closeMenu();
+       });
+
+       function addNav(id, label) {
+         navInline.appendChild(el('a', { href: '#' + id, text: label }));
+         var row = el('a', { href: '#' + id });
+         row.appendChild(el('span', { class: 'lbl', text: label }));
+         row.appendChild(el('span', { class: 'arr', text: '→' }));
+         row.addEventListener('click', closeMenu);
+         menuList.appendChild(row);
+       }
 
       // ── Hero ────────────────────────────────────────
       var hero = el('section', { class: 'es-hero' });
@@ -1014,6 +1151,12 @@
 
       app.appendChild(hero);
       app.appendChild(nav);
+      // Menu sheet lives on body (not inside app) so it overlays the
+      // whole page including the sticky nav. Re-appended on every
+      // render so the language/state stays in sync.
+      var prevMenu = document.getElementById('esMenu');
+      if (prevMenu) prevMenu.remove();
+      document.body.appendChild(menu);
 
       // ── Story ──────────────────────────────────────
       if (cfg.story && (cfg.story.body || cfg.story.label)) {
