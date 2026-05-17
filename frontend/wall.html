@@ -448,13 +448,13 @@
     }
     .ticker .stats span { display: inline-flex; align-items: center; }
 
-    /* Highlighted counts — peach gradient pill with a slow breathing
-       glow so the wall reads as actively live rather than a static
-       stat plate. Multi-stop gradient (warm cream → peach → coral →
-       deep terracotta) gives the pill internal depth; the inset
-       highlight at the top edge catches "ambient light" and the outer
-       halo pulses on a 2.4s breath so the eye is drawn without being
-       nagged. */
+    /* Highlighted counts — peach glass pill. The fill is a translucent
+       peach gradient over a backdrop-blur, so the wall imagery softens
+       through the pill instead of being painted over. Layered shadows
+       float it off the surface: a 1px specular highlight along the
+       top edge (light catching the curved rim), a faint inner shadow
+       along the bottom, a tight contact shadow, an ambient drop, and
+       a warm halo that breathes on a 2.4s pulse. */
     .ticker .stats em {
       color: #fff;
       font-style: normal;
@@ -466,16 +466,21 @@
       border-radius: 999px;
       background:
         linear-gradient(135deg,
-          rgba(255,224,196,.55) 0%,
-          rgba(245,180,138,.58) 28%,
-          rgba(240,163,122,.60) 55%,
-          rgba(196,90,58,.62) 100%);
-      border: 1px solid rgba(255,206,170,.30);
+          rgba(255,224,196,.42) 0%,
+          rgba(245,180,138,.48) 28%,
+          rgba(240,163,122,.52) 55%,
+          rgba(196,90,58,.58) 100%);
+      -webkit-backdrop-filter: blur(12px) saturate(140%);
+      backdrop-filter: blur(12px) saturate(140%);
+      border: 1px solid rgba(255,206,170,.40);
       box-shadow:
-        inset 0 1px 0 rgba(255,255,255,.25),
-        inset 0 -1px 0 rgba(120,40,20,.18),
-        0 2px 10px rgba(196,90,58,.28),
-        0 0 18px rgba(240,163,122,.22);
+        inset 0 1px 0   rgba(255,255,255,.55),
+        inset 0 -1px 0  rgba(120,40,20,.28),
+        inset 0 0 12px  rgba(255,255,255,.08),
+        0 1px 2px       rgba(0,0,0,.20),
+        0 8px 22px      rgba(0,0,0,.32),
+        0 2px 10px      rgba(196,90,58,.28),
+        0 0 18px        rgba(240,163,122,.22);
       display: inline-block;
       line-height: 1.1;
       animation: statPulse 2.4s ease-in-out infinite;
@@ -488,19 +493,25 @@
     @keyframes statPulse {
       0%, 100% {
         box-shadow:
-          inset 0 1px 0 rgba(255,255,255,.25),
-          inset 0 -1px 0 rgba(120,40,20,.18),
-          0 2px 10px rgba(196,90,58,.28),
-          0 0 18px rgba(240,163,122,.22);
-        transform: scale(1);
+          inset 0 1px 0   rgba(255,255,255,.55),
+          inset 0 -1px 0  rgba(120,40,20,.28),
+          inset 0 0 12px  rgba(255,255,255,.08),
+          0 1px 2px       rgba(0,0,0,.20),
+          0 8px 22px      rgba(0,0,0,.32),
+          0 2px 10px      rgba(196,90,58,.28),
+          0 0 18px        rgba(240,163,122,.22);
+        transform: scale(1) translateY(0);
       }
       50% {
         box-shadow:
-          inset 0 1px 0 rgba(255,255,255,.32),
-          inset 0 -1px 0 rgba(120,40,20,.22),
-          0 4px 18px rgba(240,163,122,.55),
-          0 0 32px rgba(240,163,122,.35);
-        transform: scale(1.05);
+          inset 0 1px 0   rgba(255,255,255,.65),
+          inset 0 -1px 0  rgba(120,40,20,.32),
+          inset 0 0 12px  rgba(255,255,255,.12),
+          0 1px 2px       rgba(0,0,0,.18),
+          0 12px 28px     rgba(0,0,0,.38),
+          0 4px 18px      rgba(240,163,122,.55),
+          0 0 32px        rgba(240,163,122,.35);
+        transform: scale(1.04) translateY(-1px);
       }
     }
 
@@ -872,10 +883,14 @@
 
     /* Ampersand sits at the same size as the names — italic alone
        carries the elegance; the .5 opacity + peach hue keep it as a
-       quiet separator rather than a third name. */
+       quiet separator rather than a third name. A small negative
+       vertical-align drops it just below the baseline so it visually
+       nests between the names (editorial wordmark convention) rather
+       than sitting on the same caps line. */
     .corner .names em {
       color: #f0a37a; font-style: italic; font-weight: 500;
       opacity: .5;
+      vertical-align: -.12em;
     }
 
     .guest-badge {
