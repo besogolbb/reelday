@@ -151,3 +151,51 @@ ALTER TABLE music_tracks ADD COLUMN IF NOT EXISTS uploaded_by_user_id UUID REFER
 ALTER TABLE music_tracks ADD COLUMN IF NOT EXISTS r2_key              TEXT;          -- needed for delete-from-R2 on track removal
 ALTER TABLE music_tracks ADD COLUMN IF NOT EXISTS original_filename   VARCHAR(255);  -- for display in the dashboard list
 CREATE INDEX IF NOT EXISTS idx_music_tracks_event ON music_tracks(event_id, position);
+
+-- ── Event Website (Dalisay/Hiraya) — per-event guest microsite at /e/<slug> ──
+-- See docs/event-website-plan.md. All flexible host content lives in the
+-- single event_sites.config JSONB. Public render requires is_published AND
+-- the owner's effective tier having the 'website' feature.
+CREATE TABLE IF NOT EXISTS event_sites (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id     UUID NOT NULL UNIQUE REFERENCES events(id) ON DELETE CASCADE,
+  is_published BOOLEAN     NOT NULL DEFAULT false,
+  config       JSONB       NOT NULL DEFAULT '{}'::jsonb,  -- hero/story/schedule/logistics/faq/entourage/goodToKnow + section order/visibility + accent
+  updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Guest RSVPs — one row per (event_id, guest_id), upserted on change-of-mind
+-- (poll_votes pattern). guest_id = X-Guest-Id localStorage UUID.
+CREATE TABLE IF NOT EXISTS event_rsvps (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id    UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  guest_id    VARCHAR(64)  NOT NULL,
+  guest_name  VARCHAR(120) NOT NULL,
+  email       VARCHAR(200),
+  phone       VARCHAR(40),
+  attending   BOOLEAN      NOT NULL DEFAULT true,
+  party_size  INTEGER      NOT NULL DEFAULT 1,
+  meal_choice VARCHAR(80),
+  message     TEXT,
+  created_at  TIMESTAMPTZ  DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ  DEFAULT NOW(),
+  UNIQUE (event_id, guest_id)
+);
+CREATE INDEX IF NOT EXISTS idx_event_rsvps_event ON event_rsvps(event_id, created_at DESC);
+
+-- Seat/table assignments — searched via a public match-only lookup
+-- (never the whole list: scrape/privacy). lower(guest_name) index keeps
+-- per-name lookup instant.
+CREATE TABLE IF NOT EXISTS event_seats (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id      UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  guest_name    VARCHAR(160) NOT NULL,
+  table_label   VARCHAR(80),
+  location_note VARCHAR(200),
+  seat_note     VARCHAR(120),
+  created_at    TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_event_seats_lookup ON event_seats (event_id, lower(guest_name));
+
+-- Host override of the event-type-derived microsite theme.
+ALTER TABLE events ADD COLUMN IF NOT EXISTS theme_override VARCHAR(40);

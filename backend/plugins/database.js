@@ -154,6 +154,59 @@ const MIGRATIONS = `
     created_at  TIMESTAMPTZ DEFAULT NOW(),
     PRIMARY KEY (poll_id, guest_id)
   );
+
+  -- ── Event Website (Dalisay/Hiraya) ──
+  -- Per-event guest microsite served at /e/<slug>. One row per event;
+  -- all flexible host content (hero/story/schedule/logistics/faq/
+  -- entourage/goodToKnow + section order & visibility + accent) lives in
+  -- the single config JSONB — same approach as polls.options. The site
+  -- only renders publicly when is_published AND the owner's effective
+  -- tier has the 'website' feature.
+  CREATE TABLE IF NOT EXISTS event_sites (
+    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    event_id     UUID NOT NULL UNIQUE REFERENCES events(id) ON DELETE CASCADE,
+    is_published BOOLEAN     NOT NULL DEFAULT false,
+    config       JSONB       NOT NULL DEFAULT '{}'::jsonb,
+    updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  );
+
+  -- Guest RSVPs. One row per (event_id, guest_id) — upserted on
+  -- change-of-mind, same pattern as poll_votes. guest_id is the
+  -- X-Guest-Id localStorage UUID; guest_name captured at submit time.
+  CREATE TABLE IF NOT EXISTS event_rsvps (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    event_id    UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+    guest_id    VARCHAR(64)  NOT NULL,
+    guest_name  VARCHAR(120) NOT NULL,
+    email       VARCHAR(200),
+    phone       VARCHAR(40),
+    attending   BOOLEAN      NOT NULL DEFAULT true,
+    party_size  INTEGER      NOT NULL DEFAULT 1,
+    meal_choice VARCHAR(80),
+    message     TEXT,
+    created_at  TIMESTAMPTZ  DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ  DEFAULT NOW(),
+    UNIQUE (event_id, guest_id)
+  );
+  CREATE INDEX IF NOT EXISTS idx_event_rsvps_event ON event_rsvps(event_id, created_at DESC);
+
+  -- Seat/table assignments. Searchable by guest name via a public
+  -- match-only lookup endpoint (never the whole list — scrape/privacy).
+  -- The lower(guest_name) index keeps the per-name lookup instant.
+  CREATE TABLE IF NOT EXISTS event_seats (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    event_id      UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+    guest_name    VARCHAR(160) NOT NULL,
+    table_label   VARCHAR(80),
+    location_note VARCHAR(200),
+    seat_note     VARCHAR(120),
+    created_at    TIMESTAMPTZ DEFAULT NOW()
+  );
+  CREATE INDEX IF NOT EXISTS idx_event_seats_lookup
+    ON event_seats (event_id, lower(guest_name));
+
+  -- Host can override the event-type-derived theme for the microsite.
+  ALTER TABLE events ADD COLUMN IF NOT EXISTS theme_override VARCHAR(40);
 `;
 
 async function dbPlugin(fastify) {
