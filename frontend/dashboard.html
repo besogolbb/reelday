@@ -1641,9 +1641,9 @@
           <span class="polls-h2">Event Website</span>
           <span class="polls-summary" id="esite-summary">Tap to set up · /e/<span id="esite-url-hint">slug</span></span>
         </span>
-        <span class="polls-chevron" id="esite-chevron" aria-hidden="true">▾</span>
+        <span class="polls-chevron" id="esite-chevron" aria-hidden="true" style="font-size:24px;line-height:1;color:var(--accent);font-weight:700;width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;border-radius:999px;background:rgba(196,90,58,.10);">▾</span>
       </button>
-      <div id="esite-body" style="display:none; padding: 0 22px 22px;">
+      <div id="esite-body" style="display:none; padding: 22px; background: var(--paper-2); border-top: 1px solid var(--line);">
         <div class="polls-locked" id="esite-locked" style="display:none;">
           The Event Website is unlocked on the <strong>Dalisay</strong> plan. <a href="/#pricing">Upgrade →</a>
         </div>
@@ -4632,26 +4632,47 @@
         ]},
       ];
 
-      // ── wizard chrome ──
-      const stepper = document.createElement('div');
-      stepper.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;padding:6px 0 16px;margin-bottom:14px;border-bottom:1px solid var(--line);';
+      // ── wizard chrome (modern: dot progress + active step title) ──
+      // Active step title + counter (Stripe-checkout style header)
+      const stepHeader = document.createElement('div');
+      stepHeader.style.cssText = 'display:flex;align-items:baseline;justify-content:space-between;gap:14px;margin-bottom:10px;';
+      const stepTitle = document.createElement('h4');
+      stepTitle.style.cssText = 'font-family:var(--display);font-size:22px;font-weight:600;color:var(--ink);margin:0;letter-spacing:-.01em;';
+      const stepCount = document.createElement('span');
+      stepCount.style.cssText = 'font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint);white-space:nowrap;';
+      stepHeader.appendChild(stepTitle); stepHeader.appendChild(stepCount);
+
+      // Pill-dot progress (one per step; click to jump; hover = step name)
+      const dots = document.createElement('div');
+      dots.style.cssText = 'display:flex;gap:6px;margin-bottom:20px;';
+
+      // White inset card holds the form — pops against the cream body bg.
+      const card = document.createElement('div');
+      card.style.cssText = 'background:#fff;border:1px solid var(--line);border-radius:18px;padding:24px;box-shadow:0 1px 2px rgba(42,26,20,.04);';
       const content = document.createElement('div');
+      card.appendChild(content);
+
       const footer = document.createElement('div');
-      footer.style.cssText = 'position:sticky;bottom:0;background:linear-gradient(to top, var(--dash-surface) 80%, transparent);padding:14px 0 4px;margin-top:18px;border-top:1px solid var(--line);display:flex;align-items:center;gap:10px;flex-wrap:wrap;';
+      footer.style.cssText = 'display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:18px;';
       const backBtn = btn('← Back', 'ghost');
       const nextBtn = btn('Next →', 'accent');
       const noteEl = document.createElement('span');
       noteEl.id = 'esite-note';
       noteEl.style.cssText = 'font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;';
       footer.appendChild(backBtn); footer.appendChild(nextBtn); footer.appendChild(noteEl);
-      editorEl.appendChild(stepper); editorEl.appendChild(content); editorEl.appendChild(footer);
+      editorEl.appendChild(stepHeader);
+      editorEl.appendChild(dots);
+      editorEl.appendChild(card);
+      editorEl.appendChild(footer);
 
       const chips = steps.map((s, i) => {
         const c = document.createElement('button');
-        c.type = 'button'; c.textContent = `${i + 1}. ${s.title}`;
-        c.style.cssText = 'padding:6px 12px;border-radius:999px;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;border:1px solid var(--line);background:#fff;color:var(--ink-soft);cursor:pointer;transition:background .12s,color .12s,border-color .12s;';
+        c.type = 'button';
+        c.title = `${i + 1}. ${s.title}`;
+        c.setAttribute('aria-label', c.title);
+        c.style.cssText = 'flex:1;min-width:18px;max-width:60px;height:8px;border-radius:999px;border:0;background:var(--line);cursor:pointer;padding:0;transition:background .18s ease,flex .18s ease;';
         c.addEventListener('click', () => goTo(i, true));
-        stepper.appendChild(c);
+        dots.appendChild(c);
         return c;
       });
 
@@ -4661,11 +4682,13 @@
         content.textContent = '';
         steps[idx].nodes.forEach(n => content.appendChild(n));
         chips.forEach((c, k) => {
-          const on = k === idx;
-          c.style.background    = on ? 'var(--ink)' : '#fff';
-          c.style.color         = on ? '#fff' : 'var(--ink-soft)';
-          c.style.borderColor   = on ? 'var(--ink)' : 'var(--line)';
+          const isActive = k === idx;
+          const isDone   = k < idx;
+          c.style.background = isActive ? 'var(--accent)' : (isDone ? 'var(--accent-soft)' : 'var(--line)');
+          c.style.flex      = isActive ? '2' : '1';
         });
+        stepTitle.textContent = steps[idx].title;
+        stepCount.textContent = `Step ${idx + 1} of ${steps.length}`;
         backBtn.style.visibility = idx === 0 ? 'hidden' : 'visible';
         nextBtn.textContent = idx === steps.length - 1 ? 'Save & apply' : 'Next →';
         if (scroll) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
