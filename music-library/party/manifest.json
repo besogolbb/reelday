@@ -1,44 +1,65 @@
 {
   "name":        "Party — Upbeat & Fun",
   "mood":        "party",
-  "description": "Higher-energy instrumentals for dancing, cake, bouquet toss, and reception peak.",
+  "description": "Upbeat saxophone, acoustic guitar, and indie instrumentals for dancing, cake-cutting, and reception peak. All from Pixabay Music — free for any use.",
   "cover_color": "#e85a8a",
   "position":    40,
   "tracks": [
     {
-      "file":         "01-REPLACE-ME.mp3",
-      "title":        "REPLACE WITH ACTUAL TRACK TITLE",
-      "artist":       "FreePD",
-      "duration_s":   180,
-      "license_info": "FreePD CC0 — no attribution required"
+      "file":         "anton_vlasov-nice-day-saxophone-groove-15592.mp3",
+      "title":        "Nice Day Saxophone Groove",
+      "artist":       "Anton Vlasov",
+      "duration_s":   150,
+      "license_info": "Pixabay Music — free for any use"
     },
     {
-      "file":         "02-REPLACE-ME.mp3",
-      "title":        "REPLACE WITH ACTUAL TRACK TITLE",
-      "artist":       "YouTube Audio Library",
-      "duration_s":   165,
-      "license_info": "YouTube Audio Library — free for any use"
+      "file":         "freemusicforvideo-acoustic-guitar-music-504891.mp3",
+      "title":        "Acoustic Guitar Music",
+      "artist":       "FreeMusicForVideo",
+      "duration_s":   280,
+      "license_info": "Pixabay Music — free for any use"
     },
     {
-      "file":         "03-REPLACE-ME.mp3",
-      "title":        "REPLACE WITH ACTUAL TRACK TITLE",
-      "artist":       "FreePD",
-      "duration_s":   195,
-      "license_info": "FreePD CC0 — no attribution required"
+      "file":         "freemusicforvideo-instrumental-acoustic-guitar-music-504896.mp3",
+      "title":        "Instrumental Acoustic Guitar",
+      "artist":       "FreeMusicForVideo",
+      "duration_s":   280,
+      "license_info": "Pixabay Music — free for any use"
     },
     {
-      "file":         "04-REPLACE-ME.mp3",
-      "title":        "REPLACE WITH ACTUAL TRACK TITLE",
-      "artist":       "YouTube Audio Library",
-      "duration_s":   210,
-      "license_info": "YouTube Audio Library — free for any use"
+      "file":         "moonpub-guitar-and-sax-play-upbeat-jazz-469946.mp3",
+      "title":        "Guitar and Sax Upbeat Jazz",
+      "artist":       "MoonPub",
+      "duration_s":   190,
+      "license_info": "Pixabay Music — free for any use"
     },
     {
-      "file":         "05-REPLACE-ME.mp3",
-      "title":        "REPLACE WITH ACTUAL TRACK TITLE",
-      "artist":       "FreePD",
-      "duration_s":   175,
-      "license_info": "FreePD CC0 — no attribution required"
+      "file":         "moonpub-smooth-jazz-saxophone-piece-485790.mp3",
+      "title":        "Smooth Jazz Saxophone Piece",
+      "artist":       "MoonPub",
+      "duration_s":   230,
+      "license_info": "Pixabay Music — free for any use"
+    },
+    {
+      "file":         "onaldin_music-inspire-indie-acoustic-distant-skyline-333168.mp3",
+      "title":        "Distant Skyline (Indie Acoustic)",
+      "artist":       "Onaldin Music",
+      "duration_s":   315,
+      "license_info": "Pixabay Music — free for any use"
+    },
+    {
+      "file":         "saxorphine-footloose-party-upbeat-party-saxophone-trumpets-406213.mp3",
+      "title":        "Footloose Party — Saxophone & Trumpets",
+      "artist":       "Saxorphine",
+      "duration_s":   540,
+      "license_info": "Pixabay Music — free for any use"
+    },
+    {
+      "file":         "tunetank-upbeat-acoustic-guitar-347972.mp3",
+      "title":        "Upbeat Acoustic Guitar",
+      "artist":       "TuneTank",
+      "duration_s":   340,
+      "license_info": "Pixabay Music — free for any use"
     }
   ]
 }
