@@ -1414,6 +1414,113 @@
       display: flex; align-items: center; justify-content: center;
     }
     .upgrade-modal-close:hover { background: rgba(0,0,0,.12); }
+
+    /* ── Settings modal ───────────────────────────────────
+       Reuses the upgrade-modal backdrop/card chrome so it feels
+       native. Narrower card — it's a form, not a pricing grid. */
+    .settings-modal {
+      position: fixed; inset: 0; z-index: 1200;
+      display: none; align-items: flex-start; justify-content: center;
+      padding: 40px 20px;
+      background: rgba(20,12,8,.62);
+      backdrop-filter: blur(10px);
+      overflow-y: auto;
+    }
+    .settings-modal.open { display: flex; animation: pmFade .25s ease both; }
+    .settings-card {
+      background: var(--paper-2, #fbf5ec);
+      border-radius: 22px;
+      width: min(560px, 100%);
+      padding: 32px clamp(20px, 4vw, 40px) 32px;
+      box-shadow: 0 30px 90px rgba(0,0,0,.4);
+      position: relative;
+    }
+    .settings-card .upgrade-modal-close { position: absolute; top: 16px; right: 18px; }
+    .settings-eyebrow {
+      font-family: var(--mono); font-size: 11px; font-weight: 700;
+      letter-spacing: .26em; text-transform: uppercase;
+      color: var(--accent); margin-bottom: 6px;
+    }
+    .settings-title {
+      font-family: var(--display); font-weight: 400;
+      font-size: clamp(24px, 3vw, 34px); letter-spacing: -.02em;
+      color: var(--ink); margin: 0 0 22px;
+    }
+    .settings-group { margin-bottom: 26px; }
+    .settings-group h4 {
+      font-family: var(--mono); font-size: 11px; font-weight: 700;
+      letter-spacing: .18em; text-transform: uppercase;
+      color: var(--ink-faint); margin: 0 0 12px;
+      padding-bottom: 8px; border-bottom: 1px solid var(--line);
+    }
+    .settings-field { margin-bottom: 14px; }
+    .settings-field label {
+      display: block; font-size: 13px; font-weight: 600;
+      color: var(--ink); margin-bottom: 6px;
+    }
+    .settings-field input[type="text"],
+    .settings-field input[type="date"] {
+      width: 100%; box-sizing: border-box;
+      padding: 11px 14px; border: 1px solid var(--line-2);
+      border-radius: 12px; background: #fff; color: var(--ink);
+      font-family: inherit; font-size: 14px; outline: none;
+    }
+    .settings-field input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(196,90,58,.14);
+    }
+    /* Toggle row — checkbox + label + helper text */
+    .settings-toggle {
+      display: flex; gap: 12px; align-items: flex-start;
+      padding: 12px 0; border-bottom: 1px dashed var(--line);
+    }
+    .settings-toggle:last-child { border-bottom: 0; }
+    .settings-toggle input {
+      width: 18px; height: 18px; margin-top: 2px;
+      accent-color: var(--accent); flex: 0 0 18px; cursor: pointer;
+    }
+    .settings-toggle .st-body { flex: 1; }
+    .settings-toggle .st-title { font-size: 14px; font-weight: 600; color: var(--ink); }
+    .settings-toggle .st-hint  { font-size: 12px; color: var(--ink-faint); margin-top: 2px; line-height: 1.4; }
+    .settings-actions {
+      display: flex; gap: 10px; justify-content: flex-end;
+      margin-top: 26px;
+    }
+    .settings-actions .btn {
+      padding: 11px 22px; border-radius: 999px; font-size: 13px;
+      font-weight: 700; cursor: pointer; border: 0;
+    }
+    .settings-save { background: var(--accent); color: #fff; }
+    .settings-save:hover { background: var(--accent-deep); }
+    .settings-save:disabled { opacity: .55; cursor: not-allowed; }
+    .settings-cancel {
+      background: transparent; color: var(--ink-soft);
+      border: 1px solid var(--line-2) !important;
+    }
+    .settings-status {
+      font-size: 13px; color: #1f5e3b; margin-top: 12px; text-align: right;
+      min-height: 18px;
+    }
+    .settings-status.error { color: #b03022; }
+    .settings-danger {
+      margin-top: 22px; padding: 18px;
+      background: rgba(176,48,34,.06);
+      border: 1px solid rgba(176,48,34,.22);
+      border-radius: 14px;
+    }
+    .settings-danger h4 {
+      font-family: var(--mono); font-size: 11px; font-weight: 700;
+      letter-spacing: .18em; text-transform: uppercase;
+      color: #b03022; margin: 0 0 6px; border: 0; padding: 0;
+    }
+    .settings-danger p { font-size: 12px; color: var(--ink-soft); margin: 0 0 12px; line-height: 1.45; }
+    .settings-deactivate {
+      padding: 9px 18px; border-radius: 999px;
+      background: #fff; color: #b03022;
+      border: 1px solid rgba(176,48,34,.40);
+      font-size: 12px; font-weight: 700; cursor: pointer;
+    }
+    .settings-deactivate:hover { background: #b03022; color: #fff; }
     .upgrade-modal-eyebrow {
       font-family: var(--mono); font-size: 11px; font-weight: 700;
       letter-spacing: .26em; text-transform: uppercase;
@@ -1537,7 +1644,7 @@
         <a id="wall-nav-link" href="#" target="_blank" rel="noopener">Wall</a>
         <a id="upload-nav-link" href="#" target="_blank" rel="noopener">Upload page</a>
         <a href="#qr-wrap" id="qr-nav-link">QR Code</a>
-        <a href="#">Settings</a>
+        <a href="#" id="settings-nav-link">Settings</a>
       </div>
       <div class="event-header-top-right">
         <div id="dash-nav-links"></div>
@@ -1978,6 +2085,64 @@
   </div>
 </div>
 
+<!-- ── Settings modal ─────────────────────────────────────── -->
+<div class="settings-modal" id="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title" aria-hidden="true">
+  <div class="settings-card">
+    <button type="button" class="upgrade-modal-close" id="settings-close" aria-label="Close">×</button>
+    <div class="settings-eyebrow">— Event settings</div>
+    <h2 class="settings-title" id="settings-title">Settings</h2>
+
+    <div class="settings-group">
+      <h4>Event details</h4>
+      <div class="settings-field">
+        <label for="set-name">Event name</label>
+        <input type="text" id="set-name" maxlength="120" placeholder="e.g. Andrea &amp; JM" />
+      </div>
+      <div class="settings-field">
+        <label for="set-date">Event date</label>
+        <input type="date" id="set-date" />
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <h4>Moderation</h4>
+      <label class="settings-toggle">
+        <input type="checkbox" id="set-auto-photo" />
+        <span class="st-body">
+          <span class="st-title">Auto-publish guest photos</span>
+          <span class="st-hint">On: photos appear on the live wall instantly. Off: you approve each one before it shows.</span>
+        </span>
+      </label>
+      <label class="settings-toggle">
+        <input type="checkbox" id="set-auto-video" />
+        <span class="st-body">
+          <span class="st-title">Auto-publish guest videos</span>
+          <span class="st-hint">Same as above, for video uploads.</span>
+        </span>
+      </label>
+      <label class="settings-toggle">
+        <input type="checkbox" id="set-auto-vmsg" />
+        <span class="st-body">
+          <span class="st-title">Auto-publish video messages</span>
+          <span class="st-hint">3-step guest video greetings skip review when on.</span>
+        </span>
+      </label>
+    </div>
+
+    <div class="settings-actions">
+      <button type="button" class="btn settings-cancel" id="settings-cancel">Cancel</button>
+      <button type="button" class="btn settings-save" id="settings-save">Save changes</button>
+    </div>
+    <div class="settings-status" id="settings-status"></div>
+
+    <div class="settings-danger">
+      <h4>Danger zone</h4>
+      <p>Deactivating hides the event from guests immediately — the upload page and live wall stop working. Your photos and data are kept; reactivate anytime from My Events.</p>
+      <button type="button" class="settings-deactivate" id="settings-deactivate">Deactivate this event</button>
+    </div>
+  </div>
+</div>
+
 <script type="module">
   // iOS bfcache / app-switch recovery — same pattern as upload + wall.
   // Force a fresh load when iOS Safari restores a frozen frame so the
@@ -2010,7 +2175,7 @@
         navLinks.innerHTML = `
           <span class="header-user-name" title="${name}">${name}</span>
           <button type="button" class="header-logout-btn" id="header-logout">Logout</button>
-          <a href="/start" class="header-new-btn">+ New event</a>
+          <a href="/my-events" class="header-new-btn">My events</a>
         `;
         document.getElementById('header-logout')?.addEventListener('click', () => {
           localStorage.removeItem('reelday_token');
@@ -3521,6 +3686,127 @@
   });
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && upgradeModal?.classList.contains('open')) closeUpgradeModal();
+  });
+
+  // ── Settings modal ───────────────────────────────────
+  // Exposes the event-level controls the PATCH /events/:slug
+  // endpoint supports that aren't already on the dashboard
+  // surface (name, date, the three auto-publish moderation
+  // toggles) plus a deactivate action. Venue/time/welcome/music
+  // stay in the Event details card — not duplicated here.
+  const settingsModal  = document.getElementById('settings-modal');
+  const settingsStatus = document.getElementById('settings-status');
+
+  function fillSettingsFromEvent() {
+    const ev = currentDashEvent || {};
+    const nameEl = document.getElementById('set-name');
+    const dateEl = document.getElementById('set-date');
+    if (nameEl) nameEl.value = ev.couple_names || '';
+    // event_date may be a full ISO timestamp; <input type=date> needs YYYY-MM-DD.
+    if (dateEl) dateEl.value = ev.event_date ? String(ev.event_date).slice(0, 10) : '';
+    // Defaults mirror the DB: auto_approve columns default true.
+    document.getElementById('set-auto-photo').checked = ev.auto_approve !== false;
+    document.getElementById('set-auto-video').checked = ev.video_auto_approve !== false;
+    document.getElementById('set-auto-vmsg').checked  = ev.video_message_auto_approve !== false;
+  }
+  function openSettings() {
+    if (!settingsModal) return;
+    fillSettingsFromEvent();
+    settingsStatus.textContent = '';
+    settingsStatus.classList.remove('error');
+    settingsModal.classList.add('open');
+    settingsModal.setAttribute('aria-hidden', 'false');
+  }
+  function closeSettings() {
+    if (!settingsModal) return;
+    settingsModal.classList.remove('open');
+    settingsModal.setAttribute('aria-hidden', 'true');
+  }
+
+  document.getElementById('settings-nav-link')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    openSettings();
+  });
+  document.getElementById('settings-close')?.addEventListener('click', closeSettings);
+  document.getElementById('settings-cancel')?.addEventListener('click', closeSettings);
+  settingsModal?.addEventListener('click', (e) => {
+    if (e.target === settingsModal) closeSettings();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && settingsModal?.classList.contains('open')) closeSettings();
+  });
+
+  document.getElementById('settings-save')?.addEventListener('click', async () => {
+    const btn = document.getElementById('settings-save');
+    const token = localStorage.getItem('reelday_token');
+    settingsStatus.classList.remove('error');
+    settingsStatus.textContent = '';
+    btn.disabled = true;
+    const prevLabel = btn.textContent;
+    btn.textContent = 'Saving…';
+    try {
+      const body = {
+        couple_names: document.getElementById('set-name').value.trim() || undefined,
+        auto_approve:               document.getElementById('set-auto-photo').checked,
+        video_auto_approve:         document.getElementById('set-auto-video').checked,
+        video_message_auto_approve: document.getElementById('set-auto-vmsg').checked,
+      };
+      // Only send a date when one is set — empty string would clear it.
+      const d = document.getElementById('set-date').value;
+      if (d) body.event_date = d;
+
+      const res = await fetch(`/api/events/${slug}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Could not save.');
+      currentDashEvent = data.event;
+      settingsStatus.textContent = 'Saved.';
+      renderHeader(data.event);
+      renderSidebarState(data.event);
+      renderQR();
+      setTimeout(closeSettings, 800);
+    } catch (err) {
+      settingsStatus.classList.add('error');
+      settingsStatus.textContent = err.message || 'Could not save.';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = prevLabel;
+    }
+  });
+
+  document.getElementById('settings-deactivate')?.addEventListener('click', async () => {
+    if (!confirm('Deactivate this event? Guests will immediately lose access to the upload page and live wall. You can reactivate it later from My Events.')) return;
+    const token = localStorage.getItem('reelday_token');
+    const btn = document.getElementById('settings-deactivate');
+    btn.disabled = true;
+    btn.textContent = 'Deactivating…';
+    try {
+      const res = await fetch(`/api/events/${slug}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ is_active: false }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d.message || 'Failed');
+      }
+      // Event is gone for guests — send the host back to their list.
+      location.href = '/my-events';
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = 'Deactivate this event';
+      settingsStatus.classList.add('error');
+      settingsStatus.textContent = err.message || 'Could not deactivate.';
+    }
   });
 
   // Intercept any "/#pricing" link inside the dashboard — every existing
