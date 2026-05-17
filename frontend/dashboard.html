@@ -4559,17 +4559,35 @@
       });
 
       // seat import
-      const seatArea = area('', 'Juan Dela Cruz, Table 4, Near the stage\nMaria Santos, Table 4, Near the stage', 5);
+      const SEAT_SAMPLE = 'Juan Dela Cruz, Table 4, Near the stage\nMaria Santos, Table 4, Near the stage';
+      const seatArea = area('', SEAT_SAMPLE, 5);
       const seatStat = document.createElement('div');
       seatStat.style.cssText = 'font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink);margin-top:8px;';
       const seatBtn = btn('Import guest list', 'accent');
       seatBtn.style.marginTop = '8px';
+      // Companion "use sample" link — the placeholder shows the format but
+      // looks identical to real content, so hosts saw two grey rows and
+      // assumed clicking Import would import them. One click here actually
+      // copies the sample into the textarea, making the import behaviour
+      // honest.
+      const seatSampleBtn = document.createElement('button');
+      seatSampleBtn.type = 'button';
+      seatSampleBtn.textContent = 'Use sample data';
+      seatSampleBtn.style.cssText = 'margin:8px 0 0 10px;padding:10px 16px;background:transparent;border:1px solid var(--line-2);border-radius:999px;font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.08em;color:var(--ink-soft);cursor:pointer;';
+      seatSampleBtn.addEventListener('click', () => {
+        seatArea.value = SEAT_SAMPLE;
+        seatArea.focus();
+        seatStat.textContent = 'Sample loaded — edit, then click Import.';
+      });
       seatBtn.addEventListener('click', async () => {
         const rows = seatArea.value.split('\n').map(l => l.trim()).filter(Boolean).map(l => {
           const c = l.split(/\t|,/).map(x => x.trim());
           return { guest_name: c[0], table_label: c[1] || '', location_note: c[2] || '', seat_note: c[3] || '' };
         }).filter(r => r.guest_name);
-        if (!rows.length) { seatStat.textContent = 'Nothing to import.'; return; }
+        if (!rows.length) {
+          seatStat.textContent = 'Type guests first, or click "Use sample data".';
+          return;
+        }
         seatStat.textContent = 'Importing…';
         try {
           const r = await fetch(`/api/event-site/${slug}/seats/import`, { method: 'POST',
@@ -4658,7 +4676,13 @@
         ]},
         { title: 'Guests', nodes: [
           row('Seat plan import', 'Paste from Excel/Sheets — one guest per line: NAME, TABLE, LOCATION', seatArea),
-          (() => { const w = document.createElement('div'); w.style.marginBottom = '6px'; w.appendChild(seatBtn); return w; })(),
+          (() => {
+            const w = document.createElement('div');
+            w.style.cssText = 'display:flex;flex-wrap:wrap;align-items:center;margin-bottom:6px;';
+            w.appendChild(seatBtn);
+            w.appendChild(seatSampleBtn);
+            return w;
+          })(),
           seatStat,
           (() => { const w = document.createElement('div'); w.style.margin = '16px 0'; w.appendChild(togRow); return w; })(),
           row('RSVPs', '', rBtnRow),
