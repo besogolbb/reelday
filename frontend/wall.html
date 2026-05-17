@@ -2157,25 +2157,25 @@
   // ── Auto-hide the bottom-right controls when idle ──────────
   // Wall typically lives on a TV — we want the sound + volume + fullscreen
   // controls hidden by default so they don't intrude on the slideshow.
-  // Real activity bumps them back on; they fade after IDLE_HIDE_MS.
-  // Hovering the tray keeps it visible (CSS :hover, no JS tracking).
   //
-  // Mouse jitter note: a still mouse hand still fires sub-pixel mousemove
-  // events constantly (sensor noise). Without a threshold the idle timer
-  // never fires. We require ≥6px of cumulative travel to count as motion.
+  // Polling design: events only update `lastActivityTs`; a setInterval
+  // polls and hides on idle. This is more robust than a setTimeout-reset
+  // pattern because in fullscreen some browsers periodically fire spurious
+  // mouse events (cursor auto-hide/reveal) that would keep restarting a
+  // reset-based timer indefinitely. Polling against a real timestamp is
+  // immune to that.
+  //
+  // Mouse jitter: a still mouse still fires sub-pixel mousemove events.
+  // Only count a move as activity if cumulative travel >= MOVE_PX_THRESH.
   const controlsTray = document.getElementById('controls-tray');
-  const IDLE_HIDE_MS  = 3500;
+  const IDLE_HIDE_MS   = 3500;
   const MOVE_PX_THRESH = 12;
-  let controlsIdleTimer = 0;
+  let lastActivityTs = Date.now();
   let lastMoveX = -1, lastMoveY = -1;
 
-  function bumpControls() {
-    if (!controlsTray) return;
-    controlsTray.classList.add('show');
-    clearTimeout(controlsIdleTimer);
-    controlsIdleTimer = setTimeout(() => {
-      controlsTray.classList.remove('show');
-    }, IDLE_HIDE_MS);
+  function bumpActivity() {
+    lastActivityTs = Date.now();
+    if (controlsTray) controlsTray.classList.add('show');
   }
 
   document.addEventListener('mousemove', (e) => {
@@ -2185,12 +2185,23 @@
     if (dx + dy < MOVE_PX_THRESH) return; // ignore sensor jitter
     lastMoveX = e.clientX;
     lastMoveY = e.clientY;
-    bumpControls();
+    bumpActivity();
   }, { passive: true });
-  document.addEventListener('touchstart', bumpControls, { passive: true });
-  document.addEventListener('keydown',    bumpControls);
+  document.addEventListener('touchstart', bumpActivity, { passive: true });
+  document.addEventListener('keydown',    bumpActivity);
+
+  // Poll every 500ms — independent of any event source. If real activity
+  // hasn't happened in IDLE_HIDE_MS, hide. Works the same in fullscreen
+  // and windowed.
+  setInterval(() => {
+    if (!controlsTray) return;
+    if (Date.now() - lastActivityTs > IDLE_HIDE_MS) {
+      controlsTray.classList.remove('show');
+    }
+  }, 500);
+
   // Show briefly on first paint so the host sees the affordance exists.
-  bumpControls();
+  bumpActivity();
 
   soundBtn?.addEventListener('click', () => {
     wallSoundOn = !wallSoundOn;
