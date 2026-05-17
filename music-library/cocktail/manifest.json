@@ -1,0 +1,44 @@
+{
+  "name":        "Cocktail Hour — Light Jazz",
+  "mood":        "cocktail",
+  "description": "Light jazz and acoustic instrumentals for arrival, mingling, and cocktail service.",
+  "cover_color": "#d4af37",
+  "position":    20,
+  "tracks": [
+    {
+      "file":         "01-REPLACE-ME.mp3",
+      "title":        "REPLACE WITH ACTUAL TRACK TITLE",
+      "artist":       "FreePD",
+      "duration_s":   195,
+      "license_info": "FreePD CC0 — no attribution required"
+    },
+    {
+      "file":         "02-REPLACE-ME.mp3",
+      "title":        "REPLACE WITH ACTUAL TRACK TITLE",
+      "artist":       "YouTube Audio Library",
+      "duration_s":   210,
+      "license_info": "YouTube Audio Library — free for any use"
+    },
+    {
+      "file":         "03-REPLACE-ME.mp3",
+      "title":        "REPLACE WITH ACTUAL TRACK TITLE",
+      "artist":       "FreePD",
+      "duration_s":   180,
+      "license_info": "FreePD CC0 — no attribution required"
+    },
+    {
+      "file":         "04-REPLACE-ME.mp3",
+      "title":        "REPLACE WITH ACTUAL TRACK TITLE",
+      "artist":       "YouTube Audio Library",
+      "duration_s":   225,
+      "license_info": "YouTube Audio Library — free for any use"
+    },
+    {
+      "file":         "05-REPLACE-ME.mp3",
+      "title":        "REPLACE WITH ACTUAL TRACK TITLE",
+      "artist":       "FreePD",
+      "duration_s":   200,
+      "license_info": "FreePD CC0 — no attribution required"
+    }
+  ]
+}

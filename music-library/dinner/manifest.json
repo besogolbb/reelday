@@ -1,0 +1,44 @@
+{
+  "name":        "Dinner — Warm Background",
+  "mood":        "dinner",
+  "description": "Soft instrumental backdrop for dinner service — present but conversation-friendly.",
+  "cover_color": "#c19a6b",
+  "position":    30,
+  "tracks": [
+    {
+      "file":         "01-REPLACE-ME.mp3",
+      "title":        "REPLACE WITH ACTUAL TRACK TITLE",
+      "artist":       "FreePD",
+      "duration_s":   220,
+      "license_info": "FreePD CC0 — no attribution required"
+    },
+    {
+      "file":         "02-REPLACE-ME.mp3",
+      "title":        "REPLACE WITH ACTUAL TRACK TITLE",
+      "artist":       "YouTube Audio Library",
+      "duration_s":   195,
+      "license_info": "YouTube Audio Library — free for any use"
+    },
+    {
+      "file":         "03-REPLACE-ME.mp3",
+      "title":        "REPLACE WITH ACTUAL TRACK TITLE",
+      "artist":       "FreePD",
+      "duration_s":   240,
+      "license_info": "FreePD CC0 — no attribution required"
+    },
+    {
+      "file":         "04-REPLACE-ME.mp3",
+      "title":        "REPLACE WITH ACTUAL TRACK TITLE",
+      "artist":       "YouTube Audio Library",
+      "duration_s":   210,
+      "license_info": "YouTube Audio Library — free for any use"
+    },
+    {
+      "file":         "05-REPLACE-ME.mp3",
+      "title":        "REPLACE WITH ACTUAL TRACK TITLE",
+      "artist":       "FreePD",
+      "duration_s":   215,
+      "license_info": "FreePD CC0 — no attribution required"
+    }
+  ]
+}

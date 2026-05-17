@@ -7,3 +7,10 @@ dist/
 reelday/
 server-out.txt
 server-err.txt
+
+# Music library — keep manifests + folder structure tracked, ignore the actual
+# audio bytes (each MP3 is several MB and would bloat the repo).
+music-library/**/*.mp3
+music-library/**/*.m4a
+music-library/**/*.wav
+music-library/**/*.ogg

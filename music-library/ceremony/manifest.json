@@ -1,0 +1,44 @@
+{
+  "name":        "Ceremony — Soft & Reverent",
+  "mood":        "ceremony",
+  "description": "Slow piano and strings for the processional, vows, and intimate moments. No vocals.",
+  "cover_color": "#a8c3d4",
+  "position":    10,
+  "tracks": [
+    {
+      "file":         "01-REPLACE-ME.mp3",
+      "title":        "REPLACE WITH ACTUAL TRACK TITLE",
+      "artist":       "FreePD",
+      "duration_s":   180,
+      "license_info": "FreePD CC0 — no attribution required"
+    },
+    {
+      "file":         "02-REPLACE-ME.mp3",
+      "title":        "REPLACE WITH ACTUAL TRACK TITLE",
+      "artist":       "YouTube Audio Library",
+      "duration_s":   200,
+      "license_info": "YouTube Audio Library — free for any use"
+    },
+    {
+      "file":         "03-REPLACE-ME.mp3",
+      "title":        "REPLACE WITH ACTUAL TRACK TITLE",
+      "artist":       "FreePD",
+      "duration_s":   210,
+      "license_info": "FreePD CC0 — no attribution required"
+    },
+    {
+      "file":         "04-REPLACE-ME.mp3",
+      "title":        "REPLACE WITH ACTUAL TRACK TITLE",
+      "artist":       "YouTube Audio Library",
+      "duration_s":   180,
+      "license_info": "YouTube Audio Library — free for any use"
+    },
+    {
+      "file":         "05-REPLACE-ME.mp3",
+      "title":        "REPLACE WITH ACTUAL TRACK TITLE",
+      "artist":       "FreePD",
+      "duration_s":   240,
+      "license_info": "FreePD CC0 — no attribution required"
+    }
+  ]
+}
