@@ -8,17 +8,36 @@
  * from the database.
  */
 
+// Final pricing tiers (2026):
+//   TALA    Free   — testing / small gatherings   — 25 photos, 24h, photos only
+//   SINAG   ₱1,490 — birthdays, debuts, parties    — unlimited photo+video, 30d
+//   DALISAY ₱2,990 — weddings & milestones         — + audio notes, website, 90d
+//   HIRAYA  Pro    — organizers & venues           — multi-event, custom domain, 1yr
+//
+// Feature-flag glossary (only flags with real enforcement live here —
+// see the audit notes by each tier for matrix rows that are marketing
+// or operational, not code-gated):
+//   videoUpload  — guests may upload videos at all (Tala = photos only)
+//   videoMessage — the guided 3-step video-greeting flow
+//   audioNotes   — voice note paired with a photo (Dalisay+ "Audio Notes")
+//   reactions    — live emoji reactions on the wall
+//   polls        — live polls & games
+//   customMusic  — host-uploaded wall background music
+//   website      — full event website + seat/table finder
+//   customDomain — bring-your-own domain for the event website
 export const PLANS = {
   tala: {
     id: 'tala',
     name: 'Tala',
     price: 0,
     eventLimit: 1,
-    uploadLimit: 50,
-    galleryDays: 7,
+    uploadLimit: 25,           // 25 photos only
+    galleryDays: 1,            // 24-hour retention
     uploadWindowDays: 1,
     features: {
+      videoUpload:  false,     // photos only
       videoMessage: false,
+      audioNotes:   false,
       reactions:    false,
       polls:        false,
       customMusic:  false,
@@ -30,13 +49,16 @@ export const PLANS = {
   sinag: {
     id: 'sinag',
     name: 'Sinag',
-    price: 999,
+    price: 1490,
     eventLimit: 1,
-    uploadLimit: null,
+    uploadLimit: null,         // unlimited photos & videos
     galleryDays: 30,
     uploadWindowDays: 1,
     features: {
+      videoUpload:  true,
       videoMessage: true,
+      // Audio notes are a Dalisay+ differentiator.
+      audioNotes:   false,
       reactions:    true,
       // Live Questions & Poll is a Dalisay/Hiraya feature — kept off Sinag
       // so the trivia/quiz experience stays on the higher tiers.
@@ -50,13 +72,15 @@ export const PLANS = {
   dalisay: {
     id: 'dalisay',
     name: 'Dalisay',
-    price: 2499,
+    price: 2990,
     eventLimit: 3,
     uploadLimit: null,
     galleryDays: 90,
     uploadWindowDays: 7,
     features: {
+      videoUpload:  true,
       videoMessage: true,
+      audioNotes:   true,      // "Unlimited + Audio Notes"
       reactions:    true,
       polls:        true,
       customMusic:  true,
@@ -74,7 +98,9 @@ export const PLANS = {
     galleryDays: 365,
     uploadWindowDays: 180,
     features: {
+      videoUpload:  true,
       videoMessage: true,
+      audioNotes:   true,
       reactions:    true,
       polls:        true,
       customMusic:  true,
@@ -83,6 +109,17 @@ export const PLANS = {
     },
   },
 };
+
+// ── Matrix rows NOT enforced in code (intentionally) ──────────────
+// These differentiate tiers in marketing but have no code gate yet —
+// documented here so nobody assumes they're enforced:
+//   • Wall style (Tala "Static Slideshow" vs Sinag+ "Cinematic /
+//     Ken Burns"): the wall renderer has no per-plan branch.
+//   • White-label / "Your Logo" (Hiraya): no branding-toggle gate.
+//   • Data Export / Leads (Hiraya): RSVP CSV export is owner-only,
+//     not Hiraya-gated.
+//   • Custom domain: `customDomain` flag exists but no route reads it.
+//   • "Priority Processing" (Hiraya): operational, not a code path.
 
 export const LEGACY_PLAN_MAP = {
   libre:       'tala',

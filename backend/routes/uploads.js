@@ -317,6 +317,14 @@ export default async function uploadRoutes(fastify) {
     const isVideo        = fileMime.startsWith('video/');
     const isVideoMessage = isVideo && fields.is_video_message === 'true';
 
+    // Tala is photos-only — block all video, not just video messages.
+    if (isVideo && !plan.features?.videoUpload) {
+      return reply.status(403).send({
+        error: true,
+        code: 'plan_no_video',
+        message: 'Video uploads need a Sinag plan or higher. The free plan is photos only.',
+      });
+    }
     if (isVideoMessage && !plan.features?.videoMessage) {
       return reply.status(403).send({
         error: true,
@@ -388,10 +396,29 @@ export default async function uploadRoutes(fastify) {
     request.user = tryGetUser(request);
     fastify.log.info({ slug, userId: request.user?.id, filename, bucket: process.env.R2_BUCKET_NAME }, 'Generating presigned URL');
 
+    let presignPlan;
     try {
-      await getValidatedEvent(slug, request.user);
+      ({ plan: presignPlan } = await getValidatedEvent(slug, request.user));
     } catch (e) {
       return reply.status(e.statusCode || 500).send({ error: true, ...e });
+    }
+
+    // Plan gate at the door — reject before issuing the PUT URL so
+    // disallowed media never reaches R2 at all (Tala = photos only;
+    // audio notes are Dalisay+). Matches the deeper checks in the
+    // multipart + /complete paths.
+    const ct = String(contentType || '');
+    if (ct.startsWith('video/') && !presignPlan.features?.videoUpload) {
+      return reply.status(403).send({
+        error: true, code: 'plan_no_video',
+        message: 'Video uploads need a Sinag plan or higher. The free plan is photos only.',
+      });
+    }
+    if (ct.startsWith('audio/') && !presignPlan.features?.audioNotes) {
+      return reply.status(403).send({
+        error: true, code: 'plan_no_audio',
+        message: 'Voice notes need a Dalisay plan or higher.',
+      });
     }
 
     const fileKey = `uploads/${slug}/${Date.now()}-${filename}`;
@@ -428,6 +455,23 @@ export default async function uploadRoutes(fastify) {
     const isAudio = file_type === 'audio';
     const isVideo = !isAudio && (file_type === 'video' || (file_type !== 'photo' && fileKey.match(/\.(mp4|webm|mov|m4v|ogg)$/i)));
     const isVidMsg = isVideo && is_video_message === true;
+
+    // Defense in depth — the presign step already gated this, but a
+    // client could call /complete with a hand-built fileKey. Reject so
+    // a Tala video / non-Dalisay audio never gets a DB row (the bytes
+    // may exist in R2 but stay orphaned and invisible).
+    if (isVideo && !plan.features?.videoUpload) {
+      return reply.status(403).send({
+        error: true, code: 'plan_no_video',
+        message: 'Video uploads need a Sinag plan or higher. The free plan is photos only.',
+      });
+    }
+    if (isAudio && !plan.features?.audioNotes) {
+      return reply.status(403).send({
+        error: true, code: 'plan_no_audio',
+        message: 'Voice notes need a Dalisay plan or higher.',
+      });
+    }
     const originalKey = isVideo ? fileKey : null;
     const videoStatus = isVideo ? 'processing' : null;
 

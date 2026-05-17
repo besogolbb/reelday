@@ -5,11 +5,15 @@
  * One row per tier. Display strings here, hard limits in eventLimit/
  * uploadLimit/galleryDays/uploadWindowDays, and capability flags in features.
  *
- * Subscription model:
- *   - Tala  = free, 1 event, no expiry
- *   - Sinag = ₱999 per event (single-event purchase)
- *   - Dalisay = ₱2,499 package, up to 3 events on the account
- *   - Hiraya  = ₱4,990 / year, up to 10 events on the account
+ * Subscription model (final 2026 pricing):
+ *   - Tala    = free, 1 event, 25 photos, 24h retention, photos only
+ *   - Sinag   = ₱1,490 / event, unlimited photo+video, 30d
+ *   - Dalisay = ₱2,990 package (3 events), + audio notes + website, 90d
+ *   - Hiraya  = Pro, up to 10 events, custom domain, 1-year retention
+ *
+ * Keep features in 1:1 sync with backend/lib/plans.js — the backend
+ * copy is the enforcement source of truth; this is for display +
+ * client-side UX gating only.
  */
 
 export const PLANS = {
@@ -20,11 +24,13 @@ export const PLANS = {
     price: 0,
     priceLabel: 'Free',
     eventLimit: 1,
-    uploadLimit: 50,
-    galleryDays: 7,
+    uploadLimit: 25,
+    galleryDays: 1,            // 24-hour retention
     uploadWindowDays: 1,        // event-day uploads only
     features: {
+      videoUpload:  false,     // photos only
       videoMessage: false,
+      audioNotes:   false,
       reactions:    false,
       polls:        false,
       website:      false,
@@ -35,15 +41,17 @@ export const PLANS = {
   sinag: {
     id: 'sinag',
     name: 'Sinag',
-    tagline: 'Single celebration',
-    price: 999,
-    priceLabel: '₱999 / event',
+    tagline: 'Birthdays, debuts, parties',
+    price: 1490,
+    priceLabel: '₱1,490 / event',
     eventLimit: 1,
-    uploadLimit: null,          // unlimited
+    uploadLimit: null,          // unlimited photos & videos
     galleryDays: 30,
     uploadWindowDays: 1,
     features: {
+      videoUpload:  true,
       videoMessage: true,
+      audioNotes:   false,
       reactions:    true,
       // Live Questions & Poll is a Dalisay/Hiraya feature.
       polls:        false,
@@ -55,15 +63,17 @@ export const PLANS = {
   dalisay: {
     id: 'dalisay',
     name: 'Dalisay',
-    tagline: 'Package of 3 events',
-    price: 2499,
-    priceLabel: '₱2,499 / package',
+    tagline: 'Weddings & milestones',
+    price: 2990,
+    priceLabel: '₱2,990 / package',
     eventLimit: 3,
     uploadLimit: null,
     galleryDays: 90,
     uploadWindowDays: 7,
     features: {
+      videoUpload:  true,
       videoMessage: true,
+      audioNotes:   true,
       reactions:    true,
       polls:        true,
       website:      true,
@@ -77,13 +87,15 @@ export const PLANS = {
     name: 'Hiraya',
     tagline: 'For organizers & venues',
     price: 4990,
-    priceLabel: '₱4,990 / year',
+    priceLabel: 'Pro',
     eventLimit: 10,
     uploadLimit: null,
     galleryDays: 365,
     uploadWindowDays: 180,
     features: {
+      videoUpload:  true,
       videoMessage: true,
+      audioNotes:   true,
       reactions:    true,
       polls:        true,
       website:      true,

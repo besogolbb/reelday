@@ -1457,6 +1457,26 @@ body { background: var(--paper); min-height: 100dvh; }
     const reactionsAllowed = !!event.plan?.features?.reactions;
     if (grid) grid.dataset.locked = reactionsAllowed ? 'false' : 'true';
 
+    // Plan-gate the capture UI so guests never do the work then hit a
+    // 403. Tala is photos-only → strip video from the file pickers;
+    // audio notes are Dalisay+ → remove the voice mode pill entirely.
+    // The backend enforces both regardless; this is the UX half.
+    const feats = event.plan?.features || {};
+    if (feats.videoUpload === false) {
+      ['cameraInput', 'fileInput'].forEach(id => {
+        const inp = document.getElementById(id);
+        if (inp) inp.setAttribute('accept', 'image/*');
+      });
+    }
+    if (feats.audioNotes === false) {
+      const vp = document.getElementById('msgPillVoice');
+      if (vp) {
+        vp.style.display = 'none';
+        // If a returning guest had voice mode active, snap back to text.
+        if (vp.classList.contains('active')) switchMsgMode('text');
+      }
+    }
+
     // Restore any previously-typed name from localStorage so guests
     // returning to the page (or just switching tabs) don't have to
     // retype.
