@@ -804,6 +804,11 @@
     .controls-tray:focus-within,
     .controls-tray.always-visible { opacity: 1; pointer-events: auto; }
 
+    /* Hide the mouse cursor while in fullscreen + idle. Toggled by JS in
+       sync with controls-tray visibility — when controls hide, cursor
+       hides; when activity resumes, cursor returns. */
+    body.cursor-hidden, body.cursor-hidden * { cursor: none !important; }
+
     .fs-btn {
       width: 44px; height: 44px; border-radius: 50%;
       background: rgba(0,0,0,.55); color: #fff;
@@ -2180,10 +2185,21 @@
   let windowMovePx = 0, windowMoveCount = 0, windowFirstTs = 0;
   let suppressUntil  = 0;
 
+  function isFullscreenNow() {
+    return !!(document.fullscreenElement || document.webkitFullscreenElement);
+  }
+  function hideCursorIfFs() {
+    if (isFullscreenNow()) document.body.classList.add('cursor-hidden');
+  }
+  function showCursor() {
+    document.body.classList.remove('cursor-hidden');
+  }
+
   function bumpActivity() {
     if (Date.now() < suppressUntil) return;
     lastActivityTs = Date.now();
     if (controlsTray) controlsTray.classList.add('show');
+    showCursor();
   }
 
   document.addEventListener('mousemove', (e) => {
@@ -2256,6 +2272,8 @@
     } else {
       // Exiting fullscreen — give a fresh 3.5s before hiding.
       lastActivityTs = Date.now();
+      // Always restore cursor when leaving fullscreen, regardless of idle state.
+      showCursor();
     }
   }
   document.addEventListener('fullscreenchange',      handleFullscreenChange);
@@ -2274,6 +2292,7 @@
     // bumpActivity is already gated by the same suppressUntil check.
     if (Date.now() < suppressUntil) {
       controlsTray.classList.remove('show');
+      hideCursorIfFs();
       return;
     }
     // Promote movement to activity if it meets both criteria
@@ -2286,6 +2305,7 @@
     // Hide on idle regardless
     if (Date.now() - lastActivityTs > IDLE_HIDE_MS) {
       controlsTray.classList.remove('show');
+      hideCursorIfFs();
     }
   }, 250);
 
