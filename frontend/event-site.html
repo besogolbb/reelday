@@ -82,9 +82,14 @@
       overflow: hidden;
       isolation: isolate;
     }
+    /* Hero cover is now a real <img> element rather than a CSS
+       background — lets us hand the browser srcset + sizes so it
+       picks an appropriately-sized variant (mobile gets ~960w,
+       desktop gets ~1920w) and adds fetchpriority="high" so the
+       cover is requested ahead of the gallery and timeline images. */
     .es-hero-bg {
       position: absolute; inset: -3% -3% -3% -3%; z-index: -1;
-      background-size: cover; background-position: center;
+      width: 106%; height: 106%; object-fit: cover; object-position: center;
       animation: heroZoom 24s ease-in-out infinite alternate;
       opacity: 0; transition: opacity 1.2s ease;
     }
@@ -724,6 +729,32 @@
       return fetch('/api/event-site/' + encodeURIComponent(SLUG) + path, opts);
     }
 
+    // ── Image CDN transform ───────────────────────────
+    // Pipe any Reelday-hosted R2 image through Cloudflare's free
+    // /cdn-cgi/image/ transform so guests get a WebP/AVIF variant
+    // sized for their viewport instead of the 1.9 MB original PNG.
+    // Same pattern the dashboard and wall use (dashboard.html:2120).
+    // format=auto returns WebP/AVIF per the visitor's Accept header.
+    function cdnImage(url, width) {
+      if (!url) return url;
+      if (url.startsWith('data:') || url.startsWith('blob:')) return url;
+      if (/\.(mp4|webm|mov|m4v|ogg)(\?|$)/i.test(url)) return url;
+      try {
+        var u = new URL(url, location.href);
+        if (!/(^|\.)reelday\.ph$/.test(u.hostname)) return url;
+        if (u.pathname.indexOf('/cdn-cgi/image/') === 0) return url;
+        var opts = 'width=' + width + ',quality=82,format=auto,fit=scale-down';
+        return u.origin + '/cdn-cgi/image/' + opts + u.pathname + u.search;
+      } catch (e) { return url; }
+    }
+    // Build a responsive srcset string for an R2 image.
+    function cdnSrcset(url, widths) {
+      if (!url) return '';
+      return widths.map(function (w) {
+        return cdnImage(url, w) + ' ' + w + 'w';
+      }).join(', ');
+    }
+
     function showState(msg) {
       var s = document.getElementById('state');
       s.textContent = msg; s.hidden = false;
@@ -834,16 +865,30 @@
       // ── Hero ────────────────────────────────────────
       var hero = el('section', { class: 'es-hero' });
       if (data.cover_photo_url) {
-        var bg = el('div', { class: 'es-hero-bg' });
-        // Preload the image so the fade-in only fires after it's
-        // actually painted. Until then the gradient + colour wash holds
-        // the layout — the hero is never empty paper.
-        var pre = new Image();
-        pre.onload = function () {
-          bg.style.backgroundImage = 'url("' + encodeURI(data.cover_photo_url) + '")';
-          bg.classList.add('loaded');
-        };
-        pre.src = data.cover_photo_url;
+        // Real <img> with srcset + fetchpriority — the browser picks
+        // a viewport-appropriate variant (WebP/AVIF on Chromium/Safari
+        // via Cloudflare's format=auto) so guests pull ~80–300 KB
+        // instead of the raw 1.9 MB PNG, and the request fires at high
+        // priority before gallery images compete for bandwidth.
+        var bg = el('img', {
+          class: 'es-hero-bg',
+          alt: '',
+          'aria-hidden': 'true',
+          src: cdnImage(data.cover_photo_url, 1600),
+          srcset: cdnSrcset(data.cover_photo_url, [640, 960, 1280, 1600, 2000]),
+          sizes: '100vw',
+          decoding: 'async',
+          fetchpriority: 'high'
+        });
+        bg.addEventListener('load', function () { bg.classList.add('loaded'); });
+        // Fallback to the original if the CDN transform errors for any
+        // reason (e.g. an external cover URL the transform can't reach).
+        bg.addEventListener('error', function () {
+          if (bg.src !== data.cover_photo_url) {
+            bg.removeAttribute('srcset');
+            bg.src = data.cover_photo_url;
+          }
+        });
         hero.appendChild(bg);
       } else {
         hero.classList.add('no-bg');
@@ -1015,12 +1060,21 @@
       }
 
       // ── Gallery ──────────────────────────────────────
+      // Each tile pulls a CDN-transformed variant; lightbox link still
+      // points at the original. Sizes hint matches the 6-col editorial
+      // grid: featured tiles span ~half the viewport on desktop, full
+      // width on mobile (see .es-gallery CSS).
       if (cfg.gallery && Array.isArray(cfg.gallery.images) && cfg.gallery.images.length) {
         addNav('gallery', cfg.gallery.label || t('gallery'));
         var g = el('div', { class: 'es-gallery' });
         cfg.gallery.images.forEach(function (u) {
           var a = el('a', { href: u, target: '_blank', rel: 'noopener' });
-          var img = el('img', { loading: 'lazy', alt: '', src: u });
+          var img = el('img', {
+            loading: 'lazy', decoding: 'async', alt: '',
+            src: cdnImage(u, 800),
+            srcset: cdnSrcset(u, [400, 600, 800, 1200]),
+            sizes: '(min-width: 880px) 540px, (min-width: 720px) 360px, 50vw'
+          });
           a.appendChild(img);
           g.appendChild(a);
         });
