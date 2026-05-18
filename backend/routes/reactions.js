@@ -11,6 +11,7 @@
  */
 
 import { resolvePlan } from '../lib/plans.js';
+import { kickOffRender } from '../lib/sdeRender.js';
 
 // Closed allow-list. Stops anyone from POSTing arbitrary unicode that
 // would either break the wall layout or be used as a hidden channel.
@@ -51,6 +52,13 @@ export default async function reactionsRoutes(fastify) {
   // slug -> { uploadId, since } — last slide the wall reported showing.
   // Bounded by the number of active event slugs (one entry each).
   const nowShowing = new Map();
+
+  // SDE auto-render: once we've fired (or confirmed already done /
+  // ineligible), the slug is added here and we skip the check on
+  // subsequent polls. Bounded by total slug count over process lifetime
+  // (one tiny entry each); transient errors get the entry removed so
+  // the next poll retries. See Slice 2D in docs/SDE-HANDOVER.md.
+  const autoRenderFired = new Set();
 
   async function loadEventForReactions(slug, reply) {
     const now = Date.now();
@@ -182,28 +190,38 @@ export default async function reactionsRoutes(fastify) {
       // Reuse the POST handler's event cache (slug → {event, expires}) to skip
       // a DB round-trip on the hot read path. Cache miss falls back to a single
       // JOIN query. Wall polls every 1s — without this it was 2 DB queries/poll.
-      let eventId;
-      const cachedEv = eventCache.get(slug);
+      let cachedEv = eventCache.get(slug);
+      let event;
       if (cachedEv && cachedEv.expires > Date.now()) {
         if (!cachedEv.event) {
           return reply.status(404).send({ error: true, message: 'Event not found' });
         }
-        eventId = cachedEv.event.id;
+        event = cachedEv.event;
       } else {
+        // Load full event fields (not just id) so the cached row has
+        // everything both the POST plan-gate AND Slice 2D's auto-render
+        // check need. Cache miss penalty is one tiny JOIN.
         const { rows: evRows } = await fastify.db.query(
-          'SELECT id FROM events WHERE slug = $1 AND is_active = true',
+          `SELECT e.id, e.plan, e.user_id, e.is_active, e.upload_window_ends_at,
+                  u.subscription_tier
+             FROM events e
+             LEFT JOIN users u ON u.id = e.user_id
+            WHERE e.slug = $1 AND e.is_active = true`,
           [slug],
         );
         if (!evRows.length) {
           eventCache.set(slug, { expires: Date.now() + EVENT_CACHE_TTL_MS, event: null });
           return reply.status(404).send({ error: true, message: 'Event not found' });
         }
-        eventId = evRows[0].id;
-        // Warm the cache entry if missing (POST path may not have run yet).
-        if (!cachedEv) {
-          eventCache.set(slug, { expires: Date.now() + EVENT_CACHE_TTL_MS, event: evRows[0], allowed: true });
-        }
+        event = evRows[0];
+        const plan = resolvePlan(event.plan || event.subscription_tier || 'tala');
+        eventCache.set(slug, {
+          expires: Date.now() + EVENT_CACHE_TTL_MS,
+          event,
+          allowed: !!plan.features?.reactions,
+        });
       }
+      const eventId = event.id;
 
       const { rows } = await fastify.db.query(
         `SELECT id, emoji, guest_name, upload_id, created_at
@@ -214,10 +232,87 @@ export default async function reactionsRoutes(fastify) {
         [eventId, sinceTs],
       );
 
-      // Continue with the rest of the original handler — old code path picks up below.
-      // (Wrapping the body in try/catch lets us log the *exact* error instead of letting
-      //  the global handler swallow it as a generic "Internal server error".)
+      // ── SDE play state + auto-render check (Slice 2D) ──
+      // One JOIN'd lookup carries both signals so we don't double the DB
+      // load on the hot wall-poll path. Skipped entirely if the event's
+      // plan doesn't include SDE (cheap plan resolve from cached event).
+      const plan = resolvePlan(event.plan || event.subscription_tier || 'tala');
+      let sde_play = null;
+      if (plan.features?.sde) {
+        const { rows: sdeRows } = await fastify.db.query(
+          `SELECT e.sde_play_requested_at,
+                  e.sde_play_cleared_at,
+                  s.status         AS sde_status,
+                  s.auto_rendered  AS sde_auto_rendered,
+                  s.video_url      AS sde_video_url,
+                  s.poster_url     AS sde_poster_url,
+                  s.duration_s     AS sde_duration_s
+             FROM events e
+             LEFT JOIN event_sde s ON s.event_id = e.id
+            WHERE e.id = $1
+            LIMIT 1`,
+          [eventId],
+        );
+        const sd        = sdeRows[0] || {};
+        const requested = sd.sde_play_requested_at;
+        const cleared   = sd.sde_play_cleared_at;
+        const playActive = requested && (!cleared || new Date(cleared) < new Date(requested));
+        if (playActive && sd.sde_status === 'ready' && sd.sde_video_url) {
+          sde_play = {
+            video_url:    sd.sde_video_url,
+            poster_url:   sd.sde_poster_url,
+            duration_s:   sd.sde_duration_s,
+            requested_at: requested,
+          };
+        }
+
+        // Auto-render trigger: when the upload window has closed and
+        // no render has fired yet, kick one off. Fire-and-forget — the
+        // wall doesn't wait on us. autoRenderFired set deduplicates
+        // across the 1Hz poll storm + multi-wall events.
+        if (!autoRenderFired.has(slug) && event.upload_window_ends_at) {
+          const closed = new Date(event.upload_window_ends_at) < new Date();
+          if (closed) {
+            const inFlight = sd.sde_status === 'queued' || sd.sde_status === 'rendering';
+            const settled  = sd.sde_status === 'ready'  || sd.sde_auto_rendered === true;
+            if (inFlight || settled) {
+              autoRenderFired.add(slug); // already handled
+            } else {
+              // Eligible: row missing or {status:'idle' OR 'error'} AND auto_rendered=false.
+              // Optimistic add prevents a second concurrent poll from double-firing;
+              // a transient failure removes it so the next poll can retry.
+              autoRenderFired.add(slug);
+              fastify.db.query(
+                `SELECT id, slug, couple_names, event_date, venue
+                   FROM events WHERE id = $1`,
+                [eventId],
+              ).then(({ rows: fullRows }) => {
+                if (!fullRows.length) return null;
+                return kickOffRender(fastify, fullRows[0], { auto_rendered: true });
+              }).then(result => {
+                if (result) fastify.log.info(
+                  { event_id: eventId, slug, clip_count: result.clip_count },
+                  'sde auto-render fired (upload-window closed)',
+                );
+              }).catch(err => {
+                const terminal = err.code === 'sde_in_flight' || err.code === 'sde_no_clips';
+                fastify.log.warn(
+                  { err: err.message, code: err.code, event_id: eventId, slug, terminal },
+                  'sde auto-render failed',
+                );
+                if (!terminal) autoRenderFired.delete(slug); // allow retry on next poll
+              });
+            }
+          }
+        }
+      } else {
+        // Plan doesn't include SDE — never check this slug again.
+        autoRenderFired.add(slug);
+      }
+
+      // Stash on reply so the response builder below sees everything.
       reply.__reactions_rows = rows;
+      reply.__sde_play = sde_play;
     } catch (err) {
       request.log.error({
         where: 'GET /api/reactions/:slug',
@@ -234,6 +329,10 @@ export default async function reactionsRoutes(fastify) {
     const rows = reply.__reactions_rows;
 
     reply.header('Cache-Control', 'no-store');
-    return { reactions: rows, server_time: new Date().toISOString() };
+    return {
+      reactions:   rows,
+      server_time: new Date().toISOString(),
+      sde_play:    reply.__sde_play ?? null, // present + non-null when wall should enter takeover
+    };
   });
 }

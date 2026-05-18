@@ -1,101 +1,43 @@
 /**
- * Same Day Edit — owner routes (Batch 1: selection only, no render).
+ * Same Day Edit — owner routes.
  *
- *   GET   /api/events/:slug/sde         — status + curated preview
- *   PATCH /api/events/:slug/sde/clips   — toggle one clip pin/exclude
+ *   GET   /api/events/:slug/sde           — status + curated preview + play state
+ *   PATCH /api/events/:slug/sde/clips     — toggle one clip pin/exclude
+ *   POST  /api/events/:slug/sde/generate  — manually kick off a render
+ *   POST  /api/events/:slug/sde/play      — stamp events.sde_play_requested_at
+ *                                            (the wall picks this up on its next
+ *                                            reactions poll and enters takeover)
+ *   POST  /api/events/:slug/sde/stop      — stamp events.sde_play_cleared_at
  *
  * The Curator (lib/sdeSelect.js) runs only here, owner-authed,
  * request-time — never on the live wall. GET returns 200 even when the
  * plan lacks `sde` so the dashboard can render the upsell card (same
- * shape as the music-uploads endpoint). PATCH is hard-gated.
+ * shape as the music-uploads endpoint). All mutating routes are
+ * hard-gated.
+ *
+ * Render orchestration lives in lib/sdeRender.js (shared with the
+ * auto-trigger on upload-window close in routes/reactions.js).
  */
 
-import { resolvePlan } from '../lib/plans.js';
-import { runCurator, SELECT_DEFAULTS } from '../lib/sdeSelect.js';
-import { triggerSdeRender } from '../lib/sdeRenderInvoke.js';
+import { resolvePlan }                    from '../lib/plans.js';
+import { runCurator }                     from '../lib/sdeSelect.js';
+import { kickOffRender, SdeRenderError }  from '../lib/sdeRender.js';
+
+// Cross-route memo: same set spirit as the one in reactions.js (we
+// don't share the actual Set across modules because each route file
+// has its own closure, and the cost of "fire once per slug per
+// process per route" is fine). When the host opens the dashboard
+// post-event-close on a slug that no wall ever polled (e.g. small
+// venue, no TV), this fallback triggers auto-render anyway.
+const autoRenderFiredFromDashboard = new Set();
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// Strip the R2 public host so the Lambda gets a bucket key, not a URL.
-// Returns null for foreign hosts (shouldn't happen for R2-backed media,
-// but failing soft is better than passing a half-key into the Lambda).
-function r2KeyFromUrl(value) {
-  if (!value) return null;
-  const base = (process.env.R2_PUBLIC_URL || 'https://media.reelday.ph').replace(/\/+$/, '');
-  const str = String(value);
-  if (str.startsWith(base + '/')) return str.slice(base.length + 1);
-  if (!/^https?:\/\//i.test(str)) return str.replace(/^\/+/, '');
-  return null;
-}
-
-// What R2 key should the Lambda download for this clip? Videos prefer the
-// transcoded mp4; photos use the original upload (Ken Burns wants headroom).
-function clipKey(row) {
-  if (row.file_type === 'video') {
-    return row.compressed_key || row.original_key || r2KeyFromUrl(row.file_url);
-  }
-  return row.original_key || r2KeyFromUrl(row.file_url);
-}
-
-// "May 18, 2026 · Tagaytay" / "May 18, 2026" / "Tagaytay" / null —
-// whichever pieces the event actually has. Asia/Manila locale because
-// every customer event is local; the timezone is non-negotiable for
-// "today's" SDE so we don't shift the date in a UTC render window.
-function formatSubtitle(eventDate, venue) {
-  let datePart = null;
-  if (eventDate) {
-    const d = eventDate instanceof Date ? eventDate : new Date(eventDate);
-    if (!Number.isNaN(d.getTime())) {
-      datePart = d.toLocaleDateString('en-US', {
-        month: 'long', day: 'numeric', year: 'numeric', timeZone: 'Asia/Manila',
-      });
-    }
-  }
-  const venuePart = (venue || '').trim() || null;
-  return [datePart, venuePart].filter(Boolean).join(' · ') || null;
-}
-
-// Music chain: event's custom upload → curated playlist lead → baked
-// default → null (silent). Returns the R2 key + a track_id pointer (for
-// event_sde.track_id when we picked from music_tracks).
-async function pickMusicForRender(fastify, eventId) {
-  const { rows: own } = await fastify.db.query(
-    `SELECT id, r2_key, file_url
-       FROM music_tracks
-      WHERE event_id = $1
-      ORDER BY position ASC, created_at ASC
-      LIMIT 1`,
-    [eventId],
-  );
-  if (own.length) {
-    const key = own[0].r2_key || r2KeyFromUrl(own[0].file_url);
-    if (key) return { audioKey: key, trackId: own[0].id };
-  }
-
-  const { rows: ev } = await fastify.db.query(
-    `SELECT music_enabled, music_playlist_id FROM events WHERE id = $1`,
-    [eventId],
-  );
-  const event = ev[0] || {};
-  if (event.music_enabled !== false && event.music_playlist_id) {
-    const { rows: pl } = await fastify.db.query(
-      `SELECT id, r2_key, file_url
-         FROM music_tracks
-        WHERE playlist_id = $1 AND event_id IS NULL
-        ORDER BY position ASC, created_at ASC
-        LIMIT 1`,
-      [event.music_playlist_id],
-    );
-    if (pl.length) {
-      const key = pl[0].r2_key || r2KeyFromUrl(pl[0].file_url);
-      if (key) return { audioKey: key, trackId: pl[0].id };
-    }
-  }
-
-  const fallback = process.env.SDE_DEFAULT_AUDIO_KEY;
-  if (fallback) return { audioKey: fallback, trackId: null };
-
-  return { audioKey: null, trackId: null };
+// Active play signal: requested_at set AND (cleared_at is null OR older).
+function isPlaying(event) {
+  if (!event?.sde_play_requested_at) return false;
+  if (!event?.sde_play_cleared_at)   return true;
+  return new Date(event.sde_play_cleared_at) < new Date(event.sde_play_requested_at);
 }
 
 export default async function sdeRoutes(fastify) {
@@ -107,6 +49,7 @@ export default async function sdeRoutes(fastify) {
     const { rows } = await fastify.db.query(
       `SELECT e.id, e.slug, e.is_active, e.user_id, e.plan,
               e.couple_names, e.event_date, e.venue,
+              e.sde_play_requested_at, e.sde_play_cleared_at,
               u.subscription_tier
          FROM events e
          LEFT JOIN users u ON u.id = e.user_id
@@ -135,8 +78,8 @@ export default async function sdeRoutes(fastify) {
     return row.thumbnail_url || row.file_url;
   }
 
-  // GET — status + curated preview. 200 even when locked so the
-  // dashboard can render the upsell (mirrors the music uploads route).
+  // GET — status + curated preview + play state. 200 even when locked
+  // so the dashboard can render the upsell (mirrors music uploads).
   fastify.get('/events/:slug/sde', { preHandler: fastify.authenticate }, async (request, reply) => {
     const ctx = await loadOwnedEvent(request.params.slug, request, reply);
     if (!ctx) return;
@@ -147,17 +90,51 @@ export default async function sdeRoutes(fastify) {
     if (!sdeUnlocked) {
       return {
         sde_unlocked: false, plan: plan.id, status: 'locked',
-        clips: [], summary: null, sde: null,
+        clips: [], summary: null, sde: null, playing: false,
       };
     }
 
     const { rows: sdeRows } = await fastify.db.query(
       `SELECT status, video_url, poster_url, duration_s, clip_count,
-              error_message, rendered_at, updated_at
+              error_message, rendered_at, auto_rendered, updated_at
          FROM event_sde WHERE event_id = $1`,
       [event.id],
     );
-    const sde = sdeRows[0] || { status: 'idle' };
+    const sde = sdeRows[0] || { status: 'idle', auto_rendered: false };
+
+    // Auto-render fallback for events with no live wall poll (small
+    // venues, host visits dashboard post-close). Mirrors the trigger
+    // in routes/reactions.js — fire-and-forget, deduplicated by slug.
+    if (!autoRenderFiredFromDashboard.has(event.slug)) {
+      const { rows: evWindow } = await fastify.db.query(
+        `SELECT upload_window_ends_at FROM events WHERE id = $1`, [event.id],
+      );
+      const closedAt = evWindow[0]?.upload_window_ends_at;
+      if (closedAt && new Date(closedAt) < new Date()) {
+        const inFlight = sde.status === 'queued' || sde.status === 'rendering';
+        const settled  = sde.status === 'ready'  || sde.auto_rendered === true;
+        if (inFlight || settled) {
+          autoRenderFiredFromDashboard.add(event.slug);
+        } else {
+          autoRenderFiredFromDashboard.add(event.slug);
+          kickOffRender(fastify, event, { auto_rendered: true })
+            .then(result => {
+              request.log.info(
+                { event_id: event.id, slug: event.slug, clip_count: result.clip_count },
+                'sde auto-render fired (dashboard fallback)',
+              );
+            })
+            .catch(err => {
+              const terminal = err.code === 'sde_in_flight' || err.code === 'sde_no_clips';
+              request.log.warn(
+                { err: err.message, code: err.code, event_id: event.id, terminal },
+                'sde auto-render failed (dashboard fallback)',
+              );
+              if (!terminal) autoRenderFiredFromDashboard.delete(event.slug);
+            });
+        }
+      }
+    }
 
     let curated;
     try {
@@ -195,6 +172,10 @@ export default async function sdeRoutes(fastify) {
       return new Date(b.created_at) - new Date(a.created_at);
     });
 
+    // Play state is meaningful only when there's an actual rendered reel
+    // to play. The wall will refuse to enter takeover without video_url.
+    const playing = isPlaying(event) && sde.status === 'ready' && !!sde.video_url;
+
     return {
       sde_unlocked: true,
       plan: plan.id,
@@ -205,6 +186,8 @@ export default async function sdeRoutes(fastify) {
         duration_s: sde.duration_s,
         rendered_at: sde.rendered_at,
       } : null,
+      playing,
+      play_requested_at: playing ? event.sde_play_requested_at : null,
       summary,
       clips,
     };
@@ -244,13 +227,11 @@ export default async function sdeRoutes(fastify) {
     return { id: rows[0].id, pinned: rows[0].sde_pinned, excluded: rows[0].sde_excluded };
   });
 
-  // POST — owner clicks "Generate". Debounced at the row level (reject if
-  // a render is already queued or rendering). Runs the Curator, picks
-  // music, async-invokes the SDE Lambda, and parks the row at 'queued';
-  // the sde-ready webhook flips it to 'ready' or 'error'. Title/endcards
-  // are passed as text fields — the Lambda renders them via drawtext
-  // (no PNG generation in the backend; see SDE-HANDOVER §"Locked
-  // decisions").
+  // POST — owner clicks "Generate". Delegates to the shared kickoff
+  // helper (also used by the auto-render trigger on upload-window
+  // close, see routes/reactions.js). The helper handles debounce,
+  // curator, music, Lambda invoke, and event_sde upsert; we just map
+  // its SdeRenderError → HTTP.
   fastify.post('/events/:slug/sde/generate', { preHandler: fastify.authenticate }, async (request, reply) => {
     const ctx = await loadOwnedEvent(request.params.slug, request, reply);
     if (!ctx) return;
@@ -261,112 +242,91 @@ export default async function sdeRoutes(fastify) {
       });
     }
 
-    // Debounce: cheap row read before doing curator/lambda work.
-    const { rows: existing } = await fastify.db.query(
-      `SELECT status FROM event_sde WHERE event_id = $1`,
+    try {
+      const result = await kickOffRender(fastify, ctx.event, {
+        requested_by_user_id: request.user.id,
+        auto_rendered:        false,
+      });
+      return { ok: true, ...result };
+    } catch (err) {
+      if (err instanceof SdeRenderError) {
+        if (err.code === 'sde_in_flight') {
+          // Include current status so the dashboard's 409 handler can
+          // start polling instead of showing an error pill.
+          const { rows } = await fastify.db.query(
+            `SELECT status FROM event_sde WHERE event_id = $1`, [ctx.event.id],
+          );
+          return reply.status(err.statusCode).send({
+            error: true, code: err.code, message: err.message,
+            status: rows[0]?.status,
+          });
+        }
+        request.log.error({ err: err.message, code: err.code, event_id: ctx.event.id },
+                          'sde generate failed');
+        return reply.status(err.statusCode).send({
+          error: true, code: err.code, message: err.message,
+        });
+      }
+      throw err;
+    }
+  });
+
+  // POST /sde/play — owner taps "Play on wall". Stamps the request
+  // timestamp; the wall picks it up on its next reactions poll (~1 s)
+  // and enters fullscreen takeover with event_sde.video_url. Refuses
+  // when there's no rendered reel to play.
+  fastify.post('/events/:slug/sde/play', { preHandler: fastify.authenticate }, async (request, reply) => {
+    const ctx = await loadOwnedEvent(request.params.slug, request, reply);
+    if (!ctx) return;
+    if (!ctx.sdeUnlocked) {
+      return reply.status(403).send({
+        error: true, code: 'sde_locked',
+        message: 'Same Day Edit is a Dalisay plan feature.',
+      });
+    }
+
+    const { rows } = await fastify.db.query(
+      `SELECT status, video_url FROM event_sde WHERE event_id = $1`,
       [ctx.event.id],
     );
-    const currentStatus = existing[0]?.status;
-    if (currentStatus === 'queued' || currentStatus === 'rendering') {
+    const sde = rows[0];
+    if (!sde || sde.status !== 'ready' || !sde.video_url) {
       return reply.status(409).send({
-        error: true, code: 'sde_in_flight',
-        message: 'A render is already in progress for this event.',
-        status: currentStatus,
+        error: true, code: 'sde_not_ready',
+        message: 'Render a reel first — there’s nothing to play on the wall yet.',
       });
     }
 
-    let curated;
-    try {
-      curated = await runCurator(fastify, ctx.event.id);
-    } catch (err) {
-      request.log.error({ err: err.message, event_id: ctx.event.id }, 'sde curator failed (generate)');
-      return reply.status(503).send({
-        error: true, code: 'curator_failed',
-        message: 'Could not curate the reel right now. Try again.',
-      });
-    }
-    if (!curated.ordered.length) {
-      return reply.status(422).send({
-        error: true, code: 'sde_no_clips',
-        message: 'No clips available yet. Wait for guest uploads first.',
-      });
-    }
-
-    // Curator rows → Lambda payload. Drop any clip we can't resolve to
-    // an R2 key (defensive: clipKey returning null means a foreign-host
-    // or never-uploaded row, which would crash the Lambda download).
-    const clips = curated.ordered
-      .map(row => ({
-        key:  clipKey(row),
-        type: row.file_type,
-        dur:  row.file_type === 'video' ? SELECT_DEFAULTS.videoSec : SELECT_DEFAULTS.photoSec,
-      }))
-      .filter(c => c.key);
-
-    if (!clips.length) {
-      return reply.status(422).send({
-        error: true, code: 'sde_no_clips',
-        message: 'Selected clips are missing storage keys. Re-upload and try again.',
-      });
-    }
-
-    const { audioKey, trackId } = await pickMusicForRender(fastify, ctx.event.id);
-
-    // Text-card content. The Lambda renders these as drawtext-on-black
-    // (skips silently if its font file is missing). Subtitle is built
-    // from event_date + venue; either part may be absent. Endcard copy
-    // is a fixed default for now — hosts can customise in a later slice.
-    const title    = (ctx.event.couple_names || '').trim() || null;
-    const subtitle = formatSubtitle(ctx.event.event_date, ctx.event.venue);
-    const endcardText = 'Thank you for celebrating with us.';
-
-    const outKey = `sde/${ctx.event.id}/sde-${Date.now()}.mp4`;
-    const payload = {
-      eventId:      ctx.event.id,
-      slug:         ctx.event.slug,
-      clips,
-      audioKey,
-      title,
-      subtitle,
-      endcardText,
-      titleCardKey: null, // text path wins; PNG fields kept null
-      endcardKey:   null,
-      outKey,
-    };
-
-    try {
-      await triggerSdeRender(payload);
-    } catch (err) {
-      request.log.error({ err: err.message, event_id: ctx.event.id }, 'sde lambda invoke failed');
-      return reply.status(502).send({
-        error: true, code: 'sde_invoke_failed',
-        message: 'Could not start the render. Try again in a minute.',
-      });
-    }
-
-    // Upsert to 'queued'. We deliberately leave video_url/poster_url/
-    // duration_s/rendered_at untouched on conflict so the dashboard can
-    // keep showing the last good render while the new one is in flight.
+    // Clear cleared_at AND stamp a new requested_at — a fresh request
+    // restarts playback even if the wall was already showing the reel
+    // (host can re-trigger the moment from the beginning).
     await fastify.db.query(
-      `INSERT INTO event_sde
-         (event_id, status, clip_count, track_id, requested_by_user_id,
-          error_message, updated_at)
-       VALUES ($1, 'queued', $2, $3, $4, NULL, NOW())
-       ON CONFLICT (event_id) DO UPDATE
-         SET status               = 'queued',
-             clip_count           = EXCLUDED.clip_count,
-             track_id             = EXCLUDED.track_id,
-             requested_by_user_id = EXCLUDED.requested_by_user_id,
-             error_message        = NULL,
-             updated_at           = NOW()`,
-      [ctx.event.id, clips.length, trackId, request.user.id],
+      `UPDATE events
+          SET sde_play_requested_at = NOW(),
+              sde_play_cleared_at   = NULL
+        WHERE id = $1`,
+      [ctx.event.id],
     );
+    return { ok: true, playing: true };
+  });
 
-    return {
-      ok:         true,
-      status:     'queued',
-      clip_count: clips.length,
-      has_audio:  !!audioKey,
-    };
+  // POST /sde/stop — owner taps "Stop wall". Stamps cleared_at; the
+  // wall sees the cleared timestamp newer than requested and exits
+  // takeover on its next reactions poll.
+  fastify.post('/events/:slug/sde/stop', { preHandler: fastify.authenticate }, async (request, reply) => {
+    const ctx = await loadOwnedEvent(request.params.slug, request, reply);
+    if (!ctx) return;
+    if (!ctx.sdeUnlocked) {
+      return reply.status(403).send({
+        error: true, code: 'sde_locked',
+        message: 'Same Day Edit is a Dalisay plan feature.',
+      });
+    }
+
+    await fastify.db.query(
+      `UPDATE events SET sde_play_cleared_at = NOW() WHERE id = $1`,
+      [ctx.event.id],
+    );
+    return { ok: true, playing: false };
   });
 }
