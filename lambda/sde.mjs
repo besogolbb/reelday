@@ -286,6 +286,10 @@ async function renderTextCard(workdir, outPath, lines, durSec) {
 
   // Build per-line drawtext filters. Y positions are offset from center
   // so two lines straddle the middle; a single line sits dead-center.
+  // Cinematic styling: dark tinted bg (not pure black), drop shadow on
+  // every line for depth, a thin divider between title and subtitle,
+  // and a 0.5s fade-in / fade-out wrap. None of these need a new font
+  // or a new dep — all are stock drawtext / drawbox / fade filters.
   const drawTexts = [];
   const cleanLines = lines
     .map(l => ({ ...l, text: String(l?.text || '').trim() }))
@@ -301,27 +305,57 @@ async function renderTextCard(workdir, outPath, lines, durSec) {
 
     const fontsize = line.fontsize || 72;
     const color    = line.color    || 'white';
-    // Two-line layout: title above center, subtitle below. Single line:
-    // dead center. The `(h-th)/2` term centers each label vertically on
-    // its own glyph height, then we shift by `yOffset` for stacking.
-    const yOffset  = cleanLines.length === 1 ? 0
-                   : (i === 0 ? -fontsize : Math.round(fontsize * 0.9));
-    const ySign    = yOffset >= 0 ? '+' : '-';
-    const yMag     = Math.abs(yOffset);
+    // Two-line layout: title CENTER at (h/2 - 50), subtitle CENTER at
+    // (h/2 + 50). Single-line: dead center. Tighter than the previous
+    // ±fontsize spacing — more cohesive, frames the divider better.
+    let yExpr;
+    if (cleanLines.length === 1) {
+      yExpr = '(h-text_h)/2';
+    } else if (i === 0) {
+      yExpr = '(h-text_h)/2-60';
+    } else {
+      yExpr = '(h-text_h)/2+45';
+    }
 
+    // Drop shadow: black at 60% alpha, offset 3px right + 4px down.
+    // Subtle enough not to feel "stage-design" but enough to lift the
+    // text off the background — particularly important on a TV viewed
+    // from across a room where flat text looks washed-out.
     drawTexts.push(
       `drawtext=fontfile='${SDE_FONT_PATH}':textfile='${textPath}':` +
       `fontsize=${fontsize}:fontcolor=${color}:` +
-      `x=(w-text_w)/2:y=(h-text_h)/2${ySign}${yMag}`,
+      `shadowcolor=black@0.6:shadowx=3:shadowy=4:` +
+      `x=(w-text_w)/2:y=${yExpr}`,
     );
   }
 
-  const vf = drawTexts.join(',') + `,format=yuv420p,setsar=1`;
+  // Thin decorative divider between title and subtitle on two-line cards
+  // (e.g. "Maria & Juan" / "May 18, 2026 · Tagaytay"). 120 × 2 px, dimmed
+  // white. Sits in the gap between the title's bottom and the subtitle's
+  // top — gives the layout a sense of composition vs. floating labels.
+  if (cleanLines.length >= 2) {
+    drawTexts.push(
+      `drawbox=x=(w-120)/2:y=(h/2)-1:w=120:h=2:color=white@0.45:t=fill`,
+    );
+  }
+
+  // Cinematic open + close: 0.5 s fade in, 0.5 s fade out. The fade
+  // wraps the whole vf chain (including the divider), so everything
+  // appears + disappears together.
+  const FADE = 0.5;
+  const fadeOutStart = Math.max(0, durSec - FADE);
+  const fades = `fade=t=in:st=0:d=${FADE},fade=t=out:st=${fadeOutStart}:d=${FADE}`;
+
+  const vf = drawTexts.join(',') + `,${fades},format=yuv420p,setsar=1`;
 
   try {
     await runFfmpeg([
       '-y', '-nostdin', '-hide_banner', '-loglevel', 'error',
-      '-f', 'lavfi', '-i', `color=c=black:s=${TARGET_W}x${TARGET_H}:d=${durSec}:r=${TARGET_FPS}`,
+      // Dark navy-tinted background (#0a0a14) instead of flat #000.
+      // Pure black against drop-shadowed white text reads as "flat";
+      // the slight tint feels intentional without competing with the
+      // colour of the photos that follow.
+      '-f', 'lavfi', '-i', `color=c=0x0a0a14:s=${TARGET_W}x${TARGET_H}:d=${durSec}:r=${TARGET_FPS}`,
       '-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=mono',
       '-vf', vf,
       '-shortest',
@@ -440,9 +474,9 @@ async function normalizeAll(workdir, payload, localPaths) {
   if (wantsTitleText) {
     const out = join(workdir, safeCardName(0));
     const rendered = await renderTextCard(workdir, out, [
-      { text: payload.title,    fontsize: 84, color: 'white'    },
-      { text: payload.subtitle, fontsize: 36, color: 'white@0.7' },
-    ], 2.5);
+      { text: payload.title,    fontsize: 96, color: 'white'    },
+      { text: payload.subtitle, fontsize: 36, color: 'white@0.75' },
+    ], 3.0);
     if (rendered) normalizedPaths.push(out);
   } else if (localPaths.titleCard) {
     const out = join(workdir, safeCardName(0));
@@ -466,8 +500,8 @@ async function normalizeAll(workdir, payload, localPaths) {
   if (payload.endcardText) {
     const out = join(workdir, safeCardName(payload.clips.length + 1));
     const rendered = await renderTextCard(workdir, out, [
-      { text: payload.endcardText, fontsize: 56, color: 'white' },
-    ], 2.5);
+      { text: payload.endcardText, fontsize: 64, color: 'white' },
+    ], 3.0);
     if (rendered) normalizedPaths.push(out);
   } else if (localPaths.endcard) {
     const out = join(workdir, safeCardName(payload.clips.length + 1));
