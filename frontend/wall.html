@@ -4261,17 +4261,15 @@
 
     video.play().then(() => {
       console.info('[sde] takeover playing (muted)');
-      // Try to unmute silently. On a wall whose audio was already
-      // unlocked via #sound-btn, this works and the hint hides. On a
-      // cold wall, browser may re-mute; the hint stays for the tap.
-      video.muted = false;
-      setTimeout(() => {
-        if (!video.muted && muteHint) muteHint.classList.remove('visible');
-      }, 50);
+      // DO NOT auto-unmute here. Chrome's behavior when an unmute
+      // attempt is rejected (no prior user gesture on this tab) is
+      // to PAUSE the video entirely, not just keep it muted —
+      // documented at https://goo.gl/xX8pDD, observed in production
+      // 2026-05-18. The mute hint stays visible; tapping it is a
+      // user gesture and unmutes safely. Hosts can also tap the
+      // wall's existing #sound-btn once before the event to grant
+      // tab-wide activation for both the gallery and SDE audio.
     }).catch(err => {
-      // Muted autoplay failing is unusual — surface it loudly so we
-      // can investigate. The frozen-frame symptom belongs to silently-
-      // resolved-but-not-playing, not to a rejection like this.
       console.warn('[sde] takeover play() rejected even muted:', err && err.message);
     });
   }
