@@ -4122,6 +4122,7 @@
   let reactionsSince = new Date().toISOString();
   let reactionDropFrame = false;
   let sdePlayingRequestedAt = null; // remembers the last requested_at we acted on
+  let sdeWasMusicPlaying    = false; // whether bg music was playing pre-takeover (restore on exit)
   async function pollReactions() {
     // Tier gate: Tala doesn't include live reactions, so don't even
     // hit the endpoint — keeps the wall quiet and the network log clean.
@@ -4188,12 +4189,40 @@
         overlay.classList.remove('visible');
         overlay.setAttribute('aria-hidden', 'true');
         if (muteHint) muteHint.classList.remove('visible');
+
+        // Resume the gallery — playback was paused on takeover entry
+        // to free up the device's video decoders. Advance to the next
+        // slide rather than resuming the interrupted one, so the wall
+        // doesn't pop back to a half-played video.
+        try {
+          if (sdeWasMusicPlaying && bgMusic) bgMusic.play().catch(() => {});
+        } catch {}
+        sdeWasMusicPlaying = false;
+        try { clearTimeout(slideTimer); } catch {}
+        try { advance(); } catch {}
       }
       return;
     }
 
     // Same play request as before — already showing, nothing to do.
     if (playSig.requested_at === sdePlayingRequestedAt) return;
+
+    // Pause the gallery BEFORE starting takeover — frees up the
+    // hardware video decoders (TV browsers often have only 1-2) and
+    // stops bg music from fighting the reel's audio track. The
+    // overlay's z-index 200 covers the gallery visually, but without
+    // pausing, vidA/vidB keep decoding in the background and the SDE
+    // playback stutters / freezes on weaker devices (user-reported
+    // 2026-05-18).
+    try { vidA && vidA.pause(); } catch {}
+    try { vidB && vidB.pause(); } catch {}
+    try {
+      if (bgMusic) {
+        sdeWasMusicPlaying = !bgMusic.paused;
+        bgMusic.pause();
+      }
+    } catch {}
+    try { clearTimeout(slideTimer); slideTimer = null; } catch {}
 
     // Enter or restart takeover. First version tried unmuted autoplay
     // and fell back to muted on rejection — but the unmuted .play()
