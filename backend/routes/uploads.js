@@ -4,6 +4,7 @@ import { gzipSync } from 'zlib';
 import { PutObjectCommand, DeleteObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { resolvePlan } from '../lib/plans.js';
+import { extractStorageKey } from '../lib/storageKeys.js';
 import { triggerVideoTranscode } from '../lib/awsLambdaService.js';
 import { verifyToken } from '../plugins/auth.js';
 import { getCount as getPresenceCount } from './presence.js';
@@ -133,18 +134,6 @@ export default async function uploadRoutes(fastify) {
   async function reconcileVideoUploads(rows) {
     if (!Array.isArray(rows) || !rows.length) return rows;
     return Promise.all(rows.map(row => reconcileVideoUpload(row)));
-  }
-
-  function extractStorageKey(fileUrl) {
-    if (!fileUrl) return null;
-
-    try {
-      const parsed = new URL(fileUrl);
-      return decodeURIComponent(parsed.pathname.replace(/^\/+/, ''));
-    } catch {
-      const match = String(fileUrl).match(/(?:^|\/)(uploads\/.+)$/);
-      return match ? decodeURIComponent(match[1]) : null;
-    }
   }
 
   // Helper to optionally get user from token without forcing authentication

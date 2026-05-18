@@ -1,6 +1,72 @@
 import { timingSafeEqual } from 'crypto';
+import { ListObjectsV2Command, DeleteObjectsCommand } from '@aws-sdk/client-s3';
 import { resolvePlan, galleryExpiryFor, uploadWindowEndFor } from '../lib/plans.js';
+import { extractStorageKey } from '../lib/storageKeys.js';
 import { baseSlug, randomSuffix, isSlugCollision } from './events.js';
+
+// Best-effort R2 reaper for a hard-deleted event. Gathers every object the
+// event owns and batch-deletes it so a wipe doesn't leak storage:
+//   • uploads     — original_key, compressed_key, and the keys behind
+//                    file_url / web_url / poster_url (mirrors the per-upload
+//                    deleter in routes/uploads.js, same 5-key set)
+//   • music_tracks — host-uploaded custom tracks only (event_id scoped, so
+//                    curated-library tracks are never touched) via r2_key
+//   • event-site   — host hero/prenup imagery, all under the deterministic
+//                    `event-site/<event_id>/` prefix (listed straight from R2)
+//
+// Storage is NOT the source of truth — the DB rows are. So this runs AFTER
+// the row delete has committed and never throws: a storage hiccup leaves a
+// recoverable orphan, it must not resurrect a deleted event or 500 the call.
+async function reapEventStorage(fastify, eventId, uploadRows, musicRows, log) {
+  const bucket = process.env.R2_BUCKET_NAME;
+  if (!bucket) return;
+
+  const keys = new Set();
+  for (const r of uploadRows) {
+    if (r.original_key)   keys.add(r.original_key);
+    if (r.compressed_key) keys.add(r.compressed_key);
+    for (const k of [
+      extractStorageKey(r.file_url),
+      extractStorageKey(r.web_url),
+      extractStorageKey(r.poster_url),
+    ]) if (k) keys.add(k);
+  }
+  for (const r of musicRows) if (r.r2_key) keys.add(r.r2_key);
+
+  // Site imagery isn't tracked in its own table (URLs live inside the
+  // event_sites.config JSONB at arbitrary paths), but every object is
+  // written under this one prefix — list it rather than parse the blob.
+  try {
+    let ContinuationToken;
+    do {
+      const page = await fastify.storage.send(new ListObjectsV2Command({
+        Bucket: bucket,
+        Prefix: `event-site/${eventId}/`,
+        ContinuationToken,
+      }));
+      for (const obj of page.Contents || []) if (obj.Key) keys.add(obj.Key);
+      ContinuationToken = page.IsTruncated ? page.NextContinuationToken : undefined;
+    } while (ContinuationToken);
+  } catch (err) {
+    log.warn({ err: err.message, event_id: eventId }, 'event-site R2 list failed');
+  }
+
+  const all = [...keys];
+  // S3/R2 DeleteObjects caps at 1000 keys per request; a large event can
+  // blow past that, so chunk it.
+  for (let i = 0; i < all.length; i += 1000) {
+    const batch = all.slice(i, i + 1000);
+    try {
+      await fastify.storage.send(new DeleteObjectsCommand({
+        Bucket: bucket,
+        Delete: { Objects: batch.map(Key => ({ Key })), Quiet: true },
+      }));
+    } catch (err) {
+      log.warn({ err: err.message, event_id: eventId, count: batch.length },
+               'event R2 batch delete failed');
+    }
+  }
+}
 
 // Admin gate: every /admin/* route must present `Authorization: Bearer <ADMIN_TOKEN>`
 // matching the env var. Compared via timingSafeEqual to defeat timing oracles.
@@ -527,16 +593,17 @@ export default async function adminRoutes(fastify) {
   });
 
   // DELETE /api/admin/events/:slug — hard-delete an event row. Child tables
-  // (uploads, video_messages, reactions, polls, event_websites, event_rsvps,
+  // (uploads, video_messages, reactions, polls, event_sites, event_rsvps,
   // event_seats, music_tracks) all have ON DELETE CASCADE so they vanish
   // automatically. Payments do NOT cascade — we null out their event_id
-  // first so the payment audit trail survives a wiped event. The actual
-  // file objects in storage are NOT removed here; they're orphaned and can
-  // be reaped separately if needed. Prefer /deactivate over this for
+  // first so the payment audit trail survives a wiped event. The R2 objects
+  // those rows referenced are then reaped (best-effort) via reapEventStorage
+  // so a wipe doesn't leak storage. Prefer /deactivate over this for
   // anything other than spam / test data.
   fastify.delete('/admin/events/:slug', async (request, reply) => {
     const { slug } = request.params;
     const client = await fastify.db.connect();
+    let eventId, uploadRows = [], musicRows = [];
     try {
       await client.query('BEGIN');
       const { rows } = await client.query('SELECT id FROM events WHERE slug = $1', [slug]);
@@ -544,17 +611,32 @@ export default async function adminRoutes(fastify) {
         await client.query('ROLLBACK');
         return reply.status(404).send({ error: true, message: 'Event not found' });
       }
-      const eventId = rows[0].id;
+      eventId = rows[0].id;
+      // Snapshot the storage keys BEFORE the cascade removes the rows.
+      ({ rows: uploadRows } = await client.query(
+        `SELECT original_key, compressed_key, file_url, web_url, poster_url
+           FROM uploads WHERE event_id = $1`,
+        [eventId],
+      ));
+      ({ rows: musicRows } = await client.query(
+        `SELECT r2_key FROM music_tracks
+          WHERE event_id = $1 AND r2_key IS NOT NULL`,
+        [eventId],
+      ));
       await client.query('UPDATE payments SET event_id = NULL WHERE event_id = $1', [eventId]);
       await client.query('DELETE FROM events WHERE id = $1', [eventId]);
       await client.query('COMMIT');
-      return { success: true };
     } catch (err) {
       try { await client.query('ROLLBACK'); } catch {}
       throw err;
     } finally {
       client.release();
     }
+
+    // Row delete is committed and authoritative; clean storage afterwards so
+    // a slow/failed R2 call can't roll back the wipe (reaper never throws).
+    await reapEventStorage(fastify, eventId, uploadRows, musicRows, request.log);
+    return { success: true };
   });
 
   // POST /api/admin/events/:slug/extend
