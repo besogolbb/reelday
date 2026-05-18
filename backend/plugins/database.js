@@ -47,6 +47,11 @@ const MIGRATIONS = `
   ALTER TABLE events ADD COLUMN IF NOT EXISTS playback_burst_id    INTEGER DEFAULT 0;
   ALTER TABLE events ADD COLUMN IF NOT EXISTS playback_burst_queue JSONB   DEFAULT '[]'::jsonb;
 
+  -- Google Calendar sync: id of this event's entry in the shared service-
+  -- account calendar (lib/gcal.js). NULL = never synced / not configured.
+  -- Lets create→insert, edit→patch, delete→delete stay idempotent.
+  ALTER TABLE events ADD COLUMN IF NOT EXISTS gcal_event_id VARCHAR(256);
+
   -- Server-side video transcode pipeline: web_url is the wall-friendly
   -- 720p H.264 MP4 (with faststart), poster_url is a JPEG of the first
   -- frame. Both are NULL until the background ffmpeg job finishes; the

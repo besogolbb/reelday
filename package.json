@@ -30,6 +30,7 @@
     "dotenv": "^16.4.5",
     "fastify": "^4.28.1",
     "fastify-plugin": "^4.5.1",
+    "google-auth-library": "^10.6.2",
     "jsonwebtoken": "^9.0.3",
     "nodemailer": "^6.9.14",
     "pg": "^8.12.0",

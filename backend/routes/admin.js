@@ -2,7 +2,28 @@ import { timingSafeEqual } from 'crypto';
 import { ListObjectsV2Command, DeleteObjectsCommand } from '@aws-sdk/client-s3';
 import { resolvePlan, galleryExpiryFor, uploadWindowEndFor } from '../lib/plans.js';
 import { extractStorageKey } from '../lib/storageKeys.js';
+import { syncEventToGcal, deleteGcalEvent } from '../lib/gcal.js';
 import { baseSlug, randomSuffix, isSlugCollision } from './events.js';
+
+// Best-effort Google Calendar sync after an admin event mutation. Never
+// throws into the request path — a Calendar hiccup must not fail the DB
+// write (same philosophy as the R2 reaper); the next edit or the backfill
+// script reconciles. Persists/clears events.gcal_event_id so create→insert,
+// edit→patch and unschedule→delete stay idempotent.
+async function syncEventCalendar(fastify, ev, log) {
+  try {
+    const gid = await syncEventToGcal(ev);
+    if (gid && gid !== ev.gcal_event_id) {
+      await fastify.db.query('UPDATE events SET gcal_event_id = $2 WHERE id = $1', [ev.id, gid]);
+      ev.gcal_event_id = gid;
+    } else if (!gid && ev.gcal_event_id) {
+      await fastify.db.query('UPDATE events SET gcal_event_id = NULL WHERE id = $1', [ev.id]);
+      ev.gcal_event_id = null;
+    }
+  } catch (err) {
+    log.warn({ err: err.message, slug: ev.slug }, 'gcal sync failed');
+  }
+}
 
 // Best-effort R2 reaper for a hard-deleted event. Gathers every object the
 // event owns and batch-deletes it so a wipe doesn't leak storage:
@@ -465,6 +486,7 @@ export default async function adminRoutes(fastify) {
         [user_id, resolved.id],
       );
     }
+    await syncEventCalendar(fastify, inserted, request.log);
     return reply.status(201).send({ event: inserted });
   });
 
@@ -524,6 +546,7 @@ export default async function adminRoutes(fastify) {
     const params = [slug, ...uniqueCols.map(c => b[c])];
 
     const client = await fastify.db.connect();
+    let saved;
     try {
       await client.query('BEGIN');
       const { rows } = await client.query(
@@ -552,13 +575,17 @@ export default async function adminRoutes(fastify) {
         );
       }
       await client.query('COMMIT');
-      return { event: ev };
+      saved = ev;
     } catch (err) {
       try { await client.query('ROLLBACK'); } catch {}
       throw err;
     } finally {
       client.release();
     }
+
+    // Post-commit, best-effort: mirror the change into Google Calendar.
+    await syncEventCalendar(fastify, saved, request.log);
+    return { event: saved };
   });
 
   // GET /api/admin/stats
@@ -620,15 +647,17 @@ export default async function adminRoutes(fastify) {
   fastify.post('/admin/events/:slug/deactivate', async (request, reply) => {
     const { slug } = request.params;
 
-    const { rowCount } = await fastify.db.query(
-      'UPDATE events SET is_active = false WHERE slug = $1',
+    const { rows } = await fastify.db.query(
+      'UPDATE events SET is_active = false WHERE slug = $1 RETURNING *',
       [slug],
     );
 
-    if (!rowCount) {
+    if (!rows.length) {
       return reply.status(404).send({ error: true, message: 'Event not found' });
     }
 
+    // Reflect the cancellation in Google Calendar (best-effort).
+    await syncEventCalendar(fastify, rows[0], request.log);
     return { success: true };
   });
 
@@ -643,15 +672,16 @@ export default async function adminRoutes(fastify) {
   fastify.delete('/admin/events/:slug', async (request, reply) => {
     const { slug } = request.params;
     const client = await fastify.db.connect();
-    let eventId, uploadRows = [], musicRows = [];
+    let eventId, gcalEventId, uploadRows = [], musicRows = [];
     try {
       await client.query('BEGIN');
-      const { rows } = await client.query('SELECT id FROM events WHERE slug = $1', [slug]);
+      const { rows } = await client.query('SELECT id, gcal_event_id FROM events WHERE slug = $1', [slug]);
       if (!rows.length) {
         await client.query('ROLLBACK');
         return reply.status(404).send({ error: true, message: 'Event not found' });
       }
       eventId = rows[0].id;
+      gcalEventId = rows[0].gcal_event_id;
       // Snapshot the storage keys BEFORE the cascade removes the rows.
       ({ rows: uploadRows } = await client.query(
         `SELECT original_key, compressed_key, file_url, web_url, poster_url
@@ -676,6 +706,10 @@ export default async function adminRoutes(fastify) {
     // Row delete is committed and authoritative; clean storage afterwards so
     // a slow/failed R2 call can't roll back the wipe (reaper never throws).
     await reapEventStorage(fastify, eventId, uploadRows, musicRows, request.log);
+    if (gcalEventId) {
+      try { await deleteGcalEvent(gcalEventId); }
+      catch (err) { request.log.warn({ err: err.message, slug }, 'gcal delete failed'); }
+    }
     return { success: true };
   });
 
