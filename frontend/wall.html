@@ -1442,6 +1442,31 @@
       backdrop-filter: blur(10px);
     }
     #sde-mute-hint.visible { display: inline-flex; }
+    /* Loading indicator shown while the SDE mp4 prebuffers. Hides
+       once canplaythrough fires (browser thinks it can sustain
+       playback). Without this prebuffer wait, the user gets "brief
+       freezes every few seconds" — classic streaming-buffer
+       exhaustion on residential connections with the ultrafast
+       preset's larger files. */
+    #sde-loading {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      display: none; align-items: center; gap: 12px;
+      background: rgba(0,0,0,.7); color: #fff;
+      border: 1px solid rgba(255,255,255,.18);
+      padding: 18px 32px; border-radius: 999px;
+      font-family: var(--mono); font-size: 14px; letter-spacing: .18em;
+      text-transform: uppercase;
+      backdrop-filter: blur(10px);
+    }
+    #sde-loading.visible { display: inline-flex; }
+    #sde-loading .sde-spinner {
+      width: 14px; height: 14px;
+      border: 2px solid rgba(255,255,255,.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: sde-loading-spin 0.9s linear infinite;
+    }
+    @keyframes sde-loading-spin { to { transform: rotate(360deg); } }
     @keyframes sdeFadeIn { from { opacity: 0; } to { opacity: 1; } }
 
     /* ── Floating emojis ──────────────────────────────────────
@@ -1770,6 +1795,7 @@
      host taps Stop. Video loops until cleared. -->
 <div id="sde-takeover" aria-hidden="true">
   <video id="sde-video" playsinline preload="auto" loop></video>
+  <div id="sde-loading"><span class="sde-spinner"></span><span>Loading reel</span></div>
   <div id="sde-mute-hint" role="button" tabindex="0">🔊 Tap for sound</div>
 </div>
 
@@ -4180,6 +4206,8 @@
     const muteHint = document.getElementById('sde-mute-hint');
     if (!overlay || !video) return;
 
+    const loadingEl = document.getElementById('sde-loading');
+
     if (!playSig) {
       if (sdePlayingRequestedAt !== null) {
         sdePlayingRequestedAt = null;
@@ -4189,6 +4217,7 @@
         overlay.classList.remove('visible');
         overlay.setAttribute('aria-hidden', 'true');
         if (muteHint) muteHint.classList.remove('visible');
+        if (loadingEl) loadingEl.classList.remove('visible');
 
         // Resume the gallery — playback was paused on takeover entry
         // to free up the device's video decoders. Advance to the next
@@ -4259,19 +4288,36 @@
       };
     }
 
-    video.play().then(() => {
-      console.info('[sde] takeover playing (muted)');
-      // DO NOT auto-unmute here. Chrome's behavior when an unmute
-      // attempt is rejected (no prior user gesture on this tab) is
-      // to PAUSE the video entirely, not just keep it muted —
-      // documented at https://goo.gl/xX8pDD, observed in production
-      // 2026-05-18. The mute hint stays visible; tapping it is a
-      // user gesture and unmutes safely. Hosts can also tap the
-      // wall's existing #sound-btn once before the event to grant
-      // tab-wide activation for both the gallery and SDE audio.
-    }).catch(err => {
-      console.warn('[sde] takeover play() rejected even muted:', err && err.message);
-    });
+    // Show loading indicator while the browser prefetches enough data.
+    // Without this wait, residential connections + the ultrafast-preset
+    // mp4 (~150-300 MB for a 4-min reel) produce "brief freezes every
+    // few seconds" — buffer-exhaustion stutter (user-reported 2026-05-18).
+    if (loadingEl) loadingEl.classList.add('visible');
+
+    let started = false;
+    const startPlayback = (reason) => {
+      if (started) return;
+      started = true;
+      if (loadingEl) loadingEl.classList.remove('visible');
+      console.info('[sde] takeover starting playback (' + reason + ')');
+      video.play().then(() => {
+        console.info('[sde] takeover playing (muted)');
+        // DO NOT auto-unmute (https://goo.gl/xX8pDD) — Chrome pauses
+        // the video if the unmute is rejected. Mute hint handles sound.
+      }).catch(err => {
+        console.warn('[sde] takeover play() rejected even muted:', err && err.message);
+      });
+    };
+
+    // Prefer canplaythrough (browser thinks it can sustain playback);
+    // fall back to canplay after 6 s (some content fires canplaythrough
+    // slowly even when ready); hard fallback after 15 s so a slow
+    // connection can't trap the takeover forever.
+    video.addEventListener('canplaythrough', () => startPlayback('canplaythrough'), { once: true });
+    setTimeout(() => {
+      if (!started && video.readyState >= 3) startPlayback('canplay-fallback');
+    }, 6000);
+    setTimeout(() => startPlayback('hard-fallback'), 15000);
   }
 
   async function pollBurst() {
