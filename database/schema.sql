@@ -81,6 +81,12 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_tier       VARCHAR(20)  
 ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_expires_at TIMESTAMPTZ;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS events_remaining        INTEGER;
 
+-- tala_used: lifetime "1 free Tala event per account" flag. Set to true
+-- the first time a user creates a plan='tala' event and never cleared,
+-- so a Tala user who deletes their event can't claim another free one.
+-- Backfilled at boot from existing plan='tala' rows. See backend/routes/events.js.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS tala_used BOOLEAN NOT NULL DEFAULT false;
+
 -- ── Per-event expiry stamps (computed from plan at creation time) ──
 -- gallery_expires_at: when the wall + downloads soft-lock
 -- upload_window_ends_at: when guests can no longer upload

@@ -305,6 +305,9 @@
   @media (min-width: 640px) {
     .upgrade-grid { grid-template-columns: repeat(2, 1fr); }
   }
+  @media (min-width: 900px) {
+    .upgrade-grid { grid-template-columns: repeat(3, 1fr); }
+  }
   .upgrade-card {
     background: #fff;
     border: 1.5px solid var(--line);
@@ -789,25 +792,42 @@
     if (reasonMsg) reasonEl.textContent = reasonMsg;
 
     const curIdx = PLAN_ORDER.indexOf(currentTierId);
-    // Offer the user's current paid tier (re-buy a credit) plus any higher
-    // paid tier. Tala is free and never appears as an "upgrade" option.
-    const offerable = PLAN_ORDER.filter((id, idx) =>
-      idx >= curIdx && PLANS[id] && PLANS[id].price > 0
-    );
+    // Always offer all three paid tiers — even Sinag for a Dalisay user
+    // (per-event model: a small follow-up event may not need Dalisay's
+    // audio notes / website). Tala is free and never appears as an
+    // upgrade option (it's the free-starter slot, not an upgrade path).
+    const offerable = PLAN_ORDER.filter(id => PLANS[id] && PLANS[id].price > 0);
+
+    // Featured = the most natural next step. If the user is below the
+    // top tier, that's the tier directly above them; if they're already
+    // on the top tier, the same-tier renewal becomes featured.
+    const featuredId = curIdx < PLAN_ORDER.length - 1
+      ? PLAN_ORDER[curIdx + 1]
+      : currentTierId;
 
     grid.innerHTML = '';
     offerable.forEach(id => {
       const p       = PLANS[id];
+      const idx     = PLAN_ORDER.indexOf(id);
       const isRebuy = id === currentTierId;
-      // Featured = the upsell, i.e. the next tier above current. If the
-      // user is already on the top tier (Hiraya) the re-buy itself
-      // becomes the featured card.
-      const featured = isRebuy ? offerable.length === 1 : id === offerable[1];
+      // Tag + CTA copy reflects direction. Switching DOWN is a real
+      // option in the per-event model (the new event will be billed
+      // and feature-gated as the lower tier), so it gets honest
+      // "Switch to" framing rather than being hidden.
+      const direction = isRebuy ? 'same'
+                      : idx > curIdx ? 'up'
+                      : 'down';
+      const tag = direction === 'same' ? 'Buy another'
+                : direction === 'up'   ? 'Upgrade to'
+                : 'Switch to';
+      const cta = direction === 'down' ? `Use ${p.name} & continue →`
+                : isRebuy              ? 'Buy & continue →'
+                                       : 'Upgrade & continue →';
 
       const card = document.createElement('div');
-      card.className = `upgrade-card${featured ? ' featured' : ''}`;
+      card.className = `upgrade-card${id === featuredId ? ' featured' : ''}`;
       card.innerHTML = `
-        <div class="uc-tag">${isRebuy ? 'Buy another' : 'Upgrade to'}</div>
+        <div class="uc-tag">${tag}</div>
         <div class="uc-tier">${p.name}</div>
         <div class="uc-price">${p.priceLabel || ('₱' + p.price)}</div>
         <div class="uc-tagline">${p.tagline || ''}</div>
@@ -816,7 +836,7 @@
         </ul>
         <button type="button" class="uc-cta" data-tier="${id}">
           <span class="btn-spinner"></span>
-          <span>${isRebuy ? 'Buy & continue →' : 'Upgrade & continue →'}</span>
+          <span>${cta}</span>
         </button>
       `;
       grid.appendChild(card);

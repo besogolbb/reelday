@@ -212,6 +212,22 @@ const MIGRATIONS = `
 
   -- Host can override the event-type-derived theme for the microsite.
   ALTER TABLE events ADD COLUMN IF NOT EXISTS theme_override VARCHAR(40);
+
+  -- ── Free-tier lifetime cap ──
+  -- Tala is "1 free event per account, ever" — without this column the
+  -- count-based active-events check in events.js lets a Tala user
+  -- delete their event and claim another free one. Set to true the
+  -- first time a user creates a plan='tala' event (events.js does the
+  -- write) and never cleared. Backfilled below for accounts that
+  -- already have a Tala-tier event on record.
+  ALTER TABLE users ADD COLUMN IF NOT EXISTS tala_used BOOLEAN NOT NULL DEFAULT false;
+  UPDATE users
+     SET tala_used = true
+   WHERE tala_used = false
+     AND id IN (
+       SELECT DISTINCT user_id FROM events
+        WHERE plan = 'tala' AND user_id IS NOT NULL
+     );
 `;
 
 async function dbPlugin(fastify) {

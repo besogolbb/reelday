@@ -34,7 +34,8 @@ function tryGetUser(request) {
 async function loadUserWithPlan(db, userId) {
   if (!userId) return null;
   const { rows } = await db.query(
-    `SELECT id, subscription_tier, subscription_expires_at, events_remaining
+    `SELECT id, subscription_tier, subscription_expires_at,
+            events_remaining, tala_used
        FROM users WHERE id = $1`,
     [userId],
   );
@@ -66,6 +67,21 @@ export default async function eventRoutes(fastify) {
     }
 
     const planForEvent = resolvePlan(user.subscription_tier);
+
+    // ── Tala lifetime cap (1 free event per account, ever) ──
+    // Hard rule that overrides the count-based check below — a Tala user
+    // who deletes their event must NOT be able to claim another free
+    // slot. tala_used is set the first time a plan='tala' row is
+    // inserted (below) and is never cleared.
+    if (planForEvent.id === 'tala' && user.tala_used) {
+      return reply.status(403).send({
+        error: true,
+        code: 'plan_limit_events',
+        message: `You've already used your free Tala event. Upgrade to add more.`,
+        plan: planForEvent.id,
+        tala_used: true,
+      });
+    }
 
     // ── Enforce events_remaining first (paid tiers), eventLimit second (Tala) ──
     if (user.events_remaining !== null && user.events_remaining !== undefined) {
@@ -150,6 +166,16 @@ export default async function eventRoutes(fastify) {
     if (user.events_remaining !== null && user.events_remaining !== undefined) {
       await fastify.db.query(
         `UPDATE users SET events_remaining = GREATEST(events_remaining - 1, 0) WHERE id = $1`,
+        [userId],
+      );
+    }
+
+    // Burn the free-Tala slot on first Tala insert. After this, the
+    // lifetime check above blocks any future plan='tala' attempts —
+    // even if this event later gets soft- or hard-deleted.
+    if (planForEvent.id === 'tala' && !user.tala_used) {
+      await fastify.db.query(
+        `UPDATE users SET tala_used = true WHERE id = $1`,
         [userId],
       );
     }
