@@ -1174,6 +1174,25 @@
       box-shadow: 0 4px 14px rgba(196,90,58,.08);
     }
     .info-card .row.row-highlight span:first-child { color: var(--accent-deep); }
+
+    /* Always-visible upload-window status pill.
+       Scoped by #info-window-row so it beats the generic
+       .info-card .row span:first-child/:last-child rules. */
+    #info-window-row .win-pill {
+      display: inline-block;
+      font-family: var(--mono); font-size: 11px; font-weight: 700;
+      letter-spacing: .1em; text-transform: uppercase;
+      padding: 3px 9px; border-radius: 999px;
+      background: rgba(45,122,74,.16); color: #1f5e3b;
+    }
+    #info-window-row .win-pill.is-pending { background: rgba(216,160,90,.20); color: #8a5a1a; }
+    #info-window-row .win-pill.is-closed  { background: rgba(196,90,58,.16);  color: #c44a3a; }
+    #info-window-row .win-hint {
+      display: block; margin-top: 4px;
+      font-family: var(--mono); font-size: 10px; font-weight: 600;
+      letter-spacing: .04em; color: var(--ink-soft);
+      text-transform: none;
+    }
     .info-card .row.row-highlight span:last-child { color: var(--accent-deep); }
 
     /* Quota meter slot — only visible on plans that have a cap */
@@ -1684,6 +1703,13 @@
     <h3>Event info</h3>
     <div class="row"><span>Type</span><span id="info-type">—</span></div>
     <div class="row row-highlight"><span>Plan</span><span id="info-plan">—</span></div>
+    <div class="row row-highlight" id="info-window-row">
+      <span>Uploads</span>
+      <span>
+        <span class="win-pill" id="mini-access">—</span>
+        <span class="win-hint" id="mini-next"></span>
+      </span>
+    </div>
     <div class="row row-highlight"><span>Wall expires</span><span id="info-expires">—</span></div>
 
     <!-- upload quota meter (hidden on plans without a cap) -->
@@ -2736,22 +2762,22 @@
 
   // ── Render quota meter + soft-lock banner ─────────────
   function renderSidebarState(event) {
-    const meta = THEME_MAP[event.event_type] || THEME_MAP.wedding;
     const now           = new Date();
     const startsAt      = event.upload_window_starts_at ? new Date(event.upload_window_starts_at) : null;
     const endsAt        = event.upload_window_ends_at   ? new Date(event.upload_window_ends_at)   : null;
     const notYetOpen    = !!(startsAt && startsAt > now);
     const uploadsClosed = !!(endsAt   && endsAt   < now);
 
-    const miniTheme = $('mini-theme');
-    if (miniTheme) miniTheme.textContent = meta.label;
-
     // 3-state access pill: Pending → Open now → Closed.
+    // NULL window dates (legacy events) fall through to "Open now",
+    // which matches backend behaviour (uploads allowed until gallery expiry).
     const miniAccess = $('mini-access');
     if (miniAccess) {
       miniAccess.textContent = notYetOpen ? 'Opens soon'
                               : uploadsClosed ? 'Closed'
                               : 'Open now';
+      miniAccess.classList.toggle('is-pending', notYetOpen);
+      miniAccess.classList.toggle('is-closed', !notYetOpen && uploadsClosed);
     }
 
     // Next-action hint matches the state.
