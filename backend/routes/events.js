@@ -343,7 +343,7 @@ export default async function eventRoutes(fastify) {
   fastify.patch('/events/:slug', { preHandler: fastify.authenticate }, async (request, reply) => {
     const { slug } = request.params;
     const {
-      couple_names, event_date, cover_photo_url, is_active,
+      couple_names, cover_photo_url, is_active,
       venue, event_time, welcome_message,
       auto_approve,
       video_auto_approve,
@@ -366,6 +366,8 @@ export default async function eventRoutes(fastify) {
     const { rows } = await fastify.db.query(
       `UPDATE events
        SET couple_names               = COALESCE($2, couple_names),
+           -- event_date is admin-only: $3 is hardcoded NULL below so the
+           -- host PATCH can never move it (keeps upload-window stamps sane).
            event_date                 = COALESCE($3, event_date),
            cover_photo_url            = COALESCE($4, cover_photo_url),
            is_active                  = COALESCE($5, is_active),
@@ -382,7 +384,7 @@ export default async function eventRoutes(fastify) {
       [
         slug,
         couple_names    ?? null,
-        event_date      ?? null,
+        null, // $3 event_date — admin-only, never set via host PATCH
         cover_photo_url ?? null,
         is_active       ?? null,
         orNull(venue),

@@ -2080,10 +2080,6 @@
         <label for="set-name">Event name</label>
         <input type="text" id="set-name" maxlength="120" placeholder="e.g. Andrea &amp; JM" />
       </div>
-      <div class="settings-field">
-        <label for="set-date">Event date</label>
-        <input type="date" id="set-date" />
-      </div>
     </div>
 
     <div class="settings-group">
@@ -3717,10 +3713,7 @@
   function fillSettingsFromEvent() {
     const ev = currentDashEvent || {};
     const nameEl = document.getElementById('set-name');
-    const dateEl = document.getElementById('set-date');
     if (nameEl) nameEl.value = ev.couple_names || '';
-    // event_date may be a full ISO timestamp; <input type=date> needs YYYY-MM-DD.
-    if (dateEl) dateEl.value = ev.event_date ? String(ev.event_date).slice(0, 10) : '';
     // Defaults mirror the DB: auto_approve columns default true.
     document.getElementById('set-auto-photo').checked = ev.auto_approve !== false;
     document.getElementById('set-auto-video').checked = ev.video_auto_approve !== false;
@@ -3768,9 +3761,6 @@
         video_auto_approve:         document.getElementById('set-auto-video').checked,
         video_message_auto_approve: document.getElementById('set-auto-vmsg').checked,
       };
-      // Only send a date when one is set — empty string would clear it.
-      const d = document.getElementById('set-date').value;
-      if (d) body.event_date = d;
 
       const res = await fetch(`/api/events/${slug}`, {
         method: 'PATCH',
