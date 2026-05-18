@@ -132,12 +132,14 @@
     // closing moment doesn't land. 10s lets the room read the endcard.
     var END_HOLD_MS = 10000;
     var endedFired  = false;
+    var endTimer    = null;   // handle so seek() can cancel it
     function signalEnded(reason) {
       if (endedFired) return;
       endedFired = true;
       console.info('[sde-play] reel ended (' + reason + '), holding ' +
                    (END_HOLD_MS / 1000) + 's then signaling parent');
-      setTimeout(function () {
+      endTimer = setTimeout(function () {
+        endTimer = null;
         try {
           parent.postMessage({ type: 'sde-play-ended' }, window.location.origin);
         } catch (e) {
@@ -227,10 +229,38 @@
         console.warn('[sde-play] fullscreen failed:', e && e.message);
       }
     }
+    // ±5 s seek on Left/Right arrow. Standard YouTube/HTML5 convention.
+    // Honour the user's intent even if we're already in the 10s end-hold:
+    // a seek BACK out of the hold cancels the pending return-to-gallery
+    // timer and resumes playback, so the staff can re-watch a moment.
+    var SEEK_STEP_S = 5;
+    function seek(delta) {
+      if (!isFinite(v.duration) || v.duration <= 0) return;
+      var newTime = Math.max(0, Math.min(v.duration, v.currentTime + delta));
+      v.currentTime = newTime;
+      console.info('[sde-play] seek ' + (delta > 0 ? '+' : '') + delta + 's → ' +
+                   newTime.toFixed(2) + ' / ' + v.duration.toFixed(2));
+      // Seeking BACK while in end-hold cancels the auto-return.
+      if (endedFired && newTime < v.duration - 1) {
+        if (endTimer) { clearTimeout(endTimer); endTimer = null; }
+        endedFired = false;
+        console.info('[sde-play] end-hold cancelled by seek-back, resuming');
+        v.play().catch(function (err) {
+          console.warn('[sde-play] resume after seek-back failed:', err && err.message);
+        });
+      }
+    }
+
     document.addEventListener('keydown', function (e) {
       if (e.key === 'f' || e.key === 'F' || e.key === ' ' || e.code === 'Space') {
         e.preventDefault();
         toggleFs();
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        seek(-SEEK_STEP_S);
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        seek(+SEEK_STEP_S);
       }
     });
     document.addEventListener('dblclick', function () { toggleFs(); });
