@@ -5792,6 +5792,12 @@
         '.sde-btn-accent{background:var(--accent);color:#fff;border-color:var(--accent);}' +
         '.sde-btn-accent:hover{background:var(--accent-deep,var(--accent));filter:brightness(.95);}' +
         '.sde-btn-ghost{background:transparent;color:var(--ink-soft);}' +
+        // Live "Stop wall" style — distinct from ghost so the host
+        // immediately sees the wall is currently doing something.
+        '.sde-btn-live{background:#b02a2a;color:#fff;border-color:#b02a2a;}' +
+        '.sde-btn-live:hover{background:#9b2424;}' +
+        '.sde-btn-live .sde-livedot{width:8px;height:8px;border-radius:50%;background:#fff;box-shadow:0 0 0 3px rgba(255,255,255,.25);animation:sde-pulse 1.2s ease infinite;}' +
+        '@keyframes sde-pulse{0%,100%{opacity:1;}50%{opacity:.5;}}' +
         '.sde-pill{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:7px 11px;border-radius:999px;background:rgba(42,26,20,.06);color:var(--ink-soft);}' +
         '.sde-pill-warn{background:rgba(196,90,58,.12);color:var(--accent);}' +
         '.sde-pill-error{background:rgba(176,42,42,.10);color:#9b2a2a;}' +
@@ -5938,9 +5944,17 @@
         const m   = Math.floor(dur / 60);
         const ss  = String(dur % 60).padStart(2, '0');
         const ago = renderedAgo(sde.rendered_at);
+        const isPlaying = data.playing === true;
+        // Play/Stop on the wall — when active, the button goes red with
+        // a pulsing dot so the host immediately sees the wall is in
+        // takeover mode. Backend tracks state via events.sde_play_*.
+        const playWallBtn = isPlaying
+          ? '<button type="button" class="sde-btn sde-btn-live" id="sde-stopwall-btn"><span class="sde-livedot"></span> Stop wall</button>'
+          : '<button type="button" class="sde-btn sde-btn-ghost" id="sde-playwall-btn">📺 Play on wall</button>';
         html =
           '<a class="sde-btn sde-btn-accent" id="sde-watch-link" href="' + esc(sde.video_url) +
           '" target="_blank" rel="noopener">▶ Watch reel</a>' +
+          playWallBtn +
           '<button type="button" class="sde-btn sde-btn-ghost" id="sde-regenerate-btn">Regenerate</button>' +
           '<span class="sde-meta">' + m + ':' + ss + ' · ' + esc(ago) + '</span>';
       } else if (status === 'error') {
@@ -5966,8 +5980,12 @@
       bar.innerHTML = html;
       const genBtn   = document.getElementById('sde-generate-btn');
       const regenBtn = document.getElementById('sde-regenerate-btn');
+      const playBtn  = document.getElementById('sde-playwall-btn');
+      const stopBtn  = document.getElementById('sde-stopwall-btn');
       if (genBtn)   genBtn.addEventListener('click', handleGenerate);
       if (regenBtn) regenBtn.addEventListener('click', handleRegenerate);
+      if (playBtn)  playBtn.addEventListener('click', handlePlayWall);
+      if (stopBtn)  stopBtn.addEventListener('click', handleStopWall);
 
       // Polling lifecycle: only spin while we're waiting on a render.
       if (status === 'queued' || status === 'rendering') startPolling();
@@ -6010,6 +6028,44 @@
       // once so accidental clicks don't trigger renders.
       if (!confirm('Render a new version of your reel? This replaces what’s shown here.')) return;
       await handleGenerate();
+    }
+
+    // Slice 2D: ask the wall to enter fullscreen takeover with the
+    // current reel. Backend stamps events.sde_play_requested_at; the
+    // wall picks it up on its next ~1 s reactions poll. We re-load /sde
+    // so the bar flips Play→Stop without waiting for a polling tick.
+    async function handlePlayWall() {
+      const btn = document.getElementById('sde-playwall-btn');
+      if (btn) { btn.disabled = true; btn.textContent = 'Starting…'; }
+      try {
+        const r = await fetch('/api/events/' + slug + '/sde/play', {
+          method: 'POST', headers: AH,
+        });
+        if (r.ok) { await load(); return; }
+        const body = await r.json().catch(() => ({}));
+        alert((body && body.message) || 'Could not start the wall reveal.');
+      } catch (e) {
+        console.warn('[sde] play-on-wall failed', e);
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    async function handleStopWall() {
+      const btn = document.getElementById('sde-stopwall-btn');
+      if (btn) { btn.disabled = true; }
+      try {
+        const r = await fetch('/api/events/' + slug + '/sde/stop', {
+          method: 'POST', headers: AH,
+        });
+        if (r.ok) { await load(); return; }
+        const body = await r.json().catch(() => ({}));
+        alert((body && body.message) || 'Could not stop the wall reveal.');
+      } catch (e) {
+        console.warn('[sde] stop-wall failed', e);
+      } finally {
+        if (btn) btn.disabled = false;
+      }
     }
 
     function startPolling() {
