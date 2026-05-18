@@ -1816,6 +1816,29 @@
       </div>
     </div>
 
+    <!-- ── Same Day Edit panel (Dalisay/Hiraya) ──────────────────
+         Filled by an isolated <script type="module"> at the end of
+         <body> so it shares NO scope with the main dashboard module.
+         Batch 1: curated preview + pin/exclude only (no render yet). -->
+    <div class="panel" id="sde-panel" style="display:none; margin-bottom:18px; padding:0;">
+      <button type="button" class="polls-toggle" id="sde-toggle" aria-expanded="false" aria-controls="sde-body">
+        <span class="polls-head-main">
+          <span class="polls-h2">Same Day Edit</span>
+          <span class="polls-summary" id="sde-summary">Tap to preview your recap reel</span>
+        </span>
+        <span class="polls-chevron" id="sde-chevron" aria-hidden="true" style="font-size:24px;line-height:1;color:var(--accent);font-weight:700;width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;border-radius:999px;background:rgba(196,90,58,.10);">▾</span>
+      </button>
+      <div id="sde-body" style="display:none; padding: 22px; background: var(--paper-2); border-top: 1px solid var(--line);">
+        <div class="polls-locked" id="sde-locked" style="display:none;">
+          Same Day Edit is unlocked on the <strong>Dalisay</strong> plan. <a href="/#pricing">Upgrade →</a>
+        </div>
+        <div id="sde-content" style="display:none;">
+          <div id="sde-status"></div>
+          <div id="sde-grid"></div>
+        </div>
+      </div>
+    </div>
+
     <div class="panel">
       <div class="panel-head">
         <div class="stream-tabs-3d" id="stream-tabs-3d">
@@ -5583,6 +5606,175 @@
         console.warn('[event-site editor] init failed', e);
       }
     })();
+  }
+</script>
+
+<script type="module">
+  // Same Day Edit panel — isolated module (own scope, mirrors the
+  // event-site module so no identifier can collide with the main
+  // dashboard script). Batch 1: preview the curated reel + pin/exclude.
+  const slug  = new URLSearchParams(location.search).get('slug');
+  const panel = document.getElementById('sde-panel');
+  if (slug && panel) {
+    const token     = localStorage.getItem('reelday_token');
+    const AH        = token ? { 'Authorization': `Bearer ${token}` } : {};
+    const lockedEl  = document.getElementById('sde-locked');
+    const bodyEl    = document.getElementById('sde-body');
+    const contentEl = document.getElementById('sde-content');
+    const statusEl  = document.getElementById('sde-status');
+    const gridEl    = document.getElementById('sde-grid');
+    const toggleBtn = document.getElementById('sde-toggle');
+    const chev      = document.getElementById('sde-chevron');
+    const summaryEl = document.getElementById('sde-summary');
+
+    let loaded = false;
+
+    const COLLAPSE_KEY = 'reelday_sde_collapsed';
+    function setCollapsed(c, persist) {
+      bodyEl.style.display = c ? 'none' : 'block';
+      toggleBtn.setAttribute('aria-expanded', String(!c));
+      chev.style.transform = c ? '' : 'rotate(180deg)';
+      if (persist) { try { localStorage.setItem(COLLAPSE_KEY, c ? '1' : '0'); } catch {} }
+    }
+    setCollapsed(localStorage.getItem(COLLAPSE_KEY) !== '0', false); // default collapsed
+    toggleBtn.addEventListener('click', () => {
+      const willOpen = bodyEl.style.display === 'none';
+      setCollapsed(!willOpen, true);
+      if (willOpen && !loaded) load();
+    });
+
+    if (!document.getElementById('sde-style')) {
+      const st = document.createElement('style');
+      st.id = 'sde-style';
+      st.textContent =
+        '#sde-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px;margin-top:14px;}' +
+        '.sde-tile{position:relative;border-radius:10px;overflow:hidden;background:var(--paper);border:1px solid var(--line);}' +
+        '.sde-tile img{width:100%;height:94px;object-fit:cover;display:block;background:#000;}' +
+        '.sde-tile.out{opacity:.42;filter:grayscale(.6);}' +
+        '.sde-badge{position:absolute;top:6px;left:6px;font-size:11px;font-weight:700;padding:2px 7px;border-radius:999px;background:rgba(0,0,0,.62);color:#fff;}' +
+        '.sde-meta{display:flex;justify-content:space-between;align-items:center;padding:6px 8px;font-size:11px;color:var(--ink-soft);}' +
+        '.sde-acts{display:flex;gap:4px;padding:0 8px 8px;}' +
+        '.sde-acts button{flex:1;font-size:11px;padding:5px 0;border-radius:7px;border:1px solid var(--line);background:var(--paper-2);color:var(--ink-soft);cursor:pointer;}' +
+        '.sde-acts button.on{background:var(--accent);color:#fff;border-color:var(--accent);}' +
+        '.sde-bar{font-size:13px;color:var(--ink-soft);margin:4px 0 2px;line-height:1.5;}';
+      document.head.appendChild(st);
+    }
+
+    const esc = s => String(s == null ? '' : s);
+
+    async function patchClip(id, state) {
+      try {
+        const r = await fetch(`/api/events/${slug}/sde/clips`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', ...AH },
+          body: JSON.stringify({ id, state }),
+        });
+        return r.ok;
+      } catch { return false; }
+    }
+
+    function tile(c) {
+      const t = document.createElement('div');
+      t.className = 'sde-tile' + (c.selected ? '' : ' out');
+
+      const img = document.createElement('img');
+      img.loading = 'lazy'; img.src = esc(c.thumb); img.alt = '';
+      t.appendChild(img);
+
+      const badge = document.createElement('span');
+      badge.className = 'sde-badge';
+      badge.textContent = c.excluded ? 'Hidden'
+        : c.selected ? `#${c.order + 1}${c.pinned ? ' · pinned' : ''}`
+        : 'Not used';
+      t.appendChild(badge);
+
+      const meta = document.createElement('div');
+      meta.className = 'sde-meta';
+      const left = document.createElement('span');
+      left.textContent = c.type === 'video' ? '▶ video' : 'photo';
+      const right = document.createElement('span');
+      right.textContent = `♥ ${c.reaction_count}`;
+      meta.appendChild(left); meta.appendChild(right);
+      t.appendChild(meta);
+
+      const acts = document.createElement('div');
+      acts.className = 'sde-acts';
+      const pinBtn = document.createElement('button');
+      pinBtn.textContent = 'Pin';
+      if (c.pinned) pinBtn.classList.add('on');
+      const exBtn = document.createElement('button');
+      exBtn.textContent = 'Hide';
+      if (c.excluded) exBtn.classList.add('on');
+      pinBtn.addEventListener('click', async () => {
+        pinBtn.disabled = exBtn.disabled = true;
+        const ok = await patchClip(c.id, c.pinned ? 'neutral' : 'pinned');
+        if (ok) load(); else { pinBtn.disabled = exBtn.disabled = false; }
+      });
+      exBtn.addEventListener('click', async () => {
+        pinBtn.disabled = exBtn.disabled = true;
+        const ok = await patchClip(c.id, c.excluded ? 'neutral' : 'excluded');
+        if (ok) load(); else { pinBtn.disabled = exBtn.disabled = false; }
+      });
+      acts.appendChild(pinBtn); acts.appendChild(exBtn);
+      t.appendChild(acts);
+      return t;
+    }
+
+    function render(data) {
+      panel.style.display = '';
+      if (!data.sde_unlocked) {
+        summaryEl.textContent = 'Locked · Dalisay plan';
+        lockedEl.style.display = '';
+        contentEl.style.display = 'none';
+        return;
+      }
+      lockedEl.style.display = 'none';
+      contentEl.style.display = '';
+      const s = data.summary || {};
+      const total = s.totalSec || 0;
+      const mins = Math.floor(total / 60);
+      const secs = String(total % 60).padStart(2, '0');
+      summaryEl.textContent = `${s.selectedCount || 0} clips · ~${mins}:${secs}`;
+      statusEl.className = 'sde-bar';
+      statusEl.textContent =
+        `Preview of your recap reel — ${s.selectedCount || 0} of ${s.approvedCount || 0} uploads chosen ` +
+        `(most-reacted moments + anything you pin). Pin to force-include, Hide to drop. ` +
+        `The video itself is generated in a later update.`;
+      gridEl.textContent = '';
+      const clips = data.clips || [];
+      if (!clips.length) {
+        const e = document.createElement('div');
+        e.className = 'sde-bar';
+        e.textContent = 'No photos or videos uploaded yet — nothing to edit.';
+        gridEl.appendChild(e);
+        return;
+      }
+      clips.forEach(c => gridEl.appendChild(tile(c)));
+    }
+
+    async function load() {
+      try {
+        const r = await fetch(`/api/events/${slug}/sde`, { headers: AH });
+        if (!r.ok) {
+          panel.style.display = '';
+          summaryEl.textContent = 'Preview unavailable';
+          lockedEl.style.display = '';
+          lockedEl.textContent = 'Could not load the preview — please refresh.';
+          contentEl.style.display = 'none';
+          return;
+        }
+        loaded = true;
+        render(await r.json());
+      } catch (e) {
+        panel.style.display = 'none';
+        console.warn('[sde] init failed', e);
+      }
+    }
+
+    // Show the panel header immediately (collapsed by default); load
+    // lazily on first expand, or now if it starts expanded (persisted).
+    panel.style.display = '';
+    if (bodyEl.style.display !== 'none') load();
   }
 </script>
 
