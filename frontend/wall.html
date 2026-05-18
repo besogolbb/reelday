@@ -4219,14 +4219,18 @@
         if (muteHint) muteHint.classList.remove('visible');
         if (loadingEl) loadingEl.classList.remove('visible');
 
-        // Resume the gallery — playback was paused on takeover entry
-        // to free up the device's video decoders. Advance to the next
-        // slide rather than resuming the interrupted one, so the wall
-        // doesn't pop back to a half-played video.
+        // Resume the gallery — playback was fully released on takeover
+        // entry (src removed, decoders freed). advance() re-attaches
+        // src via showSlide naturally — we don't try to resume the
+        // interrupted slide because (a) the audience already saw it
+        // pre-reveal, and (b) re-loading and seeking back would just
+        // add buffer-stall jank for no gain.
         try {
           if (sdeWasMusicPlaying && bgMusic) bgMusic.play().catch(() => {});
         } catch {}
         sdeWasMusicPlaying = false;
+        const emojiEl = document.getElementById('emoji-container');
+        if (emojiEl) emojiEl.style.display = '';
         try { clearTimeout(slideTimer); } catch {}
         try { advance(); } catch {}
       }
@@ -4236,22 +4240,40 @@
     // Same play request as before — already showing, nothing to do.
     if (playSig.requested_at === sdePlayingRequestedAt) return;
 
-    // Pause the gallery BEFORE starting takeover — frees up the
-    // hardware video decoders (TV browsers often have only 1-2) and
-    // stops bg music from fighting the reel's audio track. The
-    // overlay's z-index 200 covers the gallery visually, but without
-    // pausing, vidA/vidB keep decoding in the background and the SDE
-    // playback stutters / freezes on weaker devices (user-reported
-    // 2026-05-18).
-    try { vidA && vidA.pause(); } catch {}
-    try { vidB && vidB.pause(); } catch {}
+    // FULLY RELEASE the gallery media elements before starting
+    // takeover. Just pausing isn't enough — even paused, vidA/vidB
+    // keep their src loaded and may hold hardware decoder + memory
+    // resources. Same URL plays smoothly in a standalone tab but
+    // stutters on the wall (user-reported 2026-05-18) → contention
+    // from paused-but-loaded gallery videos. Removing src + load()
+    // fully releases everything; advance() on takeover EXIT will
+    // re-attach src naturally via showSlide.
+    const releaseVid = v => {
+      if (!v) return;
+      try { v.pause(); } catch {}
+      try { v.removeAttribute('src'); } catch {}
+      try { v.load(); } catch {}
+    };
+    releaseVid(vidA);
+    releaseVid(vidB);
     try {
       if (bgMusic) {
         sdeWasMusicPlaying = !bgMusic.paused;
         bgMusic.pause();
+        // Don't removeAttribute('src') on bgMusic — the music subsystem
+        // re-attaches on resume via its own logic; tearing the src down
+        // would require us to know its current source URL to restore.
+        // Audio decoder load is much smaller than video anyway.
       }
     } catch {}
     try { clearTimeout(slideTimer); slideTimer = null; } catch {}
+
+    // Hide the emoji container during takeover. Its CSS animations
+    // run on the GPU compositor and don't typically block playback,
+    // but on weaker devices they add up; cheap to disable since the
+    // takeover covers it visually anyway.
+    const emojiEl = document.getElementById('emoji-container');
+    if (emojiEl) emojiEl.style.display = 'none';
 
     // Enter or restart takeover. First version tried unmuted autoplay
     // and fell back to muted on rejection — but the unmuted .play()
