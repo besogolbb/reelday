@@ -3,8 +3,9 @@
 Cold-start pointer for the **Same Day Edit** build. Working tree clean,
 all on `main`. Spec: [same-day-edit-plan.md](same-day-edit-plan.md).
 Perf log: [perf-test-database.md](perf-test-database.md). Last updated
-**2026-05-18** (Slice 2B backend shipped + production-hardened on a 3 GB
-Lambda; first real reel rendered end-to-end and verified by host).
+**2026-05-18** (Slice 2B backend + Slice 2C frontend both shipped;
+first real reel rendered end-to-end and verified by host; SDE feature
+is now host-usable on a 3 GB Lambda).
 
 ## Shipped (chronological)
 
@@ -27,6 +28,7 @@ Lambda; first real reel rendered end-to-end and verified by host).
 | `cce2489` | polish | Blur-fill background instead of letterbox black bars (split + boxblur + overlay) |
 | `b76815e` | hardening | Await the success-path webhook (silent webhook-miss bug: render succeeded, DB stayed stale) |
 | `a41a3b3` | hardening | Fix video-clip freeze at brick boundaries (`-fflags +shortest` + finite anullsrc); resolved the duration anomaly too (397s → 231s, matches Curator's 240s cap) |
+| `183865e` | **2C** | Generate button + status pill + Watch / Regenerate in [dashboard.html](../frontend/dashboard.html) SDE panel — drives the render bar off `GET /sde.status` + `POST /sde/generate`; polls every 12 s while queued/rendering; auto-resumes on refresh; stops on collapse |
 
 ## Curation model (current truth)
 
@@ -75,18 +77,37 @@ lands** — just remove the env vars and restore the polished defaults.
 - **Blur-fill in Ken Burns path**: currently the kenBurns:true branch in [normalizePhoto](../lambda/sde.mjs) still uses `pad=color=black` on the 2400×1350 upscale because zoompan reads that frame. When Ken Burns comes back on, apply BLUR_FILL_GRAPH to the upscale too.
 - **Beat-sync + LUT**: original Batch 3 scope, still parked.
 
-## Active task — Slice 2C (frontend)
+## Slice 2C — DONE (frontend render controls shipped)
 
-Generate button + status pill + Download in the isolated SDE module in
-[dashboard.html](../frontend/dashboard.html) (~L5723). Wire `POST
-/api/events/<slug>/sde/generate`; poll `GET /api/events/<slug>/sde` for
-status transitions `idle → queued → rendering → ready` (the webhook
-flips queued → ready/error directly; `rendering` is reserved for a
-future Lambda-side ping). On `ready`, render the video URL + a Download
-link to `video_url`. On `error`, surface `error_message`.
+`183865e` adds `#sde-render-bar` to the existing isolated SDE module
+in [dashboard.html](../frontend/dashboard.html). State machine reads
+straight from `GET /sde.status`:
 
-After 2C: **Slice 2D** = wall reveal (`sde_play_*`) + auto-render at
-upload-window close.
+| Status | Bar shows |
+|---|---|
+| `idle` | `[Generate reel]` (disabled if `approvedCount === 0`) + meta hint |
+| `queued` / `rendering` | spinning pill + ~5–8 min hint; polls every 12 s |
+| `ready` | `[▶ Watch reel]` + `[Regenerate]` + duration + "n min ago" |
+| `error` | red `Last render failed` pill + `[Try again]` |
+
+Polling lifecycle: starts when load() returns queued/rendering, stops
+on terminal states OR on panel collapse. Refresh mid-render
+auto-resumes because polling is decided from each payload, not from
+the click. 409 `sde_in_flight` is treated as success (someone already
+started it → just poll). All new JS identifiers stay inside the
+isolated `<script type="module">` so the dashboard top-level-collision
+footgun stays defused.
+
+## Active task — Slice 2D (wall reveal + auto-render)
+
+Two pieces:
+
+1. **Wall reveal** — `events.sde_play_requested_at` / `sde_play_cleared_at` columns already exist (migration B0). Owner taps a new "Play on wall" button in the dashboard SDE panel (next to Watch reel) → backend stamps `sde_play_requested_at = NOW()`. The wall ([frontend/wall.html](../wall.html)) already polls on its tick (the now-showing beacon); compare it against its last-seen value and trigger a fullscreen video takeover with `event_sde.video_url`. "Stop" stamps `sde_play_cleared_at`.
+2. **Auto-render at upload-window close** — when `events.ends_at` passes, a hook on the existing upload-window-close path calls the same generate logic with `event_sde.auto_rendered = true`. Host gets a finished reel without clicking anything.
+
+After 2D: SDE feature is feature-complete pre-Batch-3 polish. The
+quota-raise follow-ups (transitions, Ken Burns blur-fill on upscale,
+beat-sync, LUT) all sit waiting for the 10 GB Lambda bump.
 
 ## Operator: pre-flight before first render
 
