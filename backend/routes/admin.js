@@ -455,6 +455,16 @@ export default async function adminRoutes(fastify) {
     if (!inserted) {
       return reply.status(500).send({ error: true, message: 'Could not allocate a unique URL — try a slightly different name.' });
     }
+    // Same rationale as the PATCH path: feature gates read the owner's
+    // users.subscription_tier, not events.plan. Lift the assigned owner to
+    // the chosen plan so an admin-comped event actually behaves like one.
+    // Per-ACCOUNT, so it raises all of that owner's events to this plan.
+    if (user_id) {
+      await fastify.db.query(
+        'UPDATE users SET subscription_tier = $2 WHERE id = $1',
+        [user_id, resolved.id],
+      );
+    }
     return reply.status(201).send({ event: inserted });
   });
 
@@ -513,12 +523,42 @@ export default async function adminRoutes(fastify) {
     const sets   = uniqueCols.map((c, i) => `${c} = $${i + 2}`).join(', ');
     const params = [slug, ...uniqueCols.map(c => b[c])];
 
-    const { rows } = await fastify.db.query(
-      `UPDATE events SET ${sets} WHERE slug = $1 RETURNING *`,
-      params,
-    );
-    if (!rows.length) return reply.status(404).send({ error: true, message: 'Event not found' });
-    return { event: rows[0] };
+    const client = await fastify.db.connect();
+    try {
+      await client.query('BEGIN');
+      const { rows } = await client.query(
+        `UPDATE events SET ${sets} WHERE slug = $1 RETURNING *`,
+        params,
+      );
+      if (!rows.length) {
+        await client.query('ROLLBACK');
+        return reply.status(404).send({ error: true, message: 'Event not found' });
+      }
+      const ev = rows[0];
+      // For an OWNED event, events.plan is otherwise cosmetic: every
+      // feature gate resolves the effective plan from the owner's
+      // users.subscription_tier (event-site.js loadGate, uploads.js
+      // getValidatedEvent), and that column defaults to 'tala' and is
+      // never null — so the `|| events.plan` fallback only ever fires for
+      // ownerless legacy events. Propagate the chosen plan onto the
+      // owner's tier so changing it in the admin editor actually unlocks
+      // features. NOTE: tier is per-ACCOUNT, so this lifts every event
+      // that owner has to this plan, not just this one. b.plan is already
+      // lowercased + validated against VALID_PLANS (== VALID_TIERS).
+      if (planChanged && ev.user_id) {
+        await client.query(
+          'UPDATE users SET subscription_tier = $2 WHERE id = $1',
+          [ev.user_id, b.plan],
+        );
+      }
+      await client.query('COMMIT');
+      return { event: ev };
+    } catch (err) {
+      try { await client.query('ROLLBACK'); } catch {}
+      throw err;
+    } finally {
+      client.release();
+    }
   });
 
   // GET /api/admin/stats
