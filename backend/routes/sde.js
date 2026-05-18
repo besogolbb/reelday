@@ -329,4 +329,46 @@ export default async function sdeRoutes(fastify) {
     );
     return { ok: true, playing: false };
   });
+
+  // POST /sde/wall-finished — PUBLIC, called by the wall iframe when
+  // the reel ends (the iframe doesn't loop; one play then auto-return
+  // to gallery). Stamps cleared_at so:
+  //   - subsequent 1 Hz reactions polls don't re-mount the takeover
+  //   - the dashboard's "Stop wall" pill flips back to "Play on wall"
+  //     within a poll cycle, no host action needed
+  //
+  // Validated by requested_at — wall sends the timestamp it just
+  // finished playing; server clears only if it still matches the
+  // active requested_at. Prevents a slow wall (one that took 30 s
+  // to finish after the host already re-triggered) from killing a
+  // fresh playback. Race-safe.
+  //
+  // Public on purpose: walls have no auth. Worst-case griefer with
+  // event slug + active requested_at ends a takeover early; host can
+  // just re-tap Play. Same trust model as the reactions write path.
+  fastify.post('/events/:slug/sde/wall-finished', async (request, reply) => {
+    const { slug } = request.params;
+    const requestedAt = request.body && request.body.requested_at;
+    if (!requestedAt) {
+      return reply.status(400).send({
+        error: true, code: 'missing_requested_at',
+        message: 'requested_at is required.',
+      });
+    }
+
+    // Conditional UPDATE — only clears if the wall's requested_at still
+    // matches the event's. RETURNING tells us whether the clear hit
+    // (visibility only; the wall doesn't act on it).
+    const { rows } = await fastify.db.query(
+      `UPDATE events
+          SET sde_play_cleared_at = NOW()
+        WHERE slug = $1
+          AND sde_play_requested_at = $2
+          AND (sde_play_cleared_at IS NULL
+               OR sde_play_cleared_at < sde_play_requested_at)
+        RETURNING id`,
+      [slug, requestedAt],
+    );
+    return { ok: true, cleared: rows.length > 0 };
+  });
 }

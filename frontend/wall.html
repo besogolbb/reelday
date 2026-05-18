@@ -4177,6 +4177,66 @@
   //
   // Same-request_at → no-op. New request_at → (re)mount iframe.
   // Null → unmount + resume gallery.
+
+  // Idempotent teardown — called from BOTH:
+  //   - handleSdePlay(null) when the server reports cleared
+  //   - the postMessage listener when the iframe's <video> hits `ended`
+  //     (play-once flow; reel finishes → return to gallery without
+  //     waiting for the host to tap Stop)
+  // Guarded by overlay.visible so a double-call (iframe end + server
+  // clearing within the same poll cycle) only runs the resume once.
+  function tearDownSdeTakeover() {
+    const overlay = document.getElementById('sde-takeover');
+    const frame   = document.getElementById('sde-frame');
+    if (!overlay || !frame) return;
+    if (!overlay.classList.contains('visible')) return;  // already torn down
+
+    // about:blank tears down the iframe document → its <video>,
+    // network connections, and decoder are fully released.
+    frame.src = 'about:blank';
+    overlay.classList.remove('visible');
+    overlay.setAttribute('aria-hidden', 'true');
+
+    // Resume the gallery — media was fully released on entry.
+    // advance() re-attaches slide src via showSlide naturally; we
+    // skip resuming the interrupted slide (audience already saw it
+    // pre-reveal, and re-seek would just add buffer jank).
+    try {
+      if (sdeWasMusicPlaying && bgMusic) bgMusic.play().catch(() => {});
+    } catch {}
+    sdeWasMusicPlaying = false;
+    const emojiEl = document.getElementById('emoji-container');
+    if (emojiEl) emojiEl.style.display = '';
+    try { clearTimeout(slideTimer); } catch {}
+    try { advance(); } catch {}
+  }
+
+  // Listen for the iframe's "I'm done" signal. Origin-restricted to
+  // our own host (the iframe is same-origin) — a stray cross-origin
+  // frame can't spoof an early teardown. requested_at we send back to
+  // the server is whatever we last entered takeover with; the server
+  // guards against stale clears by matching it to the active stamp.
+  window.addEventListener('message', function (ev) {
+    if (ev.origin !== window.location.origin) return;
+    if (!ev.data || ev.data.type !== 'sde-play-ended') return;
+    const finishedAt = sdePlayingRequestedAt;
+    console.info('[sde] iframe reports ended → teardown + clear server state');
+    tearDownSdeTakeover();
+    if (finishedAt) {
+      fetch(`/api/events/${slug}/sde/wall-finished`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ requested_at: finishedAt }),
+      }).catch(err => console.warn('[sde] wall-finished failed:', err && err.message));
+    }
+    // KEEP sdePlayingRequestedAt set — the next 1Hz poll likely returns
+    // the same requested_at (server clear hasn't landed yet); the
+    // matching check at the top of handleSdePlay turns it into a no-op
+    // (no surprise re-mount). Once the server clears, playSig=null →
+    // handleSdePlay null path resets sdePlayingRequestedAt to null AND
+    // re-calls tearDownSdeTakeover (idempotent, no-op).
+  });
+
   function handleSdePlay(playSig) {
     const overlay = document.getElementById('sde-takeover');
     const frame   = document.getElementById('sde-frame');
@@ -4200,24 +4260,7 @@
     if (!playSig) {
       if (sdePlayingRequestedAt !== null) {
         sdePlayingRequestedAt = null;
-        // about:blank tears down the iframe document → its <video>,
-        // network connections, and decoder are fully released.
-        frame.src = 'about:blank';
-        overlay.classList.remove('visible');
-        overlay.setAttribute('aria-hidden', 'true');
-
-        // Resume the gallery — media was fully released on entry.
-        // advance() re-attaches slide src via showSlide naturally; we
-        // skip resuming the interrupted slide (audience already saw it
-        // pre-reveal, and re-seek would just add buffer jank).
-        try {
-          if (sdeWasMusicPlaying && bgMusic) bgMusic.play().catch(() => {});
-        } catch {}
-        sdeWasMusicPlaying = false;
-        const emojiEl = document.getElementById('emoji-container');
-        if (emojiEl) emojiEl.style.display = '';
-        try { clearTimeout(slideTimer); } catch {}
-        try { advance(); } catch {}
+        tearDownSdeTakeover();
       }
       return;
     }

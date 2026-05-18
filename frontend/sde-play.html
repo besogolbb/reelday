@@ -87,9 +87,22 @@
 
     if (poster) v.poster = poster;
     v.muted = true;   // muted autoplay is universally permitted
-    v.loop  = true;
+    v.loop  = false;  // play ONCE; parent wall tears us down on `ended`
+                      // (it then resumes the live gallery)
     v.src   = src;
     try { v.load(); } catch (e) {}
+
+    // When the reel finishes, tell the parent wall via postMessage. The
+    // wall owns lifecycle; we just signal. Origin-restricted to our own
+    // host so a stray frame can't spoof us into reacting to noise.
+    v.addEventListener('ended', function () {
+      console.info('[sde-play] reel ended, signaling parent');
+      try {
+        parent.postMessage({ type: 'sde-play-ended' }, window.location.origin);
+      } catch (e) {
+        console.warn('[sde-play] postMessage failed:', e && e.message);
+      }
+    });
 
     loading.classList.add('on');
 
