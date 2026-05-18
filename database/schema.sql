@@ -212,3 +212,42 @@ CREATE INDEX IF NOT EXISTS idx_event_seats_lookup ON event_seats (event_id, lowe
 
 -- Host override of the event-type-derived microsite theme.
 ALTER TABLE events ADD COLUMN IF NOT EXISTS theme_override VARCHAR(40);
+
+-- ── Same Day Edit (SDE) — Dalisay/Hiraya auto-rendered recap reel ──
+-- See docs/same-day-edit-plan.md. One row per event tracks render
+-- status + the finished mp4. The heavy reaction tally that picks the
+-- clips runs only at request-time (never on the live wall) — see the
+-- now-showing beacon in backend/routes/reactions.js. track_id is a soft
+-- pointer at the chosen music_tracks row, intentionally WITHOUT a FK so
+-- this stays identical to the boot-time migration in database.js (where
+-- the music_* tables are not guaranteed to exist yet).
+CREATE TABLE IF NOT EXISTS event_sde (
+  id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id             UUID NOT NULL UNIQUE REFERENCES events(id) ON DELETE CASCADE,
+  status               VARCHAR(20) NOT NULL DEFAULT 'idle', -- idle|queued|rendering|ready|error
+  video_url            TEXT,
+  poster_url           TEXT,
+  duration_s           INTEGER,
+  clip_count           INTEGER,
+  track_id             UUID,
+  config               JSONB NOT NULL DEFAULT '{}'::jsonb,
+  error_message        TEXT,
+  auto_rendered        BOOLEAN NOT NULL DEFAULT false,
+  requested_by_user_id UUID REFERENCES users(id),
+  rendered_at          TIMESTAMPTZ,
+  created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at           TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Host curation of the SDE selection. pinned = always include,
+-- excluded = never include; everything else falls to the
+-- reaction-ranked default + recency fallback (backend/lib/sdeSelect.js).
+ALTER TABLE uploads ADD COLUMN IF NOT EXISTS sde_pinned   BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE uploads ADD COLUMN IF NOT EXISTS sde_excluded BOOLEAN NOT NULL DEFAULT false;
+
+-- Wall "reveal" command for the finished SDE. Host taps "Play on wall"
+-- → sde_play_requested_at = NOW(); the wall compares it to its
+-- last-seen value on its existing poll tick and does a fullscreen
+-- takeover. "Stop" sets sde_play_cleared_at.
+ALTER TABLE events ADD COLUMN IF NOT EXISTS sde_play_requested_at TIMESTAMPTZ;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS sde_play_cleared_at   TIMESTAMPTZ;

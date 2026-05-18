@@ -26,6 +26,7 @@
 //   polls        — live polls & games
 //   customMusic  — host-uploaded wall background music
 //   website      — full event website + seat/table finder
+//   sde          — auto-rendered Same Day Edit recap reel (Dalisay+)
 //   customDomain — bring-your-own domain for the event website
 export const PLANS = {
   tala: {
@@ -44,6 +45,7 @@ export const PLANS = {
       polls:        false,
       customMusic:  false,
       website:      false,
+      sde:          false,
       customDomain: false,
     },
   },
@@ -71,6 +73,7 @@ export const PLANS = {
       polls:        false,
       customMusic:  true,
       website:      false,
+      sde:          false,
       customDomain: false,
     },
   },
@@ -96,6 +99,7 @@ export const PLANS = {
       polls:        true,
       customMusic:  true,
       website:      true,
+      sde:          true,
       customDomain: false,
     },
   },
@@ -122,6 +126,7 @@ export const PLANS = {
       polls:        true,
       customMusic:  true,
       website:      true,
+      sde:          true,
       customDomain: true,
     },
   },

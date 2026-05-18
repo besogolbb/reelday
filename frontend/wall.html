@@ -4086,7 +4086,12 @@
     // hit the endpoint — keeps the wall quiet and the network log clean.
     if (planFeatures && planFeatures.reactions === false) return;
     try {
-      const url = `/api/reactions/${slug}?since=${encodeURIComponent(reactionsSince)}`;
+      // Now-showing beacon: tell the server which slide is on screen so
+      // guest reactions (which carry no upload_id) get credited to it.
+      // Piggybacked on this existing poll — no extra request. SDE plan §3.
+      const showingId = items[currentIdx] && items[currentIdx].id;
+      const url = `/api/reactions/${slug}?since=${encodeURIComponent(reactionsSince)}`
+        + (showingId ? `&showing=${encodeURIComponent(showingId)}` : '');
       const res = await fetch(url, { cache: 'no-store' });
       if (!res.ok) return;
       const data = await res.json();

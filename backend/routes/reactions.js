@@ -21,6 +21,14 @@ const ALLOWED_EMOJI = [
   '🥰', '✨', '🎉', '🥹', '🌹', '💖',
 ];
 
+// SDE now-showing beacon: the wall reports its current slide via
+// ?showing=<uuid> on its existing reactions poll so guest reactions
+// (which carry no upload_id) can be credited to whatever is on screen.
+// In-memory + single-process — confirmed safe, see
+// docs/same-day-edit-plan.md §3.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const NOW_SHOWING_TTL_MS = 30_000;  // ignore the pointer if the wall stopped beaconing
+
 export default async function reactionsRoutes(fastify) {
   // Tighter bucket for the write side — each row is a DB insert and
   // immediately fans out to every connected wall on its next poll.
@@ -39,6 +47,10 @@ export default async function reactionsRoutes(fastify) {
   // for a few seconds so plan/tier changes still propagate quickly.
   const EVENT_CACHE_TTL_MS = 5_000;
   const eventCache = new Map(); // slug -> { expires, event | null }
+
+  // slug -> { uploadId, since } — last slide the wall reported showing.
+  // Bounded by the number of active event slugs (one entry each).
+  const nowShowing = new Map();
 
   async function loadEventForReactions(slug, reply) {
     const now = Date.now();
@@ -109,6 +121,19 @@ export default async function reactionsRoutes(fastify) {
 
     const guestId = String(request.headers['x-guest-id'] || request.ip).slice(0, 64);
 
+    // The reaction panel sends no upload_id (the common case). Attribute
+    // the tap to whatever the wall last reported it was showing for this
+    // event, as long as that beacon is still fresh. The INSERT's
+    // subquery below still validates the id belongs to this event, so a
+    // stale/foreign pointer degrades to NULL rather than mis-crediting.
+    let effectiveUploadId = upload_id || null;
+    if (!effectiveUploadId) {
+      const ns = nowShowing.get(slug);
+      if (ns && Date.now() - ns.since < NOW_SHOWING_TTL_MS) {
+        effectiveUploadId = ns.uploadId;
+      }
+    }
+
     // upload_id is optional; verify it belongs to this event inline so
     // the whole write is a single round-trip — under reaction bursts the
     // old SELECT+INSERT pattern was draining the pool and freezing other
@@ -121,7 +146,7 @@ export default async function reactionsRoutes(fastify) {
          $3, $4, $5
        )
        RETURNING id, created_at`,
-      [event.id, upload_id || null, guestId, name, emoji],
+      [event.id, effectiveUploadId, guestId, name, emoji],
     );
     return reply.status(201).send({ id: inserted[0].id, created_at: inserted[0].created_at });
   });
@@ -133,6 +158,15 @@ export default async function reactionsRoutes(fastify) {
   fastify.get('/reactions/:slug', async (request, reply) => {
     const { slug } = request.params;
     const since = request.query?.since;
+
+    // Now-showing beacon: the wall appends ?showing=<current upload id>
+    // to this poll it already makes every ~1s. Record it so guest
+    // reactions can be attributed to the slide on screen. No DB write,
+    // no extra query — just an in-memory pointer. See sde plan §3.
+    const showing = request.query?.showing;
+    if (typeof showing === 'string' && UUID_RE.test(showing)) {
+      nowShowing.set(slug, { uploadId: showing, since: Date.now() });
+    }
 
     try {
       let sinceTs;
