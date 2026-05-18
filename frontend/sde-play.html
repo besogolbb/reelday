@@ -66,13 +66,41 @@
     /* Subtle glow so the fill reads at a distance on a venue TV. */
     box-shadow: 0 0 6px rgba(255,255,255,.55);
   }
+  /* Small one-tap fullscreen icon, top-right. Hides instantly on
+     click — the wall is meant to live in fullscreen the rest of the
+     reel; the icon's only job is "get me in". Re-appears if the user
+     exits fullscreen (Esc) so they can tap back in. */
+  #fsBtn {
+    position: fixed; top: 14px; right: 14px;
+    width: 44px; height: 44px;
+    background: rgba(0,0,0,.55);
+    border: 1px solid rgba(255,255,255,.22);
+    border-radius: 999px;
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    transition: background .12s ease;
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  }
+  #fsBtn:hover { background: rgba(0,0,0,.78); }
+  #fsBtn svg   { width: 20px; height: 20px; }
+  #fsBtn.hidden { display: none; }
 </style>
 </head>
 <body>
-  <video id="v" playsinline preload="auto" loop muted></video>
+  <!-- NB: no `loop` attribute — parent wall owns one-play lifecycle.
+       (Kept in JS too: v.loop = false, belt + suspenders.) -->
+  <video id="v" playsinline preload="auto" muted></video>
   <div id="loading"><span class="spin"></span><span>Loading reel</span></div>
   <div id="sound" role="button" tabindex="0">🔊 Tap for sound</div>
   <div id="progress"><div id="progressFill"></div></div>
+  <button id="fsBtn" type="button" aria-label="Toggle fullscreen" title="Fullscreen (F · Space · double-click)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>
+    </svg>
+  </button>
 <script>
   (function () {
     var qs      = new URLSearchParams(location.search);
@@ -82,8 +110,11 @@
     var loading = document.getElementById('loading');
     var sound   = document.getElementById('sound');
     var fill    = document.getElementById('progressFill');
+    var fsBtn   = document.getElementById('fsBtn');
 
     if (!src) { document.body.textContent = ''; return; }
+
+    console.info('[sde-play] init, src=', src);
 
     if (poster) v.poster = poster;
     v.muted = true;   // muted autoplay is universally permitted
@@ -95,13 +126,27 @@
     // When the reel finishes, tell the parent wall via postMessage. The
     // wall owns lifecycle; we just signal. Origin-restricted to our own
     // host so a stray frame can't spoof us into reacting to noise.
-    v.addEventListener('ended', function () {
-      console.info('[sde-play] reel ended, signaling parent');
+    var endedFired = false;
+    function signalEnded(reason) {
+      if (endedFired) return;
+      endedFired = true;
+      console.info('[sde-play] reel ended (' + reason + '), signaling parent');
       try {
         parent.postMessage({ type: 'sde-play-ended' }, window.location.origin);
       } catch (e) {
         console.warn('[sde-play] postMessage failed:', e && e.message);
       }
+    }
+    v.addEventListener('ended', function () { signalEnded('ended-event'); });
+    // Belt + suspenders fallback. The `ended` event is *supposed* to
+    // fire when currentTime hits duration, but some browser + mp4
+    // combinations don't reliably emit it (esp. R2-served files whose
+    // duration metadata is just shy of the actual last frame). If we
+    // get within 0.3s of duration without firing, treat it as ended.
+    v.addEventListener('timeupdate', function () {
+      if (endedFired) return;
+      if (!isFinite(v.duration) || v.duration <= 0) return;
+      if (v.currentTime >= v.duration - 0.3) signalEnded('timeupdate-fallback');
     });
 
     loading.classList.add('on');
@@ -181,6 +226,28 @@
       }
     });
     document.addEventListener('dblclick', function () { toggleFs(); });
+
+    // Icon click → hide instantly, then toggle fullscreen. The hide is
+    // optimistic (before fullscreen actually engages) so the button
+    // doesn't linger for a frame; if the fullscreen request fails for
+    // some reason, fullscreenchange won't fire and the button stays
+    // hidden — that's fine, the user still has F/Space/dblclick.
+    if (fsBtn) {
+      fsBtn.addEventListener('click', function () {
+        fsBtn.classList.add('hidden');
+        toggleFs();
+      });
+    }
+    // Re-show the icon if the user exits fullscreen (Esc), so they
+    // can tap back in without remembering a keyboard shortcut.
+    function syncFsBtnVisibility() {
+      if (!fsBtn) return;
+      var inFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+      if (inFs) fsBtn.classList.add('hidden');
+      else      fsBtn.classList.remove('hidden');
+    }
+    document.addEventListener('fullscreenchange',       syncFsBtnVisibility);
+    document.addEventListener('webkitfullscreenchange', syncFsBtnVisibility);
   })();
 </script>
 </body>
