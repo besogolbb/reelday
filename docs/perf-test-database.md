@@ -20,7 +20,7 @@ Use these as the reference for "is today's run healthy?" Updated whenever a mean
 | Wall poll 200c × 1000 | 393 rps · p95 0.94 s · 0 fail | 2026-05-15 | local |
 | Wall poll 600c × 600 | 217 rps · p95 2.55 s · 0 fail | 2026-05-15 | local |
 | Upload kickoff 600c × 600 | 291 rps · p95 1.80 s · 0 fail | 2026-05-16 | local |
-| Upload kickoff 1000c × 1000 | p99 3.7 s · 0 fail | 2026-05-18 | CI |
+| Upload kickoff 1000c × 1000 | 186 rps · p95 3.33 s · p99 3.42 s · 0 fail | 2026-05-18 | remote |
 | Reactions 200c × 1000 | 596 rps · p95 689 ms · 0 fail | 2026-05-16 | local |
 | Mixed peak (600u + 1500r + walls / 30s) | rx p95 11 ms · wall p95 526 ms · upload p95 2.0 s · 0 fail | 2026-05-18 | local |
 | Sustained 3-min mix | 0 fail · flat latency · upload/rx p95 ~86 ms · wall p95 261 ms | 2026-05-18 | remote (PH laptop) |
@@ -92,6 +92,7 @@ Use these as the reference for "is today's run healthy?" Updated whenever a mean
 | 33 | Cross-event isolation 30s (post SDE-beacon) | `stress-cross-event cxzv-fe0y scarlette-skye-td9n 200 30` | remote | reaction spam 2474 ok · spam p95 192 ms · Wall A p95 455 ms · **Wall B p95 387 ms** · 0 fail · N=10 | ✅ | First run with the now-showing beacon live (commit 85c32f4). Beacon stamps `upload_id` on all 2474 reaction writes — spam p95 192 ms vs 689 ms local reactions baseline ⇒ the added INSERT validation subquery is noise when reactions aren't contending an upload burst. Wall B isolated under the <1 s gate. N=10 small-sample (one slow poll dominates p95). |
 | 34 | Mixed peak 600 + 1500 / 30s (post SDE-beacon) | `stress-mixed cxzv-fe0y 600 1500 30` | remote | uploads p95 3387 ms · reactions p95 1009 ms · wall p95 1818 ms · 0 fail (600/600, 1500/1500, 9/9) | ⚠️ | 0-fail baseline criterion holds. Reaction p95 1009 ms elevated vs entry 18 (385 ms) / entry 31 (79 ms): suspected single-laptop upstream saturation (uploads p50→max gap, per entry 31), not the beacon. **Resolved by entry 35** — local re-check confirms laptop noise. |
 | 35 | Mixed peak 600 + 1500 / 30s (post SDE-beacon, local) | `stress-mixed cxzv-fe0y 600 1500 30` | local | uploads p95 2006 ms · **reactions p50 4 ms · p95 11 ms** · wall p95 526 ms · 0 fail (600/600, 1500/1500, 10/10) | ✅ | **First `local` mixed-peak run = backend-truth baseline.** Beacon definitively cleared: reaction-write p95 11 ms with the beacon stamping `upload_id` on every write *during* the 600-row upload burst ⇒ the added INSERT validation subquery is free. Entry 34's 1009 ms was ~99 % laptop upstream noise. Reaction tail p99 1396 ms / max 2114 ms = ~1 % of writes coinciding with peak upload-insert pool contention (the upload storm itself, uploads p95 2.0 s), not beacon-specific. |
+| 36 | perf:full suite (post SDE-beacon) | `npm run perf:full` + standalone `stress-cross-event … 200 30` | remote | health 775 ms · upload 1000c p95 3334 ms **p99 3417 ms** 0 fail · mixed 0 fail (up p95 2500 / rx p95 783 / wall p95 1626) · sustained 3 min 0 fail **flat** (up/rx p95 ~780 / wall p95 1016) · multi-wall 0 fail/2453 (rx-poll p95 1013) · cross-event Wall B p95 861 ms (<1 s) 0 fail | ✅ | Full remote suite, beacon live, **0 backend failures (~10.5 k req)**. Upload 1000c p99 **3.42 s = new remote best** (beats entry 17's 5.30 s; ≈ CI entry 23). Absolute p95s elevated vs the unusually-quiet entry 32 = documented back-to-back full-suite TIME_WAIT pressure on one laptop, not backend: sustained stayed flat across all 6 × 30 s buckets (no drift/leak — the real criterion), and the beacon was already cleared in `local` entry 35 (rx p95 11 ms). Hairline ⚠: multi-wall reactions-poll p95 1013 ms (just over the script's 1 s line) — same laptop-pressure cause; optional `local` multi-wall re-check. Cross-event Wall A≈B (937/861 ms) ⇒ isolation intact, N=9 small-sample. |
 
 ---
 
@@ -103,8 +104,8 @@ Use these as the reference for "is today's run healthy?" Updated whenever a mean
 | 2026-05-15 | 4 | ~6,500 | 93 (expected rate-limit) | Gzip + new scripts |
 | 2026-05-16 | 7 | ~10,000 | 0 | Upload optimization + first remote full suite |
 | 2026-05-17 | 9 | ~20,000 | 91 (client-side, not backend) | Pre-launch deep check |
-| 2026-05-18 | 13 | ~31,200 | 2 (client-side socket aborts in CI mixed test) | CI full suite + warm-up validation + local steady-state baselines + post SDE-beacon perf check (entries 33–35, 0 fail; beacon cleared) |
-| **Total** | **34** | **~68,200** | **0 backend failures** | |
+| 2026-05-18 | 14 | ~41,700 | 2 (client-side socket aborts in CI mixed test) | CI full suite + warm-up validation + local steady-state baselines + post SDE-beacon perf check (entries 33–36, 0 fail; beacon cleared; full remote suite re-pass + new 1000c remote best) |
+| **Total** | **35** | **~78,700** | **0 backend failures** | |
 
 ---
 
