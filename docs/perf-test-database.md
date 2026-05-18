@@ -89,6 +89,8 @@ Use these as the reference for "is today's run healthy?" Updated whenever a mean
 | 30 | Cross-event isolation 30s | `stress-cross-event ... 200 30` | remote | Wall A p95 211 ms · **Wall B p95 168 ms** · 3062 spam · 0 fail | ✅ | Confirms isolation under real network conditions. Wall B *faster* than Wall A here — inversion flipped direction, definitively confirming the original anomaly was N=10 noise, not isolation failure. |
 | 31 | Mixed peak 600 + 1500 / 30s | `stress-mixed 600 1500 30` | remote | uploads p95 1652 ms · reactions p95 79 ms · wall p95 1633 ms · 0 fail | ✅ | Upload p50→max gap of 33 ms = saturated upstream bandwidth from home connection, not server load. Reactions and wall reflect real server. |
 | 32 | Sustained 3 min | `stress-sustained 3` | remote (laptop) | upload p95 85 ms · reaction p95 86 ms · wall p95 261 ms · 0 fail · flat over 3 min | ✅ | **New steady-state baseline.** Per-30s readouts: rx p95 76-87 ms, upload p95 79-98 ms, wall p95 237-293 ms — zero drift. Proves the CI sustained "drift" (entry 25) was inter-run variance, not server degradation. |
+| 33 | Cross-event isolation 30s (post SDE-beacon) | `stress-cross-event cxzv-fe0y scarlette-skye-td9n 200 30` | remote | reaction spam 2474 ok · spam p95 192 ms · Wall A p95 455 ms · **Wall B p95 387 ms** · 0 fail · N=10 | ✅ | First run with the now-showing beacon live (commit 85c32f4). Beacon stamps `upload_id` on all 2474 reaction writes — spam p95 192 ms vs 689 ms local reactions baseline ⇒ the added INSERT validation subquery is noise when reactions aren't contending an upload burst. Wall B isolated under the <1 s gate. N=10 small-sample (one slow poll dominates p95). |
+| 34 | Mixed peak 600 + 1500 / 30s (post SDE-beacon) | `stress-mixed cxzv-fe0y 600 1500 30` | remote | uploads p95 3387 ms · reactions p95 1009 ms · wall p95 1818 ms · 0 fail (600/600, 1500/1500, 9/9) | ⚠️ | 0-fail baseline criterion holds. Reaction p95 1009 ms elevated vs entry 18 (385 ms) / entry 31 (79 ms): reaction INSERT now does a real `uploads` PK lookup while 600 rows insert into that table concurrently — plus single-laptop upstream saturation (uploads p50→max gap, per entry 31). Entry 33 shows the beacon itself is cheap; **re-run `stress-mixed` in `local` env to separate beacon cost from laptop-bandwidth noise before trusting.** |
 
 ---
 
@@ -100,8 +102,8 @@ Use these as the reference for "is today's run healthy?" Updated whenever a mean
 | 2026-05-15 | 4 | ~6,500 | 93 (expected rate-limit) | Gzip + new scripts |
 | 2026-05-16 | 7 | ~10,000 | 0 | Upload optimization + first remote full suite |
 | 2026-05-17 | 9 | ~20,000 | 91 (client-side, not backend) | Pre-launch deep check |
-| 2026-05-18 | 10 | ~24,500 | 2 (client-side socket aborts in CI mixed test) | CI full suite + warm-up validation + local steady-state baselines |
-| **Total** | **31** | **~61,500** | **0 backend failures** | |
+| 2026-05-18 | 12 | ~29,100 | 2 (client-side socket aborts in CI mixed test) | CI full suite + warm-up validation + local steady-state baselines + post SDE-beacon perf check (entries 33–34, 0 fail) |
+| **Total** | **33** | **~66,100** | **0 backend failures** | |
 
 ---
 
@@ -115,6 +117,7 @@ Use these as the reference for "is today's run healthy?" Updated whenever a mean
 | 2026-05-16 | Added stress-upload-e2e for full presigned → R2 PUT → complete flow | First end-to-end measurement of real guest experience |
 | 2026-05-17 | (No code changes — pure validation runs) | Confirmed all baselines hold; cross-event re-verified with larger sample |
 | 2026-05-18 | Cross-event test: 3 discarded warm-up polls per slug before storm clock starts (commit bc8d7d6) | Wall B p95 805 ms → 526 ms (CI) and 168 ms (local). Eliminated cold-connection / cold prepared-statement bias that was making the quiet event look slower than the spammed one at N=10. |
+| 2026-05-18 | SDE now-showing beacon (commit 85c32f4): reaction INSERT now stamps `upload_id` from an in-memory wall pointer; the existing validation subquery now executes a real `uploads` PK lookup instead of short-circuiting on NULL | Isolated cross-event run (entry 33): reaction-write p95 192 ms remote — no measurable cost. Concurrent-upload-burst run (entry 34): reaction p95 385→1009 ms — **not yet confirmed as beacon vs. upload-table contention + laptop noise; pending a `local` mixed re-check.** |
 
 ---
 
