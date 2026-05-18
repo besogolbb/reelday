@@ -102,19 +102,6 @@
       font-weight: 400; letter-spacing: .08em;
     }
 
-    /* Simple "events created" tally — no progress-against-limit gauge.
-       In the per-event model the limit gauge was misleading; the raw
-       count is still useful so the host knows where they stand. */
-    .events-created {
-      margin-top: 1rem;
-      display: flex; align-items: baseline; justify-content: space-between;
-      font-size: .85rem; color: var(--ink-faint);
-    }
-    .events-created .ec-num {
-      font-family: var(--display); font-size: 1.35rem;
-      color: var(--ink); font-weight: 500;
-    }
-
     /* Small reference-date footnote under the limits row so the 90-day
        gallery / 7-day upload-window numbers aren't ambiguous. */
     .limits-note {
@@ -271,8 +258,8 @@
 
         <div class="limits">
           <div class="limit">
-            <div class="label">Events</div>
-            <div class="value">${formatLimit(plan.eventLimit, plan.eventLimit === 1 ? 'event' : 'events')}</div>
+            <div class="label">Events created</div>
+            <div class="value">${ownedEvents} <small>${ownedEvents === 1 ? 'event' : 'events'}</small></div>
           </div>
           <div class="limit">
             <div class="label">Uploads per event</div>
@@ -293,11 +280,6 @@
           So Dalisay's 7-day upload window means guests can keep uploading until 7 days after the wedding,
           and the 90-day gallery stays open until 90 days after. (If you skip the event date when creating,
           we anchor to the event-creation moment instead.)
-        </div>
-
-        <div class="events-created">
-          <span>Events you've created</span>
-          <span class="ec-num">${ownedEvents}</span>
         </div>
 
         <div class="features">
