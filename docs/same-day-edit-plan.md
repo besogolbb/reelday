@@ -5,7 +5,7 @@ recap reel, rendered automatically. Gated to **Dalisay & Hiraya** via a
 new `plans.js` `sde` feature flag (same Dalisay+ pattern as `website` /
 `polls` / `audioNotes`). This is the headline justification for the
 ₱2,990 Dalisay price point: it replaces a manual video-editing service
-with a ~3-minute automated "Digital SDE".
+with an automated "Digital SDE" — a reel up to ~4 minutes long.
 
 Strategy: the wall entertains *during* the event; the SDE is the
 keepsake the couple actually posts and shares *after*.
@@ -208,8 +208,10 @@ Selection algorithm (in JS, deterministic):
    sparse, noisy, or the tally is skipped entirely, the reel is still
    built from host picks + chronology. Reactions only ever *re-order
    within* the host's structure — they can never break the SDE.
-4. Cap at `MAX_CLIPS` (≈25) and a `MAX_TOTAL_S` budget
-   (photo = 3 s, video ≈ 5 s).
+4. Cap at `MAX_CLIPS` (≈80) and a `MAX_TOTAL_S` budget of **240 s
+   (~4 min target)** — `MAX_TOTAL_S` is the real governor; `MAX_CLIPS`
+   is set high enough that duration binds first even for a photo-only
+   event (240 / 3 s = 80). Photo = 3 s, video ≈ 5 s.
 5. **Final reel order = chronological by `created_at`** of the selected
    set (ceremony → reception narrative). Order is a `config` knob so we
    can A/B "best-first" later.
@@ -428,10 +430,13 @@ re-render).
   `events.current_slide_upload_id` column, ≈1 cheap UPDATE/slide) if the
   container is ever scaled to multiple replicas — at which point the
   existing transcode cap breaks first, so this isn't the canary.
-- **Lambda ceiling:** ≤25 clips concat is a single long job — dedicated
-  function with bumped `/tmp` + memory + timeout, isolated from the live
-  per-upload transcoder. ~1–3 min render keeps the "5-minute SDE"
-  promise.
+- **Lambda ceiling:** up to ~80 clips → a ~4-min 1080p concat is a
+  single long job — **bigger than the original 25-clip estimate**, so
+  Batch 2 must size the dedicated function accordingly: more `/tmp`
+  (≈80 normalized bricks + the master), more memory, and a higher
+  timeout. Still one isolated job off the live per-upload transcoder;
+  re-confirm render stays within the "produced in ~5 min" promise once
+  the real per-clip ffmpeg cost is measured.
 - **Hot-path discipline:** the wall reveal-state read must ride an
   existing poll, not add one. Append a row to
   `docs/perf-test-database.md` if a render coincides with a stress run.

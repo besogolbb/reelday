@@ -15,11 +15,16 @@
  */
 
 export const SELECT_DEFAULTS = {
-  maxClips:    25,   // hard ceiling on bricks in the reel
-  minClips:    12,   // below this, top up with most-recent uploads
+  // Target a ~4-minute reel. maxTotalSec (240 s) is the real governor;
+  // maxClips is set high enough that the duration cap binds first even
+  // for a photo-only event (240 / 3 s = 80) — otherwise the count would
+  // cap the reel at ~2 min before it ever reaches 4. A video-heavy
+  // event tops out at ~48 clips (240 / 5 s) and still hits 4 min.
+  maxClips:    80,   // ceiling on bricks; duration cap usually binds first
+  minClips:    12,   // floor — below this, top up with most-recent uploads
   photoSec:    3,    // Ken Burns still
   videoSec:    5,    // trimmed guest clip
-  maxTotalSec: 150,  // ~2.5 min — attention-span ceiling for a guest reel
+  maxTotalSec: 240,  // 4 min — hard length ceiling for the reel
 };
 
 // Weighted reaction score. Buckets mirror the wall's allowed emoji
