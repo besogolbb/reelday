@@ -2194,18 +2194,18 @@
 
   // ── Theme map ────────────────────────────────────────
   const THEME_MAP = {
-    wedding:          { theme: 'wedding',          emoji: '💍', label: 'Kasalan' },
+    wedding:          { theme: 'wedding',          emoji: '💍', label: 'Wedding' },
     debut:            { theme: 'debut',            emoji: '👑', label: 'Debut' },
-    birthday:         { theme: 'birthday',         emoji: '🎂', label: 'Kaarawan' },
+    birthday:         { theme: 'birthday',         emoji: '🎂', label: 'Birthday' },
     seventh_birthday: { theme: 'seventh_birthday', emoji: '🌟', label: '7th Birthday' },
-    baptism:          { theme: 'baptism',          emoji: '🕊️', label: 'Binyag' },
+    baptism:          { theme: 'baptism',          emoji: '🕊️', label: 'Baptism' },
     reunion:          { theme: 'reunion',          emoji: '🎉', label: 'General Event' },
     corporate:        { theme: 'corporate',        emoji: '🏢', label: 'Corporate Event' },
     memorial:         { theme: 'memorial',         emoji: '🕯️', label: 'Memorial' },
   };
 
-  const FIL_MONTHS = ['Enero','Pebrero','Marso','Abril','Mayo','Hunyo',
-                      'Hulyo','Agosto','Setyembre','Oktubre','Nobyembre','Disyembre'];
+  const MONTHS = ['January','February','March','April','May','June',
+                  'July','August','September','October','November','December'];
 
   // ── State ─────────────────────────────────────────────
   const params  = new URLSearchParams(location.search);
@@ -2262,7 +2262,7 @@
   // ── Helpers ───────────────────────────────────────────
   function formatDate(dateStr) {
     const d = new Date(dateStr);
-    return `${FIL_MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
+    return `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
   }
 
   function showToast(msg) {
