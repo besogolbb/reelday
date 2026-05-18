@@ -3241,6 +3241,12 @@
       upload.sde_excluded = false;
       // Update counts + tabs without a full re-render.
       updateTabCounts(allUploads);
+      // Cross-module nudge so the isolated SDE panel re-fetches its
+      // curated preview and the strip thumbnail moves in/out instantly.
+      // Listener lives in the isolated <script type="module"> at end of body.
+      window.dispatchEvent(new CustomEvent('reelday:sde-changed', {
+        detail: { uploadId, pinned: pinned === true },
+      }));
     } catch (err) {
       // revert visual state
       btn.classList.toggle('on', wasPinned);
@@ -5877,6 +5883,23 @@
     // lazily on first expand, or now if it starts expanded (persisted).
     panel.style.display = '';
     if (bodyEl.style.display !== 'none') load();
+
+    // ── Live update from the Feature pin in the main streams ────────
+    // The main dashboard module dispatches 'reelday:sde-changed' after a
+    // successful pin/unpin PATCH. If we're open, re-fetch immediately so
+    // the strip thumbnail appears/disappears in lock-step with the host's
+    // click. If we're collapsed, mark stale so the next expand re-loads
+    // fresh data (no point burning a request on a panel nobody's looking at).
+    let pendingReload = null;
+    window.addEventListener('reelday:sde-changed', () => {
+      if (bodyEl.style.display === 'none') {
+        loaded = false;
+        return;
+      }
+      // Coalesce rapid clicks (host pinning a few in a row) into one fetch.
+      if (pendingReload) clearTimeout(pendingReload);
+      pendingReload = setTimeout(() => { pendingReload = null; load(); }, 120);
+    });
   }
 </script>
 
