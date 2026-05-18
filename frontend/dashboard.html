@@ -926,6 +926,35 @@
       border: none; color: var(--ink);
     }
 
+    /* ── Feature pin (lower-left, persistent on every tile) ─────────
+       Featured ⇒ this clip is in the Same Day Edit. Outlined when
+       unfeatured, filled accent when featured. Always visible (does
+       not depend on the hover overlay) so the host can scan what's
+       already in the SDE from the stream view alone. */
+    .photo-grid > div .feature-pin {
+      position: absolute; left: 8px; bottom: 8px; z-index: 5;
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 5px 10px 5px 8px;
+      border-radius: 999px;
+      font-family: var(--mono); font-size: 9px;
+      letter-spacing: .12em; text-transform: uppercase;
+      background: rgba(255,255,255,.92); color: var(--ink);
+      border: 1px solid rgba(42,26,20,.12);
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,.18);
+      transition: background .15s ease, color .15s ease, transform .12s ease;
+    }
+    .photo-grid > div .feature-pin:hover { transform: translateY(-1px); }
+    .photo-grid > div .feature-pin:disabled { opacity: .55; cursor: progress; }
+    .photo-grid > div .feature-pin .feature-pin-star { font-size: 12px; line-height: 1; }
+    .photo-grid > div .feature-pin.on {
+      background: var(--accent); color: #fff; border-color: var(--accent);
+      box-shadow: 0 2px 10px rgba(196,90,58,.45);
+    }
+    .photo-grid > div .feature-pin.on .feature-pin-star { color: #ffe5a3; }
+    /* In bulk-select mode the pin would conflict with multi-select clicks. */
+    .photo-grid.select-mode > div .feature-pin { display: none; }
+
     /* Bulk-select mode */
     .photo-grid.select-mode > div { cursor: pointer; }
     .photo-grid.select-mode > div::after {
@@ -2397,7 +2426,7 @@
     switch(tab) {
       case 'pending':  return uploads.filter(u => u.status === 'pending');
       case 'approved': return uploads.filter(isApproved);
-      case 'featured': return uploads.filter(u => u.featured === true);
+      case 'featured': return uploads.filter(u => u.sde_pinned === true);
       case 'hidden':   return uploads.filter(isHidden);
       case 'all':
       default:         return uploads;
@@ -2412,7 +2441,7 @@
     const allCount      = scoped.length;
     const pendingCount  = scoped.filter(u => u.status === 'pending').length;
     const approvedCount = scoped.filter(isApproved).length;
-    const featuredCount = scoped.filter(u => u.featured === true).length;
+    const featuredCount = scoped.filter(u => u.sde_pinned === true).length;
     const hiddenCount   = scoped.filter(isHidden).length;
 
     $('tab-all-count').textContent      = allCount;
@@ -2992,16 +3021,18 @@
   }
 
   // ── Get action button based on upload status ──────────
+  // Featuring is now its own persistent lower-left button on every tile
+  // (wired to the SDE pin/exclude PATCH), so we only return the
+  // contextual approve/unhide action here. Tiles that are already
+  // approved show no overlay action — the host clicks the tile to open
+  // the preview modal or uses the Feature pin below-left.
   function getActionButton(u) {
     if (u.status === 'pending') {
       return `<span class="actions-btn" data-action="approve" data-id="${u.id}">Approve</span>`;
-    } else if (u.featured) {
-      return `<span class="actions-btn" data-action="unfeature" data-id="${u.id}">Unfeature</span>`;
     } else if (u.status === 'hidden' || u.hidden) {
       return `<span class="actions-btn" data-action="unhide" data-id="${u.id}">Unhide</span>`;
-    } else {
-      return `<span class="actions-btn" data-action="feature" data-id="${u.id}">Feature</span>`;
     }
+    return '';
   }
 
   // Preconnect to whichever CDN/R2 host serves the first upload's media,
@@ -3090,7 +3121,17 @@
         : '';
 
       const showLabelFallback = !mediaSrc && !isVideo && !isAudioOnly;
-      return `<div class="placeholder ${cls}" style="${styleParts.join(';')};">${badge}${videoEl}${imageEl}${audioBtn}${showLabelFallback ? safeLabel : ''}<div class="actions-overlay"><span class="uploader">${safeLabel}</span>${msgPreview}${actionBtn}</div></div>`;
+      // Lower-left Feature pin — persistent (always visible). Featured ⇒
+      // included in the Same Day Edit. Voice-only standalone tiles never
+      // make it into the SDE, so we suppress the pin there.
+      const isPinned    = u.sde_pinned === true;
+      const featurePin  = isAudioOnly ? '' :
+        `<button type="button" class="feature-pin${isPinned ? ' on' : ''}" data-feature-id="${u.id}"
+                 aria-pressed="${isPinned}" title="${isPinned ? 'Featured in Same Day Edit — click to remove' : 'Add to Same Day Edit'}">
+           <span class="feature-pin-star" aria-hidden="true">${isPinned ? '★' : '☆'}</span>
+           <span class="feature-pin-label">${isPinned ? 'Featured' : 'Feature'}</span>
+         </button>`;
+      return `<div class="placeholder ${cls}" style="${styleParts.join(';')};">${badge}${videoEl}${imageEl}${audioBtn}${showLabelFallback ? safeLabel : ''}${featurePin}<div class="actions-overlay"><span class="uploader">${safeLabel}</span>${msgPreview}${actionBtn}</div></div>`;
     }).join('');
 
     hydrateLazyVideos();
@@ -3151,6 +3192,64 @@
       renderGallery(normalized);
     } catch (err) {
       showToast('Failed to perform action. Please try again.');
+    }
+  }
+
+  // ── Feature toggle (lower-left pin on every tile) ─────
+  // Featured ≡ sde_pinned. We optimistically flip the local row and the
+  // button class, PATCH the SDE clips endpoint, then reconcile on the
+  // response. We do NOT re-render the whole gallery — that would re-run
+  // the lazy-video observers and feel laggy. The next refreshUploads()
+  // tick (every 10s) syncs counts/tabs naturally.
+  async function handleFeatureToggle(uploadId, btn) {
+    const upload = (allUploads || []).find(u => String(u.id) === String(uploadId));
+    if (!upload) return;
+    const wasPinned = upload.sde_pinned === true;
+    const nextState = wasPinned ? 'neutral' : 'pinned';
+
+    btn.disabled = true;
+    // Optimistic UI — flip class + icon now, revert on failure.
+    btn.classList.toggle('on', !wasPinned);
+    const star = btn.querySelector('.feature-pin-star');
+    const lbl  = btn.querySelector('.feature-pin-label');
+    if (star) star.textContent = wasPinned ? '☆' : '★';
+    if (lbl)  lbl.textContent  = wasPinned ? 'Feature' : 'Featured';
+    btn.setAttribute('aria-pressed', String(!wasPinned));
+
+    try {
+      const res = await fetch(`/api/events/${slug}/sde/clips`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...authHeader() },
+        body: JSON.stringify({ id: uploadId, state: nextState }),
+      });
+      if (!res.ok) {
+        if (res.status === 403) {
+          showToast('Featuring is a Dalisay plan feature.');
+        } else {
+          throw new Error('feature toggle failed');
+        }
+        // revert
+        btn.classList.toggle('on', wasPinned);
+        if (star) star.textContent = wasPinned ? '★' : '☆';
+        if (lbl)  lbl.textContent  = wasPinned ? 'Featured' : 'Feature';
+        btn.setAttribute('aria-pressed', String(wasPinned));
+        return;
+      }
+      const { pinned } = await res.json();
+      // Trust server truth — also clears sde_excluded if it was set.
+      upload.sde_pinned   = pinned === true;
+      upload.sde_excluded = false;
+      // Update counts + tabs without a full re-render.
+      updateTabCounts(allUploads);
+    } catch (err) {
+      // revert visual state
+      btn.classList.toggle('on', wasPinned);
+      if (star) star.textContent = wasPinned ? '★' : '☆';
+      if (lbl)  lbl.textContent  = wasPinned ? 'Featured' : 'Feature';
+      btn.setAttribute('aria-pressed', String(wasPinned));
+      showToast('Could not update featured state. Try again.');
+    } finally {
+      btn.disabled = false;
     }
   }
 
@@ -4695,6 +4794,18 @@
         return;
       }
 
+      // Feature pin (lower-left, persistent). Toggles sde_pinned via the
+      // SDE clips PATCH endpoint — that single column IS the curation
+      // source of truth (featured ≡ sde_pinned). Optimistic update so the
+      // star flips immediately; we re-sync the row from the server reply.
+      const pinBtn = e.target.closest('.feature-pin');
+      if (pinBtn) {
+        e.stopPropagation();
+        const id = pinBtn.dataset.featureId;
+        if (id) handleFeatureToggle(id, pinBtn);
+        return;
+      }
+
       // Clicking any tile (photo or video) opens the preview modal so
       // the host can review and approve / hide / move from the same place.
       const tile = e.target.closest('.photo-grid > div');
@@ -5647,78 +5758,23 @@
       const st = document.createElement('style');
       st.id = 'sde-style';
       st.textContent =
-        '#sde-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px;margin-top:14px;}' +
-        '.sde-tile{position:relative;border-radius:10px;overflow:hidden;background:var(--paper);border:1px solid var(--line);}' +
-        '.sde-tile img{width:100%;height:94px;object-fit:cover;display:block;background:#000;}' +
-        '.sde-tile.out{opacity:.42;filter:grayscale(.6);}' +
-        '.sde-badge{position:absolute;top:6px;left:6px;font-size:11px;font-weight:700;padding:2px 7px;border-radius:999px;background:rgba(0,0,0,.62);color:#fff;}' +
-        '.sde-meta{display:flex;justify-content:space-between;align-items:center;padding:6px 8px;font-size:11px;color:var(--ink-soft);}' +
-        '.sde-acts{display:flex;gap:4px;padding:0 8px 8px;}' +
-        '.sde-acts button{flex:1;font-size:11px;padding:5px 0;border-radius:7px;border:1px solid var(--line);background:var(--paper-2);color:var(--ink-soft);cursor:pointer;}' +
-        '.sde-acts button.on{background:var(--accent);color:#fff;border-color:var(--accent);}' +
-        '.sde-bar{font-size:13px;color:var(--ink-soft);margin:4px 0 2px;line-height:1.5;}';
+        // Clean featured-only summary strip — host curates via the
+        // Feature pin in the stream tabs, not from here. This panel
+        // is now a read-only confirmation of what's in the reel.
+        '#sde-strip{display:flex;gap:8px;overflow-x:auto;padding:14px 2px 4px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;}' +
+        '#sde-strip::-webkit-scrollbar{height:6px;}' +
+        '#sde-strip::-webkit-scrollbar-thumb{background:rgba(42,26,20,.15);border-radius:999px;}' +
+        '.sde-mini{flex:0 0 96px;position:relative;border-radius:9px;overflow:hidden;background:var(--paper);border:1px solid var(--line);scroll-snap-align:start;}' +
+        '.sde-mini img{width:100%;height:72px;object-fit:cover;display:block;background:#000;}' +
+        '.sde-mini .sde-num{position:absolute;top:5px;left:5px;font-family:var(--mono);font-size:10px;font-weight:700;padding:2px 6px;border-radius:999px;background:rgba(0,0,0,.62);color:#fff;}' +
+        '.sde-mini .sde-kind{position:absolute;top:5px;right:5px;font-family:var(--mono);font-size:9px;letter-spacing:.06em;padding:2px 5px;border-radius:5px;background:rgba(255,255,255,.85);color:var(--ink);}' +
+        '.sde-bar{font-size:13px;color:var(--ink-soft);margin:4px 0 2px;line-height:1.5;}' +
+        '.sde-hint{font-size:12px;color:var(--ink-faint);margin-top:10px;line-height:1.5;}' +
+        '.sde-cta{display:inline-block;margin-top:4px;font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);text-decoration:none;border-bottom:1px dashed var(--accent);}';
       document.head.appendChild(st);
     }
 
     const esc = s => String(s == null ? '' : s);
-
-    async function patchClip(id, state) {
-      try {
-        const r = await fetch(`/api/events/${slug}/sde/clips`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', ...AH },
-          body: JSON.stringify({ id, state }),
-        });
-        return r.ok;
-      } catch { return false; }
-    }
-
-    function tile(c) {
-      const t = document.createElement('div');
-      t.className = 'sde-tile' + (c.selected ? '' : ' out');
-
-      const img = document.createElement('img');
-      img.loading = 'lazy'; img.src = esc(c.thumb); img.alt = '';
-      t.appendChild(img);
-
-      const badge = document.createElement('span');
-      badge.className = 'sde-badge';
-      badge.textContent = c.excluded ? 'Hidden'
-        : c.selected ? `#${c.order + 1}${c.pinned ? ' · pinned' : ''}`
-        : 'Not used';
-      t.appendChild(badge);
-
-      const meta = document.createElement('div');
-      meta.className = 'sde-meta';
-      const left = document.createElement('span');
-      left.textContent = c.type === 'video' ? '▶ video' : 'photo';
-      const right = document.createElement('span');
-      right.textContent = `♥ ${c.reaction_count}`;
-      meta.appendChild(left); meta.appendChild(right);
-      t.appendChild(meta);
-
-      const acts = document.createElement('div');
-      acts.className = 'sde-acts';
-      const pinBtn = document.createElement('button');
-      pinBtn.textContent = 'Pin';
-      if (c.pinned) pinBtn.classList.add('on');
-      const exBtn = document.createElement('button');
-      exBtn.textContent = 'Hide';
-      if (c.excluded) exBtn.classList.add('on');
-      pinBtn.addEventListener('click', async () => {
-        pinBtn.disabled = exBtn.disabled = true;
-        const ok = await patchClip(c.id, c.pinned ? 'neutral' : 'pinned');
-        if (ok) load(); else { pinBtn.disabled = exBtn.disabled = false; }
-      });
-      exBtn.addEventListener('click', async () => {
-        pinBtn.disabled = exBtn.disabled = true;
-        const ok = await patchClip(c.id, c.excluded ? 'neutral' : 'excluded');
-        if (ok) load(); else { pinBtn.disabled = exBtn.disabled = false; }
-      });
-      acts.appendChild(pinBtn); acts.appendChild(exBtn);
-      t.appendChild(acts);
-      return t;
-    }
 
     function render(data) {
       panel.style.display = '';
@@ -5734,22 +5790,68 @@
       const total = s.totalSec || 0;
       const mins = Math.floor(total / 60);
       const secs = String(total % 60).padStart(2, '0');
-      summaryEl.textContent = `${s.selectedCount || 0} clips · ~${mins}:${secs}`;
+      const selectedCount = s.selectedCount || 0;
+      const approvedCount = s.approvedCount || 0;
+      const pinnedCount   = s.pinnedCount   || 0;
+      summaryEl.textContent = `${selectedCount} clips · ~${mins}:${secs}`;
+
       statusEl.className = 'sde-bar';
-      statusEl.textContent =
-        `Preview of your recap reel — ${s.selectedCount || 0} of ${s.approvedCount || 0} uploads chosen ` +
-        `(most-reacted moments + anything you pin). Pin to force-include, Hide to drop. ` +
-        `The video itself is generated in a later update.`;
-      gridEl.textContent = '';
+      // Two distinct stories depending on whether the host has featured
+      // anything yet. The fallback is the safety net we keep on purpose.
+      if (pinnedCount > 0) {
+        statusEl.innerHTML =
+          `<strong>${selectedCount}</strong> clip${selectedCount === 1 ? '' : 's'} in your reel ` +
+          `(${pinnedCount} featured + most-reacted moments to fill).<br>` +
+          `Tap the <em>Feature</em> star on any photo or video in the stream to add it here.`;
+      } else {
+        statusEl.innerHTML =
+          `You haven't featured anything yet — your reel will auto-build from the most-reacted ` +
+          `<strong>${selectedCount}</strong> of ${approvedCount} uploads.<br>` +
+          `Tap the <em>Feature</em> star on any tile in the Photo / Video stream to lock it into the reel.`;
+      }
+
+      // Strip = ordered, featured-only preview. Selected-but-not-pinned
+      // clips (the auto-filled tail) are NOT shown here — they live in
+      // the streams already, and this panel is now the "what I curated"
+      // view, not a duplicate gallery.
+      const strip = gridEl;
+      strip.id = 'sde-strip';
+      strip.textContent = '';
       const clips = data.clips || [];
-      if (!clips.length) {
+      const featured = clips
+        .filter(c => c.pinned && !c.excluded)
+        .sort((a, b) => {
+          // Preserve reel order (Curator-assigned) where available.
+          const ao = a.order == null ?  1e9 : a.order;
+          const bo = b.order == null ?  1e9 : b.order;
+          return ao - bo;
+        });
+
+      if (!featured.length) {
         const e = document.createElement('div');
-        e.className = 'sde-bar';
-        e.textContent = 'No photos or videos uploaded yet — nothing to edit.';
-        gridEl.appendChild(e);
+        e.className = 'sde-hint';
+        if (!clips.length) {
+          e.textContent = 'No photos or videos uploaded yet — nothing to edit.';
+        } else {
+          e.textContent = 'Nothing featured yet. Your reel still builds automatically — but featuring tiles in the stream is how you take control of it.';
+        }
+        strip.appendChild(e);
         return;
       }
-      clips.forEach(c => gridEl.appendChild(tile(c)));
+
+      featured.forEach((c, i) => {
+        const mini = document.createElement('div');
+        mini.className = 'sde-mini';
+        const img = document.createElement('img');
+        img.loading = 'lazy'; img.src = esc(c.thumb); img.alt = '';
+        const num  = document.createElement('span');
+        num.className = 'sde-num'; num.textContent = `#${i + 1}`;
+        const kind = document.createElement('span');
+        kind.className = 'sde-kind';
+        kind.textContent = c.type === 'video' ? '▶' : '☐';
+        mini.appendChild(img); mini.appendChild(num); mini.appendChild(kind);
+        strip.appendChild(mini);
+      });
     }
 
     async function load() {
