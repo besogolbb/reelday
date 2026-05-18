@@ -37,6 +37,24 @@ function clipKey(row) {
   return row.original_key || r2KeyFromUrl(row.file_url);
 }
 
+// "May 18, 2026 · Tagaytay" / "May 18, 2026" / "Tagaytay" / null —
+// whichever pieces the event actually has. Asia/Manila locale because
+// every customer event is local; the timezone is non-negotiable for
+// "today's" SDE so we don't shift the date in a UTC render window.
+function formatSubtitle(eventDate, venue) {
+  let datePart = null;
+  if (eventDate) {
+    const d = eventDate instanceof Date ? eventDate : new Date(eventDate);
+    if (!Number.isNaN(d.getTime())) {
+      datePart = d.toLocaleDateString('en-US', {
+        month: 'long', day: 'numeric', year: 'numeric', timeZone: 'Asia/Manila',
+      });
+    }
+  }
+  const venuePart = (venue || '').trim() || null;
+  return [datePart, venuePart].filter(Boolean).join(' · ') || null;
+}
+
 // Music chain: event's custom upload → curated playlist lead → baked
 // default → null (silent). Returns the R2 key + a track_id pointer (for
 // event_sde.track_id when we picked from music_tracks).
@@ -294,13 +312,24 @@ export default async function sdeRoutes(fastify) {
 
     const { audioKey, trackId } = await pickMusicForRender(fastify, ctx.event.id);
 
+    // Text-card content. The Lambda renders these as drawtext-on-black
+    // (skips silently if its font file is missing). Subtitle is built
+    // from event_date + venue; either part may be absent. Endcard copy
+    // is a fixed default for now — hosts can customise in a later slice.
+    const title    = (ctx.event.couple_names || '').trim() || null;
+    const subtitle = formatSubtitle(ctx.event.event_date, ctx.event.venue);
+    const endcardText = 'Thank you for celebrating with us.';
+
     const outKey = `sde/${ctx.event.id}/sde-${Date.now()}.mp4`;
     const payload = {
       eventId:      ctx.event.id,
       slug:         ctx.event.slug,
       clips,
       audioKey,
-      titleCardKey: null, // drawtext path lands in a follow-up commit
+      title,
+      subtitle,
+      endcardText,
+      titleCardKey: null, // text path wins; PNG fields kept null
       endcardKey:   null,
       outKey,
     };

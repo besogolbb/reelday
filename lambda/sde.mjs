@@ -24,18 +24,29 @@
  *                     (provides /opt/bin/ffmpeg)
  *   - Env vars:       R2_BUCKET_NAME, R2_ACCOUNT_ID,
  *                     R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY,
- *                     WEBHOOK_URL  (→ https://<host>/webhooks/sde-ready),
- *                     WEBHOOK_SECRET (shared with backend)
+ *                     WEBHOOK_URL  (→ https://<host>/api/webhooks/sde-ready),
+ *                     WEBHOOK_SECRET (shared with backend),
+ *                     SDE_FONT_PATH (TTF/OTF for drawtext cards;
+ *                       defaults to /opt/fonts/Inter-Bold.ttf — ship
+ *                       a font in the layer or zip, else cards are
+ *                       skipped (render still succeeds))
  *
  * Invoked async (`InvocationType: 'Event'`) — never sync — by
- * backend/lib/awsLambdaService.js (Slice 2B). Idempotent: if `outKey`
- * already exists in R2, skip the work and just notify.
+ * backend/lib/sdeRenderInvoke.js. Idempotent: if `outKey` already
+ * exists in R2, skip the work and just notify.
+ *
+ * Payload fields (all optional except eventId, outKey, clips[]):
+ *   - title, subtitle  → drawtext title card (black bg, centered)
+ *   - endcardText      → drawtext endcard (black bg, centered)
+ *   - titleCardKey, endcardKey → PNG cards (alternate path; text wins
+ *                                  if both are provided)
+ *   - audioKey         → music bed (R2 key); null = silent reel
  */
 
 import { S3Client, GetObjectCommand, PutObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { mkdtemp, rm, writeFile, stat } from 'fs/promises';
+import { mkdtemp, rm, writeFile, stat, access } from 'fs/promises';
 import { createReadStream, createWriteStream } from 'fs';
 import { spawn } from 'child_process';
 import { pipeline } from 'stream/promises';
@@ -48,6 +59,11 @@ const {
   WEBHOOK_URL,
   WEBHOOK_SECRET,
   FFMPEG_PATH = '/opt/bin/ffmpeg',
+  // drawtext font for the title / endcard text path. The operator must
+  // ship a TTF/OTF at this path in the layer or zip; if the file is
+  // missing we skip the card rather than failing the whole render (the
+  // PNG card path is the alternate route — pass titleCardKey instead).
+  SDE_FONT_PATH = '/opt/fonts/Inter-Bold.ttf',
   // Per-clip normalization budget. The Curator caps the total at 240 s
   // (80 clips × 3 s ceiling), so an individual normalize is bounded;
   // this is a defense-in-depth limit, not the primary cap.
@@ -199,6 +215,72 @@ async function normalizePhoto(srcPath, outPath, durSec, { kenBurns = true } = {}
   ], { label: `normalize-photo` });
 }
 
+// Render a black-background card with up to two centered text lines
+// (title + subtitle, or just endcard line). Generated entirely by FFmpeg
+// from `color=` + `drawtext` so there's no PNG generation step in the
+// backend. Text is passed via `textfile=` (not `text=`) so we don't have
+// to escape user input — drawtext reads the literal file bytes.
+//
+// Returns the output path on success, or null if the font is missing —
+// caller treats null as "skip this card" rather than failing the render.
+async function renderTextCard(workdir, outPath, lines, durSec) {
+  const fontExists = await access(SDE_FONT_PATH).then(() => true).catch(() => false);
+  if (!fontExists) {
+    console.warn(`[sde] drawtext font not found at ${SDE_FONT_PATH}; skipping text card`);
+    return null;
+  }
+
+  // Build per-line drawtext filters. Y positions are offset from center
+  // so two lines straddle the middle; a single line sits dead-center.
+  const drawTexts = [];
+  const cleanLines = lines
+    .map(l => ({ ...l, text: String(l?.text || '').trim() }))
+    .filter(l => l.text);
+  if (!cleanLines.length) return null;
+
+  // Write each line to its own file so drawtext reads literal bytes
+  // (avoids escaping rules for `:` `'` `\` in arbitrary user input).
+  for (let i = 0; i < cleanLines.length; i++) {
+    const line = cleanLines[i];
+    const textPath = join(workdir, `card_text_${i}.txt`);
+    await writeFile(textPath, line.text);
+
+    const fontsize = line.fontsize || 72;
+    const color    = line.color    || 'white';
+    // Two-line layout: title above center, subtitle below. Single line:
+    // dead center. The `(h-th)/2` term centers each label vertically on
+    // its own glyph height, then we shift by `yOffset` for stacking.
+    const yOffset  = cleanLines.length === 1 ? 0
+                   : (i === 0 ? -fontsize : Math.round(fontsize * 0.9));
+    const ySign    = yOffset >= 0 ? '+' : '-';
+    const yMag     = Math.abs(yOffset);
+
+    drawTexts.push(
+      `drawtext=fontfile='${SDE_FONT_PATH}':textfile='${textPath}':` +
+      `fontsize=${fontsize}:fontcolor=${color}:` +
+      `x=(w-text_w)/2:y=(h-text_h)/2${ySign}${yMag}`,
+    );
+  }
+
+  const vf = drawTexts.join(',') + `,format=yuv420p,setsar=1`;
+
+  await runFfmpeg([
+    '-y', '-nostdin', '-hide_banner', '-loglevel', 'error',
+    '-f', 'lavfi', '-i', `color=c=black:s=${TARGET_W}x${TARGET_H}:d=${durSec}:r=${TARGET_FPS}`,
+    '-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=mono',
+    '-vf', vf,
+    '-shortest',
+    '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '22',
+    '-pix_fmt', 'yuv420p', '-profile:v', 'high', '-level', '4.0',
+    '-c:a', 'aac', '-b:a', '64k', '-ar', '48000', '-ac', '1',
+    '-r', String(TARGET_FPS),
+    '-movflags', '+faststart',
+    outPath,
+  ], { label: 'render-text-card' });
+
+  return outPath;
+}
+
 async function normalizeVideo(srcPath, outPath, durSec) {
   await runFfmpeg([
     '-y', '-nostdin', '-hide_banner', '-loglevel', 'error',
@@ -275,8 +357,18 @@ async function normalizeAll(workdir, payload, localPaths) {
   // Batch 3 can switch to bounded-parallel if real events show lag.
   const normalizedPaths = [];
 
-  // Title card first (if any) — 2.5 s flat hold.
-  if (localPaths.titleCard) {
+  // Title card: text-rendered (drawtext) takes precedence over a
+  // pre-rendered PNG. Either path is optional — if neither is provided
+  // the reel just opens on the first guest moment.
+  const wantsTitleText = payload.title || payload.subtitle;
+  if (wantsTitleText) {
+    const out = join(workdir, safeCardName(0));
+    const rendered = await renderTextCard(workdir, out, [
+      { text: payload.title,    fontsize: 84, color: 'white'    },
+      { text: payload.subtitle, fontsize: 36, color: 'white@0.7' },
+    ], 2.5);
+    if (rendered) normalizedPaths.push(out);
+  } else if (localPaths.titleCard) {
     const out = join(workdir, safeCardName(0));
     await normalizePhoto(localPaths.titleCard, out, 2.5, { kenBurns: false });
     normalizedPaths.push(out);
@@ -295,7 +387,13 @@ async function normalizeAll(workdir, payload, localPaths) {
     normalizedPaths.push(out);
   }
 
-  if (localPaths.endcard) {
+  if (payload.endcardText) {
+    const out = join(workdir, safeCardName(payload.clips.length + 1));
+    const rendered = await renderTextCard(workdir, out, [
+      { text: payload.endcardText, fontsize: 56, color: 'white' },
+    ], 2.5);
+    if (rendered) normalizedPaths.push(out);
+  } else if (localPaths.endcard) {
     const out = join(workdir, safeCardName(payload.clips.length + 1));
     await normalizePhoto(localPaths.endcard, out, 2.5, { kenBurns: false });
     normalizedPaths.push(out);
@@ -378,6 +476,9 @@ export const handler = async (event, context) => {
     audioKey = null,
     titleCardKey = null,
     endcardKey = null,
+    title = null,
+    subtitle = null,
+    endcardText = null,
     outKey,
   } = payload;
 
@@ -388,8 +489,10 @@ export const handler = async (event, context) => {
   if (!Array.isArray(clips)) throw new Error('Missing clips[]');
   if (clips.length === 0)    throw new Error('clips[] is empty');
 
+  const hasTitleCard   = !!(title || subtitle || titleCardKey);
+  const hasEndcard     = !!(endcardText || endcardKey);
   console.log(`[sde] start event=${eventId} slug=${slug} clips=${clips.length} ` +
-              `audio=${!!audioKey} title=${!!titleCardKey} endcard=${!!endcardKey} out=${outKey}`);
+              `audio=${!!audioKey} title=${hasTitleCard} endcard=${hasEndcard} out=${outKey}`);
 
   // Idempotency: if the output already exists in R2, skip the work and
   // re-notify. Lets the backend safely retry on transient webhook loss.
@@ -426,8 +529,8 @@ export const handler = async (event, context) => {
     if (!durationS) {
       // Fallback to summed payload durations + card overheads.
       durationS = totalDurationSec(clips)
-        + (localPaths.titleCard ? 2.5 : 0)
-        + (localPaths.endcard   ? 2.5 : 0);
+        + (hasTitleCard ? 2.5 : 0)
+        + (hasEndcard   ? 2.5 : 0);
     }
     console.log(`[sde] stitched duration=${durationS.toFixed(2)}s`);
 
