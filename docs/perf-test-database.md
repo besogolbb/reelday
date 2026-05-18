@@ -20,10 +20,10 @@ Use these as the reference for "is today's run healthy?" Updated whenever a mean
 | Wall poll 200c × 1000 | 393 rps · p95 0.94 s · 0 fail | 2026-05-15 | local |
 | Wall poll 600c × 600 | 217 rps · p95 2.55 s · 0 fail | 2026-05-15 | local |
 | Upload kickoff 600c × 600 | 291 rps · p95 1.80 s · 0 fail | 2026-05-16 | local |
-| Upload kickoff 1000c × 1000 | p99 ~5.3 s · 0 fail | 2026-05-17 | remote |
+| Upload kickoff 1000c × 1000 | p99 3.7 s · 0 fail | 2026-05-18 | CI |
 | Reactions 200c × 1000 | 596 rps · p95 689 ms · 0 fail | 2026-05-16 | local |
 | Mixed peak (600u + 1500r + walls / 30s) | 0 fail all components | 2026-05-17 | remote |
-| Sustained 3-min mix | 0 fail · flat latency | 2026-05-17 | remote |
+| Sustained 3-min mix | 0 fail · flat latency · upload/rx p95 ~86 ms · wall p95 261 ms | 2026-05-18 | remote (PH laptop) |
 | Multi-wall + 150 spammers | 0 fail · wall p95 < 700 ms | 2026-05-17 | remote |
 | Cross-event isolation (200 spammers, 90s) | Wall B p95 611 ms · 0 fail | 2026-05-17 | remote |
 | Poll vote storm (300 voters) | p95 1.74 s · 0 fail | 2026-05-15 | local |
@@ -75,6 +75,21 @@ Use these as the reference for "is today's run healthy?" Updated whenever a mean
 | 21 | Cross-event isolation 30s | `stress-cross-event ... 200 30` | remote | Wall B p95 1409 ms · 0 fail · only 9 samples | ⚠️ | Small-sample noise — single slow poll dominated p95. Re-run at 90s for real signal. |
 | 22 | Cross-event isolation 90s | `stress-cross-event ... 200 90` | remote | Wall B p95 611 ms · 0 fail · 27 samples · 9,375 total requests | ✅ | Real signal. Wall A and B essentially identical (~600 ms p95) = backend not saturating, both reflect baseline remote latency. Clean isolation. |
 
+### 2026-05-18 — CI run + warm-up validation + local steady-state baselines
+
+| # | Test | Cmd | Env | Result | Verdict | Note |
+|---|---|---|---|---|---|---|
+| 23 | Upload 1000c | `stress-upload 1000 1000` (perf:full) | CI (GH Actions) | 241 rps · p95 3655 ms · p99 3705 ms · max 3951 ms · 0 fail | ✅ | **New best** for 1000c remote (beats entry 17's p99 5302 ms by ~30%). Runner ID 26006641369. |
+| 24 | Mixed peak 600 + 1500 / 30s | `stress-mixed 600 1500 30` | CI | uploads p95 2180 ms · reactions p95 461 ms · wall p95 2148 ms · 1498/1500 reactions ok (err: 2) | ✅ | Beats entry 18 across uploads/wall. `err: 2` = vanilla TypeError from socket abort during burst (no `e.code`) — confirmed via stress-mixed.mjs:47. Not server-side. |
+| 25 | Sustained 3 min | `stress-sustained 3` | CI | upload p95 473 ms · reaction p95 463 ms · wall p95 619 ms · 0 fail | ✅ | Slightly above entry 19's mid-percentiles but tail is *better* (p99/max all down). Within run-to-run variance. |
+| 26 | Multi-wall + 150 spammers | `stress-multiwall 3 150 30` | CI | wall uploads-poll p95 448 ms · wall reactions-poll p95 496 ms · spam writes p95 462 ms · 0 fail / 4689 | ✅ | Tighter than entry 20 across the board. 4689 spam writes (vs 2874) with 0 fail. |
+| 27 | Cross-event isolation 30s (no warm-up) | `stress-cross-event ... 200 30` | CI | Wall A p95 503 ms · Wall B p95 805 ms · 0 fail · 10 samples each | ⚠️ | Wall B *slower* than Wall A under storm — inverted from expected. Root cause: B's first poll was 805 ms (cold connection / cold prepared-statement cache), and with N=10 the first poll = p95. Motivated the warm-up fix in [scripts/stress-cross-event.mjs](../scripts/stress-cross-event.mjs). |
+| 28 | Cross-event isolation 30s (with warm-up) | `stress-cross-event ... 200 30` | CI | Wall A p95 462 ms · Wall B p95 526 ms · 0 fail · 10 samples each · 5573 spam writes | ✅ | Warm-up landed. Inversion collapsed from 302 ms gap → 64 ms gap (noise at N=10). Per-second ticker started at p95 439 ms instead of 805 ms — cold-start gone. Validates commit bc8d7d6. |
+| 29 | Upload 200c × 1000 | `stress-upload 200 1000` | remote | 690 rps · p95 644 ms · p99 657 ms · 0 fail | ✅ | Lower-concurrency follow-up from PowerShell. |
+| 30 | Cross-event isolation 30s | `stress-cross-event ... 200 30` | remote | Wall A p95 211 ms · **Wall B p95 168 ms** · 3062 spam · 0 fail | ✅ | Confirms isolation under real network conditions. Wall B *faster* than Wall A here — inversion flipped direction, definitively confirming the original anomaly was N=10 noise, not isolation failure. |
+| 31 | Mixed peak 600 + 1500 / 30s | `stress-mixed 600 1500 30` | remote | uploads p95 1652 ms · reactions p95 79 ms · wall p95 1633 ms · 0 fail | ✅ | Upload p50→max gap of 33 ms = saturated upstream bandwidth from home connection, not server load. Reactions and wall reflect real server. |
+| 32 | Sustained 3 min | `stress-sustained 3` | remote (laptop) | upload p95 85 ms · reaction p95 86 ms · wall p95 261 ms · 0 fail · flat over 3 min | ✅ | **New steady-state baseline.** Per-30s readouts: rx p95 76-87 ms, upload p95 79-98 ms, wall p95 237-293 ms — zero drift. Proves the CI sustained "drift" (entry 25) was inter-run variance, not server degradation. |
+
 ---
 
 ## Aggregate scorecard
@@ -85,7 +100,8 @@ Use these as the reference for "is today's run healthy?" Updated whenever a mean
 | 2026-05-15 | 4 | ~6,500 | 93 (expected rate-limit) | Gzip + new scripts |
 | 2026-05-16 | 7 | ~10,000 | 0 | Upload optimization + first remote full suite |
 | 2026-05-17 | 9 | ~20,000 | 91 (client-side, not backend) | Pre-launch deep check |
-| **Total** | **21** | **~37,000** | **0 backend failures** | |
+| 2026-05-18 | 10 | ~24,500 | 2 (client-side socket aborts in CI mixed test) | CI full suite + warm-up validation + local steady-state baselines |
+| **Total** | **31** | **~61,500** | **0 backend failures** | |
 
 ---
 
@@ -98,6 +114,7 @@ Use these as the reference for "is today's run healthy?" Updated whenever a mean
 | 2026-05-16 | Upload validation: separate queries → JOIN + 10s in-memory cache | Upload 600c p95 2.55 s → 1.80 s, 217 rps → 291 rps |
 | 2026-05-16 | Added stress-upload-e2e for full presigned → R2 PUT → complete flow | First end-to-end measurement of real guest experience |
 | 2026-05-17 | (No code changes — pure validation runs) | Confirmed all baselines hold; cross-event re-verified with larger sample |
+| 2026-05-18 | Cross-event test: 3 discarded warm-up polls per slug before storm clock starts (commit bc8d7d6) | Wall B p95 805 ms → 526 ms (CI) and 168 ms (local). Eliminated cold-connection / cold prepared-statement bias that was making the quiet event look slower than the spammed one at N=10. |
 
 ---
 
