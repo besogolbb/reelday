@@ -241,12 +241,15 @@ async function normalizePhoto(srcPath, outPath, durSec, { kenBurns = true } = {}
 
   await runFfmpeg([
     '-y', '-nostdin', '-hide_banner', '-loglevel', 'error',
-    // -fflags +shortest + -max_interleave_delta are the canonical
-    // workaround for filter_complex + anullsrc + -shortest not always
-    // trimming the audio cleanly to the video end. Without these, the
-    // brick mp4 can have its audio track outlast its video track,
-    // which concat-demuxer renders as a held-last-frame at clip end.
-    '-fflags', '+shortest', '-max_interleave_delta', '100M',
+    // -max_interleave_delta keeps the muxer from holding back packets
+    // waiting for an interleave window, which combined with the finite
+    // anullsrc below + -shortest makes filter_complex bricks end cleanly.
+    // (NB: an earlier version also passed `-fflags +shortest`; `shortest`
+    // is NOT a documented fflags constant, FFmpeg 4.x silently ignored
+    // it, FFmpeg 7+ rejects it as "Undefined constant" and refuses to
+    // open the input. The real trimming work is done by the finite
+    // anullsrc + -shortest combo below.)
+    '-max_interleave_delta', '100M',
     '-loop', '1', '-t', String(durSec),
     '-i', srcPath,
     // Anullsrc with explicit d= so both streams are FINITE — lets
@@ -353,12 +356,16 @@ async function normalizeVideo(srcPath, outPath, durSec) {
   // the video, because -shortest + filter_complex + infinite anullsrc
   // can fail to trim audio at video EOF. Symptom: video freezes on the
   // last frame at every video-clip boundary while music keeps playing.
-  // Fix: anullsrc=d=durSec makes both streams finite, and the
-  // -fflags +shortest + -max_interleave_delta flags are the canonical
-  // workaround for the -shortest-with-filter_complex bug.
+  // Fix: anullsrc=d=durSec makes both streams finite, and
+  // -max_interleave_delta loosens the muxer so it doesn't stall waiting
+  // for an interleave window before flushing the trimmed tail.
+  // (NB: an earlier version also passed `-fflags +shortest`; `shortest`
+  // is NOT a documented fflags constant, FFmpeg 4.x silently ignored it,
+  // FFmpeg 7+ rejects it as "Undefined constant" and refuses to open
+  // the input. Removed — finite anullsrc + -shortest does the work.)
   await runFfmpeg([
     '-y', '-nostdin', '-hide_banner', '-loglevel', 'error',
-    '-fflags', '+shortest', '-max_interleave_delta', '100M',
+    '-max_interleave_delta', '100M',
     '-t', String(durSec),
     '-i', srcPath,
     '-f', 'lavfi', '-i', `anullsrc=r=48000:cl=mono:d=${durSec}`,
