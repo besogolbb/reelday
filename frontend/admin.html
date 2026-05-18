@@ -10,244 +10,454 @@
   <link rel="shortcut icon" href="/favicon.ico?v=5" />
   <link rel="stylesheet" href="/css/shared.css" />
   <style>
-    body { min-height: 100dvh; }
+    body { min-height: 100dvh; background: var(--paper); }
 
-    /* ── Login screen ── */
-    .login-screen {
-      display: flex; align-items: center; justify-content: center;
-      min-height: 100dvh; padding: 2rem;
-    }
-    .login-card {
-      background: #fff;
-      border: 1px solid var(--line);
-      border-radius: var(--r-xl);
-      box-shadow: var(--shadow-card);
-      padding: 2.5rem; width: 100%; max-width: 360px;
-    }
+    /* ── Login (unchanged shape) ───────────────────────────── */
+    .login-screen { display: flex; align-items: center; justify-content: center; min-height: 100dvh; padding: 2rem; }
+    .login-card { background: #fff; border: 1px solid var(--line); border-radius: var(--r-xl);
+                  box-shadow: var(--shadow-card); padding: 2.5rem; width: 100%; max-width: 360px; }
     .login-card h1 { font-family: var(--display); color: var(--accent); font-size: 1.6rem; margin-bottom: .4rem; }
     .login-card p { color: var(--ink-soft); font-size: .9rem; margin-bottom: 1.75rem; }
-    .login-input {
-      width: 100%; padding: .75rem 1rem; background: #fff;
-      border: 1.5px solid var(--line-2); border-radius: var(--r);
-      color: var(--ink); font-family: inherit; font-size: 1rem;
-      outline: none; margin-bottom: 1rem;
-      transition: border-color .15s, box-shadow .15s;
-    }
-    .login-input:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(196,90,58,.12);
-    }
+    .login-input { width: 100%; padding: .75rem 1rem; background: #fff; border: 1.5px solid var(--line-2);
+                   border-radius: var(--r); color: var(--ink); font-family: inherit; font-size: 1rem;
+                   outline: none; margin-bottom: 1rem; transition: border-color .15s, box-shadow .15s; }
+    .login-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(196,90,58,.12); }
     .login-error { color: var(--accent-deep); font-size: .85rem; margin-top: .75rem; }
 
-    /* ── Admin shell ── */
-    .admin-shell { display: none; }
+    /* ── Admin shell: sidebar + main ─────────────────────── */
+    .admin-shell { display: none; min-height: 100dvh; grid-template-columns: 240px 1fr; }
+    .admin-shell.ready { display: grid; }
 
-    .admin-main { max-width: 1100px; margin-inline: auto; padding: 2rem 1.5rem 4rem; }
+    .sidebar {
+      background: linear-gradient(180deg, #fff 0%, var(--paper) 100%);
+      border-right: 1px solid var(--line);
+      display: flex; flex-direction: column; padding: 1.5rem 0;
+      position: sticky; top: 0; height: 100dvh; overflow-y: auto;
+    }
+    .sidebar .brand {
+      padding: 0 1.5rem 1.5rem;
+      font-family: var(--display); font-size: 1.15rem; color: var(--accent);
+      border-bottom: 1px solid var(--line); margin-bottom: 1rem;
+      display: flex; align-items: center; gap: .5rem;
+    }
+    .sidebar .brand .mark { font-size: 1.4rem; }
+    .sidebar nav { display: flex; flex-direction: column; gap: .15rem; padding: 0 .75rem; flex: 1; }
+    .nav-item {
+      display: flex; align-items: center; gap: .65rem;
+      padding: .65rem .85rem;
+      background: transparent; border: none; cursor: pointer;
+      color: var(--ink-soft); font-family: inherit; font-size: .92rem; font-weight: 500;
+      border-radius: var(--r); text-align: left; transition: background .12s, color .12s;
+    }
+    .nav-item:hover { background: var(--paper-2); color: var(--ink); }
+    .nav-item.active { background: var(--accent); color: #fff; box-shadow: 0 2px 8px rgba(196,90,58,.25); }
+    .nav-item .nav-ico { font-size: 1.05rem; width: 1.2rem; text-align: center; }
+    .nav-item .nav-badge {
+      margin-left: auto; background: rgba(0,0,0,.08); color: inherit;
+      font-family: var(--mono); font-size: .68rem; font-weight: 600;
+      padding: .12rem .5rem; border-radius: 999px;
+    }
+    .nav-item.active .nav-badge { background: rgba(255,255,255,.25); }
 
-    /* ── Stats row ── */
-    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
-    .stat-card {
-      background: #fff;
-      border: 1px solid var(--line);
-      border-radius: var(--r-lg);
-      box-shadow: var(--shadow-soft);
-      padding: 1.25rem; text-align: center;
-    }
-    .stat-num { font-family: var(--display); font-size: 2rem; color: var(--accent); }
-    .stat-lbl {
-      font-family: var(--mono);
-      font-size: .7rem; font-weight: 500; color: var(--ink-faint);
-      text-transform: uppercase; letter-spacing: .08em; margin-top: .3rem;
-    }
+    .sidebar-footer { padding: 1rem 1.25rem 0; border-top: 1px solid var(--line); margin-top: 1rem; }
+    .stats-mini { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; margin-bottom: 1rem; }
+    .stat-mini { background: var(--paper-2); border-radius: var(--r-sm); padding: .55rem .65rem; text-align: center; }
+    .stat-mini span { display: block; font-family: var(--display); font-size: 1.05rem; color: var(--accent); font-weight: 600; }
+    .stat-mini label { font-family: var(--mono); font-size: .58rem; color: var(--ink-faint);
+                       text-transform: uppercase; letter-spacing: .08em; }
+    .sidebar-footer .btn-ghost { width: 100%; padding: .55rem .85rem; font-size: .85rem; }
 
-    /* ── Sections ── */
-    .section { margin-bottom: 2.5rem; }
-    .section-title {
-      font-family: var(--display); font-size: 1.2rem; color: var(--ink);
-      margin-bottom: 1rem; display: flex; align-items: center; gap: .5rem;
+    /* ── Main area ──────────────────────────────────────── */
+    .main { padding: 1.75rem 2rem 4rem; max-width: 1500px; }
+    .topbar { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; margin-bottom: 1.75rem; flex-wrap: wrap; }
+    .view-title { font-family: var(--display); font-size: 1.7rem; color: var(--ink); margin: 0; line-height: 1; }
+    .view-sub { font-size: .85rem; color: var(--ink-faint); margin-top: .25rem; }
+    .view-actions { display: flex; gap: .55rem; align-items: center; }
+
+    .view { animation: fadeIn .2s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+    /* ── Calendar view ──────────────────────────────────── */
+    .cal-layout { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 1.5rem; }
+    @media (max-width: 1100px) { .cal-layout { grid-template-columns: 1fr; } }
+
+    .cal-grid-panel, .cal-agenda {
+      background: #fff; border: 1px solid var(--line); border-radius: var(--r-lg);
+      box-shadow: var(--shadow-soft); padding: 1.25rem;
     }
-    .count-badge {
+    .cal-header { display: flex; align-items: center; gap: .65rem; margin-bottom: 1rem; }
+    .cal-header h2 { font-family: var(--display); font-size: 1.15rem; color: var(--ink); margin: 0 .5rem; flex: 1; }
+    .cal-nav-btn {
+      width: 32px; height: 32px; border-radius: var(--r-sm);
+      background: var(--paper-2); border: 1px solid var(--line-2);
+      color: var(--ink); font-size: 1.1rem; cursor: pointer; line-height: 1;
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+    .cal-nav-btn:hover { background: var(--paper-3); }
+    .cal-weekdays {
+      display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;
+      font-family: var(--mono); font-size: .65rem; color: var(--ink-faint);
+      text-transform: uppercase; letter-spacing: .08em; padding-bottom: .35rem;
+      border-bottom: 1px solid var(--line); margin-bottom: .35rem; text-align: center;
+    }
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+    .cal-cell {
+      min-height: 84px; padding: .35rem .4rem;
+      background: var(--paper); border: 1px solid var(--line);
+      border-radius: var(--r-sm); display: flex; flex-direction: column; gap: 3px;
+      cursor: pointer; transition: background .12s, border-color .12s, transform .12s;
+      position: relative; overflow: hidden;
+    }
+    .cal-cell:hover { background: var(--paper-2); border-color: var(--line-2); }
+    .cal-cell.other-month { opacity: .35; }
+    .cal-cell.today { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+    .cal-cell.selected { background: rgba(196,90,58,.10); border-color: var(--accent); }
+    .cal-cell .day-num { font-family: var(--mono); font-size: .75rem; color: var(--ink-soft); font-weight: 600; }
+    .cal-cell.today .day-num { color: var(--accent); }
+    .cal-cell .overlap-badge {
+      position: absolute; top: 4px; right: 4px;
       background: var(--accent); color: #fff;
-      border-radius: 999px; font-family: var(--mono);
-      font-size: .68rem; font-weight: 600; padding: .15rem .55rem;
+      font-family: var(--mono); font-size: .58rem; font-weight: 700;
+      padding: 1px 5px; border-radius: 999px;
     }
+    .cal-chip {
+      font-size: .68rem; padding: 2px 5px; border-radius: 4px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      font-weight: 600; line-height: 1.3;
+      border-left: 3px solid currentColor;
+    }
+    .cal-chip-more { font-family: var(--mono); font-size: .58rem; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .06em; padding-left: 5px; }
 
-    /* ── Table ── */
+    /* Tier-coloured chips */
+    .chip-tala     { background: rgba(120,100,90,.12);  color: var(--ink-soft); }
+    .chip-sinag    { background: rgba(216,160,90,.20);  color: #7a5a20; }
+    .chip-dalisay  { background: rgba(196,90,58,.18);   color: var(--accent-deep); }
+    .chip-hiraya   { background: rgba(78,52,128,.16);   color: #4e3480; }
+    .chip-inactive { opacity: .45; }
+
+    .cal-legend {
+      display: flex; gap: .75rem; flex-wrap: wrap; margin-top: 1rem;
+      padding-top: 1rem; border-top: 1px solid var(--line);
+      font-family: var(--mono); font-size: .65rem; text-transform: uppercase; letter-spacing: .06em;
+    }
+    .legend { display: inline-flex; align-items: center; gap: .35rem; padding: .15rem .55rem; border-radius: 999px; }
+    .legend::before { content: ''; width: 8px; height: 8px; border-radius: 2px; background: currentColor; }
+
+    /* Agenda panel */
+    .agenda-header { display: flex; align-items: baseline; gap: .5rem; margin-bottom: .85rem; padding-bottom: .85rem; border-bottom: 1px solid var(--line); }
+    .agenda-header h3 { font-family: var(--display); font-size: 1.1rem; margin: 0; color: var(--ink); }
+    .agenda-count { font-family: var(--mono); font-size: .68rem; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .06em; }
+    .agenda-card {
+      display: block; padding: .75rem .85rem; border-radius: var(--r-sm);
+      background: var(--paper); margin-bottom: .55rem; cursor: pointer;
+      border: 1px solid var(--line); transition: background .12s, transform .12s;
+      text-decoration: none; color: inherit;
+    }
+    .agenda-card:hover { background: var(--paper-2); transform: translateX(2px); }
+    .agenda-card .name { font-weight: 700; font-size: .95rem; color: var(--ink); }
+    .agenda-card .meta { font-size: .78rem; color: var(--ink-faint); margin-top: .2rem; display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+    .agenda-empty { color: var(--ink-faint); font-size: .88rem; font-style: italic; padding: 1.5rem 0; text-align: center; }
+
+    details.unscheduled { margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+    details.unscheduled summary {
+      cursor: pointer; font-family: var(--mono); font-size: .72rem;
+      text-transform: uppercase; letter-spacing: .08em; color: var(--ink-soft); font-weight: 600;
+    }
+    details.unscheduled[open] summary { margin-bottom: .65rem; }
+
+    /* ── Events view ────────────────────────────────────── */
+    .filters {
+      display: flex; gap: .55rem; flex-wrap: wrap; margin-bottom: 1.25rem;
+      background: #fff; border: 1px solid var(--line); border-radius: var(--r-lg);
+      box-shadow: var(--shadow-soft); padding: .85rem 1rem;
+    }
+    .filters input, .filters select {
+      padding: .5rem .75rem; border: 1px solid var(--line-2); border-radius: var(--r);
+      font-family: inherit; font-size: .88rem; background: #fff; color: var(--ink); outline: none;
+    }
+    .filters input { flex: 1 1 240px; min-width: 0; }
+    .filters input:focus, .filters select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(196,90,58,.12); }
+
+    /* ── Shared table styles ─────────────────────────────── */
     .tbl-wrap {
-      overflow-x: auto;
-      border-radius: var(--r-lg);
-      border: 1px solid var(--line);
-      box-shadow: var(--shadow-soft);
+      overflow-x: auto; border-radius: var(--r-lg);
+      border: 1px solid var(--line); box-shadow: var(--shadow-soft); background: #fff;
     }
     table { width: 100%; border-collapse: collapse; font-size: .875rem; }
     thead { background: var(--paper-2); }
-    th {
-      padding: .75rem 1rem; text-align: left; font-weight: 600;
-      color: var(--ink-soft); font-family: var(--mono);
-      font-size: .7rem; text-transform: uppercase; letter-spacing: .06em;
-      white-space: nowrap;
-    }
+    th { padding: .75rem 1rem; text-align: left; font-weight: 600;
+         color: var(--ink-soft); font-family: var(--mono);
+         font-size: .7rem; text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
     td { padding: .85rem 1rem; border-top: 1px solid var(--line); vertical-align: middle; background: #fff; }
     tr:hover td { background: var(--paper); }
 
-    .pill {
-      display: inline-block; padding: .2rem .65rem; border-radius: 999px;
-      font-family: var(--mono); font-size: .68rem; font-weight: 600;
-      text-transform: uppercase; letter-spacing: .06em;
-    }
+    .pill { display: inline-block; padding: .2rem .65rem; border-radius: 999px;
+            font-family: var(--mono); font-size: .68rem; font-weight: 600;
+            text-transform: uppercase; letter-spacing: .06em; }
     .pill-pending   { background: rgba(216,160,90,.15);  color: #7a5a20; }
     .pill-succeeded { background: rgba(45,106,74,.12);   color: #2d6a4a; }
     .pill-rejected  { background: rgba(196,90,58,.12);   color: var(--accent-deep); }
     .pill-paid      { background: rgba(45,106,74,.12);   color: #2d6a4a; }
     .pill-unpaid    { background: rgba(216,160,90,.15);  color: #7a5a20; }
+    .pill-refunded  { background: rgba(78,52,128,.12);   color: #4e3480; }
+    .pill-active    { background: rgba(45,106,74,.12);   color: #2d6a4a; }
+    .pill-inactive  { background: rgba(120,90,80,.15);   color: var(--ink-soft); }
 
-    .btn-verify, .btn-reject, .btn-deactivate, .btn-activate, .btn-ghost-sm {
+    .btn-verify, .btn-reject, .btn-deactivate, .btn-activate, .btn-ghost-sm, .btn-edit-sm {
       padding: .35rem .8rem; border: none; border-radius: var(--r-sm);
       font-family: inherit; font-size: .8rem; font-weight: 600;
-      cursor: pointer; transition: opacity .15s; white-space: nowrap;
+      cursor: pointer; transition: opacity .15s, background .15s; white-space: nowrap;
     }
     .btn-verify     { background: rgba(45,106,74,.12);  color: #2d6a4a;        border: 1px solid rgba(45,106,74,.25); }
     .btn-reject     { background: rgba(196,90,58,.10);  color: var(--accent-deep); border: 1px solid rgba(196,90,58,.25); }
     .btn-deactivate { background: rgba(196,90,58,.10);  color: var(--accent-deep); border: 1px solid rgba(196,90,58,.25); }
     .btn-activate   { background: rgba(45,106,74,.12);  color: #2d6a4a;        border: 1px solid rgba(45,106,74,.25); }
     .btn-ghost-sm   { background: transparent;          color: var(--ink-soft);   border: 1px solid var(--line-2); }
+    .btn-edit-sm    { background: var(--paper-2);       color: var(--ink);        border: 1px solid var(--line-2); }
     .btn-verify:hover, .btn-reject:hover, .btn-deactivate:hover,
-    .btn-activate:hover, .btn-ghost-sm:hover { opacity: .75; }
+    .btn-activate:hover, .btn-ghost-sm:hover, .btn-edit-sm:hover { opacity: .8; }
 
-    /* Inline tier selector inside a user row. Looks like a pill so it
-       blends with the rest of the table at rest, but is fully clickable. */
-    .tier-select {
-      padding: .3rem .55rem;
-      border-radius: 999px;
-      border: 1px solid var(--line-2);
-      background: #fff;
-      font-family: var(--mono);
-      font-size: .72rem; font-weight: 600;
-      text-transform: uppercase; letter-spacing: .06em;
-      color: var(--ink-soft);
-      cursor: pointer;
-    }
+    .tier-select { padding: .3rem .55rem; border-radius: 999px; border: 1px solid var(--line-2);
+                   background: #fff; font-family: var(--mono); font-size: .72rem; font-weight: 600;
+                   text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft); cursor: pointer; }
     .tier-select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(196,90,58,.12); }
     .tier-tala     { background: var(--paper-2);            color: var(--ink-soft); }
     .tier-sinag    { background: rgba(216,160,90,.18);      color: #7a5a20; }
     .tier-dalisay  { background: rgba(196,90,58,.12);       color: var(--accent-deep); }
     .tier-hiraya   { background: rgba(78,52,128,.14);       color: #4e3480; }
 
-    /* Filter pills above the payments table. Active pill picks up the
-       brand accent so the current status filter is obvious. */
     .filter-row { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: 1rem; }
-    .pay-filter {
-      padding: .35rem .85rem;
-      border: 1px solid var(--line-2);
-      background: #fff;
-      border-radius: 999px;
-      font-family: var(--mono);
-      font-size: .72rem; font-weight: 600;
-      text-transform: uppercase; letter-spacing: .06em;
-      color: var(--ink-soft);
-      cursor: pointer;
-      transition: all .12s;
-    }
+    .pay-filter { padding: .35rem .85rem; border: 1px solid var(--line-2); background: #fff;
+                  border-radius: 999px; font-family: var(--mono); font-size: .72rem; font-weight: 600;
+                  text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft); cursor: pointer;
+                  transition: all .12s; }
     .pay-filter:hover { background: var(--paper-2); }
-    .pay-filter.active {
-      background: var(--accent); color: #fff; border-color: var(--accent);
-    }
+    .pay-filter.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 
-    /* Manual-entry inline form. Hidden by default; toggled by the
-       '+ Record manual payment' button. */
+    .action-btns { display: flex; gap: .5rem; flex-wrap: wrap; }
+    .empty-state { padding: 3rem 1rem; text-align: center; color: var(--ink-faint); font-size: .9rem; background: #fff; }
+
     .manual-form {
-      background: var(--paper-2);
-      border: 1px solid var(--line);
-      border-radius: var(--r-lg);
-      padding: 1.25rem;
-      margin-bottom: 1rem;
+      background: var(--paper-2); border: 1px solid var(--line); border-radius: var(--r-lg);
+      padding: 1.25rem; margin-bottom: 1rem;
     }
-    .manual-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: .75rem;
-    }
-    .manual-grid label {
-      display: flex; flex-direction: column; gap: .3rem;
-      font-family: var(--mono); font-size: .72rem; font-weight: 600;
-      text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft);
-    }
+    .manual-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: .75rem; }
+    .manual-grid label { display: flex; flex-direction: column; gap: .3rem;
+                         font-family: var(--mono); font-size: .72rem; font-weight: 600;
+                         text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft); }
     .manual-grid input, .manual-grid select {
-      padding: .55rem .75rem;
-      border: 1px solid var(--line-2);
-      border-radius: var(--r);
-      font-family: inherit; font-size: .9rem;
-      background: #fff; color: var(--ink);
-      outline: none;
+      padding: .55rem .75rem; border: 1px solid var(--line-2); border-radius: var(--r);
+      font-family: inherit; font-size: .9rem; background: #fff; color: var(--ink); outline: none;
     }
     .manual-grid input:focus, .manual-grid select:focus {
       border-color: var(--accent); box-shadow: 0 0 0 3px rgba(196,90,58,.12);
     }
 
-    .pill-refunded { background: rgba(78,52,128,.12);       color: #4e3480; }
+    /* ── Modal ──────────────────────────────────────────── */
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(42,26,20,.55);
+      display: none; align-items: center; justify-content: center; z-index: 100; padding: 1rem;
+      backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+    }
+    .modal-backdrop.show { display: flex; animation: fadeIn .15s ease; }
+    .modal {
+      background: #fff; border-radius: var(--r-lg); box-shadow: var(--shadow-lift);
+      width: 100%; max-width: 600px; max-height: 90dvh; display: flex; flex-direction: column; overflow: hidden;
+    }
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1.1rem 1.25rem; border-bottom: 1px solid var(--line);
+    }
+    .modal-header h2 { font-family: var(--display); font-size: 1.2rem; color: var(--ink); margin: 0; }
+    .modal-close {
+      background: transparent; border: none; font-size: 1.5rem; line-height: 1;
+      color: var(--ink-faint); cursor: pointer; padding: .15rem .4rem; border-radius: var(--r-sm);
+    }
+    .modal-close:hover { background: var(--paper-2); color: var(--ink); }
+    .modal-body { padding: 1.25rem; overflow-y: auto; }
+    .modal-footer { padding: .9rem 1.25rem; border-top: 1px solid var(--line);
+                    display: flex; justify-content: flex-end; gap: .55rem; background: var(--paper); }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .9rem; }
+    .form-grid label { display: flex; flex-direction: column; gap: .3rem;
+                       font-family: var(--mono); font-size: .7rem; font-weight: 600;
+                       text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft); }
+    .form-grid label.full { grid-column: 1 / -1; }
+    .form-grid input, .form-grid select, .form-grid textarea {
+      padding: .55rem .75rem; border: 1px solid var(--line-2); border-radius: var(--r);
+      font-family: inherit; font-size: .9rem; background: #fff; color: var(--ink); outline: none;
+    }
+    .form-grid textarea { min-height: 70px; resize: vertical; }
+    .form-grid input:focus, .form-grid select:focus, .form-grid textarea:focus {
+      border-color: var(--accent); box-shadow: 0 0 0 3px rgba(196,90,58,.12);
+    }
+    .form-check { display: flex; align-items: center; gap: .55rem; font-size: .88rem;
+                  color: var(--ink); text-transform: none; letter-spacing: 0; font-weight: 500; font-family: inherit; }
+    .form-check input { width: auto; }
+    .form-hint { font-size: .72rem; color: var(--ink-faint); text-transform: none; letter-spacing: 0; font-weight: 400;
+                 margin-top: .2rem; font-family: inherit; }
 
-    .action-btns { display: flex; gap: .5rem; }
+    /* ── Toast ──────────────────────────────────────────── */
+    .toast {
+      position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%) translateY(150%);
+      background: var(--ink); color: #fff; padding: .75rem 1.25rem; border-radius: var(--r);
+      box-shadow: var(--shadow-card); font-size: .9rem; z-index: 200;
+      transition: transform .25s cubic-bezier(.2,.8,.2,1); pointer-events: none; max-width: 90vw;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast.error { background: var(--accent-deep); }
+    .toast.success { background: #2d6a4a; }
 
-    .empty-state { padding: 3rem 1rem; text-align: center; color: var(--ink-faint); font-size: .9rem; background: #fff; }
-
-    @media (max-width: 640px) {
-      .stats-row { grid-template-columns: repeat(2, 1fr); }
-      .admin-main { padding-inline: 1rem; }
+    @media (max-width: 900px) {
+      .admin-shell { grid-template-columns: 64px 1fr; }
+      .sidebar .brand span:not(.mark) { display: none; }
+      .nav-item span:not(.nav-ico):not(.nav-badge) { display: none; }
+      .stats-mini { display: none; }
+      .sidebar { padding: 1.25rem 0; }
+      .sidebar nav, .sidebar-footer { padding-inline: .5rem; }
+      .nav-item { justify-content: center; }
+      .main { padding: 1.25rem 1rem 3rem; }
     }
   </style>
 </head>
 <body>
 
-<!-- ── Login ─────────────────────────────────────────── -->
+<!-- ── Login ────────────────────────────────────────────────────────── -->
 <div class="login-screen" id="login-screen">
   <div class="login-card">
     <h1>Reelday Admin</h1>
-    <p>Enter your admin password to continue.</p>
+    <p>Enter the admin password to continue.</p>
     <input class="login-input" type="password" id="pw-input" placeholder="Password" autocomplete="current-password" />
     <button class="btn btn-accent" id="login-btn" style="width:100%;min-height:48px">Enter</button>
     <div class="login-error" id="login-error" style="display:none">Incorrect password.</div>
   </div>
 </div>
 
-<!-- ── Admin shell ────────────────────────────────────── -->
+<!-- ── Admin shell ─────────────────────────────────────────────────── -->
 <div class="admin-shell" id="admin-shell">
-  <header class="site-header">
-    <div class="site-header-inner">
-      <a class="brand brand-lockup" href="/" aria-label="Reelday.ph — home"><img src="/images/LOGO.png?v=2" alt="Reelday.ph" class="brand-img" /></a>
-      <span style="font-family:var(--mono);font-size:.78rem;color:var(--ink-faint);letter-spacing:.1em;text-transform:uppercase">Admin Panel</span>
-      <button class="btn btn-ghost" id="btn-logout" style="padding:10px 16px;font-size:.85rem;margin-left:auto">Logout</button>
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="mark">✦</span>
+      <span>Reelday Admin</span>
     </div>
-  </header>
-
-  <main class="admin-main">
-
-    <!-- Stats -->
-    <div class="stats-row" id="stats-row">
-      <div class="stat-card"><div class="stat-num" id="s-events">—</div><div class="stat-lbl">Total Events</div></div>
-      <div class="stat-card"><div class="stat-num" id="s-paid">—</div><div class="stat-lbl">Paid Events</div></div>
-      <div class="stat-card"><div class="stat-num" id="s-pending">—</div><div class="stat-lbl">Pending Payments</div></div>
-      <div class="stat-card"><div class="stat-num" id="s-revenue">—</div><div class="stat-lbl">Total Revenue</div></div>
-    </div>
-
-    <!-- Payments -->
-    <div class="section">
-      <div class="section-title">
-        💳 Payments
-        <span class="count-badge" id="payments-badge">0</span>
-        <button class="btn-activate" style="margin-left:auto;padding:.4rem .85rem;font-size:.8rem" id="btn-open-manual">+ Record manual payment</button>
+    <nav>
+      <button class="nav-item active" data-view="calendar"><span class="nav-ico">📅</span><span>Calendar</span></button>
+      <button class="nav-item" data-view="events"><span class="nav-ico">📋</span><span>Events</span><span class="nav-badge" id="nav-events-count">—</span></button>
+      <button class="nav-item" data-view="payments"><span class="nav-ico">💳</span><span>Payments</span><span class="nav-badge" id="nav-payments-count">—</span></button>
+      <button class="nav-item" data-view="users"><span class="nav-ico">👥</span><span>Users</span><span class="nav-badge" id="nav-users-count">—</span></button>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="stats-mini">
+        <div class="stat-mini"><span id="s-revenue">—</span><label>Revenue</label></div>
+        <div class="stat-mini"><span id="s-pending">—</span><label>Pending</label></div>
       </div>
+      <button class="btn btn-ghost" id="btn-logout">Logout</button>
+    </div>
+  </aside>
 
-      <!-- Filter pills -->
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <h1 class="view-title" id="view-title">Calendar</h1>
+        <div class="view-sub" id="view-sub">At-a-glance view of every scheduled event.</div>
+      </div>
+      <div class="view-actions" id="view-actions"></div>
+    </header>
+
+    <!-- Calendar view -->
+    <section class="view" id="view-calendar">
+      <div class="cal-layout">
+        <div class="cal-grid-panel">
+          <div class="cal-header">
+            <button class="cal-nav-btn" id="cal-prev" title="Previous month">‹</button>
+            <h2 id="cal-month-label">—</h2>
+            <button class="cal-nav-btn" id="cal-next" title="Next month">›</button>
+            <button class="btn-ghost-sm" id="cal-today" title="Jump to today">Today</button>
+          </div>
+          <div class="cal-weekdays">
+            <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+          </div>
+          <div class="cal-grid" id="cal-grid"></div>
+          <div class="cal-legend">
+            <span class="legend chip-tala">Tala</span>
+            <span class="legend chip-sinag">Sinag</span>
+            <span class="legend chip-dalisay">Dalisay</span>
+            <span class="legend chip-hiraya">Hiraya</span>
+            <span style="margin-left:auto;color:var(--ink-faint);font-size:.62rem">⚠ chip count = events overlapping</span>
+          </div>
+        </div>
+
+        <aside class="cal-agenda">
+          <div class="agenda-header">
+            <h3 id="agenda-date">Select a date</h3>
+            <span class="agenda-count" id="agenda-count"></span>
+          </div>
+          <div id="agenda-body">
+            <p class="agenda-empty">Click a date on the calendar to see its events.</p>
+          </div>
+          <details class="unscheduled" id="unscheduled-wrap">
+            <summary>Unscheduled events (<span id="unscheduled-count">0</span>)</summary>
+            <div id="unscheduled-body"></div>
+          </details>
+        </aside>
+      </div>
+    </section>
+
+    <!-- Events view -->
+    <section class="view" id="view-events" style="display:none">
+      <div class="filters">
+        <input type="search" id="evt-search" placeholder="Search by couple name, slug, or owner email…" />
+        <select id="evt-plan-filter">
+          <option value="">All plans</option>
+          <option value="tala">Tala</option>
+          <option value="sinag">Sinag</option>
+          <option value="dalisay">Dalisay</option>
+          <option value="hiraya">Hiraya</option>
+        </select>
+        <select id="evt-paid-filter">
+          <option value="">All payment</option>
+          <option value="paid">Paid</option>
+          <option value="unpaid">Unpaid</option>
+        </select>
+        <select id="evt-status-filter">
+          <option value="">All status</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+        <select id="evt-when-filter">
+          <option value="">Any date</option>
+          <option value="upcoming">Upcoming</option>
+          <option value="past">Past</option>
+          <option value="this-month">This month</option>
+          <option value="unscheduled">Unscheduled</option>
+        </select>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Event Date</th>
+              <th>Couple / Event</th>
+              <th>Owner</th>
+              <th>Plan</th>
+              <th>Status</th>
+              <th>Uploads</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="events-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Payments view -->
+    <section class="view" id="view-payments" style="display:none">
       <div class="filter-row">
         <button class="pay-filter active" data-status="">All</button>
         <button class="pay-filter" data-status="manual_pending">Pending GCash</button>
-        <button class="pay-filter" data-status="pending">Pending Card</button>
         <button class="pay-filter" data-status="succeeded">Succeeded</button>
         <button class="pay-filter" data-status="rejected">Rejected</button>
         <button class="pay-filter" data-status="refunded">Refunded</button>
       </div>
-
-      <!-- Manual entry form (hidden by default) -->
       <div class="manual-form" id="manual-form" style="display:none">
         <div class="manual-grid">
           <label>User <select id="m-user"></select></label>
@@ -258,104 +468,65 @@
               <option value="hiraya">Hiraya</option>
             </select>
           </label>
-          <label>Amount (₱)
-            <input type="number" id="m-amount" min="0" step="1" placeholder="999" />
-          </label>
-          <label>Event slug <span style="color:var(--ink-faint);font-size:.72rem">(optional)</span>
-            <input type="text" id="m-slug" placeholder="e.g. mary-john-2026" />
-          </label>
-          <label style="grid-column:1/-1">Reference / note <span style="color:var(--ink-faint);font-size:.72rem">(optional)</span>
-            <input type="text" id="m-ref" placeholder="cash, bank-transfer, etc." />
-          </label>
+          <label>Amount (₱) <input type="number" id="m-amount" min="0" step="1" placeholder="999" /></label>
+          <label>Event slug (optional) <input type="text" id="m-slug" placeholder="e.g. mary-john-2026" /></label>
+          <label>Reference (optional) <input type="text" id="m-ref" placeholder="cash, bank-transfer, etc." /></label>
         </div>
-        <div style="display:flex;gap:.5rem;margin-top:.75rem;justify-content:flex-end">
+        <div style="display:flex;gap:.55rem;justify-content:flex-end;margin-top:1rem">
           <button class="btn-ghost-sm" id="btn-cancel-manual">Cancel</button>
           <button class="btn-verify"   id="btn-submit-manual">Record payment</button>
         </div>
       </div>
-
       <div class="tbl-wrap">
         <table>
           <thead>
             <tr>
-              <th>User / Event</th>
-              <th>Amount</th>
-              <th>Plan</th>
-              <th>Status</th>
-              <th>Reference</th>
-              <th>Date</th>
-              <th>Actions</th>
+              <th>User</th><th>Amount</th><th>Plan</th><th>Status</th><th>Reference</th><th>Date</th><th>Actions</th>
             </tr>
           </thead>
-          <tbody id="payments-tbody">
-            <tr><td colspan="7" class="empty-state">Loading…</td></tr>
-          </tbody>
+          <tbody id="payments-tbody"></tbody>
         </table>
       </div>
-    </div>
+    </section>
 
-    <!-- Users -->
-    <div class="section">
-      <div class="section-title">
-        👥 Users
-        <span class="count-badge" id="users-badge">0</span>
-      </div>
-      <div style="display:flex; gap:.5rem; margin-bottom:.75rem; flex-wrap:wrap;">
-        <input type="text" id="users-search" placeholder="Search by name or email…"
-               style="flex:1; min-width:220px; padding:.55rem .85rem; border:1px solid var(--line-2); border-radius:var(--r); font-family:inherit; font-size:.875rem; background:#fff; outline:none;" />
+    <!-- Users view -->
+    <section class="view" id="view-users" style="display:none">
+      <div class="filters">
+        <input type="search" id="users-search" placeholder="Search by name or email…" />
       </div>
       <div class="tbl-wrap">
         <table>
           <thead>
             <tr>
-              <th>Name / Email</th>
-              <th>Plan</th>
-              <th>Events</th>
-              <th>Verified</th>
-              <th>Status</th>
-              <th>Joined</th>
-              <th>Actions</th>
+              <th>Name / Email</th><th>Plan</th><th>Events</th><th>Verified</th><th>Status</th><th>Joined</th><th>Actions</th>
             </tr>
           </thead>
-          <tbody id="users-tbody">
-            <tr><td colspan="7" class="empty-state">Loading…</td></tr>
-          </tbody>
+          <tbody id="users-tbody"></tbody>
         </table>
       </div>
-    </div>
-
-    <!-- All Events -->
-    <div class="section">
-      <div class="section-title">📋 All Events</div>
-      <div class="tbl-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Couple</th>
-              <th>Slug</th>
-              <th>Email</th>
-              <th>Plan</th>
-              <th>Status</th>
-              <th>Uploads</th>
-              <th>Created</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="events-tbody">
-            <tr><td colspan="8" class="empty-state">Loading…</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
+    </section>
   </main>
 </div>
 
+<!-- ── Shared modal ─────────────────────────────────────────────── -->
+<div class="modal-backdrop" id="modal-backdrop">
+  <div class="modal">
+    <header class="modal-header">
+      <h2 id="modal-title">—</h2>
+      <button class="modal-close" id="modal-close" aria-label="Close">×</button>
+    </header>
+    <div class="modal-body" id="modal-body"></div>
+    <footer class="modal-footer" id="modal-footer"></footer>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status"></div>
+
 <script>
-  // The token we send is compared server-side against ADMIN_TOKEN env on
-  // every /api/admin/* call. The localStorage cache is just so an admin
-  // doesn't have to re-paste it on every page load — losing it doesn't
-  // grant access by itself.
+  // ────────────────────────────────────────────────────────────────
+  // Auth — server-side ADMIN_TOKEN check on every /api/admin/* call.
+  // localStorage is a UX cache only; losing it doesn't grant access.
+  // ────────────────────────────────────────────────────────────────
   const ADMIN_TOKEN_KEY = 'reelday_admin_token';
 
   function adminFetch(url, opts = {}) {
@@ -366,26 +537,28 @@
     });
   }
 
-  function esc(s) {
-    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const formatAmount = c => '₱' + (c / 100).toLocaleString('en-PH', { minimumFractionDigits: 0 });
+  const fmtDate = d => d ? new Date(d).toLocaleDateString('en-PH', { month:'short', day:'numeric', year:'numeric' }) : '—';
+  const fmtDateLong = d => d ? new Date(d).toLocaleDateString('en-PH', { weekday:'long', month:'long', day:'numeric', year:'numeric' }) : '—';
+  // event_date is a DATE (no time); normalize to YYYY-MM-DD without TZ skew.
+  function dateKey(d) {
+    if (!d) return null;
+    const s = String(d);
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+    const dt = new Date(d);
+    if (Number.isNaN(dt.getTime())) return null;
+    return dt.toISOString().slice(0, 10);
+  }
+  function todayKey() {
+    const d = new Date();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${d.getFullYear()}-${m}-${day}`;
   }
 
-  function formatAmount(cents) {
-    return '₱' + (cents / 100).toLocaleString('en-PH', { minimumFractionDigits: 0 });
-  }
-
-  function fmtDate(d) {
-    if (!d) return '—';
-    return new Date(d).toLocaleDateString('en-PH', { month:'short', day:'numeric', year:'numeric' });
-  }
-
-  // ── Auth ─────────────────────────────────────────────
-  // Real check happens on the server. We just verify the cached token by
-  // hitting a cheap admin endpoint; if it's accepted we proceed.
   async function tokenWorks(token) {
-    const r = await fetch('/api/admin/stats', {
-      headers: { 'Authorization': `Bearer ${token}` },
-    });
+    const r = await fetch('/api/admin/stats', { headers: { 'Authorization': `Bearer ${token}` } });
     return r.ok;
   }
 
@@ -410,29 +583,442 @@
 
   function showAdmin() {
     document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('admin-shell').style.display  = 'block';
+    document.getElementById('admin-shell').classList.add('ready');
     loadAll();
   }
 
-  // Try cached token on page load; if the server rejects it, drop it and
-  // show the login screen (covers ADMIN_TOKEN rotation).
   (async () => {
     const cached = localStorage.getItem(ADMIN_TOKEN_KEY);
     if (cached && await tokenWorks(cached)) showAdmin();
     else if (cached) localStorage.removeItem(ADMIN_TOKEN_KEY);
   })();
 
-  // ── Data ─────────────────────────────────────────────
-  async function loadAll() {
-    await Promise.all([loadStats(), loadPayments(), loadUsers(), loadEvents()]);
+  // ────────────────────────────────────────────────────────────────
+  // Toast — non-blocking feedback. Replaces most alert() calls.
+  // ────────────────────────────────────────────────────────────────
+  const toastEl = document.getElementById('toast');
+  let toastTimer = null;
+  function toast(msg, kind = '') {
+    toastEl.textContent = msg;
+    toastEl.className = 'toast ' + (kind || '') + ' show';
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove('show'), 3200);
   }
 
-  // Cached user list so filtering by the search box doesn't refetch.
-  let allUsers = [];
+  // ────────────────────────────────────────────────────────────────
+  // Modal helpers
+  // ────────────────────────────────────────────────────────────────
+  const modalBackdrop = document.getElementById('modal-backdrop');
+  const modalTitle    = document.getElementById('modal-title');
+  const modalBody     = document.getElementById('modal-body');
+  const modalFooter   = document.getElementById('modal-footer');
+  function openModal({ title, body, footer }) {
+    modalTitle.textContent = title;
+    modalBody.innerHTML    = body || '';
+    modalFooter.innerHTML  = footer || '';
+    modalBackdrop.classList.add('show');
+  }
+  function closeModal() { modalBackdrop.classList.remove('show'); }
+  document.getElementById('modal-close').onclick = closeModal;
+  modalBackdrop.addEventListener('click', e => { if (e.target === modalBackdrop) closeModal(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && modalBackdrop.classList.contains('show')) closeModal(); });
 
+  // ────────────────────────────────────────────────────────────────
+  // View switching
+  // ────────────────────────────────────────────────────────────────
+  const VIEW_META = {
+    calendar: { title: 'Calendar',  sub: 'At-a-glance view of every scheduled event — overlapping dates flagged.' },
+    events:   { title: 'Events',    sub: 'Filter, edit, reassign, or comp any event in the system.' },
+    payments: { title: 'Payments',  sub: 'Verify GCash transfers, refund, or record manual payments.' },
+    users:    { title: 'Users',     sub: 'Manage plan tiers, verification, and account status.' },
+  };
+
+  function switchView(name) {
+    document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.view === name));
+    ['calendar','events','payments','users'].forEach(v => {
+      document.getElementById(`view-${v}`).style.display = v === name ? '' : 'none';
+    });
+    const meta = VIEW_META[name] || {};
+    document.getElementById('view-title').textContent = meta.title || '';
+    document.getElementById('view-sub').textContent   = meta.sub   || '';
+    renderViewActions(name);
+    if (name === 'calendar') renderCalendar();
+    if (name === 'events')   renderEvents();
+  }
+  document.querySelectorAll('.nav-item').forEach(b => b.onclick = () => switchView(b.dataset.view));
+
+  function renderViewActions(name) {
+    const host = document.getElementById('view-actions');
+    if (name === 'calendar' || name === 'events') {
+      host.innerHTML = `<button class="btn btn-accent" id="btn-new-event" style="padding:.55rem 1.1rem">+ New event</button>`;
+      document.getElementById('btn-new-event').onclick = () => openEventEditor(null);
+    } else if (name === 'payments') {
+      host.innerHTML = `<button class="btn btn-accent" id="btn-open-manual" style="padding:.55rem 1.1rem">+ Record payment</button>`;
+      document.getElementById('btn-open-manual').onclick = openManualPayment;
+    } else {
+      host.innerHTML = '';
+    }
+  }
+
+  // ────────────────────────────────────────────────────────────────
+  // Data loading
+  // ────────────────────────────────────────────────────────────────
+  let allUsers    = [];
+  let allEvents   = [];
+  let paymentStatusFilter = '';
+
+  async function loadAll() {
+    await Promise.all([loadStats(), loadEvents(), loadUsers(), loadPayments()]);
+    renderViewActions('calendar');
+    renderCalendar();
+  }
+
+  async function loadStats() {
+    try {
+      const r = await adminFetch('/api/admin/stats');
+      const d = await r.json();
+      document.getElementById('s-revenue').textContent = formatAmount(d.total_revenue ?? 0);
+      document.getElementById('s-pending').textContent = (d.pending_payments ?? 0).toString();
+      document.getElementById('nav-events-count').textContent = (d.total_events ?? 0).toString();
+    } catch { /* silent */ }
+  }
+
+  async function loadEvents() {
+    try {
+      const r = await adminFetch('/api/admin/events');
+      const { events } = await r.json();
+      allEvents = events || [];
+      document.getElementById('nav-events-count').textContent = allEvents.length.toString();
+      // re-render whichever view is showing
+      if (document.getElementById('view-calendar').style.display !== 'none') renderCalendar();
+      if (document.getElementById('view-events').style.display !== 'none')   renderEvents();
+    } catch {
+      allEvents = [];
+    }
+  }
+
+  async function loadUsers() {
+    try {
+      const r = await adminFetch('/api/admin/users');
+      const { users } = await r.json();
+      allUsers = users || [];
+      document.getElementById('nav-users-count').textContent = allUsers.length.toString();
+      renderUsers(allUsers);
+    } catch {
+      document.getElementById('users-tbody').innerHTML = '<tr><td colspan="7" class="empty-state">Error loading users.</td></tr>';
+    }
+  }
+
+  async function loadPayments() {
+    try {
+      const qs = paymentStatusFilter ? `?status=${encodeURIComponent(paymentStatusFilter)}` : '';
+      const r = await adminFetch(`/api/admin/payments${qs}`);
+      const { payments } = await r.json();
+      document.getElementById('nav-payments-count').textContent = payments.length.toString();
+      renderPayments(payments);
+    } catch {
+      document.getElementById('payments-tbody').innerHTML = `<tr><td colspan="7" class="empty-state">Error loading payments.</td></tr>`;
+    }
+  }
+
+  // ────────────────────────────────────────────────────────────────
+  // Calendar view
+  // ────────────────────────────────────────────────────────────────
+  // calCursor: first-of-month for the currently-displayed month.
+  let calCursor = (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); })();
+  let selectedDateKey = null;
+
+  function renderCalendar() {
+    const grid = document.getElementById('cal-grid');
+    const year = calCursor.getFullYear();
+    const month = calCursor.getMonth();
+    document.getElementById('cal-month-label').textContent =
+      calCursor.toLocaleDateString('en-PH', { month: 'long', year: 'numeric' });
+
+    // Index events by YYYY-MM-DD.
+    const byDate = new Map();
+    const unscheduled = [];
+    for (const e of allEvents) {
+      const k = dateKey(e.event_date);
+      if (!k) { unscheduled.push(e); continue; }
+      if (!byDate.has(k)) byDate.set(k, []);
+      byDate.get(k).push(e);
+    }
+
+    // 6-row grid (42 cells), Monday-start, with leading/trailing-month padding.
+    const firstWeekday = new Date(year, month, 1).getDay(); // 0=Sun..6=Sat
+    const leadDays = (firstWeekday + 6) % 7; // shift so Monday=0
+    const start = new Date(year, month, 1 - leadDays);
+    const today = todayKey();
+    const cells = [];
+    for (let i = 0; i < 42; i++) {
+      const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+      const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const list = byDate.get(k) || [];
+      const isOther = d.getMonth() !== month;
+      const isToday = k === today;
+      const isSel   = k === selectedDateKey;
+      const overlap = list.length > 1;
+      const chips = list.slice(0, 3).map(e => `
+        <div class="cal-chip chip-${esc(e.plan || 'tala')}${e.is_active === false ? ' chip-inactive' : ''}" title="${esc(e.couple_names)} (${esc(e.plan || 'tala')})">
+          ${esc(e.couple_names)}
+        </div>`).join('');
+      const more = list.length > 3 ? `<div class="cal-chip-more">+${list.length - 3} more</div>` : '';
+      cells.push(`
+        <div class="cal-cell${isOther ? ' other-month' : ''}${isToday ? ' today' : ''}${isSel ? ' selected' : ''}" data-date="${k}">
+          <span class="day-num">${d.getDate()}</span>
+          ${overlap ? `<span class="overlap-badge" title="${list.length} events on this day">${list.length}</span>` : ''}
+          ${chips}${more}
+        </div>`);
+    }
+    grid.innerHTML = cells.join('');
+    grid.querySelectorAll('.cal-cell').forEach(cell => {
+      cell.onclick = () => { selectedDateKey = cell.dataset.date; renderCalendar(); renderAgenda(byDate, unscheduled); };
+    });
+
+    renderAgenda(byDate, unscheduled);
+  }
+
+  function renderAgenda(byDate, unscheduled) {
+    const dateLbl = document.getElementById('agenda-date');
+    const countEl = document.getElementById('agenda-count');
+    const body    = document.getElementById('agenda-body');
+
+    if (!selectedDateKey) {
+      dateLbl.textContent = 'Select a date';
+      countEl.textContent = '';
+      body.innerHTML = '<p class="agenda-empty">Click a date on the calendar to see its events.</p>';
+    } else {
+      dateLbl.textContent = fmtDateLong(selectedDateKey + 'T00:00:00');
+      const list = byDate.get(selectedDateKey) || [];
+      countEl.textContent = list.length ? `${list.length} event${list.length === 1 ? '' : 's'}` : '';
+      body.innerHTML = list.length
+        ? list.map(agendaCard).join('')
+        : '<p class="agenda-empty">No events on this day. Click + New event to schedule one.</p>';
+      body.querySelectorAll('[data-slug]').forEach(card => {
+        card.onclick = () => openEventEditor(card.dataset.slug);
+      });
+    }
+
+    // Unscheduled section
+    document.getElementById('unscheduled-count').textContent = unscheduled.length.toString();
+    const u = document.getElementById('unscheduled-body');
+    if (!unscheduled.length) {
+      u.innerHTML = '<p class="agenda-empty" style="padding:.75rem 0">None.</p>';
+    } else {
+      u.innerHTML = unscheduled.map(agendaCard).join('');
+      u.querySelectorAll('[data-slug]').forEach(card => {
+        card.onclick = () => openEventEditor(card.dataset.slug);
+      });
+    }
+  }
+
+  function agendaCard(e) {
+    const planPill = `<span class="pill chip-${esc(e.plan || 'tala')}" style="padding:.1rem .5rem">${esc(e.plan || 'tala')}</span>`;
+    const paidPill = `<span class="pill ${e.is_paid ? 'pill-paid' : 'pill-unpaid'}">${e.is_paid ? 'Paid' : 'Unpaid'}</span>`;
+    const inactivePill = e.is_active === false ? `<span class="pill pill-inactive">Inactive</span>` : '';
+    return `<a class="agenda-card" data-slug="${esc(e.slug)}" href="javascript:void(0)">
+      <div class="name">${esc(e.couple_names)}</div>
+      <div class="meta">
+        ${planPill}${paidPill}${inactivePill}
+        <span>· ${esc(e.user_email || 'no owner')}</span>
+        <span>· ${e.upload_count} uploads</span>
+      </div>
+    </a>`;
+  }
+
+  document.getElementById('cal-prev').onclick = () => { calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth() - 1, 1); renderCalendar(); };
+  document.getElementById('cal-next').onclick = () => { calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth() + 1, 1); renderCalendar(); };
+  document.getElementById('cal-today').onclick = () => {
+    const d = new Date();
+    calCursor = new Date(d.getFullYear(), d.getMonth(), 1);
+    selectedDateKey = todayKey();
+    renderCalendar();
+  };
+
+  // ────────────────────────────────────────────────────────────────
+  // Events view (filterable table + open editor)
+  // ────────────────────────────────────────────────────────────────
+  function renderEvents() {
+    const q       = document.getElementById('evt-search').value.trim().toLowerCase();
+    const plan    = document.getElementById('evt-plan-filter').value;
+    const paid    = document.getElementById('evt-paid-filter').value;
+    const status  = document.getElementById('evt-status-filter').value;
+    const when    = document.getElementById('evt-when-filter').value;
+    const today   = todayKey();
+
+    const filtered = allEvents.filter(e => {
+      if (q && !`${e.couple_names} ${e.slug} ${e.user_email || ''}`.toLowerCase().includes(q)) return false;
+      if (plan && (e.plan || 'tala') !== plan) return false;
+      if (paid === 'paid'   && !e.is_paid) return false;
+      if (paid === 'unpaid' &&  e.is_paid) return false;
+      if (status === 'active'   && e.is_active === false) return false;
+      if (status === 'inactive' && e.is_active !== false) return false;
+      const k = dateKey(e.event_date);
+      if (when === 'unscheduled' && k) return false;
+      if (when === 'upcoming'    && (!k || k <  today)) return false;
+      if (when === 'past'        && (!k || k >= today)) return false;
+      if (when === 'this-month') {
+        if (!k) return false;
+        const d = new Date(); const m = String(d.getMonth() + 1).padStart(2, '0');
+        if (!k.startsWith(`${d.getFullYear()}-${m}`)) return false;
+      }
+      return true;
+    });
+
+    const tbody = document.getElementById('events-tbody');
+    if (!filtered.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No events match.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = filtered.map(e => `
+      <tr>
+        <td style="white-space:nowrap;color:${e.event_date ? 'var(--ink)' : 'var(--ink-faint)'}">${e.event_date ? fmtDate(e.event_date) : '— unscheduled —'}</td>
+        <td>
+          <strong>${esc(e.couple_names)}</strong><br>
+          <a href="/dashboard?slug=${esc(e.slug)}" target="_blank" style="color:var(--accent);font-size:.78rem">${esc(e.slug)}</a>
+        </td>
+        <td style="font-size:.82rem;color:var(--ink-soft)">${esc(e.user_email || '—')}</td>
+        <td><span class="pill chip-${esc(e.plan || 'tala')}">${esc(e.plan || 'tala')}</span></td>
+        <td style="white-space:nowrap">
+          <span class="pill ${e.is_paid ? 'pill-paid' : 'pill-unpaid'}">${e.is_paid ? 'Paid' : 'Unpaid'}</span>
+          ${e.is_active === false ? '<br><span class="pill pill-inactive" style="margin-top:.25rem">Inactive</span>' : ''}
+        </td>
+        <td>${e.upload_count}</td>
+        <td>
+          <div class="action-btns">
+            <button class="btn-edit-sm" onclick="openEventEditor('${esc(e.slug)}')">✏ Edit</button>
+            <button class="btn-reject"  onclick="deleteEvent('${esc(e.slug)}')" title="Permanently delete">🗑</button>
+          </div>
+        </td>
+      </tr>`).join('');
+  }
+
+  ['evt-search','evt-plan-filter','evt-paid-filter','evt-status-filter','evt-when-filter'].forEach(id => {
+    document.getElementById(id).addEventListener('input', renderEvents);
+  });
+
+  // ────────────────────────────────────────────────────────────────
+  // Event editor / create modal
+  // ────────────────────────────────────────────────────────────────
+  const EVENT_TYPES = ['wedding','debut','birthday','seventh_birthday','baptism','reunion','corporate','memorial'];
   const TIERS = ['tala', 'sinag', 'dalisay', 'hiraya'];
   const TIER_LABELS = { tala: 'Tala (Free)', sinag: 'Sinag', dalisay: 'Dalisay', hiraya: 'Hiraya' };
 
+  function openEventEditor(slug) {
+    const isNew = !slug;
+    const e = isNew ? {} : (allEvents.find(x => x.slug === slug) || {});
+
+    const userOpts = ['<option value="">— no owner —</option>'].concat(
+      allUsers.map(u => `<option value="${esc(u.id)}"${u.id === e.user_id ? ' selected' : ''}>${esc(u.full_name || u.email)} — ${esc(u.email)}</option>`)
+    ).join('');
+    const typeOpts = EVENT_TYPES.map(t => `<option value="${t}"${t === (e.event_type || 'wedding') ? ' selected' : ''}>${t.replace(/_/g, ' ')}</option>`).join('');
+    const planOpts = TIERS.map(t => `<option value="${t}"${t === (e.plan || 'tala') ? ' selected' : ''}>${esc(TIER_LABELS[t])}</option>`).join('');
+    const eventDateVal = dateKey(e.event_date) || '';
+
+    const body = `
+      <div class="form-grid">
+        <label class="full">Couple / event name *
+          <input type="text" id="f-couple" value="${esc(e.couple_names || '')}" placeholder="e.g. Mary &amp; John" />
+        </label>
+        <label>Event type
+          <select id="f-type">${typeOpts}</select>
+        </label>
+        <label>Event date
+          <input type="date" id="f-date" value="${esc(eventDateVal)}" />
+        </label>
+        <label>Plan
+          <select id="f-plan">${planOpts}</select>
+        </label>
+        <label>Owner
+          <select id="f-user">${userOpts}</select>
+          <span class="form-hint">Reassigning changes who can edit it from the dashboard.</span>
+        </label>
+        <label class="full">Venue
+          <input type="text" id="f-venue" value="${esc(e.venue || '')}" placeholder="e.g. Manila Cathedral" />
+        </label>
+        <label>Event time
+          <input type="text" id="f-time" value="${esc(e.event_time || '')}" placeholder="e.g. 3:00 PM" />
+        </label>
+        <label class="full">Welcome message
+          <textarea id="f-welcome" placeholder="Shown to guests on the upload page">${esc(e.welcome_message || '')}</textarea>
+        </label>
+        <label class="form-check"><input type="checkbox" id="f-paid"   ${e.is_paid   !== false ? 'checked' : ''}> Paid (comped if checked)</label>
+        <label class="form-check"><input type="checkbox" id="f-active" ${e.is_active !== false ? 'checked' : ''}> Active (uploads allowed)</label>
+        ${isNew ? '' : `
+          <div class="full" style="background:var(--paper-2);border-radius:var(--r);padding:.6rem .85rem;font-size:.78rem;color:var(--ink-soft)">
+            <strong>Slug:</strong> <code style="font-family:var(--mono)">${esc(e.slug)}</code><br>
+            <strong>Gallery expires:</strong> ${fmtDate(e.gallery_expires_at)} ·
+            <strong>Uploads end:</strong> ${fmtDate(e.upload_window_ends_at)}<br>
+            <span class="form-hint">Changing the plan or event date will auto-recompute these windows.</span>
+          </div>`}
+      </div>`;
+
+    const footer = `
+      ${isNew ? '' : `<button class="btn-reject" id="f-delete">Delete event</button>`}
+      <div style="flex:1"></div>
+      <button class="btn-ghost-sm" id="f-cancel">Cancel</button>
+      <button class="btn-verify"   id="f-save">${isNew ? 'Create event' : 'Save changes'}</button>`;
+
+    openModal({ title: isNew ? 'New event' : `Edit · ${e.couple_names}`, body, footer });
+    document.getElementById('f-cancel').onclick = closeModal;
+    document.getElementById('f-save').onclick   = () => saveEvent(slug);
+    if (!isNew) document.getElementById('f-delete').onclick = () => { closeModal(); deleteEvent(slug); };
+  }
+
+  async function saveEvent(existingSlug) {
+    const payload = {
+      couple_names:    document.getElementById('f-couple').value.trim(),
+      event_type:      document.getElementById('f-type').value,
+      event_date:      document.getElementById('f-date').value || null,
+      plan:            document.getElementById('f-plan').value,
+      user_id:         document.getElementById('f-user').value || null,
+      venue:           document.getElementById('f-venue').value.trim() || null,
+      event_time:      document.getElementById('f-time').value.trim() || null,
+      welcome_message: document.getElementById('f-welcome').value.trim() || null,
+      is_paid:         document.getElementById('f-paid').checked,
+      is_active:       document.getElementById('f-active').checked,
+    };
+    if (!payload.couple_names) { toast('Couple / event name is required.', 'error'); return; }
+    try {
+      const isNew = !existingSlug;
+      const url = isNew ? '/api/admin/events' : `/api/admin/events/${encodeURIComponent(existingSlug)}`;
+      const method = isNew ? 'POST' : 'PATCH';
+      const r = await adminFetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.message || 'Failed');
+      closeModal();
+      toast(isNew ? `Created · ${data.event?.slug}` : 'Saved.', 'success');
+      await Promise.all([loadEvents(), loadStats(), loadUsers(), loadPayments()]);
+    } catch (e) {
+      toast('Save failed: ' + (e.message || 'unknown error'), 'error');
+    }
+  }
+
+  async function deleteEvent(slug) {
+    const typed = prompt(
+      `PERMANENT DELETE\n\nThis wipes "${slug}" and ALL its uploads, video messages, polls, RSVPs, and website content. Payment history is kept.\n\nType the slug to confirm:`
+    );
+    if (typed == null) return;
+    if (typed.trim() !== slug) { toast('Slug did not match. Nothing deleted.', 'error'); return; }
+    try {
+      const r = await adminFetch(`/api/admin/events/${encodeURIComponent(slug)}`, { method: 'DELETE' });
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        throw new Error(d.message || 'Failed');
+      }
+      toast('Event deleted.', 'success');
+      await Promise.all([loadEvents(), loadStats(), loadPayments(), loadUsers()]);
+    } catch (e) { toast('Delete failed: ' + (e.message || ''), 'error'); }
+  }
+
+  // ────────────────────────────────────────────────────────────────
+  // Users view
+  // ────────────────────────────────────────────────────────────────
   function renderUserRow(u) {
     const tier = (u.subscription_tier || 'tala').toLowerCase();
     const tierClass = TIERS.includes(tier) ? `tier-${tier}` : 'tier-tala';
@@ -466,18 +1052,12 @@
         <td>${verifiedPill}</td>
         <td>${statusPill}</td>
         <td style="font-size:.8rem;color:var(--ink-faint)">${fmtDate(u.created_at)}</td>
-        <td>
-          <div class="action-btns">
-            ${verifyBtn}
-            ${activeBtn}
-          </div>
-        </td>
+        <td><div class="action-btns">${verifyBtn}${activeBtn}</div></td>
       </tr>`;
   }
 
   function renderUsers(list) {
     const tbody = document.getElementById('users-tbody');
-    document.getElementById('users-badge').textContent = list.length;
     if (!list.length) {
       tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No users match.</td></tr>';
       return;
@@ -485,18 +1065,7 @@
     tbody.innerHTML = list.map(renderUserRow).join('');
   }
 
-  async function loadUsers() {
-    try {
-      const r = await adminFetch('/api/admin/users');
-      const { users } = await r.json();
-      allUsers = users || [];
-      renderUsers(allUsers);
-    } catch {
-      document.getElementById('users-tbody').innerHTML = '<tr><td colspan="7" class="empty-state">Error loading users.</td></tr>';
-    }
-  }
-
-  document.getElementById('users-search').addEventListener('input', (e) => {
+  document.getElementById('users-search').addEventListener('input', e => {
     const q = e.target.value.trim().toLowerCase();
     if (!q) return renderUsers(allUsers);
     renderUsers(allUsers.filter(u =>
@@ -505,38 +1074,36 @@
     ));
   });
 
-  // Inline plan change — sends to the server and updates the cached
-  // user list so the dropdown reflects the new value without a full reload.
   async function setPlan(id, tier, selectEl) {
     const prev = selectEl.dataset.prev || allUsers.find(u => u.id === id)?.subscription_tier || 'tala';
     selectEl.dataset.prev = tier;
     try {
       const r = await adminFetch(`/api/admin/users/${id}/plan`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tier }),
       });
       if (!r.ok) throw new Error();
       const u = allUsers.find(u => u.id === id);
       if (u) u.subscription_tier = tier;
       selectEl.className = `tier-select tier-${tier}`;
+      toast(`Plan updated to ${TIER_LABELS[tier] || tier}.`, 'success');
     } catch {
       selectEl.value = prev;
-      alert('Failed to change plan.');
+      toast('Failed to change plan.', 'error');
     }
   }
 
   async function setVerified(id, verified) {
     try {
       const r = await adminFetch(`/api/admin/users/${id}/verify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_verified: verified }),
       });
       if (!r.ok) throw new Error();
       const u = allUsers.find(u => u.id === id);
       if (u) { u.is_verified = verified; renderUsers(allUsers); }
-    } catch { alert('Failed to update verification.'); }
+      toast(verified ? 'User verified.' : 'Verification revoked.', 'success');
+    } catch { toast('Failed to update verification.', 'error'); }
   }
 
   async function setActive(id, active) {
@@ -544,30 +1111,19 @@
     if (!confirm(`Are you sure you want to ${verb} this user?${active ? '' : ' They will be blocked from logging in.'}`)) return;
     try {
       const r = await adminFetch(`/api/admin/users/${id}/active`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_active: active }),
       });
       if (!r.ok) throw new Error();
       const u = allUsers.find(u => u.id === id);
       if (u) { u.is_active = active; renderUsers(allUsers); }
-    } catch { alert(`Failed to ${verb} user.`); }
+      toast(active ? 'User reactivated.' : 'User deactivated.', 'success');
+    } catch { toast(`Failed to ${verb} user.`, 'error'); }
   }
 
-  async function loadStats() {
-    try {
-      const r = await adminFetch('/api/admin/stats');
-      const d = await r.json();
-      document.getElementById('s-events').textContent  = d.total_events ?? 0;
-      document.getElementById('s-paid').textContent    = d.paid_events   ?? 0;
-      document.getElementById('s-pending').textContent = d.pending_payments ?? 0;
-      document.getElementById('s-revenue').textContent = formatAmount(d.total_revenue ?? 0);
-    } catch { /* silent */ }
-  }
-
-  // Active status filter for the payments table. Empty string = "All".
-  let paymentStatusFilter = '';
-
+  // ────────────────────────────────────────────────────────────────
+  // Payments view
+  // ────────────────────────────────────────────────────────────────
   function actionsForPayment(p) {
     if (p.status === 'manual_pending') {
       return `<div class="action-btns">
@@ -593,38 +1149,28 @@
     return `<span class="pill ${cls}">${esc(label)}</span>`;
   }
 
-  async function loadPayments() {
-    try {
-      const qs = paymentStatusFilter ? `?status=${encodeURIComponent(paymentStatusFilter)}` : '';
-      const r = await adminFetch(`/api/admin/payments${qs}`);
-      const { payments } = await r.json();
-      document.getElementById('payments-badge').textContent = payments.length;
-      const tbody = document.getElementById('payments-tbody');
-      if (!payments.length) {
-        tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No payments match this filter.</td></tr>';
-        return;
-      }
-      tbody.innerHTML = payments.map(p => `
-        <tr id="row-${esc(p.id)}">
-          <td>
-            <strong>${esc(p.user_name || p.user_email || '—')}</strong>
-            ${p.user_email ? `<br><span style="color:var(--ink-faint);font-size:.8rem">${esc(p.user_email)}</span>` : ''}
-            ${p.slug ? `<br><a href="/dashboard?slug=${esc(p.slug)}" target="_blank" style="color:var(--accent);font-size:.78rem">${esc(p.slug)}</a>` : ''}
-          </td>
-          <td>${formatAmount(p.amount)}</td>
-          <td>${esc(p.plan || p.tier || '—')}</td>
-          <td>${statusPill(p.status)}</td>
-          <td><code style="background:var(--paper-2);padding:.2rem .5rem;border-radius:4px;font-size:.78rem;font-family:var(--mono)">${esc(p.gcash_reference || p.paymongo_payment_id || '—')}</code></td>
-          <td style="font-size:.8rem;color:var(--ink-faint)">${fmtDate(p.created_at)}</td>
-          <td>${actionsForPayment(p)}</td>
-        </tr>`).join('');
-    } catch {
-      document.getElementById('payments-tbody').innerHTML = `<tr><td colspan="7" class="empty-state">Error loading payments.</td></tr>`;
+  function renderPayments(payments) {
+    const tbody = document.getElementById('payments-tbody');
+    if (!payments.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No payments match this filter.</td></tr>';
+      return;
     }
+    tbody.innerHTML = payments.map(p => `
+      <tr id="row-${esc(p.id)}">
+        <td>
+          <strong>${esc(p.user_name || p.user_email || '—')}</strong>
+          ${p.user_email ? `<br><span style="color:var(--ink-faint);font-size:.8rem">${esc(p.user_email)}</span>` : ''}
+          ${p.slug ? `<br><a href="/dashboard?slug=${esc(p.slug)}" target="_blank" style="color:var(--accent);font-size:.78rem">${esc(p.slug)}</a>` : ''}
+        </td>
+        <td>${formatAmount(p.amount)}</td>
+        <td>${esc(p.plan || p.tier || '—')}</td>
+        <td>${statusPill(p.status)}</td>
+        <td><code style="background:var(--paper-2);padding:.2rem .5rem;border-radius:4px;font-size:.78rem;font-family:var(--mono)">${esc(p.gcash_reference || p.paymongo_payment_id || '—')}</code></td>
+        <td style="font-size:.8rem;color:var(--ink-faint)">${fmtDate(p.created_at)}</td>
+        <td>${actionsForPayment(p)}</td>
+      </tr>`).join('');
   }
 
-  // Filter pill click handler — re-fetches the filtered list rather than
-  // doing client-side filtering, so the badge counts stay accurate.
   document.querySelectorAll('.pay-filter').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.pay-filter').forEach(b => b.classList.remove('active'));
@@ -634,20 +1180,16 @@
     });
   });
 
-  // ── Manual payment entry ─────────────────────────────
-  const manualForm = document.getElementById('manual-form');
-  document.getElementById('btn-open-manual').onclick = () => {
-    // Populate the user dropdown from the already-loaded users cache so
-    // the admin picks from a known list instead of typing a UUID.
+  function openManualPayment() {
     const sel = document.getElementById('m-user');
     sel.innerHTML = '<option value="">Choose user…</option>' + allUsers.map(u =>
       `<option value="${esc(u.id)}">${esc(u.full_name || u.email)} — ${esc(u.email)}</option>`
     ).join('');
-    manualForm.style.display = 'block';
-    manualForm.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  };
+    document.getElementById('manual-form').style.display = 'block';
+    document.getElementById('manual-form').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
   document.getElementById('btn-cancel-manual').onclick = () => {
-    manualForm.style.display = 'none';
+    document.getElementById('manual-form').style.display = 'none';
   };
   document.getElementById('btn-submit-manual').onclick = async () => {
     const user_id   = document.getElementById('m-user').value;
@@ -655,15 +1197,13 @@
     const amountPhp = Number(document.getElementById('m-amount').value);
     const slug      = document.getElementById('m-slug').value.trim();
     const reference = document.getElementById('m-ref').value.trim();
-    if (!user_id) return alert('Please choose a user.');
-    if (!Number.isFinite(amountPhp) || amountPhp < 0) return alert('Enter a valid amount in pesos.');
+    if (!user_id) return toast('Please choose a user.', 'error');
+    if (!Number.isFinite(amountPhp) || amountPhp < 0) return toast('Enter a valid amount in pesos.', 'error');
     try {
       const r = await adminFetch('/api/admin/payments/manual', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           user_id, tier,
-          // Pesos -> centavos to match the rest of the payments column.
           amount: Math.round(amountPhp * 100),
           slug: slug || undefined,
           reference: reference || undefined,
@@ -671,14 +1211,14 @@
       });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data.message || 'Failed');
-      manualForm.style.display = 'none';
-      // Reset form fields
+      document.getElementById('manual-form').style.display = 'none';
       document.getElementById('m-amount').value = '';
       document.getElementById('m-slug').value = '';
       document.getElementById('m-ref').value = '';
+      toast('Payment recorded.', 'success');
       await Promise.all([loadPayments(), loadStats(), loadUsers(), loadEvents()]);
     } catch (e) {
-      alert('Could not record payment: ' + (e.message || 'unknown error'));
+      toast('Could not record payment: ' + (e.message || 'unknown error'), 'error');
     }
   };
 
@@ -686,42 +1226,10 @@
     if (!confirm('Mark this payment as refunded? The linked event will be flipped back to unpaid. This does NOT contact PayMongo — refund the actual money there separately.')) return;
     try {
       const r = await adminFetch(`/api/admin/payments/${id}/refund`, { method: 'POST' });
-      if (!r.ok) {
-        const d = await r.json().catch(() => ({}));
-        throw new Error(d.message || 'Failed');
-      }
+      if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d.message || 'Failed'); }
+      toast('Payment refunded.', 'success');
       await Promise.all([loadPayments(), loadStats(), loadEvents()]);
-    } catch (e) { alert('Failed to refund: ' + (e.message || '')); }
-  }
-
-  async function loadEvents() {
-    try {
-      const r = await adminFetch('/api/admin/events');
-      const { events } = await r.json();
-      const tbody = document.getElementById('events-tbody');
-      if (!events.length) {
-        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No events yet.</td></tr>';
-        return;
-      }
-      tbody.innerHTML = events.map(e => `
-        <tr>
-          <td><strong>${esc(e.couple_names)}</strong></td>
-          <td><a href="/dashboard?slug=${esc(e.slug)}" target="_blank" style="color:var(--accent);font-size:.82rem">${esc(e.slug)}</a></td>
-          <td style="font-size:.82rem;color:var(--ink-soft)">${esc(e.user_email || '—')}</td>
-          <td>${esc(e.plan)}</td>
-          <td><span class="pill ${e.is_paid ? 'pill-paid' : 'pill-unpaid'}">${e.is_paid ? 'Paid' : 'Unpaid'}</span></td>
-          <td>${e.upload_count}</td>
-          <td style="font-size:.8rem;color:var(--ink-faint)">${fmtDate(e.created_at)}</td>
-          <td>
-            <div class="action-btns">
-              ${e.is_active ? `<button class="btn-deactivate" onclick="deactivate('${esc(e.slug)}', this)">🔒 Deactivate</button>` : '<span style="color:var(--ink-faint);font-size:.8rem">Inactive</span>'}
-              <button class="btn-reject" onclick="deleteEvent('${esc(e.slug)}')" title="Permanently delete this event and all its uploads">🗑 Delete</button>
-            </div>
-          </td>
-        </tr>`).join('');
-    } catch {
-      document.getElementById('events-tbody').innerHTML = `<tr><td colspan="8" class="empty-state">Error loading events.</td></tr>`;
-    }
+    } catch (e) { toast('Failed to refund: ' + (e.message || ''), 'error'); }
   }
 
   async function verify(id) {
@@ -729,10 +1237,9 @@
     try {
       const r = await adminFetch(`/api/admin/payments/verify/${id}`, { method: 'POST' });
       if (!r.ok) throw new Error();
-      // Reload the table rather than just removing the row — the row may
-      // need to show under the Succeeded filter now, with different actions.
+      toast('Payment verified.', 'success');
       await Promise.all([loadStats(), loadPayments(), loadEvents()]);
-    } catch { alert('Failed to verify payment.'); }
+    } catch { toast('Failed to verify payment.', 'error'); }
   }
 
   async function reject(id) {
@@ -740,40 +1247,15 @@
     try {
       const r = await adminFetch(`/api/admin/payments/reject/${id}`, { method: 'POST' });
       if (!r.ok) throw new Error();
+      toast('Payment rejected.', 'success');
       await Promise.all([loadStats(), loadPayments()]);
-    } catch { alert('Failed to reject payment.'); }
+    } catch { toast('Failed to reject payment.', 'error'); }
   }
 
-  // Hard-delete. Requires typing the slug to confirm — a single click
-  // shouldn't wipe a real wedding's uploads. Cascades server-side to
-  // uploads, video messages, polls, RSVPs, seats, music, website.
-  async function deleteEvent(slug) {
-    const typed = prompt(
-      `PERMANENT DELETE\n\nThis wipes "${slug}" and ALL its uploads, video messages, polls, RSVPs, and website content. Payment history is kept.\n\nType the slug to confirm:`
-    );
-    if (typed == null) return;
-    if (typed.trim() !== slug) { alert('Slug did not match. Nothing deleted.'); return; }
-    try {
-      const r = await adminFetch(`/api/admin/events/${encodeURIComponent(slug)}`, { method: 'DELETE' });
-      if (!r.ok) {
-        const d = await r.json().catch(() => ({}));
-        throw new Error(d.message || 'Failed');
-      }
-      await Promise.all([loadStats(), loadEvents(), loadPayments(), loadUsers()]);
-    } catch (e) { alert('Failed to delete event: ' + (e.message || '')); }
-  }
-
-  async function deactivate(slug, btn) {
-    if (!confirm(`Deactivate event "${slug}"? Guests will no longer be able to upload.`)) return;
-    try {
-      const r = await adminFetch(`/api/admin/events/${slug}/deactivate`, { method: 'POST' });
-      if (!r.ok) throw new Error();
-      btn.replaceWith(Object.assign(document.createElement('span'), {
-        textContent: 'Inactive',
-        style: 'color:var(--ink-faint);font-size:.8rem',
-      }));
-    } catch { alert('Failed to deactivate event.'); }
-  }
+  // Expose for inline handlers
+  window.setPlan = setPlan; window.setVerified = setVerified; window.setActive = setActive;
+  window.verify = verify; window.reject = reject; window.refundPayment = refundPayment;
+  window.openEventEditor = openEventEditor; window.deleteEvent = deleteEvent;
 </script>
 </body>
 </html>
