@@ -75,6 +75,21 @@ console.log(`Cross-event isolation test`);
 console.log(`  Event A (${slugA}): ${spammers} concurrent reaction spammers for ${durationS}s`);
 console.log(`  Event B (${slugB}): 1 wall polling every 3s — should stay unaffected\n`);
 
+// Warm-up phase — 3 discarded polls per wall before the storm clock starts,
+// so the reported p95 reflects steady-state isolation rather than a cold
+// connection / cold prepared-statement cache on the first hit. Without this,
+// 10-sample p95 effectively = first-poll latency and gives a misleading
+// signal that the spammed event is "faster" than the quiet one.
+const WARMUP_POLLS = 3;
+process.stdout.write(`Warming pools for ${slugA} and ${slugB}... `);
+for (let i = 0; i < WARMUP_POLLS; i++) {
+  await Promise.all([
+    fetch(`${base}/api/uploads/${slugA}`, { headers: { 'X-Wall-Id': 'warmup-a' } }).then(r => r.text()).catch(() => {}),
+    fetch(`${base}/api/uploads/${slugB}`, { headers: { 'X-Wall-Id': 'warmup-b' } }).then(r => r.text()).catch(() => {}),
+  ]);
+}
+console.log('done.\n');
+
 const deadline = performance.now() + durationS * 1000;
 
 // Reaction storm on slugA.
