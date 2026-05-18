@@ -162,12 +162,50 @@ export function galleryExpiryFor(planId, eventDate = new Date()) {
 }
 
 /**
+ * Split the upload window symmetrically around the event date.
+ * The pattern is: <before> days + the event day itself + <after> days,
+ * with the event day counted as the middle "1" so the totals add up
+ * to the plan's uploadWindowDays.
+ *
+ *   Tala / Sinag (N=1):  0 + 1 + 0  = event day only
+ *   Dalisay      (N=7):  3 + 1 + 3  = 3 before + day-of + 3 after
+ *   Hiraya       (N=180): 89 + 1 + 90 = ~half-year on each side
+ *
+ * Slight asymmetry on even-total tiers (N=180 → 89/90) lands the
+ * extra day in the future, which matches user expectation that
+ * "after the event" gets the benefit of the doubt.
+ */
+export function uploadWindowSplit(planId) {
+  const days = resolvePlan(planId).uploadWindowDays;
+  return {
+    before: Math.floor((days - 1) / 2),
+    after:  Math.ceil((days - 1) / 2),
+  };
+}
+
+/**
+ * Compute when uploads start being accepted for an event.
+ * Centered window — see uploadWindowSplit() above.
+ * Returns an ISO timestamp.
+ */
+export function uploadWindowStartFor(planId, eventDate = new Date()) {
+  const { before } = uploadWindowSplit(planId);
+  const d = eventDate instanceof Date ? new Date(eventDate) : new Date(eventDate);
+  d.setUTCDate(d.getUTCDate() - before);
+  return d.toISOString();
+}
+
+/**
  * Compute when uploads should stop being accepted for an event.
+ * Returns the moment *after* the last allowed day (so the timestamp
+ * is the exclusive upper bound — convenient for `if (now < ends_at)`).
+ *
+ * For Dalisay (after=3): event_date + 3 days + 1 = midnight starting
+ * event+4, which means the last full day of uploads is event+3.
  */
 export function uploadWindowEndFor(planId, eventDate = new Date()) {
-  const plan  = resolvePlan(planId);
-  const start = eventDate instanceof Date ? eventDate : new Date(eventDate);
-  const end   = new Date(start);
-  end.setUTCDate(end.getUTCDate() + plan.uploadWindowDays);
-  return end.toISOString();
+  const { after } = uploadWindowSplit(planId);
+  const d = eventDate instanceof Date ? new Date(eventDate) : new Date(eventDate);
+  d.setUTCDate(d.getUTCDate() + after + 1);
+  return d.toISOString();
 }

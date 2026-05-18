@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'crypto';
 import { buildAppUrl } from '../utils/appUrl.js';
-import { PLANS, resolvePlan, galleryExpiryFor, uploadWindowEndFor } from '../lib/plans.js';
+import { PLANS, resolvePlan, galleryExpiryFor, uploadWindowStartFor, uploadWindowEndFor } from '../lib/plans.js';
 
 /**
  * Verify a PayMongo webhook signature.
@@ -97,18 +97,20 @@ async function applyTierUpgrade(db, { userId, tier, slug }) {
       [slug, userId],
     );
     if (evRows.length) {
-      const stampDate          = evRows[0].event_date || new Date();
-      const galleryExpiresAt   = galleryExpiryFor(plan.id, stampDate);
-      const uploadWindowEndsAt = uploadWindowEndFor(plan.id, stampDate);
+      const stampDate            = evRows[0].event_date || new Date();
+      const galleryExpiresAt     = galleryExpiryFor(plan.id, stampDate);
+      const uploadWindowStartsAt = uploadWindowStartFor(plan.id, stampDate);
+      const uploadWindowEndsAt   = uploadWindowEndFor(plan.id, stampDate);
 
       await db.query(
         `UPDATE events
-           SET is_paid               = true,
-               plan                  = $2,
-               gallery_expires_at    = $3,
-               upload_window_ends_at = $4
-         WHERE slug = $1 AND user_id = $5`,
-        [slug, plan.id, galleryExpiresAt, uploadWindowEndsAt, userId],
+           SET is_paid                 = true,
+               plan                    = $2,
+               gallery_expires_at      = $3,
+               upload_window_starts_at = $4,
+               upload_window_ends_at   = $5
+         WHERE slug = $1 AND user_id = $6`,
+        [slug, plan.id, galleryExpiresAt, uploadWindowStartsAt, uploadWindowEndsAt, userId],
       );
     }
   }

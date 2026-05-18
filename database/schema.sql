@@ -88,10 +88,15 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS events_remaining        INTEGER;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS tala_used BOOLEAN NOT NULL DEFAULT false;
 
 -- ── Per-event expiry stamps (computed from plan at creation time) ──
--- gallery_expires_at: when the wall + downloads soft-lock
--- upload_window_ends_at: when guests can no longer upload
-ALTER TABLE events ADD COLUMN IF NOT EXISTS gallery_expires_at     TIMESTAMPTZ;
-ALTER TABLE events ADD COLUMN IF NOT EXISTS upload_window_ends_at  TIMESTAMPTZ;
+-- gallery_expires_at:      when the wall + downloads soft-lock
+-- upload_window_starts_at: when guests can BEGIN uploading. NULL on
+--   legacy rows created before the May 2026 centered-window shift; the
+--   backend treats NULL as "no start check" (uploads always open until
+--   ends_at), so old events keep their original wider window.
+-- upload_window_ends_at:   when guests can no longer upload (exclusive)
+ALTER TABLE events ADD COLUMN IF NOT EXISTS gallery_expires_at      TIMESTAMPTZ;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS upload_window_starts_at TIMESTAMPTZ;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS upload_window_ends_at   TIMESTAMPTZ;
 
 -- ── Optional event details surfaced on the upload page ──
 -- venue:           free text, e.g. "Manila Hotel"

@@ -180,7 +180,7 @@ export default async function uploadRoutes(fastify) {
         // LEFT JOIN (not INNER) so we can distinguish owner_missing from not_found.
         const { rows } = await fastify.db.query(
           `SELECT e.id, e.slug, e.user_id, e.plan, e.is_active,
-                  e.gallery_expires_at, e.upload_window_ends_at,
+                  e.gallery_expires_at, e.upload_window_starts_at, e.upload_window_ends_at,
                   e.auto_approve, e.video_auto_approve, e.video_message_auto_approve,
                   e.couple_names, e.playback_burst_id, e.playback_burst_queue,
                   u.id AS owner_db_id, u.subscription_tier, u.is_active AS owner_is_active
@@ -235,6 +235,17 @@ export default async function uploadRoutes(fastify) {
 
     if (!isOwner && event.gallery_expires_at && new Date(event.gallery_expires_at) < new Date()) {
       throw { statusCode: 403, code: 'gallery_locked', message: 'Gallery archived. Uploads closed.' };
+    }
+    // Start-of-window gate: NULL means legacy event (centered model
+    // wasn't a thing when it was created) — skip the check so those
+    // events keep their original "open from creation" behavior.
+    if (!isOwner && event.upload_window_starts_at && new Date(event.upload_window_starts_at) > new Date()) {
+      throw {
+        statusCode: 403,
+        code: 'upload_window_not_open',
+        message: 'Uploads open closer to the event date.',
+        opens_at: event.upload_window_starts_at,
+      };
     }
     if (!isOwner && event.upload_window_ends_at && new Date(event.upload_window_ends_at) < new Date()) {
       throw { statusCode: 403, code: 'upload_window_closed', message: 'Upload window has ended.' };
@@ -710,7 +721,8 @@ export default async function uploadRoutes(fastify) {
       if (!inflight) {
         inflight = (async () => {
           const { rows: evRows } = await fastify.db.query(
-            `SELECT id, slug, couple_names, gallery_expires_at, upload_window_ends_at,
+            `SELECT id, slug, couple_names, gallery_expires_at,
+                    upload_window_starts_at, upload_window_ends_at,
                     playback_burst_id, playback_burst_queue
                FROM events WHERE slug = $1 AND is_active = true`, [slug],
           );
@@ -728,8 +740,9 @@ export default async function uploadRoutes(fastify) {
             uploads: ups,
             event:   ev,
             locks: {
-              gallery_locked: !!(ev.gallery_expires_at  && new Date(ev.gallery_expires_at)  < now),
-              uploads_closed: !!(ev.upload_window_ends_at && new Date(ev.upload_window_ends_at) < now),
+              gallery_locked:        !!(ev.gallery_expires_at      && new Date(ev.gallery_expires_at)      < now),
+              uploads_not_yet_open:  !!(ev.upload_window_starts_at && new Date(ev.upload_window_starts_at) > now),
+              uploads_closed:        !!(ev.upload_window_ends_at   && new Date(ev.upload_window_ends_at)   < now),
             },
           };
           // Build gzip once at cache-fill time. guest_count is sampled now
@@ -780,8 +793,9 @@ export default async function uploadRoutes(fastify) {
 
     const now = new Date();
     const locks = {
-      gallery_locked: !!(event.gallery_expires_at    && new Date(event.gallery_expires_at)    < now),
-      uploads_closed: !!(event.upload_window_ends_at && new Date(event.upload_window_ends_at) < now),
+      gallery_locked:        !!(event.gallery_expires_at      && new Date(event.gallery_expires_at)      < now),
+      uploads_not_yet_open:  !!(event.upload_window_starts_at && new Date(event.upload_window_starts_at) > now),
+      uploads_closed:        !!(event.upload_window_ends_at   && new Date(event.upload_window_ends_at)   < now),
     };
 
     return { uploads: hydratedUploads, event, locks, guest_count: getPresenceCount(slug) };

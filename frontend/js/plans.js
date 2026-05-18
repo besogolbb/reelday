@@ -135,3 +135,14 @@ export function nextTier(planId) {
   const idx = PLAN_ORDER.indexOf(resolvePlan(planId).id);
   return idx >= 0 && idx < PLAN_ORDER.length - 1 ? PLANS[PLAN_ORDER[idx + 1]] : null;
 }
+
+/* Upload window is centered on the event date — see backend/lib/plans.js
+   for the full explanation. before + 1 (event day) + after = uploadWindowDays.
+   Frontend uses this to display "Uploads open in 3 days" / "X days left" copy. */
+export function uploadWindowSplit(planId) {
+  const days = resolvePlan(planId).uploadWindowDays;
+  return {
+    before: Math.floor((days - 1) / 2),
+    after:  Math.ceil((days - 1) / 2),
+  };
+}

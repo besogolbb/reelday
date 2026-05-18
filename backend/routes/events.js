@@ -1,5 +1,5 @@
 import { generateQR } from '../utils/qr.js';
-import { resolvePlan, galleryExpiryFor, uploadWindowEndFor } from '../lib/plans.js';
+import { resolvePlan, galleryExpiryFor, uploadWindowStartFor, uploadWindowEndFor } from '../lib/plans.js';
 import { verifyToken } from '../plugins/auth.js';
 
 // Sanitised, no-suffix slug from the couple/celebrant names. We try this
@@ -110,9 +110,10 @@ export default async function eventRoutes(fastify) {
       }
     }
 
-    const stampDate          = event_date || new Date();
-    const galleryExpiresAt   = galleryExpiryFor(planForEvent.id, stampDate);
-    const uploadWindowEndsAt = uploadWindowEndFor(planForEvent.id, stampDate);
+    const stampDate            = event_date || new Date();
+    const galleryExpiresAt     = galleryExpiryFor(planForEvent.id, stampDate);
+    const uploadWindowStartsAt = uploadWindowStartFor(planForEvent.id, stampDate);
+    const uploadWindowEndsAt   = uploadWindowEndFor(planForEvent.id, stampDate);
 
     // Slug allocation: try the clean name first ("juan-and-maria"); only
     // append a random suffix when that exact slug already exists. We
@@ -128,9 +129,9 @@ export default async function eventRoutes(fastify) {
         const { rows } = await fastify.db.query(
           `INSERT INTO events (
              slug, couple_names, event_type, event_date, plan, user_id,
-             gallery_expires_at, upload_window_ends_at
+             gallery_expires_at, upload_window_starts_at, upload_window_ends_at
            )
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
            RETURNING *`,
           [
             slug,
@@ -140,6 +141,7 @@ export default async function eventRoutes(fastify) {
             planForEvent.id,
             userId,
             galleryExpiresAt,
+            uploadWindowStartsAt,
             uploadWindowEndsAt,
           ],
         );
@@ -233,6 +235,11 @@ export default async function eventRoutes(fastify) {
     const galleryLocked = event.gallery_expires_at
       ? new Date(event.gallery_expires_at) < now
       : false;
+    // uploads_not_yet_open is the centered-window pre-opening state.
+    // NULL on legacy rows -> false (no pre-event gating, just like before).
+    const uploadsNotYetOpen = event.upload_window_starts_at
+      ? new Date(event.upload_window_starts_at) > now
+      : false;
     const uploadsClosed = event.upload_window_ends_at
       ? new Date(event.upload_window_ends_at) < now
       : false;
@@ -248,8 +255,9 @@ export default async function eventRoutes(fastify) {
         features:     planInfo.features,
       },
       locks: {
-        gallery_locked:  galleryLocked,
-        uploads_closed:  uploadsClosed,
+        gallery_locked:       galleryLocked,
+        uploads_not_yet_open: uploadsNotYetOpen,
+        uploads_closed:       uploadsClosed,
       },
     };
   });

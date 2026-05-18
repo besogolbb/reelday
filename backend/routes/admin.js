@@ -1,6 +1,6 @@
 import { timingSafeEqual } from 'crypto';
 import { ListObjectsV2Command, DeleteObjectsCommand } from '@aws-sdk/client-s3';
-import { resolvePlan, galleryExpiryFor, uploadWindowEndFor } from '../lib/plans.js';
+import { resolvePlan, galleryExpiryFor, uploadWindowStartFor, uploadWindowEndFor } from '../lib/plans.js';
 import { extractStorageKey } from '../lib/storageKeys.js';
 import { syncEventToGcal, deleteGcalEvent } from '../lib/gcal.js';
 import { baseSlug, randomSuffix, isSlugCollision } from './events.js';
@@ -432,6 +432,7 @@ export default async function adminRoutes(fastify) {
     const event_date        = b.event_date || null;
     const stampDate         = event_date ? new Date(event_date) : new Date();
     const galleryExpiresAt  = galleryExpiryFor(resolved.id, stampDate);
+    const uploadStartAt     = uploadWindowStartFor(resolved.id, stampDate);
     const uploadEndAt       = uploadWindowEndFor(resolved.id, stampDate);
     const is_paid           = b.is_paid === false ? false : true; // default true for admin-create
     const is_active         = b.is_active === false ? false : true;
@@ -444,11 +445,11 @@ export default async function adminRoutes(fastify) {
         const { rows } = await fastify.db.query(
           `INSERT INTO events (
              slug, couple_names, event_type, event_date, plan, user_id,
-             gallery_expires_at, upload_window_ends_at,
+             gallery_expires_at, upload_window_starts_at, upload_window_ends_at,
              is_paid, is_active,
              venue, event_time, welcome_message
            )
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
            RETURNING *`,
           [
             slug,
@@ -458,6 +459,7 @@ export default async function adminRoutes(fastify) {
             resolved.id,
             user_id,
             galleryExpiresAt,
+            uploadStartAt,
             uploadEndAt,
             is_paid,
             is_active,
@@ -499,7 +501,7 @@ export default async function adminRoutes(fastify) {
     'couple_names', 'event_type', 'event_date', 'plan',
     'is_paid', 'is_active', 'user_id',
     'venue', 'event_time', 'welcome_message',
-    'gallery_expires_at', 'upload_window_ends_at',
+    'gallery_expires_at', 'upload_window_starts_at', 'upload_window_ends_at',
   ]);
   fastify.patch('/admin/events/:slug', async (request, reply) => {
     const { slug } = request.params;
@@ -523,6 +525,7 @@ export default async function adminRoutes(fastify) {
     const dateChanged = b.event_date !== undefined;
     if ((planChanged || dateChanged) &&
         b.gallery_expires_at === undefined &&
+        b.upload_window_starts_at === undefined &&
         b.upload_window_ends_at === undefined) {
       const { rows: existing } = await fastify.db.query(
         'SELECT plan, event_date FROM events WHERE slug = $1',
@@ -533,9 +536,10 @@ export default async function adminRoutes(fastify) {
       const effDate = b.event_date !== undefined ? b.event_date : existing[0].event_date;
       const stampDate = effDate ? new Date(effDate) : new Date();
       const resolved = resolvePlan(effPlan);
-      b.gallery_expires_at    = galleryExpiryFor(resolved.id, stampDate);
-      b.upload_window_ends_at = uploadWindowEndFor(resolved.id, stampDate);
-      cols.push('gallery_expires_at', 'upload_window_ends_at');
+      b.gallery_expires_at      = galleryExpiryFor(resolved.id, stampDate);
+      b.upload_window_starts_at = uploadWindowStartFor(resolved.id, stampDate);
+      b.upload_window_ends_at   = uploadWindowEndFor(resolved.id, stampDate);
+      cols.push('gallery_expires_at', 'upload_window_starts_at', 'upload_window_ends_at');
     }
 
     // Normalize plan to lowercase (validated above) before persisting.
@@ -753,16 +757,19 @@ export default async function adminRoutes(fastify) {
       if (!rows.length) return reply.status(404).send({ error: true, message: 'Event not found' });
       const plan      = resolvePlan(rows[0].tier);
       const stampDate = rows[0].event_date || new Date();
-      const win       = uploadWindowEndFor(plan.id, stampDate);
+      const winStart  = uploadWindowStartFor(plan.id, stampDate);
+      const winEnd    = uploadWindowEndFor(plan.id, stampDate);
       const gal       = galleryExpiryFor(plan.id, stampDate);
       const { rows: out } = await fastify.db.query(
         `UPDATE events
-            SET plan                  = $2,
-                upload_window_ends_at = $3,
-                gallery_expires_at    = $4
+            SET plan                    = $2,
+                upload_window_starts_at = $3,
+                upload_window_ends_at   = $4,
+                gallery_expires_at      = $5
           WHERE slug = $1
-          RETURNING slug, plan, event_date, upload_window_ends_at, gallery_expires_at`,
-        [slug, plan.id, win, gal],
+          RETURNING slug, plan, event_date,
+                    upload_window_starts_at, upload_window_ends_at, gallery_expires_at`,
+        [slug, plan.id, winStart, winEnd, gal],
       );
       return { success: true, event: out[0], applied: { restamp: true, plan: plan.id } };
     }

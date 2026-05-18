@@ -213,6 +213,14 @@ const MIGRATIONS = `
   -- Host can override the event-type-derived theme for the microsite.
   ALTER TABLE events ADD COLUMN IF NOT EXISTS theme_override VARCHAR(40);
 
+  -- ── Centered upload window ──
+  -- Upload window switched from "open-ended forward from event_date" to
+  -- "centered ±N days around event_date" in May 2026. New column stores
+  -- the inclusive lower bound; legacy rows stay NULL and the backend
+  -- treats NULL as "no start check" so previously-created events keep
+  -- their original wider window (uploads always allowed before ends_at).
+  ALTER TABLE events ADD COLUMN IF NOT EXISTS upload_window_starts_at TIMESTAMPTZ;
+
   -- ── Free-tier lifetime cap ──
   -- Tala is "1 free event per account, ever" — without this column the
   -- count-based active-events check in events.js lets a Tala user
