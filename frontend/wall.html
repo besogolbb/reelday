@@ -1426,47 +1426,13 @@
       animation: sdeFadeIn .35s ease both;
     }
     #sde-takeover.visible { display: flex; }
-    #sde-video {
-      max-width: 100vw; max-height: 100vh;
-      width: 100%; height: 100%; object-fit: contain;
-      background: #000;
+    /* The iframe IS the player. Loading spinner, tap-for-sound, and
+       letterboxing all live inside /sde-play.html now. */
+    #sde-frame {
+      width: 100%; height: 100%;
+      border: 0; background: #000;
+      display: block;
     }
-    #sde-mute-hint {
-      position: absolute; bottom: 10vh; left: 50%; transform: translateX(-50%);
-      display: none; align-items: center; gap: 10px;
-      background: rgba(0,0,0,.78); color: #fff;
-      border: 1px solid rgba(255,255,255,.18);
-      padding: 14px 28px; border-radius: 999px;
-      font-family: var(--mono); font-size: 14px; letter-spacing: .15em;
-      text-transform: uppercase; cursor: pointer;
-      backdrop-filter: blur(10px);
-    }
-    #sde-mute-hint.visible { display: inline-flex; }
-    /* Loading indicator shown while the SDE mp4 prebuffers. Hides
-       once canplaythrough fires (browser thinks it can sustain
-       playback). Without this prebuffer wait, the user gets "brief
-       freezes every few seconds" — classic streaming-buffer
-       exhaustion on residential connections with the ultrafast
-       preset's larger files. */
-    #sde-loading {
-      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      display: none; align-items: center; gap: 12px;
-      background: rgba(0,0,0,.7); color: #fff;
-      border: 1px solid rgba(255,255,255,.18);
-      padding: 18px 32px; border-radius: 999px;
-      font-family: var(--mono); font-size: 14px; letter-spacing: .18em;
-      text-transform: uppercase;
-      backdrop-filter: blur(10px);
-    }
-    #sde-loading.visible { display: inline-flex; }
-    #sde-loading .sde-spinner {
-      width: 14px; height: 14px;
-      border: 2px solid rgba(255,255,255,.3);
-      border-top-color: #fff;
-      border-radius: 50%;
-      animation: sde-loading-spin 0.9s linear infinite;
-    }
-    @keyframes sde-loading-spin { to { transform: rotate(360deg); } }
     @keyframes sdeFadeIn { from { opacity: 0; } to { opacity: 1; } }
 
     /* ── Floating emojis ──────────────────────────────────────
@@ -1794,9 +1760,13 @@
      Shown when host taps "Play on wall" in dashboard; hidden when
      host taps Stop. Video loops until cleared. -->
 <div id="sde-takeover" aria-hidden="true">
-  <video id="sde-video" playsinline preload="auto" loop></video>
-  <div id="sde-loading"><span class="sde-spinner"></span><span>Loading reel</span></div>
-  <div id="sde-mute-hint" role="button" tabindex="0">🔊 Tap for sound</div>
+  <!-- Isolated player: own JS context / network pool / decoder slot.
+       The wall's 1Hz polling + gallery videos + music + emoji + huge
+       DOM were starving in-page playback (stutter). The iframe loads
+       /sde-play.html which does nothing but play the reel. -->
+  <iframe id="sde-frame" title="Same Day Edit"
+          allow="autoplay; fullscreen"
+          referrerpolicy="no-referrer"></iframe>
 </div>
 
 <!-- ════ BOTTOM-RIGHT CONTROLS (sound + fullscreen) ═══════ -->
@@ -4195,27 +4165,29 @@
     } catch { /* network blip — try again next tick */ }
   }
 
-  // ── SDE wall-reveal takeover (Slice 2D) ──────────────────
-  // Driven by the sde_play block in the poll response. Same-request_at
-  // → keep current state. New request_at → restart from frame 0.
-  // Null → exit takeover. Video loops while takeover is active so the
-  // host can leave it on for ambient replay; they tap Stop in the
-  // dashboard when ready to return to the gallery.
+  // ── SDE wall-reveal takeover (Slice 2D, iframe-isolated) ──
+  // The reel plays inside an <iframe src="/sde-play.html?…">, NOT an
+  // in-page <video>. The wall is too busy (1Hz polling, gallery
+  // videos, music subsystem, emoji animations, huge DOM) — in-page
+  // playback stuttered even after freeing the obvious culprits. The
+  // iframe gets its own JS context, network connection pool, and
+  // decoder slot. This function now only owns the takeover LIFECYCLE
+  // (when to mount / unmount the iframe); playback, buffering, and
+  // sound all live in /sde-play.html.
+  //
+  // Same-request_at → no-op. New request_at → (re)mount iframe.
+  // Null → unmount + resume gallery.
   function handleSdePlay(playSig) {
-    const overlay  = document.getElementById('sde-takeover');
-    const video    = document.getElementById('sde-video');
-    const muteHint = document.getElementById('sde-mute-hint');
-    if (!overlay || !video) return;
+    const overlay = document.getElementById('sde-takeover');
+    const frame   = document.getElementById('sde-frame');
+    if (!overlay || !frame) return;
 
-    const loadingEl = document.getElementById('sde-loading');
-
-    // First poll after page load: if the server reports an active
-    // play signal, don't auto-enter takeover — refreshing the wall
-    // shouldn't surprise-resume a reveal mid-event (and avoids stale
-    // signals from forgotten Stops yesterday turning into ghost
-    // playback on next event setup). Remember the requested_at so
-    // we don't fire when subsequent polls return the same one; only
-    // a NEW requested_at (host clicks Play again) triggers takeover.
+    // First poll after page load: if the server reports an active play
+    // signal, DON'T auto-enter takeover — refreshing the wall shouldn't
+    // surprise-resume a reveal (and stale signals from a forgotten Stop
+    // shouldn't ghost-play on next event setup). Remember requested_at
+    // so identical subsequent polls don't fire; only a NEW one (host
+    // clicks Play again) triggers takeover.
     if (!sdeFirstPollDone) {
       sdeFirstPollDone = true;
       if (playSig) {
@@ -4228,20 +4200,16 @@
     if (!playSig) {
       if (sdePlayingRequestedAt !== null) {
         sdePlayingRequestedAt = null;
-        try { video.pause(); } catch {}
-        video.removeAttribute('src');
-        try { video.load(); } catch {}
+        // about:blank tears down the iframe document → its <video>,
+        // network connections, and decoder are fully released.
+        frame.src = 'about:blank';
         overlay.classList.remove('visible');
         overlay.setAttribute('aria-hidden', 'true');
-        if (muteHint) muteHint.classList.remove('visible');
-        if (loadingEl) loadingEl.classList.remove('visible');
 
-        // Resume the gallery — playback was fully released on takeover
-        // entry (src removed, decoders freed). advance() re-attaches
-        // src via showSlide naturally — we don't try to resume the
-        // interrupted slide because (a) the audience already saw it
-        // pre-reveal, and (b) re-loading and seeking back would just
-        // add buffer-stall jank for no gain.
+        // Resume the gallery — media was fully released on entry.
+        // advance() re-attaches slide src via showSlide naturally; we
+        // skip resuming the interrupted slide (audience already saw it
+        // pre-reveal, and re-seek would just add buffer jank).
         try {
           if (sdeWasMusicPlaying && bgMusic) bgMusic.play().catch(() => {});
         } catch {}
@@ -4254,17 +4222,12 @@
       return;
     }
 
-    // Same play request as before — already showing, nothing to do.
+    // Same play request as before — iframe already mounted, nothing to do.
     if (playSig.requested_at === sdePlayingRequestedAt) return;
 
-    // FULLY RELEASE the gallery media elements before starting
-    // takeover. Just pausing isn't enough — even paused, vidA/vidB
-    // keep their src loaded and may hold hardware decoder + memory
-    // resources. Same URL plays smoothly in a standalone tab but
-    // stutters on the wall (user-reported 2026-05-18) → contention
-    // from paused-but-loaded gallery videos. Removing src + load()
-    // fully releases everything; advance() on takeover EXIT will
-    // re-attach src naturally via showSlide.
+    // FULLY RELEASE gallery media before mounting the iframe. Even
+    // paused, vidA/vidB keep src loaded and hold decoder + memory.
+    // Freeing them gives the iframe's player a clean decoder slot.
     const releaseVid = v => {
       if (!v) return;
       try { v.pause(); } catch {}
@@ -4276,87 +4239,23 @@
     try {
       if (bgMusic) {
         sdeWasMusicPlaying = !bgMusic.paused;
-        bgMusic.pause();
-        // Don't removeAttribute('src') on bgMusic — the music subsystem
-        // re-attaches on resume via its own logic; tearing the src down
-        // would require us to know its current source URL to restore.
-        // Audio decoder load is much smaller than video anyway.
+        bgMusic.pause(); // keep src — music subsystem owns its URL state
       }
     } catch {}
     try { clearTimeout(slideTimer); slideTimer = null; } catch {}
-
-    // Hide the emoji container during takeover. Its CSS animations
-    // run on the GPU compositor and don't typically block playback,
-    // but on weaker devices they add up; cheap to disable since the
-    // takeover covers it visually anyway.
     const emojiEl = document.getElementById('emoji-container');
     if (emojiEl) emojiEl.style.display = 'none';
 
-    // Enter or restart takeover. First version tried unmuted autoplay
-    // and fell back to muted on rejection — but the unmuted .play()
-    // sometimes resolved (no .catch fired) WHILE the video stayed
-    // frozen at frame 0 because the actual playback was silently
-    // blocked. Symptom: poster shows, never advances.
-    //
-    // Robust approach: ALWAYS start muted (browsers universally permit
-    // muted autoplay). Attempt to unmute immediately once playback
-    // begins — works on sites with media engagement (i.e., the host
-    // already tapped the wall's #sound-btn before the event). Mute
-    // hint is shown pre-emptively and auto-hides if the silent unmute
-    // sticks; otherwise it stays as the one-tap unlock.
+    // Mount (or remount) the isolated player. Setting iframe.src to a
+    // fresh URL loads a brand-new document — even on a "restart" this
+    // gives us a clean context with no leftover buffer state.
     sdePlayingRequestedAt = playSig.requested_at;
-    console.info('[sde] takeover starting', playSig.video_url);
-
-    video.muted = true;     // start muted — autoplay always permitted
-    video.loop  = true;
-    if (playSig.poster_url) video.poster = playSig.poster_url;
-    video.src = playSig.video_url;
-    try { video.load(); } catch {} // explicit reset, defensive
-
+    let fsrc = '/sde-play.html?src=' + encodeURIComponent(playSig.video_url);
+    if (playSig.poster_url) fsrc += '&poster=' + encodeURIComponent(playSig.poster_url);
+    console.info('[sde] mounting takeover iframe', fsrc);
+    frame.src = fsrc;
     overlay.classList.add('visible');
     overlay.setAttribute('aria-hidden', 'false');
-
-    // Always show the mute hint up front — single tap unmutes via a
-    // guaranteed user gesture. It hides itself below if the silent
-    // unmute attempt succeeds.
-    if (muteHint) {
-      muteHint.classList.add('visible');
-      muteHint.onclick = () => {
-        video.muted = false;
-        if (!video.muted) muteHint.classList.remove('visible');
-      };
-    }
-
-    // Show loading indicator while the browser prefetches enough data.
-    // Without this wait, residential connections + the ultrafast-preset
-    // mp4 (~150-300 MB for a 4-min reel) produce "brief freezes every
-    // few seconds" — buffer-exhaustion stutter (user-reported 2026-05-18).
-    if (loadingEl) loadingEl.classList.add('visible');
-
-    let started = false;
-    const startPlayback = (reason) => {
-      if (started) return;
-      started = true;
-      if (loadingEl) loadingEl.classList.remove('visible');
-      console.info('[sde] takeover starting playback (' + reason + ')');
-      video.play().then(() => {
-        console.info('[sde] takeover playing (muted)');
-        // DO NOT auto-unmute (https://goo.gl/xX8pDD) — Chrome pauses
-        // the video if the unmute is rejected. Mute hint handles sound.
-      }).catch(err => {
-        console.warn('[sde] takeover play() rejected even muted:', err && err.message);
-      });
-    };
-
-    // Prefer canplaythrough (browser thinks it can sustain playback);
-    // fall back to canplay after 6 s (some content fires canplaythrough
-    // slowly even when ready); hard fallback after 15 s so a slow
-    // connection can't trap the takeover forever.
-    video.addEventListener('canplaythrough', () => startPlayback('canplaythrough'), { once: true });
-    setTimeout(() => {
-      if (!started && video.readyState >= 3) startPlayback('canplay-fallback');
-    }, 6000);
-    setTimeout(() => startPlayback('hard-fallback'), 15000);
   }
 
   async function pollBurst() {

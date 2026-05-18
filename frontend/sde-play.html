@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Reelday — Same Day Edit</title>
+<!--
+  Minimal isolated SDE player. Loaded in an <iframe> by wall.html when
+  the host taps "Play on wall". The whole point is ISOLATION: this page
+  has its own JS context, its own network connection pool, and its own
+  decoder slot — none of the wall's 1Hz polling, gallery videos, music
+  subsystem, emoji animations, or giant DOM compete with playback.
+
+  Inputs (query string):
+    src    — the rendered reel mp4 URL (required)
+    poster — poster JPEG URL (optional)
+
+  No polling here. The PARENT wall owns the takeover lifecycle: it
+  creates this iframe on play, and tears it down (src=about:blank) on
+  stop. This page just plays.
+-->
+<style>
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    background: #000; overflow: hidden;
+  }
+  #v {
+    position: fixed; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: contain; background: #000;
+  }
+  #loading, #sound {
+    position: fixed; left: 50%;
+    color: #fff; background: rgba(0,0,0,.7);
+    border: 1px solid rgba(255,255,255,.18);
+    padding: 16px 30px; border-radius: 999px;
+    font: 14px/1 ui-monospace, Menlo, Consolas, monospace;
+    letter-spacing: .16em; text-transform: uppercase;
+    display: none; align-items: center; gap: 12px;
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  }
+  #loading { top: 50%; transform: translate(-50%, -50%); }
+  #sound   { bottom: 9vh; transform: translateX(-50%); cursor: pointer; }
+  #loading.on, #sound.on { display: inline-flex; }
+  .spin {
+    width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,.3); border-top-color: #fff;
+    border-radius: 50%; animation: s .9s linear infinite;
+  }
+  @keyframes s { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+  <video id="v" playsinline preload="auto" loop muted></video>
+  <div id="loading"><span class="spin"></span><span>Loading reel</span></div>
+  <div id="sound" role="button" tabindex="0">🔊 Tap for sound</div>
+<script>
+  (function () {
+    var qs      = new URLSearchParams(location.search);
+    var src     = qs.get('src');
+    var poster  = qs.get('poster');
+    var v       = document.getElementById('v');
+    var loading = document.getElementById('loading');
+    var sound   = document.getElementById('sound');
+
+    if (!src) { document.body.textContent = ''; return; }
+
+    if (poster) v.poster = poster;
+    v.muted = true;   // muted autoplay is universally permitted
+    v.loop  = true;
+    v.src   = src;
+    try { v.load(); } catch (e) {}
+
+    loading.classList.add('on');
+
+    var started = false;
+    function start(reason) {
+      if (started) return;
+      started = true;
+      loading.classList.remove('on');
+      console.info('[sde-play] starting (' + reason + ')');
+      var p = v.play();
+      if (p && p.then) {
+        p.then(function () {
+          // Do NOT auto-unmute: browsers PAUSE the video if an unmute
+          // is rejected without a user gesture (https://goo.gl/xX8pDD).
+          // The sound hint is the gesture path. A tap anywhere in this
+          // iframe counts as activation for this iframe's context.
+          sound.classList.add('on');
+        }).catch(function (err) {
+          console.warn('[sde-play] play() failed:', err && err.message);
+        });
+      } else {
+        sound.classList.add('on');
+      }
+    }
+
+    // Prefer canplaythrough (browser thinks it can sustain playback).
+    // Fallbacks so a slow connection can't trap a black screen forever.
+    v.addEventListener('canplaythrough', function () { start('canplaythrough'); }, { once: true });
+    setTimeout(function () { if (!started && v.readyState >= 3) start('canplay-fallback'); }, 8000);
+    setTimeout(function () { start('hard-fallback'); }, 18000);
+
+    function unmute() {
+      v.muted = false;
+      if (!v.muted) sound.classList.remove('on');
+    }
+    sound.addEventListener('click', unmute);
+    sound.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') unmute();
+    });
+  })();
+</script>
+</body>
+</html>
