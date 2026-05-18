@@ -48,12 +48,26 @@
     border-radius: 50%; animation: s .9s linear infinite;
   }
   @keyframes s { to { transform: rotate(360deg); } }
+  /* Thin "how-much-left" line pinned to the very bottom. No transition
+     on the fill so the loop wrap (currentTime → 0) snaps back instantly
+     instead of reverse-animating across the screen. timeupdate fires
+     ~4×/sec which is smooth enough for a 4-min reel. */
+  #progress {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    height: 3px; background: rgba(255,255,255,.12);
+    pointer-events: none;
+  }
+  #progress > #progressFill {
+    height: 100%; width: 0%;
+    background: rgba(255,255,255,.85);
+  }
 </style>
 </head>
 <body>
   <video id="v" playsinline preload="auto" loop muted></video>
   <div id="loading"><span class="spin"></span><span>Loading reel</span></div>
   <div id="sound" role="button" tabindex="0">🔊 Tap for sound</div>
+  <div id="progress"><div id="progressFill"></div></div>
 <script>
   (function () {
     var qs      = new URLSearchParams(location.search);
@@ -62,6 +76,7 @@
     var v       = document.getElementById('v');
     var loading = document.getElementById('loading');
     var sound   = document.getElementById('sound');
+    var fill    = document.getElementById('progressFill');
 
     if (!src) { document.body.textContent = ''; return; }
 
@@ -100,6 +115,14 @@
     v.addEventListener('canplaythrough', function () { start('canplaythrough'); }, { once: true });
     setTimeout(function () { if (!started && v.readyState >= 3) start('canplay-fallback'); }, 8000);
     setTimeout(function () { start('hard-fallback'); }, 18000);
+
+    // Drive the progress fill from the video's own clock. Guard NaN
+     // duration (fires before metadata loads).
+    v.addEventListener('timeupdate', function () {
+      if (isFinite(v.duration) && v.duration > 0) {
+        fill.style.width = (v.currentTime / v.duration * 100) + '%';
+      }
+    });
 
     function unmute() {
       v.muted = false;
