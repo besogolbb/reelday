@@ -71,7 +71,9 @@
      reel; the icon's only job is "get me in". Re-appears if the user
      exits fullscreen (Esc) so they can tap back in. */
   #fsBtn {
-    position: fixed; top: 14px; right: 14px;
+    /* Bottom-right, lifted just above the progress bar (6 px tall)
+       so the button doesn't sit on top of the fill. */
+    position: fixed; right: 14px; bottom: 18px;
     width: 44px; height: 44px;
     background: rgba(0,0,0,.55);
     border: 1px solid rgba(255,255,255,.22);
