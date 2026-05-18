@@ -230,9 +230,11 @@ async function loadGate(db, slug) {
     return null;
   }
   const r = rows[0];
-  // Effective tier follows the owner's current account (reactions.js
-  // pattern); legacy anon events with no user fall back to events.plan.
-  const effectiveTier = r.subscription_tier || r.plan || 'tala';
+  // Per-event tier: events.plan is the source of truth (locked in at
+  // create / upgrade time, so a Dalisay event keeps its website even
+  // if the owner later switches to Sinag). subscription_tier is the
+  // legacy fallback for rows created before per-event plans existed.
+  const effectiveTier = r.plan || r.subscription_tier || 'tala';
   const allowed = planHasFeature(effectiveTier, 'website');
   const entry = {
     expires: now + GATE_TTL_MS,

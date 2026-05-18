@@ -218,23 +218,15 @@ export default async function eventRoutes(fastify) {
       [event.id],
     );
 
-    // Effective plan follows the owner's current account tier.
-    // Tolerate the column not existing yet on un-migrated DBs.
-    let effectiveTier = event.plan;
-    if (event.user_id) {
-      try {
-        const { rows: ownerRows } = await fastify.db.query(
-          `SELECT subscription_tier FROM users WHERE id = $1`,
-          [event.user_id],
-        );
-        if (ownerRows.length && ownerRows[0].subscription_tier) {
-          effectiveTier = ownerRows[0].subscription_tier;
-        }
-      } catch (e) {
-        fastify.log.warn({ err: e.message }, 'subscription_tier lookup failed — schema may not be migrated');
-      }
-    }
-    const planInfo = resolvePlan(effectiveTier);
+    // Per-event tier (locked in at create / upgrade time). The wall +
+    // upload page gate features off the event's plan, NOT the owner's
+    // current account tier — so an event the host paid for as Dalisay
+    // keeps its audio notes / polls / website even if the host later
+    // buys a Sinag credit (which would flip subscription_tier to
+    // 'sinag'). Conversely, upgrading the user later doesn't
+    // retroactively unlock paid features on an existing free event.
+    // Matches the project-plan-tiers-event-scoped memory.
+    const planInfo = resolvePlan(event.plan);
 
     // Soft-lock state derived from stored expiry stamps
     const now = new Date();

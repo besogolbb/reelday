@@ -45,12 +45,12 @@ export default async function pollRoutes(fastify) {
 
   /**
    * Resolve event by slug. If `requireOwner`, also assert request.user.id
-   * owns the event AND that the owner's CURRENT plan tier includes polls.
+   * owns the event AND that the event's per-event plan includes polls.
    * Returns { event, plan } or sends a 401/403/404 and returns null.
    */
   async function loadEvent(slug, request, reply, { requireOwner }) {
     const { rows } = await fastify.db.query(
-      `SELECT e.id, e.is_active, e.user_id, u.subscription_tier
+      `SELECT e.id, e.is_active, e.user_id, e.plan, u.subscription_tier
          FROM events e
          LEFT JOIN users u ON u.id = e.user_id
         WHERE e.slug = $1`,
@@ -61,7 +61,9 @@ export default async function pollRoutes(fastify) {
       return null;
     }
     const event = rows[0];
-    const plan  = resolvePlan(event.subscription_tier || 'tala');
+    // Per-event tier: events.plan wins. subscription_tier is the legacy
+    // fallback for rows created before per-event plans existed.
+    const plan  = resolvePlan(event.plan || event.subscription_tier || 'tala');
     if (!plan.features?.polls) {
       reply.status(403).send({
         error: true,
@@ -345,7 +347,7 @@ export default async function pollRoutes(fastify) {
   // expired polls so a host who forgot to stop one doesn't strand it.
   fastify.get('/events/:slug/polls/active', async (request, reply) => {
     const { rows: eventRows } = await fastify.db.query(
-      `SELECT e.id, u.subscription_tier
+      `SELECT e.id, e.plan, u.subscription_tier
          FROM events e
          LEFT JOIN users u ON u.id = e.user_id
         WHERE e.slug = $1 AND e.is_active = true`,
@@ -354,7 +356,8 @@ export default async function pollRoutes(fastify) {
     if (!eventRows.length) return reply.status(404).send({ error: true, message: 'Event not found' });
     const eventId = eventRows[0].id;
 
-    const plan = resolvePlan(eventRows[0].subscription_tier || 'tala');
+    // Per-event tier (see loadEvent above).
+    const plan = resolvePlan(eventRows[0].plan || eventRows[0].subscription_tier || 'tala');
     if (!plan.features?.polls) {
       reply.header('Cache-Control', 'no-store');
       return { poll: null };

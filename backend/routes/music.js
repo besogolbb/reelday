@@ -42,7 +42,8 @@ export default async function musicRoutes(fastify) {
   // owns the event. Returns { event, plan } or sends a response and null.
   async function loadEvent(slug, request, reply, { requireOwner = false, requireCustomMusic = false } = {}) {
     const { rows } = await fastify.db.query(
-      `SELECT e.id, e.is_active, e.user_id, e.music_playlist_id, e.music_enabled,
+      `SELECT e.id, e.is_active, e.user_id, e.plan,
+              e.music_playlist_id, e.music_enabled,
               u.subscription_tier
          FROM events e
          LEFT JOIN users u ON u.id = e.user_id
@@ -54,7 +55,8 @@ export default async function musicRoutes(fastify) {
       return null;
     }
     const event = rows[0];
-    const plan  = resolvePlan(event.subscription_tier || 'tala');
+    // Per-event tier (events.plan first, subscription_tier as legacy fallback).
+    const plan  = resolvePlan(event.plan || event.subscription_tier || 'tala');
 
     if (requireOwner) {
       if (!request.user?.id) {
@@ -84,7 +86,18 @@ export default async function musicRoutes(fastify) {
   fastify.get('/events/:slug/music', async (request, reply) => {
     const ctx = await loadEvent(request.params.slug, request, reply, {});
     if (!ctx) return;
-    const { event } = ctx;
+    const { event, plan } = ctx;
+
+    // Tala wall is silent — matches the "Static Slideshow on cheap TVs"
+    // positioning and gives Sinag+ a real audio differentiator beyond
+    // just being able to upload custom tracks (which is the
+    // `customMusic` gate elsewhere in this file). Even if the host had
+    // a curated playlist or uploaded tracks before downgrading, the
+    // wall stops playing them once the event is on the Tala plan.
+    if (plan.id === 'tala') {
+      reply.header('Cache-Control', 'no-store');
+      return { playlist: null };
+    }
 
     if (event.music_enabled === false) {
       reply.header('Cache-Control', 'no-store');

@@ -202,7 +202,10 @@ export default async function uploadRoutes(fastify) {
           throw { statusCode: 403, code: 'owner_missing', message: 'Event owner account no longer exists.' };
         }
 
-        const effectiveTier = row.subscription_tier || row.plan;
+        // Per-event tier: events.plan is the source of truth (locked in at
+        // create / upgrade time). users.subscription_tier is the legacy
+        // fallback for rows created before per-event plans existed.
+        const effectiveTier = row.plan || row.subscription_tier;
         const plan = resolvePlan(effectiveTier);
         const event = row;
 

@@ -60,7 +60,7 @@ export default async function reactionsRoutes(fastify) {
     }
 
     const { rows } = await fastify.db.query(
-      `SELECT e.id, e.is_active, e.user_id, u.subscription_tier
+      `SELECT e.id, e.is_active, e.user_id, e.plan, u.subscription_tier
          FROM events e
          LEFT JOIN users u ON u.id = e.user_id
         WHERE e.slug = $1`,
@@ -72,7 +72,9 @@ export default async function reactionsRoutes(fastify) {
       return null;
     }
     const event = rows[0];
-    const plan  = resolvePlan(event.subscription_tier || 'tala');
+    // Per-event tier: events.plan is the source of truth (locked at
+    // create/upgrade). subscription_tier kept as legacy fallback.
+    const plan  = resolvePlan(event.plan || event.subscription_tier || 'tala');
     const allowed = !!plan.features?.reactions;
     eventCache.set(slug, { expires: now + EVENT_CACHE_TTL_MS, event, allowed });
     if (!allowed) {
