@@ -5845,13 +5845,23 @@
         return;
       }
 
-      featured.forEach((c, i) => {
+      // Badge = actual reel position out of the total selected count.
+      // `c.order` is the 0-based index into the Curator's chronological
+      // `ordered` array (see backend/routes/sde.js — orderPos map), so
+      // #(c.order+1) is exactly where this clip plays in the final reel,
+      // not just its rank among featured items. Total denominator comes
+      // from summary.selectedCount so it stays in sync with the header.
+      const totalInReel = selectedCount;
+      featured.forEach(c => {
         const mini = document.createElement('div');
         mini.className = 'sde-mini';
         const img = document.createElement('img');
         img.loading = 'lazy'; img.src = esc(c.thumb); img.alt = '';
         const num  = document.createElement('span');
-        num.className = 'sde-num'; num.textContent = `#${i + 1}`;
+        num.className = 'sde-num';
+        const slot = (c.order == null) ? '?' : (c.order + 1);
+        num.textContent = `#${slot}/${totalInReel}`;
+        num.title = `Plays as clip ${slot} of ${totalInReel} in the reel`;
         const kind = document.createElement('span');
         kind.className = 'sde-kind';
         kind.textContent = c.type === 'video' ? '▶' : '☐';
