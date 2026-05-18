@@ -241,11 +241,17 @@ async function normalizePhoto(srcPath, outPath, durSec, { kenBurns = true } = {}
 
   await runFfmpeg([
     '-y', '-nostdin', '-hide_banner', '-loglevel', 'error',
+    // -fflags +shortest + -max_interleave_delta are the canonical
+    // workaround for filter_complex + anullsrc + -shortest not always
+    // trimming the audio cleanly to the video end. Without these, the
+    // brick mp4 can have its audio track outlast its video track,
+    // which concat-demuxer renders as a held-last-frame at clip end.
+    '-fflags', '+shortest', '-max_interleave_delta', '100M',
     '-loop', '1', '-t', String(durSec),
     '-i', srcPath,
-    // Anullsrc gives every clip an identical silent stereo track so
-    // concat doesn't have to negotiate audio streams across bricks.
-    '-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=mono',
+    // Anullsrc with explicit d= so both streams are FINITE — lets
+    // -shortest reliably pick min(video, audio).
+    '-f', 'lavfi', '-i', `anullsrc=r=48000:cl=mono:d=${durSec}`,
     ...filterArgs,
     '-shortest',
     '-c:v', 'libx264', '-preset', SDE_X264_PRESET, '-crf', '22',
@@ -341,11 +347,21 @@ async function normalizeVideo(srcPath, outPath, durSec) {
   // are common at events and look terrible letterboxed. The original
   // guest audio is dropped (basic render is music-only; ducking parked
   // for Batch 3); we map the silent anullsrc track instead.
+  //
+  // Important: short guest clips (often 2-4 s, less than the 5 s
+  // durSec cap) used to produce bricks where the audio track outran
+  // the video, because -shortest + filter_complex + infinite anullsrc
+  // can fail to trim audio at video EOF. Symptom: video freezes on the
+  // last frame at every video-clip boundary while music keeps playing.
+  // Fix: anullsrc=d=durSec makes both streams finite, and the
+  // -fflags +shortest + -max_interleave_delta flags are the canonical
+  // workaround for the -shortest-with-filter_complex bug.
   await runFfmpeg([
     '-y', '-nostdin', '-hide_banner', '-loglevel', 'error',
+    '-fflags', '+shortest', '-max_interleave_delta', '100M',
     '-t', String(durSec),
     '-i', srcPath,
-    '-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=mono',
+    '-f', 'lavfi', '-i', `anullsrc=r=48000:cl=mono:d=${durSec}`,
     '-filter_complex', BLUR_FILL_GRAPH,
     '-map', '[outv]', '-map', '1:a',
     '-shortest',
