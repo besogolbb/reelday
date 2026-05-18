@@ -186,6 +186,23 @@ export async function kickOffRender(fastify, event, opts = {}) {
   const subtitle    = formatSubtitle(event.event_date, event.venue);
   const endcardText = 'Thank you for celebrating with us.';
 
+  // Cover photo from the Event Website — used by the Lambda as the
+  // blurred-darkened background for title + endcard. Looked up here
+  // (one cheap row) instead of demanding callers thread it through;
+  // not all callers (auto-render trigger, dashboard fallback) have
+  // the column already in scope. Null is fine: Lambda falls back to
+  // tinted-bg cards.
+  let coverImageUrl = null;
+  try {
+    const { rows: coverRows } = await fastify.db.query(
+      `SELECT cover_photo_url FROM events WHERE id = $1`,
+      [event.id],
+    );
+    coverImageUrl = (coverRows[0]?.cover_photo_url || '').trim() || null;
+  } catch (err) {
+    fastify.log?.warn?.({ err, event_id: event.id }, '[sde] cover_photo_url lookup failed; skipping');
+  }
+
   const outKey = `sde/${event.id}/sde-${Date.now()}.mp4`;
   const payload = {
     eventId:      event.id,
@@ -195,7 +212,8 @@ export async function kickOffRender(fastify, event, opts = {}) {
     title,
     subtitle,
     endcardText,
-    titleCardKey: null, // text path wins; PNG fields kept null
+    coverImageUrl,        // optional; Lambda blurs + darkens it as card bg
+    titleCardKey: null,   // text path wins; PNG fields kept null
     endcardKey:   null,
     outKey,
   };

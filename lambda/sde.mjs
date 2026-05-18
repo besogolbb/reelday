@@ -48,8 +48,13 @@
  * exists in R2, skip the work and just notify.
  *
  * Payload fields (all optional except eventId, outKey, clips[]):
- *   - title, subtitle  → drawtext title card (black bg, centered)
- *   - endcardText      → drawtext endcard (black bg, centered)
+ *   - title, subtitle  → drawtext title card
+ *   - endcardText      → drawtext endcard
+ *   - coverImageUrl    → public URL of the event's cover photo. When
+ *                          present, used as a blurred-darkened
+ *                          background for both title + endcard. Falls
+ *                          back to a tinted dark-navy bg if absent or
+ *                          the fetch fails.
  *   - titleCardKey, endcardKey → PNG cards (alternate path; text wins
  *                                  if both are provided)
  *   - audioKey         → music bed (R2 key); null = silent reel
@@ -114,6 +119,19 @@ async function r2Head(key) {
 async function r2DownloadToFile(key, destinationPath) {
   const res = await s3.send(new GetObjectCommand({ Bucket: R2_BUCKET_NAME, Key: key }));
   await pipeline(res.Body, createWriteStream(destinationPath));
+}
+
+// Fetch an arbitrary public URL → file. Used for `coverImageUrl` (the
+// event's cover photo on the Event Website, served from a public R2
+// custom domain or similar). Distinct from r2DownloadToFile because the
+// stored value is a full URL, not an R2 key — using fetch sidesteps URL
+// parsing + bucket-routing entirely. Node 20+ has fetch built in.
+async function fetchUrlToFile(url, destinationPath) {
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`fetch ${url} → ${res.status} ${res.statusText}`);
+  }
+  await pipeline(res.body, createWriteStream(destinationPath));
 }
 
 async function r2UploadFile(key, filePath, contentType) {
@@ -290,22 +308,39 @@ async function normalizePhoto(srcPath, outPath, durSec, { kenBurns = true, index
   ], { label: `normalize-photo` });
 }
 
-// Render a black-background card with up to two centered text lines
-// (title + subtitle, or just endcard line). Generated entirely by FFmpeg
-// from `color=` + `drawtext` so there's no PNG generation step in the
-// backend. Text is passed via `textfile=` (not `text=`) so we don't have
-// to escape user input — drawtext reads the literal file bytes.
+// Render a card with up to two centered text lines (title + subtitle,
+// or just endcard line). Two background modes:
+//   - opts.backgroundPath (a photo path)  → scaled-crop + heavy blur +
+//     darken, text overlaid. Cinematic; visually connects the card to
+//     the reel content. Preferred when the caller has a frame to use.
+//   - no backgroundPath                    → flat tinted dark navy. The
+//     fallback for events with no eligible photo or when the photo
+//     fails to load.
+//
+// Generated entirely by FFmpeg — no PNG pipeline in the backend. Text
+// is passed via `textfile=` (not `text=`) so we don't have to escape
+// user input — drawtext reads the literal file bytes.
 //
 // Returns the output path on success, or null if the card can't be
 // rendered for any reason (missing font file, FFmpeg layer built
 // without `--enable-libfreetype` so `drawtext` isn't compiled in, etc).
 // Caller treats null as "skip this card" — the reel is the product, the
 // card is polish, so a card failure must NEVER fail the whole render.
-async function renderTextCard(workdir, outPath, lines, durSec) {
+async function renderTextCard(workdir, outPath, lines, durSec, opts = {}) {
+  const { backgroundPath = null } = opts;
   const fontExists = await access(SDE_FONT_PATH).then(() => true).catch(() => false);
   if (!fontExists) {
     console.warn(`[sde] drawtext font not found at ${SDE_FONT_PATH}; skipping text card`);
     return null;
+  }
+  // If caller asked for a photo background but the file is gone, fall
+  // back to tinted bg rather than failing — cards are polish, not load-bearing.
+  let usePhotoBg = false;
+  if (backgroundPath) {
+    usePhotoBg = await access(backgroundPath).then(() => true).catch(() => false);
+    if (!usePhotoBg) {
+      console.warn(`[sde] card background photo not found: ${backgroundPath}; using tinted bg`);
+    }
   }
 
   // Build per-line drawtext filters. Y positions are offset from center
@@ -370,16 +405,46 @@ async function renderTextCard(workdir, outPath, lines, durSec) {
   const fadeOutStart = Math.max(0, durSec - FADE);
   const fades = `fade=t=in:st=0:d=${FADE},fade=t=out:st=${fadeOutStart}:d=${FADE}`;
 
-  const vf = drawTexts.join(',') + `,${fades},format=yuv420p,setsar=1`;
+  // Background pre-chain (runs BEFORE the drawtext/drawbox/fade chain).
+  // Two modes:
+  //   - photo bg: scale-cover the photo, heavy boxblur, darken via eq —
+  //     pulls focus to the text while keeping a hint of the event's
+  //     colour palette. Subtle Ken Burns (0.5% drift) so the bg isn't
+  //     dead static.
+  //   - tinted bg: empty pre-chain, the color= source already IS the bg.
+  //
+  // Output of the pre-chain must be the same {TARGET_W}x{TARGET_H} frame
+  // the drawtext chain expects.
+  let inputArgs, preChain;
+  if (usePhotoBg) {
+    inputArgs = ['-loop', '1', '-t', String(durSec), '-i', backgroundPath];
+    preChain  =
+      `scale=${TARGET_W}:${TARGET_H}:force_original_aspect_ratio=increase,` +
+      `crop=${TARGET_W}:${TARGET_H},` +
+      // boxblur=radius:power. 40:3 is heavy enough that faces are
+      // unrecognisable (the bg is decoration, not the subject).
+      `boxblur=40:3,` +
+      // eq brightness=-0.35 darkens; saturation=1.15 keeps the palette
+      // lively under the darken so the bg doesn't read as flat grey.
+      `eq=brightness=-0.35:saturation=1.15`;
+  } else {
+    // Dark navy-tinted background (#0a0a14) instead of flat #000.
+    // Pure black against drop-shadowed white text reads as "flat";
+    // the slight tint feels intentional without competing with the
+    // colour of the photos that follow.
+    inputArgs = ['-f', 'lavfi', '-i',
+                 `color=c=0x0a0a14:s=${TARGET_W}x${TARGET_H}:d=${durSec}:r=${TARGET_FPS}`];
+    preChain  = '';
+  }
+
+  const vf = (preChain ? preChain + ',' : '') +
+             drawTexts.join(',') +
+             `,${fades},format=yuv420p,setsar=1`;
 
   try {
     await runFfmpeg([
       '-y', '-nostdin', '-hide_banner', '-loglevel', 'error',
-      // Dark navy-tinted background (#0a0a14) instead of flat #000.
-      // Pure black against drop-shadowed white text reads as "flat";
-      // the slight tint feels intentional without competing with the
-      // colour of the photos that follow.
-      '-f', 'lavfi', '-i', `color=c=0x0a0a14:s=${TARGET_W}x${TARGET_H}:d=${durSec}:r=${TARGET_FPS}`,
+      ...inputArgs,
       '-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=mono',
       '-vf', vf,
       '-shortest',
@@ -451,7 +516,7 @@ async function downloadAll(workdir, payload) {
   // schedules ~6 sockets per host by default which is plenty for one
   // event's clip count.
   const jobs = [];
-  const localPaths = { clips: [], audio: null, titleCard: null, endcard: null };
+  const localPaths = { clips: [], audio: null, titleCard: null, endcard: null, coverImage: null };
 
   payload.clips.forEach((clip, i) => {
     const ext = clip.type === 'video' ? '.mp4' : '.jpg';
@@ -479,6 +544,20 @@ async function downloadAll(workdir, payload) {
     localPaths.endcard = join(workdir, 'endcard.png');
     jobs.push(r2DownloadToFile(payload.endcardKey, localPaths.endcard));
   }
+  // Cover photo from the Event Website (events.cover_photo_url). Used
+  // as the blurred-darkened background for BOTH the title card and the
+  // endcard — ties the cards to the curated event hero rather than a
+  // random guest upload. Failure is non-fatal: cards fall back to the
+  // tinted-bg path inside renderTextCard.
+  if (payload.coverImageUrl) {
+    localPaths.coverImage = join(workdir, 'cover.bin');
+    jobs.push(
+      fetchUrlToFile(payload.coverImageUrl, localPaths.coverImage).catch(err => {
+        console.warn(`[sde] cover image download failed (${err.message}); cards will use tinted bg`);
+        localPaths.coverImage = null;
+      }),
+    );
+  }
 
   await Promise.all(jobs);
   return localPaths;
@@ -499,8 +578,8 @@ async function normalizeAll(workdir, payload, localPaths) {
     const out = join(workdir, safeCardName(0));
     const rendered = await renderTextCard(workdir, out, [
       { text: payload.title,    fontsize: 96, color: 'white'    },
-      { text: payload.subtitle, fontsize: 36, color: 'white@0.75' },
-    ], 3.0);
+      { text: payload.subtitle, fontsize: 36, color: 'white@0.85' },
+    ], 3.0, { backgroundPath: localPaths.coverImage });
     if (rendered) normalizedPaths.push(out);
   } else if (localPaths.titleCard) {
     const out = join(workdir, safeCardName(0));
@@ -528,7 +607,7 @@ async function normalizeAll(workdir, payload, localPaths) {
     const out = join(workdir, safeCardName(payload.clips.length + 1));
     const rendered = await renderTextCard(workdir, out, [
       { text: payload.endcardText, fontsize: 64, color: 'white' },
-    ], 3.0);
+    ], 3.0, { backgroundPath: localPaths.coverImage });
     if (rendered) normalizedPaths.push(out);
   } else if (localPaths.endcard) {
     const out = join(workdir, safeCardName(payload.clips.length + 1));
