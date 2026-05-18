@@ -359,11 +359,20 @@ export default async function sdeRoutes(fastify) {
     // Conditional UPDATE — only clears if the wall's requested_at still
     // matches the event's. RETURNING tells us whether the clear hit
     // (visibility only; the wall doesn't act on it).
+    //
+    // ⚠️ Precision footgun: Postgres timestamptz has microsecond
+    // precision, JS Date has millisecond precision. The pg driver
+    // truncates microseconds on read, so the requested_at the wall
+    // echoes back is `.789` while the row in DB has `.789012`. A
+    // naive `= $2` comparison ALWAYS misses → UPDATE never runs →
+    // dashboard never flips back to "Play on wall". Truncate both
+    // sides to milliseconds for a robust round-trip match.
     const { rows } = await fastify.db.query(
       `UPDATE events
           SET sde_play_cleared_at = NOW()
         WHERE slug = $1
-          AND sde_play_requested_at = $2
+          AND date_trunc('milliseconds', sde_play_requested_at)
+              = date_trunc('milliseconds', $2::timestamptz)
           AND (sde_play_cleared_at IS NULL
                OR sde_play_cleared_at < sde_play_requested_at)
         RETURNING id`,

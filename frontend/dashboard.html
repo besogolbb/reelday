@@ -5987,8 +5987,14 @@
       if (playBtn)  playBtn.addEventListener('click', handlePlayWall);
       if (stopBtn)  stopBtn.addEventListener('click', handleStopWall);
 
-      // Polling lifecycle: only spin while we're waiting on a render.
-      if (status === 'queued' || status === 'rendering') startPolling();
+      // Polling lifecycle: spin while a render is in flight OR while the
+      // wall is currently playing the reel — that second case lets the
+      // bar flip back from "Stop wall" to "Play on wall" automatically
+      // when the wall auto-returns to the gallery (the reel finishes,
+      // the wall pings /sde/wall-finished, server clears the play
+      // state, our next 12 s poll picks that up).
+      const isPlaying = data.playing === true;
+      if (status === 'queued' || status === 'rendering' || isPlaying) startPolling();
       else stopPolling();
     }
 
