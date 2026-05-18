@@ -13,7 +13,16 @@ function requireAdmin(request, reply, done) {
     return;
   }
   const header = request.headers.authorization || '';
-  const got = header.startsWith('Bearer ') ? header.slice(7) : '';
+  const headerTok = header.startsWith('Bearer ') ? header.slice(7) : '';
+  // Exception: the calendar.ics feed is meant to be pasted into Google
+  // Calendar's "Add by URL", which can't send custom headers. Accept the
+  // token via ?token= for this one route only. Treat the query token as
+  // the same secret as the bearer header — admins who share the .ics URL
+  // are effectively sharing admin access, document this in the UI.
+  const queryTok = request.url.startsWith('/api/admin/calendar.ics')
+    ? String(request.query?.token || '')
+    : '';
+  const got = headerTok || queryTok;
   const a = Buffer.from(got);
   const b = Buffer.from(expected);
   if (a.length !== b.length || !timingSafeEqual(a, b)) {
@@ -205,6 +214,110 @@ export default async function adminRoutes(fastify) {
        ORDER BY COALESCE(e.event_date, e.created_at::date) DESC, e.created_at DESC`,
     );
     return { events: rows };
+  });
+
+  // GET /api/admin/calendar.ics — iCalendar feed of every scheduled event,
+  // designed for Google Calendar's "Add by URL" subscriber (also works in
+  // Apple Calendar / Outlook). Refreshes server-side on every fetch but
+  // Google polls roughly every 12-24 h — there's no way to force faster.
+  // Events without an event_date are omitted (can't plot a non-date).
+  // Inactive / unpaid events still appear so the admin sees the full
+  // schedule on their phone; STATUS:TENTATIVE marks the unpaid ones and
+  // STATUS:CANCELLED marks the inactive ones.
+  fastify.get('/admin/calendar.ics', async (request, reply) => {
+    const { rows } = await fastify.db.query(
+      `SELECT e.id, e.slug, e.couple_names, e.event_type, e.plan,
+              e.event_date, e.venue, e.event_time, e.is_paid, e.is_active,
+              e.created_at, e.updated_at,
+              usr.email AS user_email
+         FROM events e
+    LEFT JOIN users usr ON usr.id = e.user_id
+        WHERE e.event_date IS NOT NULL
+        ORDER BY e.event_date ASC`,
+    );
+
+    const esc = s => String(s ?? '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
+    const ymd = d => {
+      const dt = (d instanceof Date) ? d : new Date(d);
+      const y = dt.getUTCFullYear();
+      const m = String(dt.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(dt.getUTCDate()).padStart(2, '0');
+      return `${y}${m}${day}`;
+    };
+    const stamp = d => new Date(d || Date.now()).toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
+    // RFC 5545 line folding: max 75 octets per line, continuation lines
+    // start with a single space. Cheap byte-length check is fine for
+    // ASCII-heavy event data; non-ASCII may end up slightly under 75 per
+    // wrap which is harmless.
+    const fold = line => {
+      if (line.length <= 75) return line;
+      const out = [];
+      let i = 0;
+      while (i < line.length) {
+        out.push((i === 0 ? '' : ' ') + line.slice(i, i + (i === 0 ? 75 : 74)));
+        i += (i === 0 ? 75 : 74);
+      }
+      return out.join('\r\n');
+    };
+
+    const host = process.env.APP_PUBLIC_HOST || 'reelday.ph';
+    const lines = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Reelday//Admin Calendar//EN',
+      'CALSCALE:GREGORIAN',
+      'METHOD:PUBLISH',
+      'X-WR-CALNAME:Reelday Events',
+      'X-WR-TIMEZONE:Asia/Manila',
+      'REFRESH-INTERVAL;VALUE=DURATION:PT1H',
+      'X-PUBLISHED-TTL:PT1H',
+    ];
+
+    for (const e of rows) {
+      const start = ymd(e.event_date);
+      // DTEND for VALUE=DATE is exclusive; add one day so the event spans
+      // the single date correctly in all clients.
+      const endDate = new Date(e.event_date);
+      endDate.setUTCDate(endDate.getUTCDate() + 1);
+      const end = ymd(endDate);
+
+      const status = e.is_active === false ? 'CANCELLED' : (e.is_paid === false ? 'TENTATIVE' : 'CONFIRMED');
+      const planLabel = e.plan ? e.plan.charAt(0).toUpperCase() + e.plan.slice(1) : 'Tala';
+      const summary = `${e.couple_names}${e.is_paid === false ? ' (UNPAID)' : ''}${e.is_active === false ? ' (INACTIVE)' : ''}`;
+      const descParts = [
+        `Type: ${e.event_type || 'wedding'}`,
+        `Plan: ${planLabel}`,
+        e.venue       ? `Venue: ${e.venue}`               : null,
+        e.event_time  ? `Time: ${e.event_time}`           : null,
+        e.user_email  ? `Owner: ${e.user_email}`          : 'Owner: (none)',
+        `Slug: ${e.slug}`,
+      ].filter(Boolean).join('\\n');
+
+      lines.push(
+        'BEGIN:VEVENT',
+        fold(`UID:${e.id}@${host}`),
+        `DTSTAMP:${stamp(e.updated_at || e.created_at)}`,
+        `DTSTART;VALUE=DATE:${start}`,
+        `DTEND;VALUE=DATE:${end}`,
+        fold(`SUMMARY:${esc(summary)}`),
+        fold(`DESCRIPTION:${descParts}`),
+        e.venue ? fold(`LOCATION:${esc(e.venue)}`) : null,
+        fold(`URL:https://${host}/dashboard?slug=${encodeURIComponent(e.slug)}`),
+        `CATEGORIES:${planLabel}`,
+        `STATUS:${status}`,
+        `TRANSP:OPAQUE`,
+        'END:VEVENT',
+      );
+    }
+
+    lines.push('END:VCALENDAR');
+
+    reply
+      .header('Content-Type', 'text/calendar; charset=utf-8')
+      .header('Content-Disposition', 'inline; filename="reelday-events.ics"')
+      // Tell intermediaries not to cache an auth'd response.
+      .header('Cache-Control', 'private, no-store')
+      .send(lines.filter(Boolean).join('\r\n') + '\r\n');
   });
 
   // POST /api/admin/events — admin-create an event for any user. Bypasses

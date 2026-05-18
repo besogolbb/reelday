@@ -77,76 +77,171 @@
     .view { animation: fadeIn .2s ease; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 
-    /* ── Calendar view ──────────────────────────────────── */
-    .cal-layout { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 1.5rem; }
+    /* ── Calendar view (Google-style polish) ──────────────── */
+    .cal-layout { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); gap: 1.25rem; }
     @media (max-width: 1100px) { .cal-layout { grid-template-columns: 1fr; } }
 
-    .cal-grid-panel, .cal-agenda {
+    .cal-grid-panel, .cal-side-panel {
       background: #fff; border: 1px solid var(--line); border-radius: var(--r-lg);
-      box-shadow: var(--shadow-soft); padding: 1.25rem;
+      box-shadow: var(--shadow-soft); padding: 1.1rem 1.25rem;
     }
-    .cal-header { display: flex; align-items: center; gap: .65rem; margin-bottom: 1rem; }
-    .cal-header h2 { font-family: var(--display); font-size: 1.15rem; color: var(--ink); margin: 0 .5rem; flex: 1; }
+
+    /* Conflict alert above the calendar header */
+    .conflict-alert {
+      display: flex; align-items: center; gap: .65rem;
+      background: rgba(196,90,58,.08); border: 1px solid rgba(196,90,58,.25);
+      color: var(--accent-deep); padding: .6rem .85rem; border-radius: var(--r);
+      margin-bottom: .9rem; font-size: .85rem;
+    }
+    .conflict-alert .ico { font-size: 1rem; }
+    .conflict-alert.hidden { display: none; }
+    .conflict-alert button {
+      margin-left: auto; background: var(--accent); color: #fff; border: none;
+      padding: .3rem .7rem; border-radius: var(--r-sm); cursor: pointer;
+      font-family: inherit; font-size: .78rem; font-weight: 600;
+    }
+    .conflict-alert button:hover { background: var(--accent-deep); }
+
+    .cal-header { display: flex; align-items: center; gap: .5rem; margin-bottom: .9rem; }
+    .cal-header h2 {
+      font-family: var(--display); font-size: 1.25rem; color: var(--ink);
+      margin: 0 .65rem 0 0; flex: 1; letter-spacing: -.01em;
+    }
     .cal-nav-btn {
-      width: 32px; height: 32px; border-radius: var(--r-sm);
-      background: var(--paper-2); border: 1px solid var(--line-2);
-      color: var(--ink); font-size: 1.1rem; cursor: pointer; line-height: 1;
+      width: 30px; height: 30px; border-radius: 50%;
+      background: transparent; border: 1px solid var(--line);
+      color: var(--ink-soft); font-size: 1rem; cursor: pointer; line-height: 1;
       display: inline-flex; align-items: center; justify-content: center;
+      transition: background .12s, color .12s, border-color .12s;
     }
-    .cal-nav-btn:hover { background: var(--paper-3); }
+    .cal-nav-btn:hover { background: var(--paper-2); color: var(--ink); border-color: var(--line-2); }
+    .btn-today {
+      padding: .35rem .85rem; border: 1px solid var(--line);
+      background: #fff; border-radius: var(--r-sm);
+      font-family: inherit; font-size: .78rem; font-weight: 600;
+      color: var(--ink-soft); cursor: pointer;
+      transition: background .12s, color .12s;
+    }
+    .btn-today:hover { background: var(--paper-2); color: var(--ink); }
+
     .cal-weekdays {
-      display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;
-      font-family: var(--mono); font-size: .65rem; color: var(--ink-faint);
-      text-transform: uppercase; letter-spacing: .08em; padding-bottom: .35rem;
-      border-bottom: 1px solid var(--line); margin-bottom: .35rem; text-align: center;
+      display: grid; grid-template-columns: repeat(7, 1fr);
+      font-size: .65rem; color: var(--ink-faint); font-weight: 600;
+      text-transform: uppercase; letter-spacing: .08em;
+      padding: .35rem .25rem; text-align: center;
+      position: sticky; top: 0; background: #fff; z-index: 2;
     }
-    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+    .cal-grid {
+      display: grid; grid-template-columns: repeat(7, 1fr);
+      border-top: 1px solid var(--line); border-left: 1px solid var(--line);
+      border-radius: var(--r-sm); overflow: hidden;
+    }
     .cal-cell {
-      min-height: 84px; padding: .35rem .4rem;
-      background: var(--paper); border: 1px solid var(--line);
-      border-radius: var(--r-sm); display: flex; flex-direction: column; gap: 3px;
-      cursor: pointer; transition: background .12s, border-color .12s, transform .12s;
+      min-height: 96px; padding: .35rem .4rem .3rem;
+      background: #fff;
+      border-right: 1px solid var(--line); border-bottom: 1px solid var(--line);
+      display: flex; flex-direction: column; gap: 2px;
+      cursor: pointer; transition: background .1s;
       position: relative; overflow: hidden;
     }
-    .cal-cell:hover { background: var(--paper-2); border-color: var(--line-2); }
-    .cal-cell.other-month { opacity: .35; }
-    .cal-cell.today { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
-    .cal-cell.selected { background: rgba(196,90,58,.10); border-color: var(--accent); }
-    .cal-cell .day-num { font-family: var(--mono); font-size: .75rem; color: var(--ink-soft); font-weight: 600; }
-    .cal-cell.today .day-num { color: var(--accent); }
-    .cal-cell .overlap-badge {
-      position: absolute; top: 4px; right: 4px;
-      background: var(--accent); color: #fff;
-      font-family: var(--mono); font-size: .58rem; font-weight: 700;
-      padding: 1px 5px; border-radius: 999px;
+    .cal-cell:hover { background: var(--paper); }
+    .cal-cell.other-month { background: rgba(0,0,0,.012); }
+    .cal-cell.other-month .day-num { color: var(--ink-faint); opacity: .55; }
+    .cal-cell.selected { background: rgba(196,90,58,.06); box-shadow: 0 0 0 2px var(--accent) inset; z-index: 1; }
+    .cal-cell .day-num {
+      font-size: .78rem; color: var(--ink-soft); font-weight: 500;
+      width: 22px; height: 22px; line-height: 22px; text-align: center;
+      border-radius: 50%; align-self: flex-start; margin-bottom: 1px;
     }
+    .cal-cell.today .day-num {
+      background: var(--accent); color: #fff; font-weight: 600;
+    }
+    .cal-cell .overlap-badge {
+      position: absolute; top: 5px; right: 5px;
+      background: var(--accent); color: #fff;
+      font-size: .58rem; font-weight: 700;
+      padding: 1px 6px; border-radius: 999px;
+      box-shadow: 0 1px 3px rgba(196,90,58,.4);
+    }
+    /* Slim Google-style chip: solid colored bar on the left, text right. */
     .cal-chip {
-      font-size: .68rem; padding: 2px 5px; border-radius: 4px;
+      font-size: .7rem; padding: 1px 4px 1px 6px; border-radius: 3px;
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-      font-weight: 600; line-height: 1.3;
+      font-weight: 500; line-height: 1.35;
+      color: var(--ink); background: transparent;
       border-left: 3px solid currentColor;
     }
-    .cal-chip-more { font-family: var(--mono); font-size: .58rem; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .06em; padding-left: 5px; }
+    .cal-chip-more { font-size: .62rem; color: var(--ink-faint); font-weight: 500; padding-left: 9px; }
 
-    /* Tier-coloured chips */
-    .chip-tala     { background: rgba(120,100,90,.12);  color: var(--ink-soft); }
-    .chip-sinag    { background: rgba(216,160,90,.20);  color: #7a5a20; }
-    .chip-dalisay  { background: rgba(196,90,58,.18);   color: var(--accent-deep); }
-    .chip-hiraya   { background: rgba(78,52,128,.16);   color: #4e3480; }
-    .chip-inactive { opacity: .45; }
+    /* Tier colors — used as both the chip left-bar (via currentColor) and pill bg. */
+    .chip-tala     { color: #8a7468; }
+    .chip-sinag    { color: #c9924a; }
+    .chip-dalisay  { color: var(--accent); }
+    .chip-hiraya   { color: #7d3aa8; }
+    .cal-chip.chip-tala     { background: rgba(120,100,90,.07); }
+    .cal-chip.chip-sinag    { background: rgba(216,160,90,.10); }
+    .cal-chip.chip-dalisay  { background: rgba(196,90,58,.08); }
+    .cal-chip.chip-hiraya   { background: rgba(125,58,168,.08); }
+    .cal-chip.chip-inactive { opacity: .45; text-decoration: line-through; }
 
     .cal-legend {
-      display: flex; gap: .75rem; flex-wrap: wrap; margin-top: 1rem;
-      padding-top: 1rem; border-top: 1px solid var(--line);
-      font-family: var(--mono); font-size: .65rem; text-transform: uppercase; letter-spacing: .06em;
+      display: flex; gap: .85rem; flex-wrap: wrap; margin-top: .9rem;
+      padding-top: .8rem; border-top: 1px solid var(--line);
+      font-size: .68rem; color: var(--ink-soft);
     }
-    .legend { display: inline-flex; align-items: center; gap: .35rem; padding: .15rem .55rem; border-radius: 999px; }
-    .legend::before { content: ''; width: 8px; height: 8px; border-radius: 2px; background: currentColor; }
+    .legend { display: inline-flex; align-items: center; gap: .35rem; }
+    .legend::before { content: ''; width: 9px; height: 9px; border-radius: 2px; background: currentColor; }
 
-    /* Agenda panel */
+    /* ── Right side panel: tabs ──────────────────────────── */
+    .side-tabs { display: flex; gap: .3rem; margin-bottom: .85rem; border-bottom: 1px solid var(--line); }
+    .side-tab {
+      background: transparent; border: none; padding: .55rem .85rem;
+      font-family: inherit; font-size: .82rem; font-weight: 600;
+      color: var(--ink-faint); cursor: pointer; border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+    }
+    .side-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .side-tab:hover:not(.active) { color: var(--ink); }
+    .side-pane { display: none; }
+    .side-pane.active { display: block; }
+
+    /* Summary panel content */
+    .sum-card {
+      background: var(--paper); border: 1px solid var(--line); border-radius: var(--r);
+      padding: .85rem 1rem; margin-bottom: .7rem;
+    }
+    .sum-card-label { font-size: .68rem; color: var(--ink-faint); font-weight: 600;
+                      text-transform: uppercase; letter-spacing: .08em; margin-bottom: .3rem; }
+    .sum-card-value { font-family: var(--display); font-size: 1.75rem; color: var(--ink); line-height: 1; }
+    .sum-card-sub   { font-size: .78rem; color: var(--ink-soft); margin-top: .25rem; }
+
+    .tier-bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--paper-2); margin-top: .35rem; }
+    .tier-bar > span { display: block; }
+    .tier-bar .seg-tala     { background: #8a7468; }
+    .tier-bar .seg-sinag    { background: #c9924a; }
+    .tier-bar .seg-dalisay  { background: var(--accent); }
+    .tier-bar .seg-hiraya   { background: #7d3aa8; }
+
+    .tier-legend { display: flex; gap: .55rem; flex-wrap: wrap; margin-top: .5rem; font-size: .72rem; color: var(--ink-soft); }
+    .tier-legend .dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: .25rem; vertical-align: middle; }
+
+    .conflict-list { margin-top: .85rem; }
+    .conflict-list h4 { font-size: .72rem; color: var(--ink-faint); font-weight: 600;
+                        text-transform: uppercase; letter-spacing: .08em; margin: 0 0 .45rem; }
+    .conflict-row {
+      display: flex; align-items: center; gap: .55rem;
+      padding: .5rem .65rem; border-radius: var(--r-sm);
+      background: rgba(196,90,58,.06); border: 1px solid rgba(196,90,58,.20);
+      margin-bottom: .35rem; cursor: pointer; transition: background .12s;
+    }
+    .conflict-row:hover { background: rgba(196,90,58,.12); }
+    .conflict-row .date { font-weight: 600; color: var(--accent-deep); flex: 1; font-size: .85rem; }
+    .conflict-row .count { font-size: .72rem; color: var(--accent-deep); font-weight: 700; }
+
+    /* Day-detail (agenda) panel */
     .agenda-header { display: flex; align-items: baseline; gap: .5rem; margin-bottom: .85rem; padding-bottom: .85rem; border-bottom: 1px solid var(--line); }
     .agenda-header h3 { font-family: var(--display); font-size: 1.1rem; margin: 0; color: var(--ink); }
-    .agenda-count { font-family: var(--mono); font-size: .68rem; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .06em; }
+    .agenda-count { font-size: .72rem; color: var(--ink-faint); font-weight: 500; }
     .agenda-card {
       display: block; padding: .75rem .85rem; border-radius: var(--r-sm);
       background: var(--paper); margin-bottom: .55rem; cursor: pointer;
@@ -158,10 +253,10 @@
     .agenda-card .meta { font-size: .78rem; color: var(--ink-faint); margin-top: .2rem; display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
     .agenda-empty { color: var(--ink-faint); font-size: .88rem; font-style: italic; padding: 1.5rem 0; text-align: center; }
 
-    details.unscheduled { margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+    details.unscheduled { margin-top: 1.1rem; padding-top: .85rem; border-top: 1px solid var(--line); }
     details.unscheduled summary {
-      cursor: pointer; font-family: var(--mono); font-size: .72rem;
-      text-transform: uppercase; letter-spacing: .08em; color: var(--ink-soft); font-weight: 600;
+      cursor: pointer; font-size: .72rem; color: var(--ink-soft); font-weight: 600;
+      text-transform: uppercase; letter-spacing: .08em;
     }
     details.unscheduled[open] summary { margin-bottom: .65rem; }
 
@@ -365,13 +460,18 @@
 
     <!-- Calendar view -->
     <section class="view" id="view-calendar">
+      <div id="conflict-alert" class="conflict-alert hidden" role="alert">
+        <span class="ico">⚠</span>
+        <span id="conflict-alert-msg"></span>
+        <button id="conflict-alert-jump">View first</button>
+      </div>
       <div class="cal-layout">
         <div class="cal-grid-panel">
           <div class="cal-header">
             <button class="cal-nav-btn" id="cal-prev" title="Previous month">‹</button>
-            <h2 id="cal-month-label">—</h2>
             <button class="cal-nav-btn" id="cal-next" title="Next month">›</button>
-            <button class="btn-ghost-sm" id="cal-today" title="Jump to today">Today</button>
+            <h2 id="cal-month-label">—</h2>
+            <button class="btn-today" id="cal-today" title="Jump to today">Today</button>
           </div>
           <div class="cal-weekdays">
             <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
@@ -386,18 +486,60 @@
           </div>
         </div>
 
-        <aside class="cal-agenda">
-          <div class="agenda-header">
-            <h3 id="agenda-date">Select a date</h3>
-            <span class="agenda-count" id="agenda-count"></span>
+        <aside class="cal-side-panel">
+          <div class="side-tabs">
+            <button class="side-tab active" data-pane="summary">📊 Summary</button>
+            <button class="side-tab" data-pane="day">📅 Day detail</button>
           </div>
-          <div id="agenda-body">
-            <p class="agenda-empty">Click a date on the calendar to see its events.</p>
+
+          <div class="side-pane active" id="pane-summary">
+            <div class="sum-card">
+              <div class="sum-card-label">Events this month</div>
+              <div class="sum-card-value" id="sum-total">0</div>
+              <div class="sum-card-sub" id="sum-total-sub">No events scheduled.</div>
+            </div>
+
+            <div class="sum-card">
+              <div class="sum-card-label">Plan mix</div>
+              <div class="tier-bar" id="tier-bar"></div>
+              <div class="tier-legend" id="tier-legend"></div>
+            </div>
+
+            <div class="sum-card">
+              <div class="sum-card-label">Status</div>
+              <div style="display:flex;gap:.85rem;font-size:.82rem;color:var(--ink-soft);margin-top:.2rem">
+                <div><strong id="sum-paid" style="color:#2d6a4a">0</strong> paid</div>
+                <div><strong id="sum-unpaid" style="color:#7a5a20">0</strong> unpaid</div>
+                <div><strong id="sum-inactive" style="color:var(--ink-faint)">0</strong> inactive</div>
+              </div>
+            </div>
+
+            <div class="conflict-list" id="conflict-list-wrap" style="display:none">
+              <h4>Overlapping dates this month</h4>
+              <div id="conflict-list-body"></div>
+            </div>
+
+            <details class="unscheduled" id="unscheduled-wrap">
+              <summary>Unscheduled events (<span id="unscheduled-count">0</span>)</summary>
+              <div id="unscheduled-body"></div>
+            </details>
+
+            <div style="margin-top:1.1rem;padding-top:.85rem;border-top:1px solid var(--line)">
+              <button class="btn btn-ghost" id="btn-subscribe-gcal" style="width:100%;padding:.55rem;font-size:.82rem">
+                📲 Subscribe in Google Calendar
+              </button>
+            </div>
           </div>
-          <details class="unscheduled" id="unscheduled-wrap">
-            <summary>Unscheduled events (<span id="unscheduled-count">0</span>)</summary>
-            <div id="unscheduled-body"></div>
-          </details>
+
+          <div class="side-pane" id="pane-day">
+            <div class="agenda-header">
+              <h3 id="agenda-date">Select a date</h3>
+              <span class="agenda-count" id="agenda-count"></span>
+            </div>
+            <div id="agenda-body">
+              <p class="agenda-empty">Click a date on the calendar to see its events.</p>
+            </div>
+          </div>
         </aside>
       </div>
     </section>
@@ -773,10 +915,17 @@
     }
     grid.innerHTML = cells.join('');
     grid.querySelectorAll('.cal-cell').forEach(cell => {
-      cell.onclick = () => { selectedDateKey = cell.dataset.date; renderCalendar(); renderAgenda(byDate, unscheduled); };
+      cell.onclick = () => {
+        selectedDateKey = cell.dataset.date;
+        // Selecting a date is a "show me this day" intent — jump to the
+        // Day-detail tab so the user sees the events they just clicked.
+        switchSidePane('day');
+        renderCalendar();
+      };
     });
 
     renderAgenda(byDate, unscheduled);
+    renderMonthSummary(byDate, unscheduled, year, month);
   }
 
   function renderAgenda(byDate, unscheduled) {
@@ -800,7 +949,7 @@
       });
     }
 
-    // Unscheduled section
+    // Unscheduled section (lives in the Summary tab).
     document.getElementById('unscheduled-count').textContent = unscheduled.length.toString();
     const u = document.getElementById('unscheduled-body');
     if (!unscheduled.length) {
@@ -812,6 +961,94 @@
       });
     }
   }
+
+  // Builds the Summary tab + the conflict alert. Operates ONLY on events
+  // whose event_date falls inside the displayed month — unscheduled
+  // events have their own section, and other-month days are visual padding.
+  function renderMonthSummary(byDate, unscheduled, year, month) {
+    const prefix = `${year}-${String(month + 1).padStart(2, '0')}-`;
+    const monthEvents = [];
+    const conflicts = []; // [{ date, list }]
+    for (const [k, list] of byDate.entries()) {
+      if (!k.startsWith(prefix)) continue;
+      monthEvents.push(...list);
+      if (list.length > 1) conflicts.push({ date: k, list });
+    }
+    conflicts.sort((a, b) => a.date.localeCompare(b.date));
+
+    const total = monthEvents.length;
+    document.getElementById('sum-total').textContent = total.toString();
+    document.getElementById('sum-total-sub').textContent = total
+      ? `${conflicts.length} overlapping date${conflicts.length === 1 ? '' : 's'} this month.`
+      : 'No events scheduled in this month.';
+
+    // Tier mix bar
+    const tiers = ['tala', 'sinag', 'dalisay', 'hiraya'];
+    const tierCounts = Object.fromEntries(tiers.map(t => [t, 0]));
+    for (const e of monthEvents) tierCounts[(e.plan || 'tala').toLowerCase()] = (tierCounts[(e.plan || 'tala').toLowerCase()] || 0) + 1;
+    const bar = document.getElementById('tier-bar');
+    const legend = document.getElementById('tier-legend');
+    if (total) {
+      bar.innerHTML = tiers.map(t => {
+        const pct = (tierCounts[t] / total) * 100;
+        return pct > 0 ? `<span class="seg-${t}" style="width:${pct.toFixed(2)}%" title="${t}: ${tierCounts[t]}"></span>` : '';
+      }).join('');
+      legend.innerHTML = tiers.map(t => tierCounts[t]
+        ? `<span><span class="dot seg-${t}"></span>${t.charAt(0).toUpperCase() + t.slice(1)} · ${tierCounts[t]}</span>`
+        : ''
+      ).filter(Boolean).join('');
+    } else {
+      bar.innerHTML = '';
+      legend.innerHTML = '<span style="color:var(--ink-faint);font-style:italic">No events to break down.</span>';
+    }
+
+    // Paid / unpaid / inactive counts
+    let paid = 0, unpaid = 0, inactive = 0;
+    for (const e of monthEvents) {
+      if (e.is_active === false) inactive++;
+      if (e.is_paid) paid++; else unpaid++;
+    }
+    document.getElementById('sum-paid').textContent     = paid.toString();
+    document.getElementById('sum-unpaid').textContent   = unpaid.toString();
+    document.getElementById('sum-inactive').textContent = inactive.toString();
+
+    // Conflict list inside the summary panel
+    const wrap = document.getElementById('conflict-list-wrap');
+    const body = document.getElementById('conflict-list-body');
+    if (conflicts.length) {
+      wrap.style.display = '';
+      body.innerHTML = conflicts.map(({ date, list }) =>
+        `<div class="conflict-row" data-jump="${date}">
+          <span class="date">${esc(fmtDate(date + 'T00:00:00'))}</span>
+          <span class="count">${list.length} events</span>
+        </div>`
+      ).join('');
+      body.querySelectorAll('[data-jump]').forEach(row => {
+        row.onclick = () => { selectedDateKey = row.dataset.jump; switchSidePane('day'); renderCalendar(); };
+      });
+    } else {
+      wrap.style.display = 'none';
+    }
+
+    // Top-of-calendar alert banner (only when conflicts exist in this month)
+    const alert    = document.getElementById('conflict-alert');
+    const alertMsg = document.getElementById('conflict-alert-msg');
+    const jumpBtn  = document.getElementById('conflict-alert-jump');
+    if (conflicts.length) {
+      alert.classList.remove('hidden');
+      const totalOverlapping = conflicts.reduce((s, c) => s + c.list.length, 0);
+      alertMsg.textContent = `${conflicts.length} date${conflicts.length === 1 ? '' : 's'} this month have overlapping events (${totalOverlapping} events affected). Review before confirming bookings.`;
+      jumpBtn.onclick = () => { selectedDateKey = conflicts[0].date; switchSidePane('day'); renderCalendar(); };
+    } else {
+      alert.classList.add('hidden');
+    }
+  }
+
+  function switchSidePane(name) {
+    document.querySelectorAll('.side-tab').forEach(t => t.classList.toggle('active', t.dataset.pane === name));
+    document.querySelectorAll('.side-pane').forEach(p => p.classList.toggle('active', p.id === `pane-${name}`));
+  }
+  document.querySelectorAll('.side-tab').forEach(t => t.onclick = () => switchSidePane(t.dataset.pane));
 
   function agendaCard(e) {
     const planPill = `<span class="pill chip-${esc(e.plan || 'tala')}" style="padding:.1rem .5rem">${esc(e.plan || 'tala')}</span>`;
@@ -833,7 +1070,59 @@
     const d = new Date();
     calCursor = new Date(d.getFullYear(), d.getMonth(), 1);
     selectedDateKey = todayKey();
+    switchSidePane('day');
     renderCalendar();
+  };
+
+  // ────────────────────────────────────────────────────────────────
+  // Subscribe in Google Calendar — builds the .ics URL with the admin
+  // token in the query string (Google's URL subscriber can't send
+  // custom headers), shows instructions + copy-to-clipboard. Anyone
+  // with this URL has the same read access as the admin, so it
+  // should only be pasted into the admin's own Google Calendar.
+  // ────────────────────────────────────────────────────────────────
+  document.getElementById('btn-subscribe-gcal').onclick = () => {
+    const token = localStorage.getItem(ADMIN_TOKEN_KEY) || '';
+    const feedUrl = `${location.origin}/api/admin/calendar.ics?token=${encodeURIComponent(token)}`;
+    const gcalAddByUrl = `https://calendar.google.com/calendar/r/settings/addbyurl`;
+    const body = `
+      <p style="margin:0 0 .85rem;color:var(--ink-soft);font-size:.9rem">
+        Subscribing pipes every scheduled Reelday event into your Google Calendar
+        as a separate, read-only calendar. Google polls roughly every 12-24 h —
+        new events may take a few hours to show up.
+      </p>
+      <ol style="padding-left:1.25rem;margin:.5rem 0 1rem;color:var(--ink);font-size:.88rem;line-height:1.65">
+        <li>Copy the feed URL below.</li>
+        <li>Open <a href="${gcalAddByUrl}" target="_blank" style="color:var(--accent);font-weight:600">Google Calendar → Add by URL</a> (must be signed in).</li>
+        <li>Paste the URL and click <strong>Add calendar</strong>.</li>
+      </ol>
+      <label style="display:block;font-family:var(--mono);font-size:.65rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-soft);margin-bottom:.3rem">
+        Feed URL
+      </label>
+      <div style="display:flex;gap:.4rem">
+        <input id="gcal-url" type="text" readonly value="${esc(feedUrl)}"
+               style="flex:1;padding:.55rem .75rem;border:1px solid var(--line-2);border-radius:var(--r);font-family:var(--mono);font-size:.78rem;background:var(--paper);color:var(--ink);outline:none"
+               onclick="this.select()" />
+        <button class="btn-verify" id="gcal-copy" style="padding:.55rem 1rem">Copy</button>
+      </div>
+      <p style="margin:.85rem 0 0;color:var(--accent-deep);font-size:.78rem;background:rgba(196,90,58,.06);border:1px solid rgba(196,90,58,.18);border-radius:var(--r-sm);padding:.55rem .7rem">
+        ⚠ This URL contains your admin token. Treat it like a password — anyone
+        with the URL can read every event's details. Only paste it into
+        <em>your own</em> Google Calendar.
+      </p>`;
+    const footer = `<button class="btn-ghost-sm" onclick="closeModal()">Close</button>`;
+    openModal({ title: 'Subscribe in Google Calendar', body, footer });
+
+    document.getElementById('gcal-copy').onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(feedUrl);
+        toast('Feed URL copied.', 'success');
+      } catch {
+        // Fallback: select the input so the user can ⌘/Ctrl+C manually.
+        document.getElementById('gcal-url').select();
+        toast('Press Ctrl+C to copy.', '');
+      }
+    };
   };
 
   // ────────────────────────────────────────────────────────────────
