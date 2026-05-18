@@ -193,6 +193,20 @@ const TARGET_W   = 1920;
 const TARGET_H   = 1080;
 const TARGET_FPS = 24;
 
+// Blur-fill background trick — the canonical way to handle vertical
+// phone content inside a 16:9 reel without black letterbox bars. Splits
+// the source into two streams: one is scaled to FILL the frame (with
+// excess cropped) and heavily blurred; the other is scaled to FIT
+// (preserving aspect ratio); the fit version overlays centered on top
+// of the blurred fill. Same approach Instagram/Reels uses. Cost is
+// ~10-15% extra per-clip encode vs. plain `pad=color=black`.
+const BLUR_FILL_GRAPH = (
+  `[0:v]split=2[bg][fg];` +
+  `[bg]scale=${TARGET_W}:${TARGET_H}:force_original_aspect_ratio=increase,crop=${TARGET_W}:${TARGET_H},boxblur=30:2[blurred];` +
+  `[fg]scale=${TARGET_W}:${TARGET_H}:force_original_aspect_ratio=decrease[scaled];` +
+  `[blurred][scaled]overlay=(W-w)/2:(H-h)/2,fps=${TARGET_FPS},format=yuv420p,setsar=1[outv]`
+);
+
 function safeCardName(i) {
   return `clip_${String(i).padStart(4, '0')}.mp4`;
 }
@@ -204,23 +218,26 @@ async function normalizePhoto(srcPath, outPath, durSec, { kenBurns = true } = {}
   // when the Lambda is CPU-constrained).
   const frames = Math.max(1, Math.round(durSec * TARGET_FPS));
   const useKenBurns = kenBurns && KEN_BURNS_ENABLED;
-  const vf = useKenBurns
-    ? [
-        // Upscale a touch first so zoompan has headroom to crop into.
-        `scale=2400:1350:force_original_aspect_ratio=decrease`,
-        `pad=2400:1350:(ow-iw)/2:(oh-ih)/2:color=black`,
-        `zoompan=z='min(zoom+0.0015\\,1.15)':d=${frames}:s=${TARGET_W}x${TARGET_H}:fps=${TARGET_FPS}`,
-        `fps=${TARGET_FPS}`,
-        `format=yuv420p`,
-        `setsar=1`,
-      ].join(',')
-    : [
-        `scale=${TARGET_W}:${TARGET_H}:force_original_aspect_ratio=decrease`,
-        `pad=${TARGET_W}:${TARGET_H}:(ow-iw)/2:(oh-ih)/2:color=black`,
-        `fps=${TARGET_FPS}`,
-        `format=yuv420p`,
-        `setsar=1`,
-      ].join(',');
+
+  // Two paths:
+  //  - kenBurns: upscale + slow zoompan (the polished default; OFF on
+  //    3 GB Lambdas via env). Still uses pad=color=black on the upscale
+  //    stage because zoompan reads the padded frame; revisit when the
+  //    10 GB quota lands and we can afford the blur on the larger frame.
+  //  - flat: blur-fill background so portrait phone photos don't get
+  //    letterbox bars. Defined as BLUR_FILL_GRAPH at module top.
+  let filterArgs;
+  if (useKenBurns) {
+    const vf = [
+      `scale=2400:1350:force_original_aspect_ratio=decrease`,
+      `pad=2400:1350:(ow-iw)/2:(oh-ih)/2:color=black`,
+      `zoompan=z='min(zoom+0.0015\\,1.15)':d=${frames}:s=${TARGET_W}x${TARGET_H}:fps=${TARGET_FPS}`,
+      `fps=${TARGET_FPS}`, `format=yuv420p`, `setsar=1`,
+    ].join(',');
+    filterArgs = ['-vf', vf];
+  } else {
+    filterArgs = ['-filter_complex', BLUR_FILL_GRAPH, '-map', '[outv]', '-map', '1:a'];
+  }
 
   await runFfmpeg([
     '-y', '-nostdin', '-hide_banner', '-loglevel', 'error',
@@ -229,7 +246,7 @@ async function normalizePhoto(srcPath, outPath, durSec, { kenBurns = true } = {}
     // Anullsrc gives every clip an identical silent stereo track so
     // concat doesn't have to negotiate audio streams across bricks.
     '-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=mono',
-    '-vf', vf,
+    ...filterArgs,
     '-shortest',
     '-c:v', 'libx264', '-preset', SDE_X264_PRESET, '-crf', '22',
     '-pix_fmt', 'yuv420p', '-profile:v', 'high', '-level', '4.0',
@@ -320,19 +337,17 @@ async function renderTextCard(workdir, outPath, lines, durSec) {
 }
 
 async function normalizeVideo(srcPath, outPath, durSec) {
+  // Same blur-fill story as the photo flat path — portrait phone videos
+  // are common at events and look terrible letterboxed. The original
+  // guest audio is dropped (basic render is music-only; ducking parked
+  // for Batch 3); we map the silent anullsrc track instead.
   await runFfmpeg([
     '-y', '-nostdin', '-hide_banner', '-loglevel', 'error',
     '-t', String(durSec),
     '-i', srcPath,
     '-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=mono',
-    '-vf', [
-      `scale=${TARGET_W}:${TARGET_H}:force_original_aspect_ratio=decrease`,
-      `pad=${TARGET_W}:${TARGET_H}:(ow-iw)/2:(oh-ih)/2:color=black`,
-      `fps=${TARGET_FPS}`,
-      `format=yuv420p`,
-      `setsar=1`,
-    ].join(','),
-    '-map', '0:v:0', '-map', '1:a:0',  // explicit: source video + silent audio
+    '-filter_complex', BLUR_FILL_GRAPH,
+    '-map', '[outv]', '-map', '1:a',
     '-shortest',
     '-c:v', 'libx264', '-preset', SDE_X264_PRESET, '-crf', '22',
     '-pix_fmt', 'yuv420p', '-profile:v', 'high', '-level', '4.0',
