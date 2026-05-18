@@ -604,10 +604,14 @@ export const handler = async (event, context) => {
     await r2UploadFile(outKey,    finalPath,  'video/mp4');
     console.log(`[sde] uploaded ${outKey} + ${posterKey}`);
 
-    // 8. Fire-and-forget final notify with a bounded timeout so a slow
-    //    backend never inflates Lambda billable duration. Mirrors the
-    //    pattern in lambda/index.mjs.
-    notifyWebhook({
+    // 8. AWAIT the success notify. Originally fire-and-forget (to keep
+    //    Lambda billable duration tight) but with callbackWaitsForEmpty
+    //    EventLoop=false the runtime can freeze before the fetch even
+    //    leaves the box — observed in production as a "render succeeded
+    //    but DB still shows the previous render" bug. The 5 s timeout
+    //    bounds the worst case; webhook handler is sub-100 ms in normal
+    //    operation, so this adds ~50-100 ms to typical billable duration.
+    await notifyWebhook({
       status:     'ready',
       eventId, slug,
       videoKey:   outKey,
@@ -615,7 +619,7 @@ export const handler = async (event, context) => {
       durationS:  Math.round(durationS),
       clipCount:  clips.length,
       cached:     false,
-    }, { timeoutMs: 2000 });
+    }, { timeoutMs: 5000 });
 
     return { statusCode: 200, body: JSON.stringify({ ok: true, outKey, durationS }) };
   } catch (error) {
