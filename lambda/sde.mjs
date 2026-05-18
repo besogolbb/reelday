@@ -221,8 +221,11 @@ async function normalizePhoto(srcPath, outPath, durSec, { kenBurns = true } = {}
 // backend. Text is passed via `textfile=` (not `text=`) so we don't have
 // to escape user input — drawtext reads the literal file bytes.
 //
-// Returns the output path on success, or null if the font is missing —
-// caller treats null as "skip this card" rather than failing the render.
+// Returns the output path on success, or null if the card can't be
+// rendered for any reason (missing font file, FFmpeg layer built
+// without `--enable-libfreetype` so `drawtext` isn't compiled in, etc).
+// Caller treats null as "skip this card" — the reel is the product, the
+// card is polish, so a card failure must NEVER fail the whole render.
 async function renderTextCard(workdir, outPath, lines, durSec) {
   const fontExists = await access(SDE_FONT_PATH).then(() => true).catch(() => false);
   if (!fontExists) {
@@ -264,19 +267,29 @@ async function renderTextCard(workdir, outPath, lines, durSec) {
 
   const vf = drawTexts.join(',') + `,format=yuv420p,setsar=1`;
 
-  await runFfmpeg([
-    '-y', '-nostdin', '-hide_banner', '-loglevel', 'error',
-    '-f', 'lavfi', '-i', `color=c=black:s=${TARGET_W}x${TARGET_H}:d=${durSec}:r=${TARGET_FPS}`,
-    '-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=mono',
-    '-vf', vf,
-    '-shortest',
-    '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '22',
-    '-pix_fmt', 'yuv420p', '-profile:v', 'high', '-level', '4.0',
-    '-c:a', 'aac', '-b:a', '64k', '-ar', '48000', '-ac', '1',
-    '-r', String(TARGET_FPS),
-    '-movflags', '+faststart',
-    outPath,
-  ], { label: 'render-text-card' });
+  try {
+    await runFfmpeg([
+      '-y', '-nostdin', '-hide_banner', '-loglevel', 'error',
+      '-f', 'lavfi', '-i', `color=c=black:s=${TARGET_W}x${TARGET_H}:d=${durSec}:r=${TARGET_FPS}`,
+      '-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=mono',
+      '-vf', vf,
+      '-shortest',
+      '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '22',
+      '-pix_fmt', 'yuv420p', '-profile:v', 'high', '-level', '4.0',
+      '-c:a', 'aac', '-b:a', '64k', '-ar', '48000', '-ac', '1',
+      '-r', String(TARGET_FPS),
+      '-movflags', '+faststart',
+      outPath,
+    ], { label: 'render-text-card' });
+  } catch (err) {
+    // Most common cause in practice: the FFmpeg layer was built without
+    // libfreetype, so the `drawtext` filter isn't registered. Swap to a
+    // freetype-enabled layer to get cards back. Until then, the reel
+    // still renders — just without the title/endcard frames.
+    const oneLine = String(err.message || err).split('\n')[0];
+    console.warn(`[sde] text card render failed (${oneLine}); skipping card`);
+    return null;
+  }
 
   return outPath;
 }
