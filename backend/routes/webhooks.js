@@ -119,4 +119,117 @@ export default async function webhookRoutes(fastify) {
 
     return { success: true, upload: rows[0] };
   });
+
+  // ── Same Day Edit renderer callback ─────────────────────────────────
+  //
+  // Posted by lambda/sde.mjs at end-of-render. Status is 'ready' on
+  // success, 'error' on failure. Shared WEBHOOK_SECRET is verified the
+  // same way as video-ready. On 'ready' we flip event_sde to ready and
+  // merge an `sde` block into event_sites.config (preserving any other
+  // host-configured site fields). On 'error' we record the message and
+  // leave event_sites alone.
+  fastify.post('/webhooks/sde-ready', async (request, reply) => {
+    const configuredSecret = process.env.WEBHOOK_SECRET;
+    if (!configuredSecret) {
+      request.log.error('WEBHOOK_SECRET is not set; rejecting sde-ready webhook');
+      return reply.status(503).send({ error: true, message: 'Webhook handler disabled' });
+    }
+
+    const providedSecret = readWebhookSecret(request);
+    if (providedSecret !== configuredSecret) {
+      request.log.warn('Rejected sde-ready webhook with bad/missing secret');
+      return reply.status(401).send({ error: true, message: 'Invalid webhook secret' });
+    }
+
+    const body = request.body || {};
+    const eventId = readString(body.eventId, body.event_id);
+    const status  = readString(body.status);
+
+    if (!eventId || !UUID_RE.test(eventId)) {
+      return reply.status(400).send({ error: true, message: 'Valid eventId required' });
+    }
+    if (status !== 'ready' && status !== 'error') {
+      return reply.status(400).send({ error: true, message: "status must be 'ready' or 'error'" });
+    }
+
+    if (status === 'error') {
+      const message = readString(body.message) || 'Render failed (no message)';
+      const { rows } = await fastify.db.query(
+        `UPDATE event_sde
+            SET status = 'error',
+                error_message = $2,
+                updated_at = NOW()
+          WHERE event_id = $1
+          RETURNING event_id, status`,
+        [eventId, message.slice(0, 1000)],
+      );
+      if (!rows.length) {
+        return reply.status(404).send({ error: true, message: 'event_sde row not found' });
+      }
+      return { ok: true, status: 'error' };
+    }
+
+    // status === 'ready' from here.
+    const videoKey  = readString(body.videoKey, body.video_key, body.outKey, body.out_key);
+    const posterKey = readString(body.posterKey, body.poster_key);
+    if (!videoKey)  return reply.status(400).send({ error: true, message: 'videoKey required for ready' });
+    if (!posterKey) return reply.status(400).send({ error: true, message: 'posterKey required for ready' });
+
+    const durationS = Number.isFinite(+body.durationS) ? Math.max(0, Math.round(+body.durationS))
+                    : Number.isFinite(+body.duration_s) ? Math.max(0, Math.round(+body.duration_s))
+                    : null;
+    const clipCount = Number.isFinite(+body.clipCount) ? Math.max(0, Math.round(+body.clipCount))
+                    : Number.isFinite(+body.clip_count) ? Math.max(0, Math.round(+body.clip_count))
+                    : null;
+
+    const videoUrl  = isAbsoluteUrl(videoKey)  ? videoKey  : buildPublicUrl(videoKey);
+    const posterUrl = isAbsoluteUrl(posterKey) ? posterKey : buildPublicUrl(posterKey);
+
+    const { rows } = await fastify.db.query(
+      `UPDATE event_sde
+          SET status        = 'ready',
+              video_url     = $2,
+              poster_url    = $3,
+              duration_s    = COALESCE($4, duration_s),
+              clip_count    = COALESCE($5, clip_count),
+              error_message = NULL,
+              rendered_at   = NOW(),
+              updated_at    = NOW()
+        WHERE event_id = $1
+        RETURNING event_id, rendered_at`,
+      [eventId, videoUrl, posterUrl, durationS, clipCount],
+    );
+    if (!rows.length) {
+      return reply.status(404).send({ error: true, message: 'event_sde row not found' });
+    }
+
+    // Merge an `sde` block into event_sites.config. INSERT-on-conflict
+    // pattern preserves existing is_published + other config fields; if
+    // no site row exists yet we seed one as is_published=false so the
+    // hub picks it up the moment the host turns the site on.
+    const sdeBlock = {
+      video_url:   videoUrl,
+      poster_url:  posterUrl,
+      duration_s:  durationS,
+      clip_count:  clipCount,
+      rendered_at: rows[0].rendered_at,
+    };
+    await fastify.db.query(
+      `INSERT INTO event_sites (event_id, is_published, config, updated_at)
+       VALUES ($1, false, jsonb_build_object('sde', $2::jsonb), NOW())
+       ON CONFLICT (event_id) DO UPDATE
+         SET config     = jsonb_set(
+                            COALESCE(event_sites.config, '{}'::jsonb),
+                            '{sde}',
+                            EXCLUDED.config -> 'sde',
+                            true
+                          ),
+             updated_at = NOW()`,
+      [eventId, JSON.stringify(sdeBlock)],
+    );
+
+    return { ok: true, status: 'ready', video_url: videoUrl, poster_url: posterUrl };
+  });
 }
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
