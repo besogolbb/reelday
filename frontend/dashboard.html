@@ -2030,7 +2030,7 @@
           <li>30-day gallery</li>
           <li>Ken Burns transition live wall</li>
           <li>Easy 3-step video message</li>
-          <li>Event-day uploads only</li>
+          <li>Uploads: 1 day before &amp; after the event</li>
         </ul>
         <button type="button" class="up-cta" data-plan="sinag">Choose Sinag</button>
       </div>
@@ -2040,7 +2040,7 @@
         <p class="up-desc">For weddings &amp; milestones — one event, with its own website.</p>
         <ul>
           <li>Unlimited uploads</li>
-          <li>7-day upload window</li>
+          <li>Uploads: 3 days before &amp; after the event</li>
           <li>Ken Burns transition live wall</li>
           <li>Live Wall reactions</li>
           <li>Live Questions &amp; Poll (trivia)</li>
@@ -2057,7 +2057,7 @@
         <ul>
           <li>Everything in Dalisay</li>
           <li>Up to 10 events / year</li>
-          <li>6-month upload window</li>
+          <li>Uploads: 15 days before &amp; after each event</li>
           <li>1-year retention</li>
           <li>Custom domains</li>
         </ul>
@@ -2741,13 +2741,33 @@
   // ── Render quota meter + soft-lock banner ─────────────
   function renderSidebarState(event) {
     const meta = THEME_MAP[event.event_type] || THEME_MAP.wedding;
-    const uploadsClosed = !!(event.upload_window_ends_at && new Date(event.upload_window_ends_at) < new Date());
+    const now           = new Date();
+    const startsAt      = event.upload_window_starts_at ? new Date(event.upload_window_starts_at) : null;
+    const endsAt        = event.upload_window_ends_at   ? new Date(event.upload_window_ends_at)   : null;
+    const notYetOpen    = !!(startsAt && startsAt > now);
+    const uploadsClosed = !!(endsAt   && endsAt   < now);
+
     const miniTheme = $('mini-theme');
     if (miniTheme) miniTheme.textContent = meta.label;
+
+    // 3-state access pill: Pending → Open now → Closed.
     const miniAccess = $('mini-access');
-    if (miniAccess) miniAccess.textContent = uploadsClosed ? 'Closed' : 'Open now';
+    if (miniAccess) {
+      miniAccess.textContent = notYetOpen ? 'Opens soon'
+                              : uploadsClosed ? 'Closed'
+                              : 'Open now';
+    }
+
+    // Next-action hint matches the state.
     const miniNext = $('mini-next');
-    if (miniNext) miniNext.textContent = uploadsClosed ? 'Extend upload window' : 'Share the QR';
+    if (miniNext) {
+      miniNext.textContent = notYetOpen
+        ? `Opens ${formatDate(event.upload_window_starts_at)}`
+        : uploadsClosed
+          ? 'Extend upload window'
+          : 'Share the QR';
+    }
+
     const wallBtn = $('btn-open-wall');
     if (wallBtn) wallBtn.href = slug ? `/wall/${slug}` : '#';
   }
@@ -2804,13 +2824,28 @@
   }
 
   function maybeShowWindowLock(event, plan, banner) {
-    const now = new Date();
+    const now      = new Date();
+    const startsAt = event.upload_window_starts_at ? new Date(event.upload_window_starts_at) : null;
+    const endsAt   = event.upload_window_ends_at   ? new Date(event.upload_window_ends_at)   : null;
+
     if (event.gallery_expires_at && new Date(event.gallery_expires_at) < now) {
       banner.classList.remove('hidden');
       $('lb-title').textContent = 'Gallery archived';
       $('lb-msg').textContent   =
         `The ${plan.name} plan's gallery retention for this event ended on ${formatDate(event.gallery_expires_at)}. Photos remain visible — upgrade to keep accepting new ones and extend retention.`;
-    } else if (event.upload_window_ends_at && new Date(event.upload_window_ends_at) < now) {
+    } else if (startsAt && startsAt > now) {
+      // Pre-window state — host can still upload (owner bypass) but
+      // guests will see the friendly "stay tuned" banner. Reassure
+      // the host their event is set up correctly.
+      banner.classList.remove('hidden');
+      $('lb-title').textContent = 'Uploads open soon';
+      $('lb-msg').textContent   =
+        `Guests can start uploading on ${formatDate(event.upload_window_starts_at)}. ` +
+        (endsAt
+          ? `The window stays open through ${formatDate(event.upload_window_ends_at)}. `
+          : '') +
+        `You can upload anytime as the host.`;
+    } else if (endsAt && endsAt < now) {
       banner.classList.remove('hidden');
       $('lb-title').textContent = 'Upload window closed';
       $('lb-msg').textContent   =

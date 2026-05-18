@@ -48,7 +48,7 @@ export const PLANS = {
     eventLimit: 1,
     uploadLimit: null,          // unlimited photos & videos
     galleryDays: 30,
-    uploadWindowDays: 1,
+    uploadWindowDays: 3,        // 1 before + day-of + 1 after
     features: {
       videoUpload:  true,
       videoMessage: true,
@@ -93,7 +93,7 @@ export const PLANS = {
     eventLimit: 10,
     uploadLimit: null,
     galleryDays: 365,
-    uploadWindowDays: 180,
+    uploadWindowDays: 31,       // 15 before + day-of + 15 after
     features: {
       videoUpload:  true,
       videoMessage: true,

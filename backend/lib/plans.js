@@ -55,7 +55,11 @@ export const PLANS = {
     eventLimit: 1,
     uploadLimit: null,         // unlimited photos & videos
     galleryDays: 30,
-    uploadWindowDays: 1,
+    // 3 centered (1 before + day-of + 1 after). Gives Sinag a real
+    // grace period vs Tala's single day — guests can post night-of
+    // late-arrival pics and morning-after recaps without paying for
+    // Dalisay.
+    uploadWindowDays: 3,
     features: {
       videoUpload:  true,
       videoMessage: true,
@@ -104,7 +108,12 @@ export const PLANS = {
     eventLimit: 10,
     uploadLimit: null,
     galleryDays: 365,
-    uploadWindowDays: 180,
+    // 31 centered (15 before + day-of + 15 after) — was 180, which
+    // under the centered model would have opened uploads ~3 months
+    // before the event. ±15 days fits multi-day corporate retreats,
+    // wedding-weekend itineraries, and coordinators booking events
+    // ~a month out without the half-year pre-open weirdness.
+    uploadWindowDays: 31,
     features: {
       videoUpload:  true,
       videoMessage: true,
