@@ -3,9 +3,11 @@
 Cold-start pointer for the **Same Day Edit** build. Working tree clean,
 all on `main`. Spec: [same-day-edit-plan.md](same-day-edit-plan.md).
 Perf log: [perf-test-database.md](perf-test-database.md). Last updated
-**2026-05-18** (Slice 2B backend + Slice 2C frontend both shipped;
-first real reel rendered end-to-end and verified by host; SDE feature
-is now host-usable on a 3 GB Lambda).
+**2026-05-18** (Slices 2B + 2C + 2D all shipped; first real reel
+rendered end-to-end and verified by host; SDE feature is
+host-usable on a 3 GB Lambda with wall reveal + auto-render at
+upload-window close. Remaining polish waits on the 10 GB Lambda
+quota raise — see operating-state table below).
 
 ## Shipped (chronological)
 
@@ -29,6 +31,9 @@ is now host-usable on a 3 GB Lambda).
 | `b76815e` | hardening | Await the success-path webhook (silent webhook-miss bug: render succeeded, DB stayed stale) |
 | `a41a3b3` | hardening | Fix video-clip freeze at brick boundaries (`-fflags +shortest` + finite anullsrc); resolved the duration anomaly too (397s → 231s, matches Curator's 240s cap) |
 | `183865e` | **2C** | Generate button + status pill + Watch / Regenerate in [dashboard.html](../frontend/dashboard.html) SDE panel — drives the render bar off `GET /sde.status` + `POST /sde/generate`; polls every 12 s while queued/rendering; auto-resumes on refresh; stops on collapse |
+| `1813efb` | 2D-1 | Backend: extract `kickOffRender` to [lib/sdeRender.js](../backend/lib/sdeRender.js); add `POST /sde/play` + `POST /sde/stop`; auto-render trigger on the reactions GET hot path + on host's GET `/sde` fallback (both deduped via in-memory `autoRenderFired` Set) |
+| `498dd3a` | 2D-2 | Wall: `#sde-takeover` fullscreen overlay driven by `sde_play` block in the reactions poll response; loops the reel; "Tap for sound" hint if autoplay is blocked unmuted |
+| `576f29b` | 2D-3 | Dashboard: `[📺 Play on wall]` / `[● Stop wall]` button in the render bar (ready state only); flips to live-red style with pulsing dot when active |
 
 ## Curation model (current truth)
 
@@ -98,16 +103,53 @@ started it → just poll). All new JS identifiers stay inside the
 isolated `<script type="module">` so the dashboard top-level-collision
 footgun stays defused.
 
-## Active task — Slice 2D (wall reveal + auto-render)
+## Slice 2D — DONE (wall reveal + auto-render shipped)
 
-Two pieces:
+`1813efb` / `498dd3a` / `576f29b` close out the SDE 2-series.
 
-1. **Wall reveal** — `events.sde_play_requested_at` / `sde_play_cleared_at` columns already exist (migration B0). Owner taps a new "Play on wall" button in the dashboard SDE panel (next to Watch reel) → backend stamps `sde_play_requested_at = NOW()`. The wall ([frontend/wall.html](../wall.html)) already polls on its tick (the now-showing beacon); compare it against its last-seen value and trigger a fullscreen video takeover with `event_sde.video_url`. "Stop" stamps `sde_play_cleared_at`.
-2. **Auto-render at upload-window close** — when `events.ends_at` passes, a hook on the existing upload-window-close path calls the same generate logic with `event_sde.auto_rendered = true`. Host gets a finished reel without clicking anything.
+**Wall reveal** is end-to-end host-controlled:
 
-After 2D: SDE feature is feature-complete pre-Batch-3 polish. The
-quota-raise follow-ups (transitions, Ken Burns blur-fill on upscale,
-beat-sync, LUT) all sit waiting for the 10 GB Lambda bump.
+1. Host clicks `[📺 Play on wall]` in dashboard → `POST /sde/play`
+   stamps `events.sde_play_requested_at = NOW()` and clears
+   `sde_play_cleared_at`.
+2. Wall's existing 1Hz reactions poll picks up the `sde_play` block
+   in the response within ~1 s.
+3. Wall enters fullscreen takeover (`#sde-takeover`, z-index 200,
+   black letterbox) with the rendered mp4, looping.
+4. Host clicks `[● Stop wall]` → `POST /sde/stop` stamps
+   `sde_play_cleared_at`; wall exits takeover on next poll.
+
+**Auto-render** fires once per event when `upload_window_ends_at`
+passes, via TWO trigger paths so events with or without a live wall
+both get covered:
+
+- **reactions GET hot path** (one extra JOIN'd query per poll on
+  SDE-enabled events) — catches close within seconds during active
+  events.
+- **host's GET `/sde` fallback** — catches close even for events
+  whose walls have all closed by then (small venues, async hosts).
+
+Both deduped via in-process `autoRenderFired` Set (one entry per slug
+per process — bounded, terminal failures keep the slug muted,
+transient ones retry on next poll). `event_sde.auto_rendered = true`
+distinguishes auto from manual in analytics.
+
+## Active task — none queued (SDE 2-series feature-complete)
+
+The SDE feature is host-usable end-to-end on the current 3 GB Lambda:
+host curates via Feature pins, render fires on upload-window close,
+host plays on wall when ready. Remaining roadmap depends on the AWS
+10 GB quota raise (see [3 GB Lambda — current operating state](#3-gb-lambda--current-operating-state)
+above):
+
+- Transitions (xfade) — single-pass re-encode, fits in 10 GB
+- Ken Burns blur-fill on upscale — currently OFF
+- Beat-sync + LUT — original Batch 3 polish
+
+When the quota lands, all three flip back on by unsetting two env
+vars + one Lambda config change + dropping in the xfade chain in
+`concatNormalized`. Otherwise the feature is ready to ship to real
+events as-is.
 
 ## Operator: pre-flight before first render
 
