@@ -446,15 +446,16 @@
         </button>
         <button type="button" class="type-card" data-type="reunion">
           <div class="pic" style="background-image:url(/images/The%20whole%20family%20finally%20in%20one%20frame.png?v=2)"></div>
-          <div><div class="name">Reunion</div><div class="tag">Pagkikita</div></div>
+          <!-- data-type stays 'reunion' for back-compat with existing
+               events / themes / wall emoji sets; only the display label
+               broadens to 'General Event' so the card is the catch-all
+               option (Memorial was dropped from the picker in May 2026
+               but its theme + meta survive for legacy events). -->
+          <div><div class="name">General Event</div><div class="tag">Okasyon</div></div>
         </button>
         <button type="button" class="type-card" data-type="corporate">
           <div class="pic" style="background-image:url(/images/Corporate.png?v=2)"></div>
           <div><div class="name">Corporate</div><div class="tag">Kompanya</div></div>
-        </button>
-        <button type="button" class="type-card" data-type="memorial">
-          <div class="pic" style="background-image:url(/images/Memorial.png?v=2)"></div>
-          <div><div class="name">Memorial</div><div class="tag">Alaala</div></div>
         </button>
       </div>
 

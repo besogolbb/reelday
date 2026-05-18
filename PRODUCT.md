@@ -268,10 +268,14 @@ sync). Backend is the source of truth.
 
 ## 6. Event categories
 
-Currently five (Memorial was retired). Today they're cosmetic tags;
-the product behaves the same regardless. Likely to be consolidated to
-3 (Wedding / Birthday / Corporate) with each made meaningfully
-distinct via:
+Currently five offerable in the /start picker: Wedding, Birthday,
+Baptism, General Event (internal id `reunion`, rebranded from
+"Reunion" in May 2026 as the catch-all), Corporate. Memorial was
+retired from the picker in May 2026 but its theme + emoji set + admin
+dropdown entry stay alive for any pre-existing memorial events in the
+DB. Today these are cosmetic tags; the product behaves the same
+regardless. Likely to be consolidated to 3 (Wedding / Birthday /
+Corporate) with each made meaningfully distinct via:
 
 - Per-type wall emoji set (THEME_META in `wall.html`)
 - Per-type default copy ("Bride & Groom" vs "Celebrant" vs "Company")
