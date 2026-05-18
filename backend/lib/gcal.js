@@ -10,10 +10,11 @@
 //   GOOGLE_CALENDAR_SA_PRIVATE_KEY service account private_key (PEM; \n escaped)
 //   GOOGLE_CALENDAR_ID             target calendar id (…@group.calendar.google.com)
 //
-// Mapping mirrors the admin .ics feed (routes/admin.js calendar.ics) so the
-// two stay consistent: all-day event on event_date, inactive → cancelled,
-// unpaid → tentative, otherwise confirmed. The Reelday event id is stashed
-// in extendedProperties.private so entries can be reconciled later.
+// All-day event on event_date. Title is just the couple/event name and
+// every entry is `confirmed` — paid/active state is deliberately NOT
+// surfaced on the calendar (no (UNPAID)/(INACTIVE) suffix, no tentative/
+// cancelled colouring). The Reelday event id is stashed in
+// extendedProperties.private so entries can be reconciled later.
 
 import { JWT } from 'google-auth-library';
 
@@ -69,10 +70,6 @@ function nextYmd(d) {
 
 function eventResource(ev) {
   const planLabel = ev.plan ? ev.plan.charAt(0).toUpperCase() + ev.plan.slice(1) : 'Tala';
-  const unpaid    = ev.is_paid === false;
-  const inactive  = ev.is_active === false;
-  const summary   = `${ev.couple_names}${unpaid ? ' (UNPAID)' : ''}${inactive ? ' (INACTIVE)' : ''}`;
-  const status    = inactive ? 'cancelled' : (unpaid ? 'tentative' : 'confirmed');
   const description = [
     `Type: ${ev.event_type || 'wedding'}`,
     `Plan: ${planLabel}`,
@@ -83,12 +80,12 @@ function eventResource(ev) {
   ].filter(Boolean).join('\n');
 
   return {
-    summary,
+    summary: ev.couple_names,
     description,
     location: ev.venue || undefined,
     start: { date: ymd(ev.event_date) },
     end:   { date: nextYmd(ev.event_date) },
-    status,
+    status: 'confirmed',
     transparency: 'opaque',
     source: { title: 'Reelday', url: `https://${PUBLIC_HOST}/dashboard?slug=${encodeURIComponent(ev.slug)}` },
     extendedProperties: { private: { reelday_event_id: String(ev.id) } },
