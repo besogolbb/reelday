@@ -403,10 +403,10 @@
   const params = new URLSearchParams(location.search);
 
   const PLAN_LABELS = {
-    tala:    { label: 'Tala — Free',         paid: false },
-    sinag:   { label: 'Sinag — ₱999',        paid: true  },
-    dalisay: { label: 'Dalisay — ₱2,499',    paid: true  },
-    hiraya:  { label: 'Hiraya — ₱4,990/yr',  paid: true  },
+    tala:    { label: 'Tala — Free',                paid: false },
+    sinag:   { label: 'Sinag — ₱1,490 / event',     paid: true  },
+    dalisay: { label: 'Dalisay — ₱2,990 / event',   paid: true  },
+    hiraya:  { label: 'Reelday Pro — ₱9,990 / yr',  paid: true  },
   };
 
   const requestedPlan = params.get('plan');

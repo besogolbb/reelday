@@ -8,11 +8,16 @@
  * from the database.
  */
 
-// Final pricing tiers (2026):
-//   TALA    Free   — testing / small gatherings   — 25 photos, 24h, photos only
-//   SINAG   ₱1,490 — birthdays, debuts, parties    — unlimited photo+video, 30d
-//   DALISAY ₱2,990 — weddings & milestones         — + audio notes, website, 90d
-//   HIRAYA  Pro    — organizers & venues           — multi-event, custom domain, 1yr
+// Final pricing tiers (2026) — "1 event per purchase" model, except Pro:
+//   TALA       Free          — 1 event — testing / small gatherings    — 25 photos, 24h
+//   SINAG      ₱1,490 / evt  — 1 event — birthdays, debuts, parties    — unlimited photo+video, 30d
+//   DALISAY    ₱2,990 / evt  — 1 event — weddings & milestones         — + audio notes, website, 90d
+//   HIRAYA     ₱9,990 / yr   — Reelday Pro: yearly subscription for coordinators,
+//                              photographers, and venues running multiple events / month.
+//                              The ONLY tier that isn't per-event. Cap of 10 events / year.
+//
+// Internal id 'hiraya' is preserved (existing rows in users.subscription_tier);
+// the user-facing display name is "Reelday Pro" — see PLANS.hiraya.name below.
 //
 // Feature-flag glossary (only flags with real enforcement live here —
 // see the audit notes by each tier for matrix rows that are marketing
@@ -73,7 +78,12 @@ export const PLANS = {
     id: 'dalisay',
     name: 'Dalisay',
     price: 2990,
-    eventLimit: 3,
+    // One-time payment per event. Pre-2026 this was a 3-event package; the
+    // count was lowered to 1 with the Reelday Pro repositioning. Existing
+    // users with events_remaining > 1 keep their unused credits — only new
+    // Dalisay purchases land on the 1-event model (payments.js sets
+    // events_remaining = plan.eventLimit, so this naturally enforces).
+    eventLimit: 1,
     uploadLimit: null,
     galleryDays: 90,
     uploadWindowDays: 7,
@@ -91,8 +101,11 @@ export const PLANS = {
 
   hiraya: {
     id: 'hiraya',
-    name: 'Hiraya',
-    price: 4990,
+    // Display name is "Reelday Pro" — id stays 'hiraya' so existing
+    // users.subscription_tier rows and gating code keep working.
+    name: 'Reelday Pro',
+    price: 9990,             // ₱9,990 / year (the only yearly tier)
+    billing: 'yearly',       // marker for /payments — applied as +1yr expires_at
     eventLimit: 10,
     uploadLimit: null,
     galleryDays: 365,

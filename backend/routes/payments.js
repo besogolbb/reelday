@@ -26,11 +26,15 @@ function verifyPaymongoSignature(rawBody, header, secret) {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
-/* Tier metadata for the checkout UI / receipts (centavo amounts for PayMongo) */
+/* Tier metadata for the checkout UI / receipts (centavo amounts for PayMongo).
+ * KEEP IN SYNC with backend/lib/plans.js price fields — this is what PayMongo
+ * actually charges, so a drift here means the user is billed the wrong amount.
+ * Sinag / Dalisay are per-event one-time payments; Reelday Pro (id 'hiraya')
+ * is a yearly subscription — applyTierUpgrade adds +1 year to expires_at. */
 const PAID_TIERS = {
-  sinag:   { label: 'Sinag',   amount: 99900  },  // ₱999
-  dalisay: { label: 'Dalisay', amount: 249900 },  // ₱2,499
-  hiraya:  { label: 'Hiraya',  amount: 499000 },  // ₱4,990
+  sinag:   { label: 'Sinag',       amount: 149000 },  // ₱1,490 / event
+  dalisay: { label: 'Dalisay',     amount: 299000 },  // ₱2,990 / event
+  hiraya:  { label: 'Reelday Pro', amount: 999000 },  // ₱9,990 / year
 };
 
 function paymongoAuth() {
@@ -41,13 +45,14 @@ function paymongoAuth() {
  * Apply a successful payment to the buyer's account.
  *  - subscription_tier is bumped to the purchased tier
  *  - events_remaining is replaced with the tier's eventLimit (Sinag accumulates by 1 each time)
- *  - subscription_expires_at gets +1 year for Hiraya, NULL otherwise
+ *  - subscription_expires_at gets +1 year for Reelday Pro (id 'hiraya'), NULL otherwise
  *  - if a slug was passed, the targeted event is also marked is_paid + plan upgraded
  */
 async function applyTierUpgrade(db, { userId, tier, slug }) {
   const plan = resolvePlan(tier);
 
-  // Sinag accumulates (one credit per ₱999); Dalisay/Hiraya replace
+  // Sinag accumulates (one credit per ₱1,490); Dalisay replaces (1-event package);
+  // Reelday Pro (id 'hiraya') replaces with a 10-event yearly bucket.
   let updateSql, params;
   if (plan.id === 'sinag') {
     updateSql = `

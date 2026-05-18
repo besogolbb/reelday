@@ -481,7 +481,7 @@
             <span class="legend chip-tala">Tala</span>
             <span class="legend chip-sinag">Sinag</span>
             <span class="legend chip-dalisay">Dalisay</span>
-            <span class="legend chip-hiraya">Hiraya</span>
+            <span class="legend chip-hiraya">Reelday Pro</span>
             <span style="margin-left:auto;color:var(--ink-faint);font-size:.62rem">⚠ chip count = events overlapping</span>
           </div>
         </div>
@@ -553,7 +553,7 @@
           <option value="tala">Tala</option>
           <option value="sinag">Sinag</option>
           <option value="dalisay">Dalisay</option>
-          <option value="hiraya">Hiraya</option>
+          <option value="hiraya">Reelday Pro</option>
         </select>
         <select id="evt-paid-filter">
           <option value="">All payment</option>
@@ -607,10 +607,10 @@
             <select id="m-tier">
               <option value="sinag">Sinag</option>
               <option value="dalisay">Dalisay</option>
-              <option value="hiraya">Hiraya</option>
+              <option value="hiraya">Reelday Pro</option>
             </select>
           </label>
-          <label>Amount (₱) <input type="number" id="m-amount" min="0" step="1" placeholder="999" /></label>
+          <label>Amount (₱) <input type="number" id="m-amount" min="0" step="1" placeholder="1490" /></label>
           <label>Event slug (optional) <input type="text" id="m-slug" placeholder="e.g. mary-john-2026" /></label>
           <label>Reference (optional) <input type="text" id="m-ref" placeholder="cash, bank-transfer, etc." /></label>
         </div>
@@ -1192,7 +1192,7 @@
   // ────────────────────────────────────────────────────────────────
   const EVENT_TYPES = ['wedding','debut','birthday','seventh_birthday','baptism','reunion','corporate','memorial'];
   const TIERS = ['tala', 'sinag', 'dalisay', 'hiraya'];
-  const TIER_LABELS = { tala: 'Tala (Free)', sinag: 'Sinag', dalisay: 'Dalisay', hiraya: 'Hiraya' };
+  const TIER_LABELS = { tala: 'Tala (Free)', sinag: 'Sinag', dalisay: 'Dalisay', hiraya: 'Reelday Pro' };
 
   function openEventEditor(slug) {
     const isNew = !slug;

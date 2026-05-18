@@ -5,11 +5,13 @@
  * One row per tier. Display strings here, hard limits in eventLimit/
  * uploadLimit/galleryDays/uploadWindowDays, and capability flags in features.
  *
- * Subscription model (final 2026 pricing):
- *   - Tala    = free, 1 event, 25 photos, 24h retention, photos only
- *   - Sinag   = ₱1,490 / event, unlimited photo+video, 30d
- *   - Dalisay = ₱2,990 package (3 events), + audio notes + website, 90d
- *   - Hiraya  = Pro, up to 10 events, custom domain, 1-year retention
+ * Subscription model (final 2026 pricing) — "1 event per purchase" model
+ * except Reelday Pro (yearly subscription):
+ *   - Tala       = free, 1 event, 25 photos, 24h retention, photos only
+ *   - Sinag      = ₱1,490 / event,   1 event, unlimited photo+video, 30d
+ *   - Dalisay    = ₱2,990 / event,   1 event, + audio notes + website, 90d
+ *   - Reelday Pro = ₱9,990 / year, up to 10 events, custom domain, 1-year retention
+ *     (id stays 'hiraya' for backwards compatibility — display name only)
  *
  * Keep features in 1:1 sync with backend/lib/plans.js — the backend
  * copy is the enforcement source of truth; this is for display +
@@ -65,8 +67,8 @@ export const PLANS = {
     name: 'Dalisay',
     tagline: 'Weddings & milestones',
     price: 2990,
-    priceLabel: '₱2,990 / package',
-    eventLimit: 3,
+    priceLabel: '₱2,990 / event',
+    eventLimit: 1,
     uploadLimit: null,
     galleryDays: 90,
     uploadWindowDays: 7,
@@ -84,10 +86,12 @@ export const PLANS = {
 
   hiraya: {
     id: 'hiraya',
-    name: 'Hiraya',
-    tagline: 'For organizers & venues',
-    price: 4990,
-    priceLabel: 'Pro',
+    // Display name only — internal id stays 'hiraya'.
+    name: 'Reelday Pro',
+    tagline: 'For coordinators, photographers & venues',
+    price: 9990,
+    priceLabel: '₱9,990 / year',
+    billing: 'yearly',
     eventLimit: 10,
     uploadLimit: null,
     galleryDays: 365,
