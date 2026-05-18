@@ -1862,6 +1862,7 @@
           Same Day Edit is unlocked on the <strong>Dalisay</strong> plan. <a href="/#pricing">Upgrade →</a>
         </div>
         <div id="sde-content" style="display:none;">
+          <div id="sde-render-bar" style="display:none;"></div>
           <div id="sde-status"></div>
           <div id="sde-grid"></div>
         </div>
@@ -5748,12 +5749,16 @@
     const summaryEl = document.getElementById('sde-summary');
 
     let loaded = false;
+    let pollTimer = null; // setInterval handle while status is queued/rendering
 
     const COLLAPSE_KEY = 'reelday_sde_collapsed';
     function setCollapsed(c, persist) {
       bodyEl.style.display = c ? 'none' : 'block';
       toggleBtn.setAttribute('aria-expanded', String(!c));
       chev.style.transform = c ? '' : 'rotate(180deg)';
+      // Stop polling when the host collapses the panel — no point burning
+      // requests against a render whose progress nobody is watching.
+      if (c) stopPolling();
       if (persist) { try { localStorage.setItem(COLLAPSE_KEY, c ? '1' : '0'); } catch {} }
     }
     setCollapsed(localStorage.getItem(COLLAPSE_KEY) !== '0', false); // default collapsed
@@ -5778,7 +5783,21 @@
         '.sde-mini .sde-kind{position:absolute;top:5px;right:5px;font-family:var(--mono);font-size:9px;letter-spacing:.06em;padding:2px 5px;border-radius:5px;background:rgba(255,255,255,.85);color:var(--ink);}' +
         '.sde-bar{font-size:13px;color:var(--ink-soft);margin:4px 0 2px;line-height:1.5;}' +
         '.sde-hint{font-size:12px;color:var(--ink-faint);margin-top:10px;line-height:1.5;}' +
-        '.sde-cta{display:inline-block;margin-top:4px;font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);text-decoration:none;border-bottom:1px dashed var(--accent);}';
+        '.sde-cta{display:inline-block;margin-top:4px;font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);text-decoration:none;border-bottom:1px dashed var(--accent);}' +
+        // ── Slice 2C: render-bar (Generate / Watch / Regenerate / status pill) ──
+        '#sde-render-bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px dashed var(--line);}' +
+        '.sde-btn{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding:9px 14px;border-radius:8px;border:1px solid var(--line);background:var(--paper);color:var(--ink);cursor:pointer;text-decoration:none;line-height:1;transition:background .12s,opacity .12s;}' +
+        '.sde-btn:hover{background:var(--paper-2);}' +
+        '.sde-btn[disabled]{opacity:.45;cursor:not-allowed;}' +
+        '.sde-btn-accent{background:var(--accent);color:#fff;border-color:var(--accent);}' +
+        '.sde-btn-accent:hover{background:var(--accent-deep,var(--accent));filter:brightness(.95);}' +
+        '.sde-btn-ghost{background:transparent;color:var(--ink-soft);}' +
+        '.sde-pill{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:7px 11px;border-radius:999px;background:rgba(42,26,20,.06);color:var(--ink-soft);}' +
+        '.sde-pill-warn{background:rgba(196,90,58,.12);color:var(--accent);}' +
+        '.sde-pill-error{background:rgba(176,42,42,.10);color:#9b2a2a;}' +
+        '.sde-spin{display:inline-block;width:10px;height:10px;border:1.5px solid currentColor;border-right-color:transparent;border-radius:50%;animation:sde-spin .8s linear infinite;}' +
+        '@keyframes sde-spin{to{transform:rotate(360deg);}}' +
+        '.sde-meta{font-family:var(--mono);font-size:11px;letter-spacing:.02em;color:var(--ink-faint);}';
       document.head.appendChild(st);
     }
 
@@ -5806,6 +5825,7 @@
         summaryEl.textContent = 'Locked · Dalisay plan';
         lockedEl.style.display = '';
         contentEl.style.display = 'none';
+        stopPolling(); // safety: never poll on a locked event
         return;
       }
       lockedEl.style.display = 'none';
@@ -5818,6 +5838,11 @@
       const approvedCount = s.approvedCount || 0;
       const pinnedCount   = s.pinnedCount   || 0;
       summaryEl.textContent = `${selectedCount} clips · ~${mins}:${secs}`;
+
+      // Render bar (Slice 2C) — drives generate / watch / regenerate / pill
+      // off the same /sde payload the strip already uses. Also owns polling
+      // start/stop based on status, so a refresh mid-render auto-resumes.
+      renderBar(data);
 
       statusEl.className = 'sde-bar';
       // Two distinct stories depending on whether the host has featured
@@ -5883,6 +5908,130 @@
       });
     }
 
+    // ── Slice 2C: render-bar state machine ──────────────────────────
+    //
+    // renderBar paints the bar based on the latest /sde payload. Click
+    // handlers are bound per-render (since innerHTML wipes previous
+    // listeners) — cheap and avoids any global state for which button
+    // currently exists.
+    function renderBar(data) {
+      const bar = document.getElementById('sde-render-bar');
+      if (!bar) return;
+      const status        = data.status || 'idle';
+      const sde           = data.sde;
+      const summary       = data.summary || {};
+      const selectedCount = summary.selectedCount || 0;
+      const approvedCount = summary.approvedCount || 0;
+      const totalSec      = summary.totalSec || 0;
+
+      bar.style.display = '';
+      let html = '';
+
+      if (status === 'queued' || status === 'rendering') {
+        // The webhook flips queued→ready/error directly today; 'rendering'
+        // is reserved for a future mid-render ping. Treat both the same.
+        html =
+          '<span class="sde-pill sde-pill-warn"><span class="sde-spin"></span> Rendering your reel</span>' +
+          '<span class="sde-meta">~5–8 min · we’ll update this automatically</span>';
+      } else if (status === 'ready' && sde && sde.video_url) {
+        const dur = sde.duration_s || 0;
+        const m   = Math.floor(dur / 60);
+        const ss  = String(dur % 60).padStart(2, '0');
+        const ago = renderedAgo(sde.rendered_at);
+        html =
+          '<a class="sde-btn sde-btn-accent" id="sde-watch-link" href="' + esc(sde.video_url) +
+          '" target="_blank" rel="noopener">▶ Watch reel</a>' +
+          '<button type="button" class="sde-btn sde-btn-ghost" id="sde-regenerate-btn">Regenerate</button>' +
+          '<span class="sde-meta">' + m + ':' + ss + ' · ' + esc(ago) + '</span>';
+      } else if (status === 'error') {
+        html =
+          '<span class="sde-pill sde-pill-error">Last render failed</span>' +
+          '<button type="button" class="sde-btn sde-btn-accent" id="sde-generate-btn">Try again</button>';
+      } else {
+        // idle — primary CTA. Disable when there are no approved clips
+        // (the backend would 422 anyway; preempting is friendlier).
+        const canGen = approvedCount > 0;
+        const label  = canGen ? 'Generate reel' : 'Waiting for uploads';
+        const meta   = canGen
+          ? selectedCount + ' clip' + (selectedCount === 1 ? '' : 's') +
+            ' · ~' + Math.floor(totalSec / 60) + ':' + String(totalSec % 60).padStart(2, '0') +
+            ' · music + cards'
+          : 'Photos & videos from the wall first';
+        html =
+          '<button type="button" class="sde-btn sde-btn-accent" id="sde-generate-btn"' +
+          (canGen ? '' : ' disabled') + '>' + label + '</button>' +
+          '<span class="sde-meta">' + meta + '</span>';
+      }
+
+      bar.innerHTML = html;
+      const genBtn   = document.getElementById('sde-generate-btn');
+      const regenBtn = document.getElementById('sde-regenerate-btn');
+      if (genBtn)   genBtn.addEventListener('click', handleGenerate);
+      if (regenBtn) regenBtn.addEventListener('click', handleRegenerate);
+
+      // Polling lifecycle: only spin while we're waiting on a render.
+      if (status === 'queued' || status === 'rendering') startPolling();
+      else stopPolling();
+    }
+
+    async function handleGenerate() {
+      const btn = document.getElementById('sde-generate-btn');
+      if (btn) { btn.disabled = true; btn.textContent = 'Starting…'; }
+      try {
+        const r = await fetch('/api/events/' + slug + '/sde/generate', {
+          method: 'POST', headers: AH,
+        });
+        const body = await r.json().catch(() => ({}));
+        // 200: we started it. 409 sde_in_flight: someone else already did.
+        // Either way → refresh state and let the polling pick up.
+        if (r.ok || (r.status === 409 && body && body.code === 'sde_in_flight')) {
+          await load();
+          return;
+        }
+        // Surface the backend's message inline so the host knows why.
+        const msg = (body && body.message) || 'Could not start the render. Try again in a minute.';
+        const bar = document.getElementById('sde-render-bar');
+        if (bar) {
+          bar.innerHTML =
+            '<span class="sde-pill sde-pill-error">' + esc(msg) + '</span>' +
+            '<button type="button" class="sde-btn sde-btn-ghost" id="sde-generate-btn">Try again</button>';
+          const retry = document.getElementById('sde-generate-btn');
+          if (retry) retry.addEventListener('click', handleGenerate);
+        }
+      } catch (e) {
+        console.warn('[sde] generate failed', e);
+        if (btn) { btn.disabled = false; btn.textContent = 'Generate reel'; }
+      }
+    }
+
+    async function handleRegenerate() {
+      // Non-destructive (new file, old one stays in R2), but does spend
+      // Lambda time and overwrites the visible "current" reel. Confirm
+      // once so accidental clicks don't trigger renders.
+      if (!confirm('Render a new version of your reel? This replaces what’s shown here.')) return;
+      await handleGenerate();
+    }
+
+    function startPolling() {
+      if (pollTimer) return;
+      pollTimer = setInterval(() => { load(); }, 12000);
+    }
+    function stopPolling() {
+      if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    }
+
+    // Coarse "5 min ago" / "2 hours ago" formatter — exact enough for a
+    // "rendered when" hint, no dependency on Intl.RelativeTimeFormat
+    // because we want lowercase + tight wording.
+    function renderedAgo(ts) {
+      if (!ts) return 'just now';
+      const elapsed = Math.max(0, (Date.now() - new Date(ts).getTime()) / 1000);
+      if (elapsed < 60)    return 'just now';
+      if (elapsed < 3600)  return Math.floor(elapsed / 60)   + ' min ago';
+      if (elapsed < 86400) return Math.floor(elapsed / 3600) + ' hr ago';
+      try { return new Date(ts).toLocaleDateString(); } catch { return 'earlier'; }
+    }
+
     async function load() {
       try {
         const r = await fetch(`/api/events/${slug}/sde`, { headers: AH });
@@ -5892,12 +6041,14 @@
           lockedEl.style.display = '';
           lockedEl.textContent = 'Could not load the preview — please refresh.';
           contentEl.style.display = 'none';
+          stopPolling();
           return;
         }
         loaded = true;
         render(await r.json());
       } catch (e) {
         panel.style.display = 'none';
+        stopPolling();
         console.warn('[sde] init failed', e);
       }
     }
