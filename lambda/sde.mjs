@@ -211,7 +211,22 @@ function safeCardName(i) {
   return `clip_${String(i).padStart(4, '0')}.mp4`;
 }
 
-async function normalizePhoto(srcPath, outPath, durSec, { kenBurns = true } = {}) {
+// Ken Burns anchor cycle. Each tuple is [xExpr, yExpr] in zoompan's
+// source-pixel coordinate system — they tell the filter where the
+// shrinking output window sits inside the upscaled frame as zoom
+// grows. Cycling the anchor per photo gives the reel its variety
+// (otherwise every clip pulls the same direction, which is exactly
+// what host reported on 2026-05-19). Center sits first so a
+// single-photo render also looks classical.
+const KEN_BURNS_ANCHORS = [
+  ['(iw-iw/zoom)/2', '(ih-ih/zoom)/2'],  // 0: center  (classic)
+  ['0',              '0'],                // 1: top-left
+  ['iw-iw/zoom',     '0'],                // 2: top-right
+  ['0',              'ih-ih/zoom'],       // 3: bottom-left
+  ['iw-iw/zoom',     'ih-ih/zoom'],       // 4: bottom-right
+];
+
+async function normalizePhoto(srcPath, outPath, durSec, { kenBurns = true, index = 0 } = {}) {
   // zoompan operates on frames; d = durSec * fps so the zoom finishes
   // exactly when the clip ends. Honor BOTH the per-call flag and the
   // module-level env switch — env wins (gives an operator escape hatch
@@ -220,18 +235,27 @@ async function normalizePhoto(srcPath, outPath, durSec, { kenBurns = true } = {}
   const useKenBurns = kenBurns && KEN_BURNS_ENABLED;
 
   // Two paths:
-  //  - kenBurns: upscale + slow zoompan (the polished default; OFF on
-  //    3 GB Lambdas via env). Still uses pad=color=black on the upscale
+  //  - kenBurns: upscale + slow zoompan, anchor cycles per clip-index
+  //    for visual variety. Still uses pad=color=black on the upscale
   //    stage because zoompan reads the padded frame; revisit when the
   //    10 GB quota lands and we can afford the blur on the larger frame.
   //  - flat: blur-fill background so portrait phone photos don't get
   //    letterbox bars. Defined as BLUR_FILL_GRAPH at module top.
   let filterArgs;
   if (useKenBurns) {
+    // 0.0006/frame = ~0.0144 per second at 24fps → a 3 s photo drifts
+    // from 1.000 to 1.043 (4.3 % zoom), a 5 s photo to 1.072. Plenty
+    // to feel "alive" without ever feeling rushed. 1.10 cap is a
+    // belt-and-suspenders against runaway long durations.
+    // (Was 0.0015/frame with 1.15 cap — felt frantic at TV viewing
+    // distance, hit the cap in ~4 s.)
+    const [xExpr, yExpr] = KEN_BURNS_ANCHORS[index % KEN_BURNS_ANCHORS.length];
     const vf = [
       `scale=2400:1350:force_original_aspect_ratio=decrease`,
       `pad=2400:1350:(ow-iw)/2:(oh-ih)/2:color=black`,
-      `zoompan=z='min(zoom+0.0015\\,1.15)':d=${frames}:s=${TARGET_W}x${TARGET_H}:fps=${TARGET_FPS}`,
+      `zoompan=z='min(zoom+0.0006\\,1.10)':d=${frames}:` +
+        `x='${xExpr}':y='${yExpr}':` +
+        `s=${TARGET_W}x${TARGET_H}:fps=${TARGET_FPS}`,
       `fps=${TARGET_FPS}`, `format=yuv420p`, `setsar=1`,
     ].join(',');
     filterArgs = ['-vf', vf];
@@ -492,7 +516,10 @@ async function normalizeAll(workdir, payload, localPaths) {
     if (clip.type === 'video') {
       await normalizeVideo(src, out, dur);
     } else {
-      await normalizePhoto(src, out, dur, { kenBurns: true });
+      // Pass `i` so the KEN_BURNS_ANCHORS cycle gives each photo a
+      // different zoom direction (host fed back that "all same side"
+      // looked uniform).
+      await normalizePhoto(src, out, dur, { kenBurns: true, index: i });
     }
     normalizedPaths.push(out);
   }
