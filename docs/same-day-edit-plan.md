@@ -35,6 +35,10 @@ heavy build is the stitch Lambda and the dashboard→wall command channel.
    when `upload_window_ends_at` passes so there's always a final cut.
 4. **Compute: new dedicated Lambda**, direct async-invoke (NOT the
    per-upload SQS FIFO), reports back via the existing webhook pattern.
+5. **Reactions are counted at request-time, never during the live
+   event** (see §3). Recording reactions is unchanged; only the *tally*
+   moves off the hot path. Reaction score is a soft re-rank, not a hard
+   dependency.
 
 ---
 
@@ -43,9 +47,9 @@ heavy build is the stitch Lambda and the dashboard→wall command channel.
 - **Gating:** new `sde` flag in [backend/lib/plans.js](backend/lib/plans.js)
   + mirror in `frontend/js/plans.js`. `true` for `dalisay` + `hiraya`
   only. Reads effective tier the locked way:
-  `resolvePlan(event.plan || event.subscription_tier || 'tala')` — see
-  the project memory on event-scoped tiers. Tala/Sinag dashboard shows a
-  locked upsell card (mirror how `website`/`polls` render locked).
+  `resolvePlan(event.plan || event.subscription_tier || 'tala')`.
+  Tala/Sinag dashboard shows a locked upsell card (mirror how
+  `website`/`polls` render locked).
 - **Render compute:** new Lambda `reelday-sde-renderer` (separate
   function, separate file `lambda/sde.mjs`). Direct
   `InvocationType:'Event'` invoke via an `awsLambdaService`-style client
@@ -54,7 +58,7 @@ heavy build is the stitch Lambda and the dashboard→wall command channel.
   bumped to 4–10 GB, timeout 600–900 s. Reports completion to a new
   `POST /webhooks/sde-ready` reusing `WEBHOOK_SECRET`.
 - **Selection (Curator):** new pure module `backend/lib/sdeSelect.js`,
-  owner-only, server-side. One indexed query (see §3).
+  owner-only, server-side, request-time only (see §3).
 - **Reveal channel:** the wall already polls (~1 s). Fold an `sde` block
   into an existing poll response rather than adding a new per-tick
   request (verify which existing endpoint the wall polls and piggyback —
@@ -93,7 +97,7 @@ CREATE TABLE IF NOT EXISTS event_sde (
 ALTER TABLE uploads ADD COLUMN IF NOT EXISTS sde_pinned   BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE uploads ADD COLUMN IF NOT EXISTS sde_excluded BOOLEAN NOT NULL DEFAULT false;
 
--- Wall reveal command. Host "Play on wall" sets played_requested_at=NOW();
+-- Wall reveal command. Host "Play on wall" sets sde_play_requested_at=NOW();
 -- the wall compares it to its last-seen value on its existing poll tick.
 ALTER TABLE events ADD COLUMN IF NOT EXISTS sde_play_requested_at TIMESTAMPTZ;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS sde_play_cleared_at   TIMESTAMPTZ;
@@ -104,10 +108,34 @@ The final SDE URL is also written into `event_sites.config.sde`
 hub renders it with zero extra joins — consistent with how the event
 site already reads everything from that one JSONB blob.
 
-## 3. The Curator — `backend/lib/sdeSelect.js`
+## 3. The Curator — `backend/lib/sdeSelect.js` (reactions, the safe way)
 
-Single query, owner-only. Weighted score (love/fire > applause >
-everything), pinned forced in, excluded forced out:
+**The core safety rule: recording a reaction stays exactly as it is
+today; only the *counting* changes.** Two distinct operations:
+
+| Operation | When | Cost | Changed? |
+|---|---|---|---|
+| **Record** a reaction (`INSERT` into `reactions`) | live, every tap, during the event | tiny, append-only | **No change.** Existing wall path, untouched. Adds zero new load. |
+| **Tally** reactions (`GROUP BY upload_id`, the heavy aggregate) | only when SDE is requested (button click, or auto at window close) | one heavier query | **New, but off the hot path.** Never runs during the live reaction storm. |
+
+Why this removes the outage risk: `reactions.js` already carries scars
+from live aggregation draining the pool and freezing other events' wall
+GETs. By the time the tally runs, either (a) the host explicitly clicked
+Generate — a rare, owner-authed, debounced action — or (b) uploads have
+closed and wall traffic is, by definition, zero.
+
+Hardening on the tally query:
+- Wrap in `SET LOCAL statement_timeout = '8s'` so a pathological event
+  can never hang a pooled connection.
+- **Debounce: one in-flight render per event.** `POST .../generate`
+  rejects if `event_sde.status IN ('queued','rendering')`. So the heavy
+  query can fire at most once per render, not per click.
+- Owner-auth + rate-limited (`limiterKey`) — never reachable by guests,
+  never on a poll.
+- It is a single query, not N — the aggregate is computed once into the
+  selection set, not re-run per clip.
+
+The tally query (runs once, at request-time, owner-only):
 
 ```sql
 SELECT u.id, u.file_type, u.file_url, u.web_url, u.compressed_key,
@@ -132,10 +160,13 @@ SELECT u.id, u.file_type, u.file_url, u.web_url, u.compressed_key,
 ```
 
 Selection algorithm (in JS, deterministic):
-1. **Always include** `sde_pinned` rows.
+1. **Always include** `sde_pinned` rows (host's hard picks — the spine).
 2. Fill remaining slots from the rest by `score DESC, created_at DESC`.
-3. **Fallback:** if selected count < `MIN_CLIPS` (≈12), top up with the
-   most-recent non-excluded uploads until target or no uploads left.
+3. **Fallback (soft signal):** if selected count < `MIN_CLIPS` (≈12),
+   top up with the most-recent non-excluded uploads. So if reactions are
+   sparse, noisy, or the tally is skipped entirely, the reel is still
+   built from host picks + chronology. Reactions only ever *re-order
+   within* the host's structure — they can never break the SDE.
 4. Cap at `MAX_CLIPS` (≈25) and a `MAX_TOTAL_S` budget
    (photo = 3 s, video ≈ 5 s).
 5. **Final reel order = chronological by `created_at`** of the selected
@@ -163,18 +194,20 @@ keeps it a single billable run). Payload:
 Per-clip normalization (every brick comes out byte-compatible so concat
 is clean): 1920×1080, `yuv420p`, 24 fps, `setsar=1`, silent track.
 - **Photo → 3 s Ken Burns:** `zoompan=z='min(zoom+0.0015,1.15)':d=72:s=1920x1080`,
-  then `scale`/`pad` to fill 1920×1080, gentle accent.
-- **Video → first 5 s:** `-t 5`, `scale`/`pad` to 1920×1080, drop guest
-  audio in v1 (music bed only; ducking parked).
+  then `scale`/`pad` to fill 1920×1080.
+- **Video → 5 s:** `scale`/`pad` to 1920×1080, drop guest audio in the
+  basic render (music bed only; ducking parked).
 - **Endcard:** ~2.5 s brand card (event name + "ReelDay") via `drawtext`
   or a pre-rendered PNG overlaid on brand bg.
 
 Compose: concat all bricks → silent master; take `audioKey`, trim/loop
 to total duration, `afade` in/out, `-shortest`. Output H.264 1920×1080
 `+faststart` + AAC. Upload `outKey` + a poster to R2. Then
-`POST /webhooks/sde-ready` (HMAC-style shared secret like the existing
-video-ready webhook) → backend updates `event_sde` and writes
-`event_sites.config.sde`.
+`POST /webhooks/sde-ready` (shared secret like the existing video-ready
+webhook) → backend updates `event_sde` and writes `event_sites.config.sde`.
+
+The cinematic polish (blurred-fill, beat-sync, transitions, LUT, pacing,
+best-5s, loudnorm) layers onto this same module in Batch 3 — see §8.
 
 ## 5. Backend routes — `backend/routes/sde.js`
 
@@ -182,8 +215,9 @@ video-ready webhook) → backend updates `event_sde` and writes
   curated preview list with per-clip score / pinned / excluded.
 - `PATCH /api/events/:slug/sde/clips` (owner) — set pinned/excluded.
 - `POST  /api/events/:slug/sde/generate` (owner, `sde`-gated) — run
-  Curator, build payload, invoke Lambda, set `status='queued'`.
-  Debounced: reject if a render is already in flight for this event.
+  Curator (the request-time tally, §3), build payload, invoke Lambda,
+  set `status='queued'`. Debounced: reject if a render is already in
+  flight for this event.
 - `POST  /api/events/:slug/sde/play` (owner) — set
   `sde_play_requested_at = NOW()`.
 - `POST  /api/events/:slug/sde/stop` (owner) — set `sde_play_cleared_at`.
@@ -202,9 +236,9 @@ video-ready webhook) → backend updates `event_sde` and writes
   Edit" card — Generate button, status/progress, thumbnail grid of the
   curated selection with pin/exclude toggles, "Play on wall" / "Stop",
   copy-link + download for the finished mp4. Tala/Sinag → locked upsell.
-  ⚠️ Respect the standing rule: **grep before declaring any new
-  const/function in `dashboard.html`** — a duplicate in a `type=module`
-  script silently blanks the whole page.
+  ⚠️ Standing rule: **grep before declaring any new const/function in
+  `dashboard.html`** — a duplicate in a `type=module` script silently
+  blanks the whole page.
 - **Wall** ([wall.html](frontend/wall.html)): on poll, if `sde.play` and
   a `video_url`, enter the existing fullscreen takeover
   ([wall.html:1064](frontend/wall.html#L1064)), play the mp4 **with
@@ -223,37 +257,106 @@ Pixabay library tracks are free for any use incl. redistribution in the
 downloadable mp4; custom host uploads already carry the "host confirmed
 rights" attestation in `music_tracks.license_info`.
 
-## 8. Phasing
+---
 
-- **Phase 0** — `sde` flag (plans.js ×2) + migration (`event_sde`,
-  `uploads.sde_*`, `events.sde_play_*`) + schema.sql mirror.
-- **Phase 1** — Curator (`sdeSelect.js`) + owner `GET`/`PATCH` routes +
-  dashboard preview/pin UI. No render yet — validate selection alone.
-- **Phase 2** — `lambda/sde.mjs` + deploy + `generate` route +
-  `sde-ready` webhook + status UI. End-to-end to a downloadable URL.
-- **Phase 3** — Website hub pin (`event_sites.config.sde`).
-- **Phase 4** — Wall reveal (command column + takeover reuse).
-- **Phase 5** — Auto-generate at upload-window close.
+## 8. Build batches
 
-## 9. Out of scope (v1) / parked
+Each batch is independently shippable and leaves the product working.
 
-Vertical/Reels 9:16 cut · AI shot selection / face dedup ·
-beat-synced transitions · guest-audio ducking under the bed ·
-Hiraya white-label endcard · multi-track soundtrack ·
-re-render diffing (each generate is a full re-render in v1).
+### Batch 0 — Foundations
+- `sde` flag in `backend/lib/plans.js` + mirror `frontend/js/plans.js`.
+- Migration: `event_sde` table, `uploads.sde_pinned/sde_excluded`,
+  `events.sde_play_requested_at/cleared_at`; mirror into `schema.sql`.
+- **Done = ** schema in place, gate resolves Dalisay/Hiraya only.
+
+### Batch 1 — The Curator (selection only, no video yet)
+- `backend/lib/sdeSelect.js` with the request-time tally, the
+  `statement_timeout` guard, the debounce check, and the soft-signal
+  fallback (§3).
+- `GET` + `PATCH .../sde` routes.
+- Dashboard preview grid with pin/exclude toggles.
+- **Done = ** host can see exactly which clips the SDE *would* use and
+  curate them. Zero render cost. Validates selection in isolation, and
+  proves the reactions tally is safe before any FFmpeg work.
+
+### Batch 2 — Basic render (the SDE exists)
+- `lambda/sde.mjs`: normalize bricks → concat → music bed → endcard →
+  opening title card (event name + date + venue from the `events` row).
+- Deploy `reelday-sde-renderer`; `POST .../generate`; `sde-ready`
+  webhook; status UI on the dashboard card; download button.
+- **Done = ** a real, downloadable 1920×1080 mp4 end-to-end. Looks like
+  a clean slideshow with music — pipeline proven, not yet "cinematic".
+
+### Batch 3 — Cinematic polish (pure FFmpeg, no AI)
+Layered onto `lambda/sde.mjs`. This is what makes it look
+professionally edited:
+1. **Blurred-fill background** for portrait clips instead of black bars
+   (reuse the wall's existing blurred-source recipe). *Highest visual
+   gain per effort.*
+2. **Beat-synced cuts** — annotate BPM / beat-grid into the existing
+   `music-library/*/manifest.json` files **once** (no runtime lib, no
+   new dep); the render aligns clip changes to the beat.
+3. **Smooth transitions** — `xfade` crossfades / light zooms between
+   bricks instead of hard cuts.
+4. **Single cinematic color LUT** over every clip so mismatched phone
+   cameras unify into one graded look.
+5. **Pacing curve** off the beat grid — longer holds at the open,
+   quicker cuts at the music peak, slow the closer.
+6. **Best 5 s of a video by audio energy** — pick the loudest
+   (cheer/applause) window instead of the first 5 s. Heuristic, no AI.
+7. **`loudnorm` on the music bed** — every event's SDE lands at the
+   same comfortable phone-speaker volume.
+- **Done = ** the deliverable clears the "who edited this?" bar that
+  justifies ₱2,990.
+
+### Batch 4 — Delivery surfaces
+- Website hub pin (`event_sites.config.sde` → "Watch the recap" +
+  "Download to phone").
+- Wall reveal: the `sde_play_*` command columns + reuse the fullscreen
+  takeover. Host "Play on wall" / "Stop" from the dashboard.
+- **Done = ** the "reveal at the reception" moment + the shareable hub.
+
+### Batch 5 — Auto-generate at upload-window close
+- Lazy check fires one render when `upload_window_ends_at` passes,
+  guarded by `event_sde.auto_rendered`.
+- **Done = ** every Dalisay+ event ends with a final SDE even if the
+  host never clicks the button.
+
+### Batch 6 — AI pass (premium; optional, after v1 proves out)
+Runs **only on the already-curated top ~25** (never every upload — cost
+and latency would explode):
+- **Dedup + best-frame:** drop near-identical burst shots and blurry
+  ones; pick the sharpest / most-smiling frame.
+- **AI title + caption cards:** event name, a tasteful one-line opener,
+  guest-name lower-thirds — text-gen via native `fetch` to Haiku
+  (rate-limited, prompt-cached, no SDK dep — same pattern as the parked
+  AI concierge).
+- **Done = ** marketable as a genuine "AI Same Day Edit". This is the
+  upsell headline, but it carries the real cost / latency / failure
+  modes, so it ships *after* Batches 0–5 are solid.
+
+## 9. Out of scope (parked)
+
+Vertical/Reels 9:16 cut · full vision-model-on-every-upload ·
+narrative-arc / scene-mood modeling · voice/speech detection ·
+guest-audio ducking under the bed · Hiraya white-label endcard ·
+multi-track soundtrack · re-render diffing (each generate is a full
+re-render).
 
 ## 10. Risk notes
 
-- **Lambda ceiling:** 25 clips concat is a single long job — dedicated
+- **Reactions ≠ outage** *if* the tally is request-time only: see §3.
+  Recording stays append-only and unchanged; the heavy `GROUP BY`
+  runs once per render, owner-triggered, `statement_timeout`-guarded,
+  debounced, never on a poll, never during the live storm. Reaction
+  score is a soft re-rank, not a hard dependency.
+- **Lambda ceiling:** ≤25 clips concat is a single long job — dedicated
   function with bumped `/tmp` + memory + timeout, isolated from the live
   per-upload transcoder. ~1–3 min render keeps the "5-minute SDE"
   promise.
-- **Hot-path discipline:** the wall-state read must ride an existing
-  poll, not add one. The Curator query is owner-only and rate-limited.
-  Append a row to `docs/perf-test-database.md` if a render coincides
-  with a stress run.
-- **Sparse events:** the fallback (recency top-up) guarantees a reel; a
-  truly empty event (0 approved uploads) returns a clear "nothing to
-  edit yet" state, not an error.
-</content>
-</invoke>
+- **Hot-path discipline:** the wall reveal-state read must ride an
+  existing poll, not add one. Append a row to
+  `docs/perf-test-database.md` if a render coincides with a stress run.
+- **Sparse events:** the soft-signal fallback guarantees a reel; a truly
+  empty event (0 approved uploads) returns a clear "nothing to edit yet"
+  state, not an error.
