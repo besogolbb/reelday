@@ -148,8 +148,39 @@
     }
     sound.addEventListener('click', unmute);
     sound.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter' || e.key === ' ') unmute();
+      // Enter still unmutes (a11y). Space is handled at the document
+      // level for fullscreen — DON'T also unmute on space here, or
+      // pressing Space would simultaneously unmute + toggle fullscreen.
+      if (e.key === 'Enter') unmute();
     });
+
+    // Fullscreen shortcuts — F key, Space, double-click. While the
+    // takeover is up, focus is inside this iframe so the wall's own
+    // handlers don't fire. The iframe is `allow="fullscreen"` so
+    // requesting fullscreen on our documentElement works the same as
+    // it would on the parent (visually identical — the iframe is
+    // already 100% × 100% of the takeover overlay).
+    function toggleFs() {
+      try {
+        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+          var req = document.documentElement.requestFullscreen ||
+                    document.documentElement.webkitRequestFullscreen;
+          if (req) req.call(document.documentElement);
+        } else {
+          var exit = document.exitFullscreen || document.webkitExitFullscreen;
+          if (exit) exit.call(document);
+        }
+      } catch (e) {
+        console.warn('[sde-play] fullscreen failed:', e && e.message);
+      }
+    }
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'f' || e.key === 'F' || e.key === ' ' || e.code === 'Space') {
+        e.preventDefault();
+        toggleFs();
+      }
+    });
+    document.addEventListener('dblclick', function () { toggleFs(); });
   })();
 </script>
 </body>

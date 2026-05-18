@@ -1780,7 +1780,7 @@
     <input id="music-volume-slider" type="range" min="0" max="100" step="1" value="55"
            aria-label="Background music volume" />
   </div>
-  <button class="fs-btn" id="fs-btn" type="button" aria-label="Toggle fullscreen" title="Fullscreen (F)">
+  <button class="fs-btn" id="fs-btn" type="button" aria-label="Toggle fullscreen" title="Fullscreen (F · Space · double-click)">
     <svg id="fs-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>
     </svg>
@@ -4517,11 +4517,17 @@
         if (isRunning) goTo(currentIdx - 1);
         break;
       case 'f': case 'F':
-        if (!document.fullscreenElement) {
-          document.documentElement.requestFullscreen().catch(() => {});
-        } else {
-          document.exitFullscreen();
-        }
+        // Route through the helper so iOS Safari hits the
+        // <video>-element path instead of failing silently.
+        e.preventDefault();
+        toggleFullscreen();
+        break;
+      case ' ':
+        // Space → fullscreen toggle (kiosk shortcut for the staff at
+        // the venue TV). Default browser behaviour is page-scroll,
+        // which is meaningless here; preventDefault keeps it tight.
+        e.preventDefault();
+        toggleFullscreen();
         break;
       case 'p': case 'P':
         if (isRunning) togglePause();
@@ -4593,6 +4599,18 @@
   }
 
   if (fsBtn) fsBtn.addEventListener('click', toggleFullscreen);
+
+  // Double-click anywhere on the wall → fullscreen toggle. Convenient
+  // for the staff at the venue TV who don't always remember the F key.
+  // Listening on documentElement (not body) so it works even over the
+  // QR badge / fs-btn / sound-btn — the click already lands on the
+  // descendant, but dblclick bubbles to html.
+  document.documentElement.addEventListener('dblclick', e => {
+    // Skip if the dblclick was on an interactive control — those have
+    // their own click semantics (e.g. the fs-btn would toggle twice).
+    if (e.target.closest('button, a, [role="button"]')) return;
+    toggleFullscreen();
+  });
 
   document.addEventListener('fullscreenchange', () => {
     fsIcon.innerHTML = (document.fullscreenElement || document.webkitFullscreenElement) ? ICON_EXIT : ICON_ENTER;
