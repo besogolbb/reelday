@@ -757,22 +757,30 @@
       line-height: 1.3;
     }
 
-    /* ── Guest name / timestamp — naked small-caps sans-serif ───────── */
+    /* ── Guest name / timestamp — naked small-caps sans-serif ─────────
+       Tuned for long-distance legibility: the name is the high-contrast
+       anchor of the bottom-left gutter; the serif caption stays the
+       quieter, decorative element. Lifted above the blockquote so it
+       sits in the cleanest part of the gutter, away from the caption
+       baseline. Letter-spacing kept at 0.1em on the name itself — wide
+       enough to stop characters blurring together across the room,
+       tight enough not to look stretched. */
     .caption .uploader {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       font-weight: 600; font-style: normal;
       letter-spacing: .15em; text-transform: uppercase;
       color: rgba(255,255,255,.85);
-      margin-bottom: 8px;
+      margin-bottom: 16px;
       display: inline-flex; align-items: center; gap: 0;
       text-shadow:
-        0 1px 3px rgba(0,0,0,.85),
-        0 2px 10px rgba(0,0,0,.60);
+        0 4px 8px rgba(0,0,0,.5),
+        0 0 20px rgba(0,0,0,.3);
       transition: opacity .6s ease, transform .6s cubic-bezier(.2,.8,.2,1);
     }
     .caption .uploader .uploader-name {
-      font-size: clamp(24px, 2.6vw, 38px);
-      font-weight: 800; color: #fff;
+      font-size: clamp(31px, 3.4vw, 50px);  /* +30% over the prior 24/2.6vw/38 */
+      font-weight: 700; color: #fff;
+      letter-spacing: .1em;                  /* overrides parent .15em on the name only */
     }
     .caption .uploader .uploader-sep {
       font-size: clamp(14px, 1.4vw, 20px);
@@ -812,8 +820,8 @@
     body.is-portrait .caption .uploader,
     body.is-landscape .caption .uploader {
       text-shadow:
-        0 1px 4px rgba(0,0,0,.92),
-        0 3px 12px rgba(0,0,0,.70);
+        0 4px 8px rgba(0,0,0,.5),
+        0 0 20px rgba(0,0,0,.3);
     }
     body.is-landscape .caption.no-caption .uploader .uploader-name {
       font-size: clamp(13px, 1.3vw, 17px);
@@ -1536,7 +1544,7 @@
       .caption .uploader {
         font-size: 12px !important;
         letter-spacing: .18em;
-        margin-bottom: 10px;
+        margin-bottom: 14px;
       }
       .caption blockquote {
         font-size: clamp(20px, 6vw, 28px) !important;
