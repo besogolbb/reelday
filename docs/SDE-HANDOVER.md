@@ -3,7 +3,8 @@
 Cold-start pointer for the **Same Day Edit** build. Working tree clean,
 all on `main`. Spec: [same-day-edit-plan.md](same-day-edit-plan.md).
 Perf log: [perf-test-database.md](perf-test-database.md). Last updated
-**2026-05-18** (Slice 2B backend shipped).
+**2026-05-18** (Slice 2B backend shipped + production-hardened on a 3 GB
+Lambda; first real reel rendered end-to-end and verified by host).
 
 ## Shipped (chronological)
 
@@ -21,6 +22,11 @@ Perf log: [perf-test-database.md](perf-test-database.md). Last updated
 | `632cb81` | 2B-1 | `POST /api/events/:slug/sde/generate` + [backend/lib/sdeRenderInvoke.js](../backend/lib/sdeRenderInvoke.js) — owner-gated, row-debounced, async-invokes the Lambda |
 | `8c3b9d2` | 2B-2 | `POST /api/webhooks/sde-ready` — mirrors `video-ready` pattern; updates `event_sde` + merges `event_sites.config.sde` |
 | `705eafc` | 2B-3 | Title/endcard via `drawtext` (no PNG step). New payload fields `title`/`subtitle`/`endcardText`; font from `SDE_FONT_PATH` |
+| `d4e0735` | hardening | Card render failure must never fail the whole render (drawtext can be unavailable on minimal FFmpeg layers) |
+| `369691d` | hardening | `SDE_X264_PRESET` + `SDE_KEN_BURNS` env knobs so 68-clip 1080p reels fit in the AWS new-account 3 GB Lambda cap |
+| `cce2489` | polish | Blur-fill background instead of letterbox black bars (split + boxblur + overlay) |
+| `b76815e` | hardening | Await the success-path webhook (silent webhook-miss bug: render succeeded, DB stayed stale) |
+| `a41a3b3` | hardening | Fix video-clip freeze at brick boundaries (`-fflags +shortest` + finite anullsrc); resolved the duration anomaly too (397s → 231s, matches Curator's 240s cap) |
 
 ## Curation model (current truth)
 
@@ -48,6 +54,26 @@ All three pieces landed across `632cb81`/`8c3b9d2`/`705eafc`:
 1. **`POST /api/events/:slug/sde/generate`** ([sde.js](../backend/routes/sde.js)) — owner, `sde`-gated, row-debounced (rejects 409 if `status IN ('queued','rendering')`). Runs Curator → resolves R2 key per clip (`compressed_key`→`original_key`→derived) → picks music (chain: event's `music_tracks` → curated playlist lead → `SDE_DEFAULT_AUDIO_KEY` env → null) → builds payload → async-invokes via [backend/lib/sdeRenderInvoke.js](../backend/lib/sdeRenderInvoke.js) (env `SDE_LAMBDA_NAME`) → upserts `event_sde.status='queued'` (preserves last good `video_url`/`poster_url` for dashboard continuity).
 2. **`POST /api/webhooks/sde-ready`** ([webhooks.js](../backend/routes/webhooks.js)) — shared `WEBHOOK_SECRET` (`X-Webhook-Secret` or `Bearer`). On `ready`: updates `event_sde.{status,video_url,poster_url,duration_s,clip_count,rendered_at}` AND merges an `sde` block into `event_sites.config` via `jsonb_set` INSERT-on-conflict (preserves existing `is_published` + other site fields). On `error`: records `error_message`, leaves `event_sites` alone.
 3. **Title/endcard via `drawtext`** ([sde.mjs:158-217](../lambda/sde.mjs#L158)) — chosen over PNG generation per Q&A. Pure FFmpeg (`color=` source + `drawtext` filter, text via `textfile=` so no escaping). Skips silently if the font file is missing — operator can ship a font later without breaking renders.
+
+## 3 GB Lambda — current operating state
+
+AWS new accounts cap per-function memory at **3008 MB** until you file a
+Service Quota / Support case for the standard 10240 MB ceiling. The
+SDE Lambda was sized for 10 GB / 6 vCPU but ships fine on 3 GB / 2 vCPU
+with two env-controlled compromises. **Both go away when the quota
+lands** — just remove the env vars and restore the polished defaults.
+
+| Env var | Now (3 GB) | Restore (10 GB) | Why |
+|---|---|---|---|
+| `SDE_X264_PRESET` | `ultrafast` | unset → `veryfast` default | Was the difference between 14:57 timeout and ~5 min normalize |
+| `SDE_KEN_BURNS` | `false` | unset → `true` default | Zoompan dominates photo encode; off saves ~30% |
+| Lambda memory | `3008` | `10240` | Whole point of the quota raise |
+
+### When the quota raise lands — also queued for then
+
+- **Transitions (Batch 3)**: 0.3 s xfade between every clip. ~6-8 min single-pass re-encode of the stitched output — fits comfortably in 10 GB / 6 vCPU but blows the 15-min ceiling on 3 GB. Decision deferred 2026-05-18 explicitly.
+- **Blur-fill in Ken Burns path**: currently the kenBurns:true branch in [normalizePhoto](../lambda/sde.mjs) still uses `pad=color=black` on the 2400×1350 upscale because zoompan reads that frame. When Ken Burns comes back on, apply BLUR_FILL_GRAPH to the upscale too.
+- **Beat-sync + LUT**: original Batch 3 scope, still parked.
 
 ## Active task — Slice 2C (frontend)
 
