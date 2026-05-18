@@ -3,11 +3,13 @@
 Cold-start pointer for the **Same Day Edit** build. Working tree clean,
 all on `main`. Spec: [same-day-edit-plan.md](same-day-edit-plan.md).
 Perf log: [perf-test-database.md](perf-test-database.md). Last updated
-**2026-05-18** (Slices 2B + 2C + 2D all shipped; first real reel
-rendered end-to-end and verified by host; SDE feature is
-host-usable on a 3 GB Lambda with wall reveal + auto-render at
-upload-window close. Remaining polish waits on the 10 GB Lambda
-quota raise — see operating-state table below).
+**2026-05-18** (Slices 2B + 2C + 2D all shipped + a long wall-takeover
+hardening pass. First real reel rendered end-to-end and verified by
+host on phone + laptop. Wall reveal now plays via an **iframe-isolated
+player** (`/sde-play.html`), not an in-page `<video>` — see
+[Wall takeover architecture](#wall-takeover-architecture) before
+touching that path. Remaining polish waits on the 10 GB Lambda quota
+raise — see operating-state table below).
 
 ## Shipped (chronological)
 
@@ -34,6 +36,13 @@ quota raise — see operating-state table below).
 | `1813efb` | 2D-1 | Backend: extract `kickOffRender` to [lib/sdeRender.js](../backend/lib/sdeRender.js); add `POST /sde/play` + `POST /sde/stop`; auto-render trigger on the reactions GET hot path + on host's GET `/sde` fallback (both deduped via in-memory `autoRenderFired` Set) |
 | `498dd3a` | 2D-2 | Wall: `#sde-takeover` fullscreen overlay driven by `sde_play` block in the reactions poll response; loops the reel; "Tap for sound" hint if autoplay is blocked unmuted |
 | `576f29b` | 2D-3 | Dashboard: `[📺 Play on wall]` / `[● Stop wall]` button in the render bar (ready state only); flips to live-red style with pulsing dot when active |
+| `83ee7e8` | wall-fix | Frozen-at-first-frame on cold tabs: unmuted `play()` resolved but didn't actually play. Always start muted. |
+| `b26a62a` | wall-fix | Pause gallery vidA/vidB + bg music + clear slideTimer during takeover (decoder/audio contention) |
+| `f6111ff` | wall-fix | Remove auto-unmute — Chrome PAUSES the video if the unmute is rejected without a gesture ([goo.gl/xX8pDD](https://goo.gl/xX8pDD)). Hint-tap is the only safe sound path. |
+| `ceb60a5` | wall-fix | Prebuffer wait (`canplaythrough` + fallbacks) + "Loading reel" spinner before play |
+| `4ca705e` | wall-fix | FULLY release gallery videos (`pause` + `removeAttribute('src')` + `load()`) — paused-but-loaded still holds decoder/memory |
+| `6b862bd` | wall-fix | First-poll swallow: refreshing the wall must NOT auto-resume a takeover from a still-active play signal |
+| `70b9da7` | **wall arch** | **iframe-isolated player.** New [frontend/sde-play.html](../frontend/sde-play.html); wall mounts it in an `<iframe>` instead of an in-page `<video>`. The wall runtime (1Hz polls + gallery + music + emoji + DOM) was starving in-page playback; the iframe gets its own JS context / network pool / decoder slot. `handleSdePlay` slimmed to lifecycle-only. |
 
 ## Curation model (current truth)
 
@@ -48,7 +57,7 @@ quota raise — see operating-state table below).
 - **No manual reordering / drag-drop** — AI-only positioning is the product story.
 - **SDE strip read-only** — host curates via the Feature pin in stream tiles, never inside the panel.
 - **Lambda renders silent if `audioKey` null** — backend picks defaults (Slice 2B). Silent path is a safety net, not the product experience.
-- **Cards = pre-rendered PNG overlays** (not `drawtext`). PNG generation lives in backend Slice 2B.
+- ~~Cards = pre-rendered PNG overlays~~ **SUPERSEDED 2026-05-18:** cards are `drawtext`-on-black, rendered in the Lambda (`705eafc`). The PNG `titleCardKey`/`endcardKey` payload fields still exist for compatibility but the backend never sets them. Decision reversed via the Q&A at 2B kickoff — no PNG generation anywhere.
 - **Beat-sync, transitions, LUT = Batch 3.** Slice 2A produces hard cuts; this is intentional.
 - **Counting backend-only; Lambda never touches DB.** Curator runs request-time only.
 - **No new npm deps** (Easypanel 502 footgun).
@@ -114,10 +123,61 @@ footgun stays defused.
    `sde_play_cleared_at`.
 2. Wall's existing 1Hz reactions poll picks up the `sde_play` block
    in the response within ~1 s.
-3. Wall enters fullscreen takeover (`#sde-takeover`, z-index 200,
-   black letterbox) with the rendered mp4, looping.
+3. Wall **mounts an `<iframe src="/sde-play.html?src=…&poster=…">`**
+   into the `#sde-takeover` overlay (z-index 200). The iframe page
+   plays the reel; the wall just owns mount/unmount.
 4. Host clicks `[● Stop wall]` → `POST /sde/stop` stamps
-   `sde_play_cleared_at`; wall exits takeover on next poll.
+   `sde_play_cleared_at`; wall sets `frame.src = 'about:blank'` (full
+   teardown) and resumes the gallery on its next poll.
+
+## Wall takeover architecture
+
+**Why an iframe.** In-page `<video>` playback stuttered badly on the
+wall even though the *same URL played perfectly in a standalone tab*.
+Root cause: the wall runtime is heavy — 1Hz reactions poll, uploads/
+burst/polls polling, music subsystem, emoji animations, and a huge
+DOM all competing for the main thread, network connection pool, and
+(on weaker devices) the 1–2 hardware video decoders. Freeing
+individual culprits helped but never fully fixed it. The iframe
+(`70b9da7`) gives the player its own everything — same isolation as
+the standalone tab that worked.
+
+**Files:**
+- [frontend/sde-play.html](../frontend/sde-play.html) — ~90-line
+  standalone player. Reads `?src=` + `?poster=`. Muted autoplay +
+  loop + `canplaythrough` prebuffer + "Tap for sound". **No polling**
+  — the parent wall owns lifecycle. Served by `@fastify/static`
+  (root=`frontend`, prefix=`/`) — no backend route needed.
+- [frontend/wall.html](../wall.html) `handleSdePlay` — lifecycle only:
+  mount iframe on a NEW `requested_at`, `about:blank` on stop/null.
+  Still releases gallery media + hides emoji on entry (gives the
+  iframe a clean decoder slot), restores on exit.
+
+**Hard-won constraints (do NOT regress):**
+- **Never call `video.muted = false` from code.** Chrome *pauses*
+  the element if the unmute is rejected without a user gesture
+  ([goo.gl/xX8pDD](https://goo.gl/xX8pDD)). Sound is opt-in via the
+  in-iframe "Tap for sound" hint — a tap there is activation for the
+  iframe's own context. For event-day, host taps it once on the TV.
+- **Always start muted.** Muted autoplay is universally permitted;
+  unmuted is not, and a silently-blocked unmuted `play()` resolves
+  its promise while the video stays frozen at frame 0.
+- **First-poll swallow.** On the wall's first reactions poll after
+  load, an already-active `sde_play` is remembered but NOT entered —
+  refreshing the wall (or a stale forgotten-Stop signal) must not
+  surprise-play. Only a *new* `requested_at` triggers takeover.
+- **Known cosmetic mismatch:** after a wall refresh that swallowed an
+  active signal, the dashboard still shows `[● Stop wall]` (server
+  `playing` is true). Host clicks Stop → state clears → next Play
+  works normally. Fixing properly needs a wall→server "I refreshed"
+  signal — deliberately out of scope.
+
+**If it still stutters fully isolated** → it's genuine network
+bandwidth on the ~150–300 MB ultrafast-preset mp4. The real fix is
+lowering the encoder bitrate (a `SDE_X264_CRF` knob, default ~26
+instead of the hard-coded 22) at render time — drafted then reverted
+2026-05-18 when the standalone-tab test proved the file itself was
+fine. Revisit only if iframe isolation doesn't resolve it.
 
 **Auto-render** fires once per event when `upload_window_ends_at`
 passes, via TWO trigger paths so events with or without a live wall
@@ -203,15 +263,17 @@ Payload contract (current — drawtext path):
 
 - [docs/same-day-edit-plan.md](same-day-edit-plan.md) — spec, batch roadmap, locked decisions
 - [backend/lib/sdeSelect.js](../backend/lib/sdeSelect.js) — Curator
-- [backend/routes/sde.js](../backend/routes/sde.js) — owner GET/PATCH/POST (`/generate`)
+- [backend/routes/sde.js](../backend/routes/sde.js) — owner GET/PATCH/POST (`/generate`, `/play`, `/stop`); GET returns `playing`; dashboard auto-render fallback
 - [backend/routes/webhooks.js](../backend/routes/webhooks.js) — `video-ready` + `sde-ready`
+- [backend/lib/sdeRender.js](../backend/lib/sdeRender.js) — **`kickOffRender` orchestrator** (curator→music→invoke→upsert) + `SdeRenderError`; shared by `/generate` route AND the reactions-poll auto-trigger
 - [backend/lib/sdeRenderInvoke.js](../backend/lib/sdeRenderInvoke.js) — Lambda invoker (env `SDE_LAMBDA_NAME`)
-- [backend/lib/awsLambdaService.js](../backend/lib/awsLambdaService.js) — the transcoder invoker (reference pattern)
+- [backend/routes/reactions.js](../backend/routes/reactions.js) — wall poll; carries `sde_play` block + fires the auto-render trigger (`autoRenderFired` Set)
 - [backend/plugins/database.js:241-280](../backend/plugins/database.js) — migrations (idempotent at boot)
-- [lambda/sde.mjs](../lambda/sde.mjs) — renderer (B2A, header has deploy config)
+- [lambda/sde.mjs](../lambda/sde.mjs) — renderer (B2A, header has deploy config + env knobs)
 - [lambda/index.mjs](../lambda/index.mjs) — reference for env/idioms (the transcoder)
-- [frontend/dashboard.html](../frontend/dashboard.html) — main module ~L2200; isolated SDE module ~L5723; Feature pin button in `renderGallery` ~L3110; `handleFeatureToggle` ~L3214
-- [frontend/wall.html](../wall.html) — beacon already shipped (`&showing=<id>`)
+- [frontend/dashboard.html](../frontend/dashboard.html) — isolated SDE module ~L5723; render bar (`#sde-render-bar`) state machine; Play/Stop wall buttons
+- [frontend/sde-play.html](../frontend/sde-play.html) — **isolated wall player** loaded in the takeover iframe
+- [frontend/wall.html](../wall.html) — `handleSdePlay` (takeover lifecycle, iframe mount/unmount); beacon (`&showing=<id>`)
 
 ## Memory + portability
 
