@@ -100,13 +100,15 @@
   }
 
   /* ── Event type grid ───────────────────────── */
+  /* Flex (not grid) so the bottom-row orphan centers cleanly instead
+     of left-aligning to col 1. CSS grid fills cells deterministically
+     and has no native "center the last row" — the flex + justify-content
+     pattern is the cleanest fix. */
   .types-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
     gap: 12px;
-  }
-  @media (min-width: 560px) {
-    .types-grid { grid-template-columns: repeat(3, 1fr); }
   }
   .type-card {
     background: #fff; border: 1.5px solid var(--line);
@@ -114,10 +116,21 @@
     padding: 20px;
     cursor: pointer;
     aspect-ratio: 4/5;
+    /* 2-up on mobile, 3-up at >=560 — matches the prior grid breakpoint.
+       The -6/-8px adjustments account for the 12px gap so cards never
+       overflow and wrap to an extra row. */
+    flex: 0 1 calc(50% - 6px);
+    max-width: calc(50% - 6px);
     display: flex; flex-direction: column; justify-content: space-between;
     transition: all .2s ease;
     color: var(--ink); font-family: var(--sans);
     text-align: left;
+  }
+  @media (min-width: 560px) {
+    .type-card {
+      flex: 0 1 calc(33.333% - 8px);
+      max-width: calc(33.333% - 8px);
+    }
   }
   .type-card:hover {
     border-color: var(--accent);
@@ -444,18 +457,20 @@
           <div class="pic" style="background-image:url(/images/Baptism.png?v=2)"></div>
           <div><div class="name">Baptism</div><div class="tag">Binyag</div></div>
         </button>
+        <button type="button" class="type-card" data-type="corporate">
+          <div class="pic" style="background-image:url(/images/Corporate.png?v=2)"></div>
+          <div><div class="name">Corporate</div><div class="tag">Kompanya</div></div>
+        </button>
         <button type="button" class="type-card" data-type="reunion">
           <div class="pic" style="background-image:url(/images/The%20whole%20family%20finally%20in%20one%20frame.png?v=2)"></div>
           <!-- data-type stays 'reunion' for back-compat with existing
                events / themes / wall emoji sets; only the display label
                broadens to 'General Event' so the card is the catch-all
                option (Memorial was dropped from the picker in May 2026
-               but its theme + meta survive for legacy events). -->
+               but its theme + meta survive for legacy events). Placed
+               last as the catch-all so the named-occasion cards are the
+               primary CTAs. -->
           <div><div class="name">General Event</div><div class="tag">Okasyon</div></div>
-        </button>
-        <button type="button" class="type-card" data-type="corporate">
-          <div class="pic" style="background-image:url(/images/Corporate.png?v=2)"></div>
-          <div><div class="name">Corporate</div><div class="tag">Kompanya</div></div>
         </button>
       </div>
 
