@@ -218,6 +218,15 @@ Always yields a reel if ≥1 approved upload exists.
 
 ## 4. Pre-process + Stitch — `lambda/sde.mjs`
 
+**Division of labor:** the *counting* (the reaction tally / Curator, §3)
+is 100% backend — a Postgres `GROUP BY` run once at request-time where
+the connection pool already lives. **Lambda never touches the database
+and never counts.** It receives an already-decided clip list + music
+key in the invoke payload, assembles the mp4, and reports back via the
+webhook. Backend = director with the guest list; Lambda = film editor
+splicing what it was handed. This keeps Lambda a pure, stateless media
+worker (no DB creds, no per-render cold PG connection).
+
 One Lambda invocation does everything (no separate per-brick jobs —
 keeps it a single billable run). Payload:
 
@@ -311,9 +320,14 @@ Each batch is independently shippable and leaves the product working.
 - **Now-showing beacon (§3):** wall appends `&showing=<uploadId>` to its
   existing 1 s reactions poll; server keeps an in-memory
   `Map<slug,{uploadId,since}>`; the reaction `INSERT` in `reactions.js`
-  stamps `upload_id` from that pointer when the guest sends none. Verify
-  the single-Node-process assumption first (§10); fall back to an
-  `events.current_slide_upload_id` column only if multi-instance.
+  stamps `upload_id` from that pointer when the guest sends none.
+  Single-process assumption **RESOLVED — confirmed single Node process**
+  (Dockerfile `CMD ["node","backend/server.js"]`, no cluster/PM2;
+  corroborated by the existing in-process transcode semaphore in
+  `videoTranscode.js` which already depends on single-instance). The
+  in-memory pointer is safe; the `events.current_slide_upload_id`
+  fallback is **not** needed unless the container is ever run as
+  multiple replicas.
 - **Done = ** schema in place, gate resolves Dalisay/Hiraya only, and
   new reactions are attributed to a slide (so Batch 1 has real signal).
   Net live-wall cost ≈ noise: no new request, no new query, no new rows.
@@ -407,13 +421,13 @@ re-render).
   append a row to `docs/perf-test-database.md` (the perf log notes wall
   reaction bursts are the known pool-drain scenario — confirm the beacon
   doesn't regress it).
-- **Beacon multi-instance caveat:** the in-memory pointer is
-  per-process. Correct and free on a single Node process (codebase
-  implies this — KVM in-process model). If the backend is ever scaled
-  horizontally, the wall's beacon and a guest's tap can hit different
-  instances; fall back to an `events.current_slide_upload_id` column
-  (cross-instance-safe, ≈1 cheap UPDATE per slide change). **Verify the
-  process model before building Batch 0.**
+- **Beacon multi-instance caveat — RESOLVED.** Confirmed single Node
+  process (Dockerfile `CMD`, no cluster/PM2; the existing in-process
+  transcode semaphore in `videoTranscode.js` already assumes
+  single-instance). In-memory pointer is safe. Only revisit (→
+  `events.current_slide_upload_id` column, ≈1 cheap UPDATE/slide) if the
+  container is ever scaled to multiple replicas — at which point the
+  existing transcode cap breaks first, so this isn't the canary.
 - **Lambda ceiling:** ≤25 clips concat is a single long job — dedicated
   function with bumped `/tmp` + memory + timeout, isolated from the live
   per-upload transcoder. ~1–3 min render keeps the "5-minute SDE"
