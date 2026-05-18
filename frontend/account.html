@@ -102,11 +102,28 @@
       font-weight: 400; letter-spacing: .08em;
     }
 
-    /* The .usage / .usage-bar block was removed when the per-event
-       model made an "X of Y events used" gauge misleading (you're
-       always at 1-of-1 on Sinag/Dalisay until you buy another
-       credit). The limits row above still shows the plan's event
-       quota as a static figure. */
+    /* Simple "events created" tally — no progress-against-limit gauge.
+       In the per-event model the limit gauge was misleading; the raw
+       count is still useful so the host knows where they stand. */
+    .events-created {
+      margin-top: 1rem;
+      display: flex; align-items: baseline; justify-content: space-between;
+      font-size: .85rem; color: var(--ink-faint);
+    }
+    .events-created .ec-num {
+      font-family: var(--display); font-size: 1.35rem;
+      color: var(--ink); font-weight: 500;
+    }
+
+    /* Small reference-date footnote under the limits row so the 90-day
+       gallery / 7-day upload-window numbers aren't ambiguous. */
+    .limits-note {
+      margin-top: .75rem;
+      font-size: .78rem;
+      color: var(--ink-faint);
+      line-height: 1.45;
+    }
+    .limits-note b { color: var(--ink-soft); font-weight: 600; }
 
     .features { margin-top: 1.25rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: .5rem; }
     .feat {
@@ -211,9 +228,16 @@
     return `<div class="feat ${on ? 'on' : 'off'}">${on ? checkOn : checkOff}<span>${label}</span></div>`;
   }
 
-  function render({ user }) {
+  function render({ user, events }) {
     const tier = user.subscription_tier || 'tala';
     const plan = resolvePlan(tier);
+
+    // Actual count of events the user has on file (active only). We
+    // surface this as a raw number — not a progress gauge against
+    // plan.eventLimit, because in the per-event model the limit is
+    // "per purchase" rather than a cap and a gauge would always read
+    // "at the limit" right after creating an event.
+    const ownedEvents = (events || []).filter(e => e.is_active !== false).length;
 
     const upTier = nextTier(tier);
     const upPlan = upTier ? PLANS[upTier] : null;
@@ -262,6 +286,18 @@
             <div class="label">Upload window</div>
             <div class="value">${plan.uploadWindowDays} <small>${plan.uploadWindowDays === 1 ? 'day' : 'days'}</small></div>
           </div>
+        </div>
+
+        <div class="limits-note">
+          <b>Gallery lifespan</b> and <b>upload window</b> are counted forward from your <b>event date</b>.
+          So Dalisay's 7-day upload window means guests can keep uploading until 7 days after the wedding,
+          and the 90-day gallery stays open until 90 days after. (If you skip the event date when creating,
+          we anchor to the event-creation moment instead.)
+        </div>
+
+        <div class="events-created">
+          <span>Events you've created</span>
+          <span class="ec-num">${ownedEvents}</span>
         </div>
 
         <div class="features">
