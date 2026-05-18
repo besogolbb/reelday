@@ -6,7 +6,7 @@ import { verifyToken } from '../plugins/auth.js';
 // first; only when it collides with an existing event do we append a
 // random suffix (see the INSERT retry loop below). Empty/all-junk input
 // falls back to "event" so we never insert an empty slug.
-function baseSlug(coupleNames) {
+export function baseSlug(coupleNames) {
   const base = (coupleNames || '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')   // non-alphanum → dash
@@ -14,11 +14,11 @@ function baseSlug(coupleNames) {
     .slice(0, 40);
   return base || 'event';
 }
-function randomSuffix() {
+export function randomSuffix() {
   return Math.random().toString(36).slice(2, 6); // 4 alphanumerics ≈ 1.7M
 }
 // Postgres unique_violation on the slug uniqueness (constraint OR index).
-function isSlugCollision(err) {
+export function isSlugCollision(err) {
   return err && err.code === '23505' && /slug/i.test(err.constraint || err.detail || '');
 }
 

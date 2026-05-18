@@ -1,5 +1,6 @@
 import { timingSafeEqual } from 'crypto';
 import { resolvePlan, galleryExpiryFor, uploadWindowEndFor } from '../lib/plans.js';
+import { baseSlug, randomSuffix, isSlugCollision } from './events.js';
 
 // Admin gate: every /admin/* route must present `Authorization: Bearer <ADMIN_TOKEN>`
 // matching the env var. Compared via timingSafeEqual to defeat timing oracles.
@@ -191,16 +192,154 @@ export default async function adminRoutes(fastify) {
   fastify.get('/admin/events', async () => {
     const { rows } = await fastify.db.query(
       `SELECT e.id, e.slug, e.couple_names, e.event_type, e.plan,
+              e.event_date, e.gallery_expires_at, e.upload_window_ends_at,
+              e.venue, e.event_time, e.welcome_message,
               e.is_paid, e.is_active, e.created_at,
+              e.user_id,
               COUNT(up.id)::int AS upload_count,
               usr.email AS user_email
        FROM events e
        LEFT JOIN uploads  up  ON up.event_id = e.id
        LEFT JOIN users    usr ON usr.id = e.user_id
        GROUP BY e.id, usr.email
-       ORDER BY e.created_at DESC`,
+       ORDER BY COALESCE(e.event_date, e.created_at::date) DESC, e.created_at DESC`,
     );
     return { events: rows };
+  });
+
+  // POST /api/admin/events — admin-create an event for any user. Bypasses
+  // the user-facing plan limits and the payment flow; the assumption is
+  // that the admin already verified the comp/internal reason out-of-band.
+  // Stamps gallery/upload windows from the chosen plan + event_date,
+  // exactly like the user-facing create path.
+  const VALID_PLANS = new Set(['tala', 'sinag', 'dalisay', 'hiraya']);
+  fastify.post('/admin/events', async (request, reply) => {
+    const b = request.body ?? {};
+    const couple_names = String(b.couple_names || '').trim();
+    if (!couple_names) {
+      return reply.status(400).send({ error: true, message: 'couple_names is required' });
+    }
+    const user_id = b.user_id || null;
+    if (user_id) {
+      const { rows } = await fastify.db.query('SELECT id FROM users WHERE id = $1', [user_id]);
+      if (!rows.length) return reply.status(400).send({ error: true, message: 'user_id not found' });
+    }
+    const plan = String(b.plan || 'tala').toLowerCase();
+    if (!VALID_PLANS.has(plan)) {
+      return reply.status(400).send({ error: true, message: `Invalid plan. Allowed: ${[...VALID_PLANS].join(', ')}` });
+    }
+    const resolved          = resolvePlan(plan);
+    const event_date        = b.event_date || null;
+    const stampDate         = event_date ? new Date(event_date) : new Date();
+    const galleryExpiresAt  = galleryExpiryFor(resolved.id, stampDate);
+    const uploadEndAt       = uploadWindowEndFor(resolved.id, stampDate);
+    const is_paid           = b.is_paid === false ? false : true; // default true for admin-create
+    const is_active         = b.is_active === false ? false : true;
+
+    const base = baseSlug(couple_names);
+    let slug = base;
+    let inserted = null;
+    for (let attempt = 0; attempt < 6; attempt++) {
+      try {
+        const { rows } = await fastify.db.query(
+          `INSERT INTO events (
+             slug, couple_names, event_type, event_date, plan, user_id,
+             gallery_expires_at, upload_window_ends_at,
+             is_paid, is_active,
+             venue, event_time, welcome_message
+           )
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+           RETURNING *`,
+          [
+            slug,
+            couple_names,
+            b.event_type || 'wedding',
+            event_date,
+            resolved.id,
+            user_id,
+            galleryExpiresAt,
+            uploadEndAt,
+            is_paid,
+            is_active,
+            b.venue || null,
+            b.event_time || null,
+            b.welcome_message || null,
+          ],
+        );
+        inserted = rows[0];
+        break;
+      } catch (err) {
+        if (isSlugCollision(err)) { slug = `${base}-${randomSuffix()}`; continue; }
+        throw err;
+      }
+    }
+    if (!inserted) {
+      return reply.status(500).send({ error: true, message: 'Could not allocate a unique URL — try a slightly different name.' });
+    }
+    return reply.status(201).send({ event: inserted });
+  });
+
+  // PATCH /api/admin/events/:slug — edit any field. Whitelisted columns
+  // only. If plan or event_date changes, gallery_expires_at and
+  // upload_window_ends_at are recomputed unless the caller explicitly
+  // passes them (admin override wins). Reassigning user_id validates
+  // the target exists first.
+  const EDITABLE_COLS = new Set([
+    'couple_names', 'event_type', 'event_date', 'plan',
+    'is_paid', 'is_active', 'user_id',
+    'venue', 'event_time', 'welcome_message',
+    'gallery_expires_at', 'upload_window_ends_at',
+  ]);
+  fastify.patch('/admin/events/:slug', async (request, reply) => {
+    const { slug } = request.params;
+    const b = request.body ?? {};
+    const cols = Object.keys(b).filter(k => EDITABLE_COLS.has(k));
+    if (!cols.length) {
+      return reply.status(400).send({ error: true, message: 'No editable fields supplied.' });
+    }
+    if (b.plan !== undefined && !VALID_PLANS.has(String(b.plan).toLowerCase())) {
+      return reply.status(400).send({ error: true, message: `Invalid plan. Allowed: ${[...VALID_PLANS].join(', ')}` });
+    }
+    if (b.user_id !== undefined && b.user_id !== null) {
+      const { rows } = await fastify.db.query('SELECT id FROM users WHERE id = $1', [b.user_id]);
+      if (!rows.length) return reply.status(400).send({ error: true, message: 'user_id not found' });
+    }
+
+    // Recompute expiry stamps if plan or event_date changed and the
+    // caller didn't override them directly. Cheaper UX than forcing the
+    // admin to chain a /extend call after every edit.
+    const planChanged = b.plan !== undefined;
+    const dateChanged = b.event_date !== undefined;
+    if ((planChanged || dateChanged) &&
+        b.gallery_expires_at === undefined &&
+        b.upload_window_ends_at === undefined) {
+      const { rows: existing } = await fastify.db.query(
+        'SELECT plan, event_date FROM events WHERE slug = $1',
+        [slug],
+      );
+      if (!existing.length) return reply.status(404).send({ error: true, message: 'Event not found' });
+      const effPlan = (b.plan !== undefined ? String(b.plan).toLowerCase() : existing[0].plan) || 'tala';
+      const effDate = b.event_date !== undefined ? b.event_date : existing[0].event_date;
+      const stampDate = effDate ? new Date(effDate) : new Date();
+      const resolved = resolvePlan(effPlan);
+      b.gallery_expires_at    = galleryExpiryFor(resolved.id, stampDate);
+      b.upload_window_ends_at = uploadWindowEndFor(resolved.id, stampDate);
+      cols.push('gallery_expires_at', 'upload_window_ends_at');
+    }
+
+    // Normalize plan to lowercase (validated above) before persisting.
+    if (b.plan !== undefined) b.plan = String(b.plan).toLowerCase();
+
+    const uniqueCols = [...new Set(cols)];
+    const sets   = uniqueCols.map((c, i) => `${c} = $${i + 2}`).join(', ');
+    const params = [slug, ...uniqueCols.map(c => b[c])];
+
+    const { rows } = await fastify.db.query(
+      `UPDATE events SET ${sets} WHERE slug = $1 RETURNING *`,
+      params,
+    );
+    if (!rows.length) return reply.status(404).send({ error: true, message: 'Event not found' });
+    return { event: rows[0] };
   });
 
   // GET /api/admin/stats
