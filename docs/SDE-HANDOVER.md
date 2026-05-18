@@ -3,7 +3,7 @@
 Cold-start pointer for the **Same Day Edit** build. Working tree clean,
 all on `main`. Spec: [same-day-edit-plan.md](same-day-edit-plan.md).
 Perf log: [perf-test-database.md](perf-test-database.md). Last updated
-**2026-05-18**.
+**2026-05-18** (Slice 2B backend shipped).
 
 ## Shipped (chronological)
 
@@ -18,6 +18,9 @@ Perf log: [perf-test-database.md](perf-test-database.md). Last updated
 | `ff9f816` | copy | Empty-state: *"your reel will auto-build by AI."* |
 | `22a2baf` | perf | SDE strip thumbs via inline `sdeThumb` (CDN `width=200`); main grid 600→360. |
 | `2d67215` | **B2A** | [lambda/sde.mjs](../lambda/sde.mjs) — pure media worker (477 LOC). Not yet invoked. |
+| `632cb81` | 2B-1 | `POST /api/events/:slug/sde/generate` + [backend/lib/sdeRenderInvoke.js](../backend/lib/sdeRenderInvoke.js) — owner-gated, row-debounced, async-invokes the Lambda |
+| `8c3b9d2` | 2B-2 | `POST /api/webhooks/sde-ready` — mirrors `video-ready` pattern; updates `event_sde` + merges `event_sites.config.sde` |
+| `705eafc` | 2B-3 | Title/endcard via `drawtext` (no PNG step). New payload fields `title`/`subtitle`/`endcardText`; font from `SDE_FONT_PATH` |
 
 ## Curation model (current truth)
 
@@ -38,37 +41,64 @@ Perf log: [perf-test-database.md](perf-test-database.md). Last updated
 - **No new npm deps** (Easypanel 502 footgun).
 - **Beacon settled** — local mixed rx p95 11 ms, single Node process confirmed; safe.
 
-## Active task — Slice 2B (backend plumbing)
+## Slice 2B — DONE (backend plumbing shipped)
 
-Three pieces, all in [backend/routes/sde.js](../backend/routes/sde.js)
-+ [backend/routes/webhooks.js](../backend/routes/webhooks.js) + new
-helper:
+All three pieces landed across `632cb81`/`8c3b9d2`/`705eafc`:
 
-1. **`POST /api/events/:slug/sde/generate`** — owner, `sde`-gated, debounced (reject if `status IN ('queued','rendering')`). Runs Curator → picks music (chain: event's `music_tracks` → curated playlist lead → baked R2 default → null) → pre-renders title/endcard PNGs → uploads to R2 → builds payload → async-invokes Lambda via [backend/lib/awsLambdaService.js](../backend/lib/awsLambdaService.js) pattern (new `triggerSdeRender()` fn, env `SDE_LAMBDA_NAME`) → `event_sde.status='queued'`.
-2. **`POST /webhooks/sde-ready`** — shared `WEBHOOK_SECRET` (`X-Webhook-Secret` header, see [webhooks.js:29](../backend/routes/webhooks.js#L29)). Body `{status, eventId, videoKey, posterKey, durationS, clipCount, message?}`. Updates `event_sde.{status,video_url,poster_url,duration_s,clip_count,rendered_at,error_message}` and writes `event_sites.config.sde` block.
-3. **Title/endcard PNG generation** — decision pending: pure-Node SVG-to-PNG (no dep allowed) vs. a tiny Cloudflare Worker vs. canvas-via-FFmpeg drawtext fallback. **Ask the user before coding this.**
+1. **`POST /api/events/:slug/sde/generate`** ([sde.js](../backend/routes/sde.js)) — owner, `sde`-gated, row-debounced (rejects 409 if `status IN ('queued','rendering')`). Runs Curator → resolves R2 key per clip (`compressed_key`→`original_key`→derived) → picks music (chain: event's `music_tracks` → curated playlist lead → `SDE_DEFAULT_AUDIO_KEY` env → null) → builds payload → async-invokes via [backend/lib/sdeRenderInvoke.js](../backend/lib/sdeRenderInvoke.js) (env `SDE_LAMBDA_NAME`) → upserts `event_sde.status='queued'` (preserves last good `video_url`/`poster_url` for dashboard continuity).
+2. **`POST /api/webhooks/sde-ready`** ([webhooks.js](../backend/routes/webhooks.js)) — shared `WEBHOOK_SECRET` (`X-Webhook-Secret` or `Bearer`). On `ready`: updates `event_sde.{status,video_url,poster_url,duration_s,clip_count,rendered_at}` AND merges an `sde` block into `event_sites.config` via `jsonb_set` INSERT-on-conflict (preserves existing `is_published` + other site fields). On `error`: records `error_message`, leaves `event_sites` alone.
+3. **Title/endcard via `drawtext`** ([sde.mjs:158-217](../lambda/sde.mjs#L158)) — chosen over PNG generation per Q&A. Pure FFmpeg (`color=` source + `drawtext` filter, text via `textfile=` so no escaping). Skips silently if the font file is missing — operator can ship a font later without breaking renders.
 
-After 2B: **Slice 2C** = Generate button + status pill + Download in the
-isolated SDE module in `dashboard.html`. **Slice 2D** = wall reveal
-(`sde_play_*`) + auto-render at upload-window close.
+## Active task — Slice 2C (frontend)
 
-## Lambda deploy notes (for 2A)
+Generate button + status pill + Download in the isolated SDE module in
+[dashboard.html](../frontend/dashboard.html) (~L5723). Wire `POST
+/api/events/<slug>/sde/generate`; poll `GET /api/events/<slug>/sde` for
+status transitions `idle → queued → rendering → ready` (the webhook
+flips queued → ready/error directly; `rendering` is reserved for a
+future Lambda-side ping). On `ready`, render the video URL + a Download
+link to `video_url`. On `error`, surface `error_message`.
+
+After 2C: **Slice 2D** = wall reveal (`sde_play_*`) + auto-render at
+upload-window close.
+
+## Operator: pre-flight before first render
+
+- [ ] Deploy [lambda/sde.mjs](../lambda/sde.mjs) as `reelday-sde-renderer` (memory 3008 MB, /tmp 4 GB, timeout 900 s, FFmpeg layer).
+- [ ] Bundle a TTF/OTF at `/opt/fonts/Inter-Bold.ttf` (or set `SDE_FONT_PATH`). Without it, cards are skipped — render still works, but the reel opens/closes on a guest moment.
+- [ ] Backend env: `SDE_LAMBDA_NAME=reelday-sde-renderer`. Optional: `SDE_DEFAULT_AUDIO_KEY=...` for the silent-event fallback.
+- [ ] Lambda env: `WEBHOOK_URL=https://<host>/api/webhooks/sde-ready` (NOTE: `/api/` prefix), `WEBHOOK_SECRET` (shared with backend), plus the `R2_*` set used by the transcoder.
+
+## Lambda deploy notes
 
 Deploy [lambda/sde.mjs](../lambda/sde.mjs) as **separate function**
 `reelday-sde-renderer`. Config in file header — memory 3008 MB, /tmp 4
 GB, timeout 900 s, reuse the FFmpeg layer the transcoder uses
-(`/opt/bin/ffmpeg`). Env: `R2_*` (same as transcoder), `WEBHOOK_URL →
-https://<host>/webhooks/sde-ready`, `WEBHOOK_SECRET` (shared). Backend
-2B will need `SDE_LAMBDA_NAME=reelday-sde-renderer`.
+(`/opt/bin/ffmpeg`). Env: `R2_*` (same as transcoder), `WEBHOOK_URL =
+https://<host>/api/webhooks/sde-ready` (the `/api/` prefix matters —
+this is where `webhookRoutes` mounts), `WEBHOOK_SECRET` (shared),
+`SDE_FONT_PATH` (defaults to `/opt/fonts/Inter-Bold.ttf` — ship a TTF
+in the layer or zip, else cards are silently skipped). Backend env
+needs `SDE_LAMBDA_NAME=reelday-sde-renderer`.
 
-Payload contract (frozen):
+Payload contract (current — drawtext path):
 ```jsonc
 {
   "eventId": "...", "slug": "...",
   "clips": [{ "key": "uploads/<slug>/x.jpg", "type": "photo", "dur": 3 }, ...],
-  "audioKey": "music/.../foo.mp3" | null,
+  "audioKey":    "music/.../foo.mp3" | null,
+
+  // Text path (preferred — drawtext on black). Skipped if SDE_FONT_PATH
+  // file is missing. Either of title/subtitle alone is valid.
+  "title":       "Maria & Juan"               | null,
+  "subtitle":    "May 18, 2026 · Tagaytay"    | null,
+  "endcardText": "Thank you for celebrating." | null,
+
+  // Legacy PNG path (kept for compatibility; backend never sets these
+  // today — text path wins if both are provided).
   "titleCardKey": "sde/<eventId>/title.png" | null,
   "endcardKey":   "sde/<eventId>/end.png"   | null,
+
   "outKey":       "sde/<eventId>/sde-<ts>.mp4"
 }
 ```
@@ -84,9 +114,10 @@ Payload contract (frozen):
 
 - [docs/same-day-edit-plan.md](same-day-edit-plan.md) — spec, batch roadmap, locked decisions
 - [backend/lib/sdeSelect.js](../backend/lib/sdeSelect.js) — Curator
-- [backend/routes/sde.js](../backend/routes/sde.js) — owner GET/PATCH (Generate route lands here in 2B)
-- [backend/routes/webhooks.js](../backend/routes/webhooks.js) — mirror `video-ready` pattern for `sde-ready`
-- [backend/lib/awsLambdaService.js](../backend/lib/awsLambdaService.js) — invoke pattern to mirror
+- [backend/routes/sde.js](../backend/routes/sde.js) — owner GET/PATCH/POST (`/generate`)
+- [backend/routes/webhooks.js](../backend/routes/webhooks.js) — `video-ready` + `sde-ready`
+- [backend/lib/sdeRenderInvoke.js](../backend/lib/sdeRenderInvoke.js) — Lambda invoker (env `SDE_LAMBDA_NAME`)
+- [backend/lib/awsLambdaService.js](../backend/lib/awsLambdaService.js) — the transcoder invoker (reference pattern)
 - [backend/plugins/database.js:241-280](../backend/plugins/database.js) — migrations (idempotent at boot)
 - [lambda/sde.mjs](../lambda/sde.mjs) — renderer (B2A, header has deploy config)
 - [lambda/index.mjs](../lambda/index.mjs) — reference for env/idioms (the transcoder)
