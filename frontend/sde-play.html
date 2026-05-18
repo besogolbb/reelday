@@ -125,19 +125,25 @@
     v.src   = src;
     try { v.load(); } catch (e) {}
 
-    // When the reel finishes, tell the parent wall via postMessage. The
-    // wall owns lifecycle; we just signal. Origin-restricted to our own
-    // host so a stray frame can't spoof us into reacting to noise.
-    var endedFired = false;
+    // When the reel finishes, hold on the last frame (typically the
+    // endcard — "Thank you for celebrating") for END_HOLD_MS before
+    // signaling the parent to return to gallery. Without a hold, the
+    // wall snaps to live thumbnails the instant the reel ends and the
+    // closing moment doesn't land. 10s lets the room read the endcard.
+    var END_HOLD_MS = 10000;
+    var endedFired  = false;
     function signalEnded(reason) {
       if (endedFired) return;
       endedFired = true;
-      console.info('[sde-play] reel ended (' + reason + '), signaling parent');
-      try {
-        parent.postMessage({ type: 'sde-play-ended' }, window.location.origin);
-      } catch (e) {
-        console.warn('[sde-play] postMessage failed:', e && e.message);
-      }
+      console.info('[sde-play] reel ended (' + reason + '), holding ' +
+                   (END_HOLD_MS / 1000) + 's then signaling parent');
+      setTimeout(function () {
+        try {
+          parent.postMessage({ type: 'sde-play-ended' }, window.location.origin);
+        } catch (e) {
+          console.warn('[sde-play] postMessage failed:', e && e.message);
+        }
+      }, END_HOLD_MS);
     }
     v.addEventListener('ended', function () { signalEnded('ended-event'); });
     // Belt + suspenders fallback. The `ended` event is *supposed* to
