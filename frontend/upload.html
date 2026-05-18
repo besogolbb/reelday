@@ -166,6 +166,13 @@ body { background: var(--paper); min-height: 100dvh; }
   text-decoration: none; transition: background .2s;
 }
 .closed-link:hover { background: var(--ink, #2a1a14); }
+/* Inline "(in X days)" appendix used by the not-yet-open banner. */
+.not-open-countdown {
+  display: inline-block;
+  margin-left: 4px;
+  color: var(--accent, #c45a3a);
+  font-weight: 600;
+}
 .share-tab {
   background: #fff; border: 1.5px solid var(--line);
   border-radius: var(--r); padding: 12px 4px 10px;
@@ -1118,6 +1125,19 @@ body { background: var(--paper); min-height: 100dvh; }
     <a class="closed-link" id="closedWallLink" href="#">View the live wall →</a>
   </div>
 
+  <!-- ── Not-yet-open state (centered upload window — uploads open
+       N days before the event date and we're still before that) ── -->
+  <div class="closed-card" id="notOpenCard" style="display:none;">
+    <div class="closed-icon">⏳</div>
+    <h2 class="closed-h">Stay tuned!</h2>
+    <p class="closed-msg">
+      Uploads open on <b id="notOpenDate">—</b>.
+      <span id="notOpenCountdown" class="not-open-countdown"></span>
+      Save this link and come back closer to the event — your photos and videos belong here.
+    </p>
+    <a class="closed-link" id="notOpenWallLink" href="#">Peek at the live wall →</a>
+  </div>
+
   <!-- ── Share mode tabs ────────────────────────────────────
        Prominent Camera tile (the primary share action) sits on top
        spanning the full row. Record / React / Poll sit as smaller
@@ -1415,6 +1435,8 @@ body { background: var(--paper); min-height: 100dvh; }
             count:   ev.count        || 0,
             locks:   data.locks  || null,
             plan:    data.plan_info || null,
+            // Needed by the not-yet-open banner to format "Uploads open on …"
+            upload_window_starts_at: ev.upload_window_starts_at || null,
           };
         }
       } catch (e) {}
@@ -1530,18 +1552,57 @@ body { background: var(--paper); min-height: 100dvh; }
     document.getElementById('uploadHero').classList.remove('hero-loading');
     document.getElementById('profileSection')?.classList.remove('hero-loading');
 
-    // Phase 4: if the upload window has closed, hide the share UI and
-    // show a friendly "thanks for sharing" panel pointing to the wall.
-    const closed = ev.locks?.uploads_closed || ev.locks?.gallery_locked;
-    const closedCard = document.getElementById('closedCard');
-    const shareTabs  = document.querySelector('.share-tabs');
+    // Phase 4: window-state banners. Mutually exclusive — not-yet-open
+    // wins if both somehow fire (would mean a server clock skew or a
+    // 0-day window, both edge cases where "come back later" is the
+    // safer ask than "thanks for sharing").
+    const closedCard   = document.getElementById('closedCard');
+    const notOpenCard  = document.getElementById('notOpenCard');
+    const shareTabs    = document.querySelector('.share-tabs');
     const galleryPanel = document.getElementById('panel-gallery');
     const recordPanel  = document.getElementById('panel-record');
-    if (closed && closedCard) {
+
+    const notYetOpen = ev.locks?.uploads_not_yet_open;
+    const closed     = ev.locks?.uploads_closed || ev.locks?.gallery_locked;
+
+    function hideShareUI() {
+      if (shareTabs)    shareTabs.style.display    = 'none';
+      if (galleryPanel) galleryPanel.style.display = 'none';
+      if (recordPanel)  recordPanel.style.display  = 'none';
+    }
+
+    if (notYetOpen && notOpenCard) {
+      notOpenCard.style.display = 'block';
+      hideShareUI();
+      // Friendly "Uploads open on …" date + a "(in 3 days)" countdown.
+      // Falls back to a vaguer "closer to the event date" if the server
+      // didn't ship a start timestamp (shouldn't happen but defensive).
+      const opensAt = ev.upload_window_starts_at;
+      const dateEl  = document.getElementById('notOpenDate');
+      const cdEl    = document.getElementById('notOpenCountdown');
+      if (opensAt) {
+        const d = new Date(opensAt);
+        dateEl.textContent = d.toLocaleDateString('en-US', {
+          weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
+        });
+        const daysLeft = Math.ceil((d - new Date()) / 86_400_000);
+        if (daysLeft > 1) {
+          cdEl.textContent = `(in ${daysLeft} days)`;
+        } else if (daysLeft === 1) {
+          cdEl.textContent = '(tomorrow)';
+        } else {
+          // <1 day to opening — refresh trick: server'll flip the flag
+          // on the next call, so just say "very soon" without a number.
+          cdEl.textContent = '(very soon)';
+        }
+      } else {
+        dateEl.textContent = 'a date closer to the event';
+      }
+      const wallLink = document.getElementById('notOpenWallLink');
+      if (wallLink && ev.slug) wallLink.href = `/wall/${ev.slug}`;
+    } else if (closed && closedCard) {
       closedCard.style.display = 'block';
-      if (shareTabs)     shareTabs.style.display = 'none';
-      if (galleryPanel)  galleryPanel.style.display = 'none';
-      if (recordPanel)   recordPanel.style.display  = 'none';
+      hideShareUI();
       const msg = document.getElementById('closedMsg');
       if (ev.locks?.gallery_locked) {
         msg.textContent = 'This event has been archived. Salamat sa pagsali!';
