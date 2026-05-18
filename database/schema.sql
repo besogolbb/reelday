@@ -73,11 +73,10 @@ ALTER TABLE events ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES users(id);
 
 -- ── Subscription columns on users (Phase 2 plan enforcement) ──
 -- subscription_tier: 'tala' | 'sinag' | 'dalisay' | 'hiraya'
---   (id 'hiraya' = "Reelday Pro" in user-facing copy — kept for back-compat)
 -- subscription_expires_at: NULL for free / per-event purchases; set to NOW()+1yr
---   for Reelday Pro (id 'hiraya'), the only yearly tier.
+--   for Hiraya, the only yearly tier.
 -- events_remaining: NULL = unlimited per the tier; set to 1 for Sinag/Dalisay
---   one-time purchases (accumulates on Sinag re-buy), and to 10 for Reelday Pro.
+--   one-time purchases (accumulates on Sinag re-buy), and to 10 for Hiraya.
 ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_tier       VARCHAR(20)   DEFAULT 'tala';
 ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_expires_at TIMESTAMPTZ;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS events_remaining        INTEGER;

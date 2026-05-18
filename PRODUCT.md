@@ -262,7 +262,7 @@ sync). Backend is the source of truth.
 | **Tala** | Free | 1 | 25 photos | 24 hours | 1 day | Photos only |
 | **Sinag** | ₱1,490 / event | 1 | unlimited | 30 days | 1 day | + Reactions, Video messages |
 | **Dalisay** | ₱2,990 / event | 1 | unlimited | 90 days | 7 days | + Audio notes, Polls, Event website |
-| **Reelday Pro** (id `hiraya`) | ₱9,990 / year | 10 / yr | unlimited | 365 days | 180 days | Yearly subscription for coordinators, photographers & venues; + Custom domain |
+| **Hiraya** | ₱9,990 / year | 10 / yr | unlimited | 365 days | 180 days | Yearly subscription for coordinators, photographers & venues; + Custom domain |
 
 ---
 
