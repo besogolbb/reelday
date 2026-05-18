@@ -1478,16 +1478,24 @@
       color: var(--ink); margin-bottom: 6px;
     }
     .settings-field input[type="text"],
-    .settings-field input[type="date"] {
+    .settings-field input[type="date"],
+    .settings-field textarea {
       width: 100%; box-sizing: border-box;
       padding: 11px 14px; border: 1px solid var(--line-2);
       border-radius: 12px; background: #fff; color: var(--ink);
       font-family: inherit; font-size: 14px; outline: none;
     }
-    .settings-field input:focus {
+    .settings-field textarea { resize: vertical; min-height: 64px; line-height: 1.45; }
+    .settings-field input:focus,
+    .settings-field textarea:focus {
       border-color: var(--accent);
       box-shadow: 0 0 0 3px rgba(196,90,58,.14);
     }
+    .settings-note {
+      font-size: 12px; color: var(--ink-soft); line-height: 1.5;
+      margin: 0 0 14px;
+    }
+    .settings-note strong { color: var(--ink); }
     /* Toggle row — checkbox + label + helper text */
     .settings-toggle {
       display: flex; gap: 12px; align-items: flex-start;
@@ -2106,6 +2114,29 @@
         <label for="set-name">Event name</label>
         <input type="text" id="set-name" maxlength="120" placeholder="e.g. Andrea &amp; JM" />
       </div>
+    </div>
+
+    <div class="settings-group">
+      <h4>Request event date change</h4>
+      <p class="settings-note">
+        The event date is managed by the Reelday team so your upload window
+        and gallery stay aligned. Current date:
+        <strong id="req-current-date">—</strong>. Send a request below and we'll
+        email you back at <strong id="req-current-email">your account email</strong>.
+      </p>
+      <div class="settings-field">
+        <label for="req-date">New event date</label>
+        <input type="date" id="req-date" />
+      </div>
+      <div class="settings-field">
+        <label for="req-reason">Reason</label>
+        <textarea id="req-reason" rows="3" maxlength="1000"
+          placeholder="e.g. The venue moved our ceremony to a different day."></textarea>
+      </div>
+      <div class="settings-actions" style="margin-top:14px;">
+        <button type="button" class="btn settings-save" id="req-date-send">Send request to admin</button>
+      </div>
+      <div class="settings-status" id="req-date-status"></div>
     </div>
 
     <div class="settings-group">
@@ -3729,10 +3760,11 @@
 
   // ── Settings modal ───────────────────────────────────
   // Exposes the event-level controls the PATCH /events/:slug
-  // endpoint supports that aren't already on the dashboard
-  // surface (name, date, the three auto-publish moderation
-  // toggles) plus a deactivate action. Venue/time/welcome/music
-  // stay in the Event details card — not duplicated here.
+  // endpoint supports (name, the three auto-publish moderation
+  // toggles) plus a deactivate action. The event date is
+  // admin-only — hosts request a change via the form, which
+  // emails the admin inbox. Venue/time/welcome/music stay in
+  // the Event details card — not duplicated here.
   const settingsModal  = document.getElementById('settings-modal');
   const settingsStatus = document.getElementById('settings-status');
 
@@ -3744,6 +3776,17 @@
     document.getElementById('set-auto-photo').checked = ev.auto_approve !== false;
     document.getElementById('set-auto-video').checked = ev.video_auto_approve !== false;
     document.getElementById('set-auto-vmsg').checked  = ev.video_message_auto_approve !== false;
+
+    // Date-change request block — show the current date + where the
+    // reply lands so the host knows what they're asking to move.
+    const curDateEl = document.getElementById('req-current-date');
+    if (curDateEl) curDateEl.textContent = ev.event_date ? formatDate(ev.event_date) : 'not set';
+    const curEmailEl = document.getElementById('req-current-email');
+    if (curEmailEl) {
+      let acct = null;
+      try { acct = JSON.parse(localStorage.getItem('reelday_user')); } catch { /* */ }
+      if (acct?.email) curEmailEl.textContent = acct.email;
+    }
   }
   function openSettings() {
     if (!settingsModal) return;
@@ -3807,6 +3850,52 @@
     } catch (err) {
       settingsStatus.classList.add('error');
       settingsStatus.textContent = err.message || 'Could not save.';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = prevLabel;
+    }
+  });
+
+  document.getElementById('req-date-send')?.addEventListener('click', async () => {
+    const btn      = document.getElementById('req-date-send');
+    const statusEl = document.getElementById('req-date-status');
+    const newDate  = document.getElementById('req-date').value;
+    const reason   = document.getElementById('req-reason').value.trim();
+    const token    = localStorage.getItem('reelday_token');
+
+    statusEl.classList.remove('error');
+    statusEl.textContent = '';
+    if (!newDate) {
+      statusEl.classList.add('error');
+      statusEl.textContent = 'Pick the new event date.';
+      return;
+    }
+    if (reason.length < 5) {
+      statusEl.classList.add('error');
+      statusEl.textContent = 'Add a short reason for the change.';
+      return;
+    }
+
+    btn.disabled = true;
+    const prevLabel = btn.textContent;
+    btn.textContent = 'Sending…';
+    try {
+      const res = await fetch(`/api/events/${slug}/request-date-change`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ new_date: newDate, reason }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || 'Could not send your request.');
+      statusEl.textContent = 'Request sent — we’ll email you back shortly.';
+      document.getElementById('req-reason').value = '';
+      document.getElementById('req-date').value   = '';
+    } catch (err) {
+      statusEl.classList.add('error');
+      statusEl.textContent = err.message || 'Could not send your request.';
     } finally {
       btn.disabled = false;
       btn.textContent = prevLabel;

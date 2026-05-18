@@ -1,6 +1,32 @@
+import { Resend } from 'resend';
 import { generateQR } from '../utils/qr.js';
 import { resolvePlan, galleryExpiryFor, uploadWindowStartFor, uploadWindowEndFor } from '../lib/plans.js';
 import { verifyToken } from '../plugins/auth.js';
+
+// Event dates are admin-managed (the host PATCH can't move them — see the
+// hardcoded NULL $3 in the PATCH below). Hosts request a change here and
+// the form emails the admin inbox. Mirrors the Resend pattern in auth.js.
+const ADMIN_EMAIL = 'admin@reelday.ph';
+
+function resend() {
+  return new Resend(process.env.RESEND_API_KEY);
+}
+
+function withTimeout(promise, ms, label) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(
+      () => reject(new Error(`${label} timed out after ${ms}ms`)),
+      ms,
+    )),
+  ]);
+}
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"]/g, c => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]
+  ));
+}
 
 // Sanitised, no-suffix slug from the couple/celebrant names. We try this
 // first; only when it collides with an existing event do we append a
@@ -405,5 +431,68 @@ export default async function eventRoutes(fastify) {
     }
 
     return { event: rows[0] };
+  });
+
+  // Host-facing "request an event date change" — the date itself is
+  // admin-only, so this just emails the admin inbox with the ask. The
+  // host's account email goes in the body so admin can reply directly.
+  fastify.post('/events/:slug/request-date-change', { preHandler: fastify.authenticate }, async (request, reply) => {
+    const { slug } = request.params;
+    const newDate = String(request.body?.new_date ?? '').trim();
+    const reason  = String(request.body?.reason ?? '').trim();
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(newDate)) {
+      return reply.status(400).send({ error: true, message: 'A valid new date is required.' });
+    }
+    if (reason.length < 5) {
+      return reply.status(400).send({ error: true, message: 'Please add a short reason for the change.' });
+    }
+    if (reason.length > 1000) {
+      return reply.status(400).send({ error: true, message: 'Reason is too long (max 1000 characters).' });
+    }
+
+    // Ownership check doubles as existence check.
+    const { rows } = await fastify.db.query(
+      'SELECT couple_names, event_date FROM events WHERE slug = $1 AND user_id = $2',
+      [slug, request.user.id],
+    );
+    if (!rows.length) {
+      return reply.status(404).send({ error: true, message: 'Event not found' });
+    }
+    const ev = rows[0];
+    const currentDate = ev.event_date
+      ? new Date(ev.event_date).toISOString().slice(0, 10)
+      : '(not set)';
+
+    try {
+      await withTimeout(resend().emails.send({
+        from:    'Reelday <noreply@reelday.ph>',
+        to:      ADMIN_EMAIL,
+        replyTo: request.user.email,
+        subject: `Date change request — ${ev.couple_names} (${slug})`,
+        html: `
+          <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:1.5rem;color:#3f2318">
+            <h2 style="color:#c45a3a;margin:0 0 1rem">Event date change request</h2>
+            <table style="border-collapse:collapse;font-size:14px;width:100%">
+              <tr><td style="padding:6px 12px 6px 0;color:#888">Event</td><td style="padding:6px 0;font-weight:700">${escapeHtml(ev.couple_names)}</td></tr>
+              <tr><td style="padding:6px 12px 6px 0;color:#888">Slug</td><td style="padding:6px 0"><a href="https://reelday.ph/dashboard?slug=${encodeURIComponent(slug)}">${escapeHtml(slug)}</a></td></tr>
+              <tr><td style="padding:6px 12px 6px 0;color:#888">Current date</td><td style="padding:6px 0">${escapeHtml(currentDate)}</td></tr>
+              <tr><td style="padding:6px 12px 6px 0;color:#888">Requested date</td><td style="padding:6px 0;font-weight:700;color:#c45a3a">${escapeHtml(newDate)}</td></tr>
+              <tr><td style="padding:6px 12px 6px 0;color:#888">Requested by</td><td style="padding:6px 0">${escapeHtml(request.user.full_name || '—')} &lt;${escapeHtml(request.user.email)}&gt;</td></tr>
+            </table>
+            <p style="margin:1.25rem 0 .35rem;color:#888;font-size:13px">Reason</p>
+            <div style="white-space:pre-wrap;background:#faf3ec;border:1px solid #eadbce;border-radius:10px;padding:12px;font-size:14px;line-height:1.5">${escapeHtml(reason)}</div>
+            <p style="font-size:12px;color:#999;margin-top:1.5rem">Apply via Admin → Events → edit (recomputes the upload window). Reply to this email to reach the host.</p>
+          </div>`,
+      }), 10_000, 'Resend (date-change request)');
+    } catch (err) {
+      request.log.error({ err: err.message, slug }, 'date-change request email failed');
+      return reply.status(502).send({
+        error: true,
+        message: 'Could not send your request right now. Please email admin@reelday.ph directly.',
+      });
+    }
+
+    return { ok: true };
   });
 }
