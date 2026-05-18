@@ -30,6 +30,18 @@
  *                       defaults to /opt/fonts/Inter-Bold.ttf — ship
  *                       a font in the layer or zip, else cards are
  *                       skipped (render still succeeds))
+ *                     SDE_X264_PRESET ('veryfast' default; set to
+ *                       'ultrafast' on 3 GB Lambdas to fit 1080p 68-clip
+ *                       reels under the 15-min wall clock)
+ *                     SDE_KEN_BURNS ('true' default; set to 'false' on
+ *                       3 GB Lambdas — zoompan dominates photo cost
+ *                       and is a "nice-to-have" relative to the reel
+ *                       itself)
+ *
+ * Memory tuning: 3008 MB is the AWS new-account default ceiling and is
+ * tight for 68-clip 1080p reels — flip both knobs above to ultrafast +
+ * no-kenburns. Once Service Quotas grants 10 GB (gives ~6 vCPU), drop
+ * the env vars to restore the polished defaults.
  *
  * Invoked async (`InvocationType: 'Event'`) — never sync — by
  * backend/lib/sdeRenderInvoke.js. Idempotent: if `outKey` already
@@ -64,11 +76,21 @@ const {
   // missing we skip the card rather than failing the whole render (the
   // PNG card path is the alternate route — pass titleCardKey instead).
   SDE_FONT_PATH = '/opt/fonts/Inter-Bold.ttf',
+  // Encode knobs — defaults preserve the original "veryfast + Ken Burns"
+  // quality profile. On memory-capped Lambdas (3 GB == 2 vCPU) the
+  // 1080p encode of 68+ clips overruns the 15-min wall clock; set
+  // SDE_X264_PRESET=ultrafast and SDE_KEN_BURNS=false to cut that
+  // ~2x and get under the ceiling. Restore to defaults once the
+  // Lambda is bumped to 10 GB (6 vCPU) so visual polish comes back.
+  SDE_X264_PRESET = 'veryfast',
+  SDE_KEN_BURNS   = 'true',
   // Per-clip normalization budget. The Curator caps the total at 240 s
   // (80 clips × 3 s ceiling), so an individual normalize is bounded;
   // this is a defense-in-depth limit, not the primary cap.
   MAX_CLIP_INPUT_BYTES = '524288000', // 500 MB
 } = process.env;
+
+const KEN_BURNS_ENABLED = SDE_KEN_BURNS !== 'false';
 
 const MAX_BYTES = Number(MAX_CLIP_INPUT_BYTES);
 
@@ -177,9 +199,12 @@ function safeCardName(i) {
 
 async function normalizePhoto(srcPath, outPath, durSec, { kenBurns = true } = {}) {
   // zoompan operates on frames; d = durSec * fps so the zoom finishes
-  // exactly when the clip ends.
+  // exactly when the clip ends. Honor BOTH the per-call flag and the
+  // module-level env switch — env wins (gives an operator escape hatch
+  // when the Lambda is CPU-constrained).
   const frames = Math.max(1, Math.round(durSec * TARGET_FPS));
-  const vf = kenBurns
+  const useKenBurns = kenBurns && KEN_BURNS_ENABLED;
+  const vf = useKenBurns
     ? [
         // Upscale a touch first so zoompan has headroom to crop into.
         `scale=2400:1350:force_original_aspect_ratio=decrease`,
@@ -206,7 +231,7 @@ async function normalizePhoto(srcPath, outPath, durSec, { kenBurns = true } = {}
     '-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=mono',
     '-vf', vf,
     '-shortest',
-    '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '22',
+    '-c:v', 'libx264', '-preset', SDE_X264_PRESET, '-crf', '22',
     '-pix_fmt', 'yuv420p', '-profile:v', 'high', '-level', '4.0',
     '-c:a', 'aac', '-b:a', '64k', '-ar', '48000', '-ac', '1',
     '-r', String(TARGET_FPS),
@@ -274,7 +299,7 @@ async function renderTextCard(workdir, outPath, lines, durSec) {
       '-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=mono',
       '-vf', vf,
       '-shortest',
-      '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '22',
+      '-c:v', 'libx264', '-preset', SDE_X264_PRESET, '-crf', '22',
       '-pix_fmt', 'yuv420p', '-profile:v', 'high', '-level', '4.0',
       '-c:a', 'aac', '-b:a', '64k', '-ar', '48000', '-ac', '1',
       '-r', String(TARGET_FPS),
@@ -309,7 +334,7 @@ async function normalizeVideo(srcPath, outPath, durSec) {
     ].join(','),
     '-map', '0:v:0', '-map', '1:a:0',  // explicit: source video + silent audio
     '-shortest',
-    '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '22',
+    '-c:v', 'libx264', '-preset', SDE_X264_PRESET, '-crf', '22',
     '-pix_fmt', 'yuv420p', '-profile:v', 'high', '-level', '4.0',
     '-c:a', 'aac', '-b:a', '64k', '-ar', '48000', '-ac', '1',
     '-r', String(TARGET_FPS),
