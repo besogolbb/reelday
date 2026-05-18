@@ -3083,7 +3083,10 @@
       const isAudioOnly      = u.file_type === 'audio';
       const hasSidecarAudio  = !isAudioOnly && !!u.audio_url;
       const isVideo          = isVideoUpload(u);
-      const mediaSrc         = uploadMediaUrl(u, isVideo);
+      // Grid tiles render at ~170–200 px (4-col desktop / 2-col mobile),
+      // so width=360 is ~2× retina with headroom. The function's default
+      // is 600 (kept for the preview modal); only the grid drops down.
+      const mediaSrc         = uploadMediaUrl(u, isVideo, 360);
       if (mediaSrc) ensurePreconnect(mediaSrc);
 
       const styleParts = ['position:relative', 'overflow:hidden'];
@@ -5781,6 +5784,22 @@
 
     const esc = s => String(s == null ? '' : s);
 
+    // CDN image resizer — inline clone of the main module's cdnImage()
+    // (this script is scope-isolated, so we can't reuse the helper).
+    // Strip thumbs render at 96×72, so width=200 = 2× retina with
+    // plenty of headroom; saves multi-MB poster fetches on every render.
+    function sdeThumb(url) {
+      if (!url) return url;
+      if (url.startsWith('data:') || url.startsWith('blob:')) return url;
+      if (/\.(mp4|webm|mov|m4v|ogg)(\?|$)/i.test(url)) return url;
+      try {
+        const u = new URL(url, location.href);
+        if (!/(^|\.)reelday\.ph$/.test(u.hostname)) return url;
+        if (u.pathname.startsWith('/cdn-cgi/image/')) return url;
+        return `${u.origin}/cdn-cgi/image/width=200,quality=82,format=auto,fit=cover${u.pathname}${u.search}`;
+      } catch { return url; }
+    }
+
     function render(data) {
       panel.style.display = '';
       if (!data.sde_unlocked) {
@@ -5851,7 +5870,11 @@
         const mini = document.createElement('div');
         mini.className = 'sde-mini';
         const img = document.createElement('img');
-        img.loading = 'lazy'; img.src = esc(c.thumb); img.alt = '';
+        img.loading = 'lazy';
+        img.decoding = 'async';
+        img.width = 96; img.height = 72;            // locks layout, no CLS
+        img.src = sdeThumb(esc(c.thumb));           // CDN-resized to ~200w
+        img.alt = '';
         const kind = document.createElement('span');
         kind.className = 'sde-kind';
         kind.textContent = c.type === 'video' ? '▶' : '☐';
