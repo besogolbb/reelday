@@ -1414,6 +1414,36 @@
       to   { opacity: 1; transform: translate(-50%, 0); }
     }
 
+    /* ── Slice 2D: Same Day Edit fullscreen takeover ─────────
+       Sits above everything (gallery, banners, emojis) so the host's
+       "Play on wall" command produces a real reveal moment. Black
+       letterboxing because the reel is 16:9 1080p — TVs that aren't
+       16:9 native get the cinematic bars rather than a stretched mess. */
+    #sde-takeover {
+      position: fixed; inset: 0; z-index: 200;
+      background: #000;
+      display: none; align-items: center; justify-content: center;
+      animation: sdeFadeIn .35s ease both;
+    }
+    #sde-takeover.visible { display: flex; }
+    #sde-video {
+      max-width: 100vw; max-height: 100vh;
+      width: 100%; height: 100%; object-fit: contain;
+      background: #000;
+    }
+    #sde-mute-hint {
+      position: absolute; bottom: 10vh; left: 50%; transform: translateX(-50%);
+      display: none; align-items: center; gap: 10px;
+      background: rgba(0,0,0,.78); color: #fff;
+      border: 1px solid rgba(255,255,255,.18);
+      padding: 14px 28px; border-radius: 999px;
+      font-family: var(--mono); font-size: 14px; letter-spacing: .15em;
+      text-transform: uppercase; cursor: pointer;
+      backdrop-filter: blur(10px);
+    }
+    #sde-mute-hint.visible { display: inline-flex; }
+    @keyframes sdeFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
     /* ── Floating emojis ──────────────────────────────────────
        `contain: strict` + own stacking context tells the browser to keep
        layout/paint/style of the emoji layer separate from the rest of the
@@ -1732,6 +1762,15 @@
   <span>Now playing</span>
   <span class="from" id="burst-from">a video message</span>
   <span id="burst-counter">1 / 1</span>
+</div>
+
+<!-- ════ Slice 2D: Same Day Edit fullscreen takeover ═══════
+     Driven by the sde_play block in the reactions poll response.
+     Shown when host taps "Play on wall" in dashboard; hidden when
+     host taps Stop. Video loops until cleared. -->
+<div id="sde-takeover" aria-hidden="true">
+  <video id="sde-video" playsinline preload="auto" loop></video>
+  <div id="sde-mute-hint" role="button" tabindex="0">🔊 Tap for sound</div>
 </div>
 
 <!-- ════ BOTTOM-RIGHT CONTROLS (sound + fullscreen) ═══════ -->
@@ -4075,12 +4114,14 @@
   }
 
   // ── Reactions polling ────────────────────────────────────
-  // The endpoint returns { reactions:[…], server_time } where
+  // The endpoint returns { reactions:[…], server_time, sde_play } where
   // server_time lets us pin the next ?since to the SERVER clock, not
-  // the wall's (avoids drift if the wall TV's clock is off). We start
-  // at "now" so old reactions aren't replayed on page load.
+  // the wall's (avoids drift if the wall TV's clock is off), and
+  // sde_play piggybacks the SDE wall-reveal signal (Slice 2D). We
+  // start "since" at "now" so old reactions aren't replayed on page load.
   let reactionsSince = new Date().toISOString();
   let reactionDropFrame = false;
+  let sdePlayingRequestedAt = null; // remembers the last requested_at we acted on
   async function pollReactions() {
     // Tier gate: Tala doesn't include live reactions, so don't even
     // hit the endpoint — keeps the wall quiet and the network log clean.
@@ -4118,7 +4159,65 @@
         const r = list[0];
         showToast(`${r.emoji} ${r.guest_name || 'Panauhin'}`);
       }
+
+      // Slice 2D: SDE wall reveal. Backend sends sde_play=null when no
+      // active play signal, populated when the host clicked "Play on
+      // wall". handleSdePlay manages the takeover overlay lifecycle.
+      handleSdePlay(data.sde_play || null);
     } catch { /* network blip — try again next tick */ }
+  }
+
+  // ── SDE wall-reveal takeover (Slice 2D) ──────────────────
+  // Driven by the sde_play block in the poll response. Same-request_at
+  // → keep current state. New request_at → restart from frame 0.
+  // Null → exit takeover. Video loops while takeover is active so the
+  // host can leave it on for ambient replay; they tap Stop in the
+  // dashboard when ready to return to the gallery.
+  function handleSdePlay(playSig) {
+    const overlay  = document.getElementById('sde-takeover');
+    const video    = document.getElementById('sde-video');
+    const muteHint = document.getElementById('sde-mute-hint');
+    if (!overlay || !video) return;
+
+    if (!playSig) {
+      if (sdePlayingRequestedAt !== null) {
+        sdePlayingRequestedAt = null;
+        try { video.pause(); } catch {}
+        video.removeAttribute('src');
+        try { video.load(); } catch {}
+        overlay.classList.remove('visible');
+        overlay.setAttribute('aria-hidden', 'true');
+        if (muteHint) muteHint.classList.remove('visible');
+      }
+      return;
+    }
+
+    // Same play request as before — already showing, nothing to do.
+    if (playSig.requested_at === sdePlayingRequestedAt) return;
+
+    // Enter or restart takeover.
+    sdePlayingRequestedAt = playSig.requested_at;
+    video.src = playSig.video_url;
+    if (playSig.poster_url) video.poster = playSig.poster_url;
+    video.loop = true;
+    video.muted = false;
+    overlay.classList.add('visible');
+    overlay.setAttribute('aria-hidden', 'false');
+
+    // Try playing with sound. Browser autoplay policies may block — if
+    // so, retry muted and surface a "tap for sound" hint. The existing
+    // sound-btn in the controls tray uses the same gesture pattern.
+    video.play().catch(() => {
+      video.muted = true;
+      video.play().catch(err => console.warn('[sde] takeover play failed', err));
+      if (muteHint) {
+        muteHint.classList.add('visible');
+        muteHint.onclick = () => {
+          video.muted = false;
+          muteHint.classList.remove('visible');
+        };
+      }
+    });
   }
 
   async function pollBurst() {
