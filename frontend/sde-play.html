@@ -54,12 +54,17 @@
      ~4×/sec which is smooth enough for a 4-min reel. */
   #progress {
     position: fixed; left: 0; right: 0; bottom: 0;
-    height: 3px; background: rgba(255,255,255,.12);
+    height: 6px; background: rgba(255,255,255,.22);
+    /* z-index above the <video> in case a browser stacks fixed siblings
+       weirdly; the video is at z:auto so any positive value wins. */
+    z-index: 5;
     pointer-events: none;
   }
   #progress > #progressFill {
     height: 100%; width: 0%;
-    background: rgba(255,255,255,.85);
+    background: #ffffff;
+    /* Subtle glow so the fill reads at a distance on a venue TV. */
+    box-shadow: 0 0 6px rgba(255,255,255,.55);
   }
 </style>
 </head>
