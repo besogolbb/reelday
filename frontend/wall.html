@@ -745,15 +745,22 @@
 
     .caption { flex: 1 1 auto; min-width: 0; max-width: 500px; padding-right: 24px; }
 
+    /* Landscape media has plenty of horizontal real estate to the right
+       of the bottom-left caption — widen the column so longer messages
+       wrap less aggressively and the bigger font below has room to
+       breathe. Portrait keeps the tighter 500px gutter so the caption
+       doesn't crowd the subject. */
+    body.is-landscape .caption { max-width: 720px; }
+
     /* Long messages (>100 chars) get a softer scale-down so they wrap
-       cleanly inside the 500px column instead of barreling across the
+       cleanly inside the caption column instead of barreling across the
        subject's face. Line-clamp still caps at 3 lines downstream.
        Body-scoped to outrank the body.is-portrait / is-landscape rules
        below that also set caption blockquote font-size. */
     body.is-portrait  .caption.cap-long blockquote,
     body.is-landscape .caption.cap-long blockquote,
     .caption.cap-long blockquote {
-      font-size: clamp(1.8rem, 2vw, 2.6rem);
+      font-size: clamp(2.2rem, 2.5vw, 3.2rem);
       line-height: 1.3;
     }
 
@@ -798,7 +805,7 @@
     /* ── Caption message — Serif, sized for legibility from across the room ── */
     .caption blockquote {
       font-family: var(--elegant); font-style: italic; font-weight: 500;
-      font-size: clamp(2.4rem, 2.6vw, 3.4rem);
+      font-size: clamp(2.8rem, 3.2vw, 4.2rem);   /* +~20% over the previous 2.4/2.6vw/3.4 */
       line-height: 1.25; letter-spacing: -.005em;
       color: #fff;
       text-shadow:
@@ -844,7 +851,7 @@
     }
     body.is-portrait .caption.cap-subtle blockquote,
     body.is-landscape .caption.cap-subtle blockquote {
-      color: rgba(255,255,255,.70); font-size: 2.2rem;
+      color: rgba(255,255,255,.70); font-size: 2.6rem;   /* bumped from 2.2 to keep proportional to the new base */
       text-shadow:
         0 1px 3px rgba(0,0,0,.88),
         0 3px 10px rgba(0,0,0,.60);
