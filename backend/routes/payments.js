@@ -134,7 +134,7 @@ export default async function paymentRoutes(fastify) {
 
   // POST /api/payments/create — create PayMongo checkout session (auth required)
   fastify.post('/payments/create', { preHandler: fastify.authenticate }, async (request, reply) => {
-    const { tier, slug } = request.body ?? {};
+    const { tier, slug, success_path } = request.body ?? {};
 
     if (!tier) {
       return reply.status(400).send({ error: true, message: 'tier is required' });
@@ -147,9 +147,18 @@ export default async function paymentRoutes(fastify) {
 
     const userId = request.user.id;
     const appUrl = buildAppUrl(request);
+    // success_path is a tiny enum (NOT a free-form URL) so we can't be tricked
+    // into an open-redirect by a crafted body. Today the only non-default
+    // case is 'start_resume' — used by the /start wizard when the user hits
+    // a plan_limit_events 403 mid-create, pays for credits, and needs to be
+    // bounced back to /start to finalize the in-progress event payload that
+    // sessionStorage stashed pre-checkout.
+    const resumeStart = success_path === 'start_resume' && !slug;
     const successUrl = slug
       ? `${appUrl}/dashboard?slug=${slug}&upgraded=${tier}`
-      : `${appUrl}/my-events?upgraded=${tier}`;
+      : resumeStart
+        ? `${appUrl}/start?resumeCreate=1&upgraded=${tier}`
+        : `${appUrl}/my-events?upgraded=${tier}`;
     const cancelUrl  = `${appUrl}/#pricing`;
     request.log.info({ appUrl, successUrl, cancelUrl, tier }, 'Creating PayMongo checkout session');
 

@@ -266,6 +266,136 @@
   .toast.show { opacity: 1; }
   .toast.error { background: var(--accent-deep); }
 
+  /* ── Upgrade panel (shown when /api/events returns plan_limit_events) ── */
+  .upgrade-panel {
+    /* Same slide-mounting model — only ".active" copy is visible */
+    opacity: 0;
+    transform: translateX(40px);
+    transition: opacity .35s ease, transform .35s cubic-bezier(.22,1,.36,1);
+    pointer-events: none;
+    position: absolute; inset: 0;
+  }
+  .upgrade-panel.active {
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: auto;
+    position: relative;
+  }
+  .upgrade-panel h1 {
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: clamp(30px, 4.6vw, 44px);
+    letter-spacing: -.02em;
+    line-height: 1.1;
+    margin-bottom: 10px;
+    color: var(--ink);
+  }
+  .upgrade-panel h1 em { font-style: italic; color: var(--accent); }
+  .upgrade-panel .reason {
+    color: var(--ink-soft);
+    font-size: 15px;
+    margin-bottom: 28px;
+    max-width: 56ch;
+  }
+  .upgrade-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  @media (min-width: 640px) {
+    .upgrade-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  .upgrade-card {
+    background: #fff;
+    border: 1.5px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 22px;
+    display: flex; flex-direction: column;
+    transition: border-color .2s, transform .15s, box-shadow .2s;
+  }
+  .upgrade-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: var(--shadow-card); }
+  .upgrade-card.featured {
+    border-color: var(--accent);
+    background: linear-gradient(180deg, rgba(196,90,58,.04), #fff 30%);
+  }
+  .uc-tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 8px;
+  }
+  .upgrade-card.featured .uc-tag { color: var(--accent-deep); }
+  .uc-tier {
+    font-family: var(--display);
+    font-size: 26px;
+    line-height: 1.05;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+  .uc-price {
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 18px;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+  .uc-tagline {
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-bottom: 14px;
+  }
+  .uc-bullets {
+    list-style: none; padding: 0; margin: 0 0 18px;
+    flex: 1;
+  }
+  .uc-bullets li {
+    font-size: 13px;
+    color: var(--ink-soft);
+    padding: 4px 0 4px 18px;
+    position: relative;
+  }
+  .uc-bullets li::before {
+    content: '✓';
+    position: absolute; left: 0;
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .uc-cta {
+    background: var(--ink); color: #fff;
+    border: none; border-radius: 999px;
+    padding: 12px 22px;
+    font-family: var(--sans); font-size: 14px; font-weight: 600;
+    cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    min-height: 46px;
+    transition: transform .15s, opacity .15s;
+  }
+  .upgrade-card.featured .uc-cta { background: var(--accent); }
+  .upgrade-card.featured .uc-cta:hover { background: var(--accent-deep); }
+  .uc-cta:hover { transform: translateY(-1px); }
+  .uc-cta:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+  .uc-cta.loading .btn-spinner { display: block; }
+
+  /* Resume overlay shown after upgrade checkout while we finalize the event */
+  .resume-overlay {
+    position: fixed; inset: 0;
+    background: rgba(253,250,245,.95);
+    backdrop-filter: blur(6px);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 16px;
+    z-index: 9999;
+    font-family: var(--sans); color: var(--ink-soft); font-size: 15px;
+  }
+  .resume-overlay .btn-spinner {
+    width: 32px; height: 32px;
+    border-width: 3px;
+    border-color: rgba(196,90,58,.25);
+    border-top-color: var(--accent);
+    display: block;
+  }
+
   /* ── Mobile tweaks ─────────────────────────── */
   @media (max-width: 560px) {
     .wizard-header { padding: 14px 18px; }
@@ -391,6 +521,16 @@
       </div>
     </section>
 
+    <!-- Upgrade panel: shown when /api/events returns 403 plan_limit_events -->
+    <section class="upgrade-panel" id="upgrade-panel" aria-hidden="true">
+      <h1>One more <em>step.</em></h1>
+      <p class="reason" id="upgrade-reason">Your plan is at its event limit.</p>
+      <div class="upgrade-grid" id="upgrade-grid"></div>
+      <p style="font-size:12px;color:var(--ink-faint);margin-top:18px;">
+        We'll send you to PayMongo (GCash, Maya, card, QR Ph) and bring you straight back to finish creating your event.
+      </p>
+    </section>
+
   </div>
 </main>
 
@@ -398,6 +538,7 @@
 
 <script type="module">
   import { getToken, getUser, saveAuth } from '/js/auth.js';
+  import { PLANS, PLAN_ORDER }            from '/js/plans.js';
 
   // ── State ──────────────────────────────────────
   const params = new URLSearchParams(location.search);
@@ -567,7 +708,15 @@
       }),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Could not create event.');
+    if (!res.ok) {
+      // Enrich so the caller can branch on plan_limit_events without
+      // re-parsing the message string.
+      const err = new Error(data.message || 'Could not create event.');
+      err.status = res.status;
+      err.code   = data.code;
+      err.plan   = data.plan;
+      throw err;
+    }
     return data;
   }
 
@@ -598,9 +747,169 @@
         location.href = `/dashboard?slug=${event.slug}`;
       }
     } catch (err) {
+      button.disabled = false;
+      button.classList.remove('loading');
+      // If the backend blocked us because the user's plan is out of event
+      // credits, stash the in-progress event and reveal the upgrade panel
+      // instead of just toasting — the toast was a dead end.
+      if (err.code === 'plan_limit_events' && err.plan && getToken()) {
+        stashPendingEvent();
+        showUpgradePanel(err.plan, err.message);
+        return;
+      }
+      showToast(err.message, 'error');
+    }
+  }
+
+  // ── Upgrade panel ──────────────────────────────
+  // Per-tier highlights for the upgrade cards. Kept inline so we don't
+  // have to ship the full marketing copy from /js/plans.js — these are
+  // the 3-5 bullets that matter at the upgrade-decision moment.
+  const UPGRADE_BULLETS = {
+    sinag:   ['1 event', 'Unlimited photo & video', 'Live emoji reactions', '30-day gallery'],
+    dalisay: ['1 event', 'Unlimited + audio notes', 'Live polls & games', 'Full event website', '90-day gallery'],
+    hiraya:  ['Up to 10 events / year', 'White-label wall (your logo)', 'Custom domains', '6-month upload window', '1-year retention'],
+  };
+
+  function stashPendingEvent() {
+    try {
+      sessionStorage.setItem('reelday:pendingEvent', JSON.stringify({
+        type: state.type,
+        name: state.name,
+        date: state.date,
+        ts:   Date.now(),
+      }));
+    } catch { /* private mode / storage full — fall back to manual re-create */ }
+  }
+
+  function showUpgradePanel(currentTierId, reasonMsg) {
+    const panel    = document.getElementById('upgrade-panel');
+    const grid     = document.getElementById('upgrade-grid');
+    const reasonEl = document.getElementById('upgrade-reason');
+    if (reasonMsg) reasonEl.textContent = reasonMsg;
+
+    const curIdx = PLAN_ORDER.indexOf(currentTierId);
+    // Offer the user's current paid tier (re-buy a credit) plus any higher
+    // paid tier. Tala is free and never appears as an "upgrade" option.
+    const offerable = PLAN_ORDER.filter((id, idx) =>
+      idx >= curIdx && PLANS[id] && PLANS[id].price > 0
+    );
+
+    grid.innerHTML = '';
+    offerable.forEach(id => {
+      const p       = PLANS[id];
+      const isRebuy = id === currentTierId;
+      // Featured = the upsell, i.e. the next tier above current. If the
+      // user is already on the top tier (Hiraya) the re-buy itself
+      // becomes the featured card.
+      const featured = isRebuy ? offerable.length === 1 : id === offerable[1];
+
+      const card = document.createElement('div');
+      card.className = `upgrade-card${featured ? ' featured' : ''}`;
+      card.innerHTML = `
+        <div class="uc-tag">${isRebuy ? 'Buy another' : 'Upgrade to'}</div>
+        <div class="uc-tier">${p.name}</div>
+        <div class="uc-price">${p.priceLabel || ('₱' + p.price)}</div>
+        <div class="uc-tagline">${p.tagline || ''}</div>
+        <ul class="uc-bullets">
+          ${(UPGRADE_BULLETS[id] || []).map(b => `<li>${b}</li>`).join('')}
+        </ul>
+        <button type="button" class="uc-cta" data-tier="${id}">
+          <span class="btn-spinner"></span>
+          <span>${isRebuy ? 'Buy & continue →' : 'Upgrade & continue →'}</span>
+        </button>
+      `;
+      grid.appendChild(card);
+    });
+
+    grid.querySelectorAll('.uc-cta').forEach(btn => {
+      btn.addEventListener('click', () => startUpgradeCheckout(btn.dataset.tier, btn));
+    });
+
+    // Hide all wizard slides; reveal the panel in their place.
+    slides.forEach(el => el.classList.remove('active'));
+    panel.classList.add('active');
+    panel.setAttribute('aria-hidden', 'false');
+    btnBack.disabled = false;
+    btnBack.onclick = () => {
+      // Back from upgrade → return to the last wizard slide so they can
+      // tweak event details or just see what they were buying.
+      panel.classList.remove('active');
+      panel.setAttribute('aria-hidden', 'true');
+      btnBack.onclick = null;       // restore default handler
+      btnBack.disabled = currentSlide === 0;
+      goTo(currentSlide);
+    };
+  }
+
+  async function startUpgradeCheckout(tierId, button) {
+    button.disabled = true;
+    button.classList.add('loading');
+    const token = getToken();
+    try {
+      const res = await fetch('/api/payments/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        // success_path: 'start_resume' tells the backend to bounce us
+        // back to /start?resumeCreate=1 after PayMongo checkout instead
+        // of /my-events, so the resume block below can finalize the
+        // event the user was midway through creating.
+        body: JSON.stringify({ tier: tierId, success_path: 'start_resume' }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.checkout_url) {
+        throw new Error(data.message || 'Could not start checkout.');
+      }
+      location.href = data.checkout_url;
+    } catch (err) {
       showToast(err.message, 'error');
       button.disabled = false;
       button.classList.remove('loading');
+    }
+  }
+
+  // ── Resume after upgrade checkout ──────────────
+  // PayMongo bounces back to /start?resumeCreate=1&upgraded=<tier>. If we
+  // have a stashed event payload + a token, finalize the event silently
+  // and forward to the dashboard. Otherwise (e.g. user opened the URL in
+  // a new browser / cleared storage) fall through to the normal wizard.
+  if (params.get('resumeCreate') === '1' && getToken()) {
+    const stashed = sessionStorage.getItem('reelday:pendingEvent');
+    if (stashed) {
+      try {
+        const payload = JSON.parse(stashed);
+        // 30-minute TTL — PayMongo sessions expire well before this; a
+        // stash older than that is almost certainly an unrelated tab.
+        if (Date.now() - (payload.ts || 0) < 30 * 60 * 1000) {
+          state.type = payload.type || state.type;
+          state.name = payload.name || '';
+          state.date = payload.date || '';
+          sessionStorage.removeItem('reelday:pendingEvent');
+
+          // Overlay so the user sees we're not idle while the POST flies.
+          const overlay = document.createElement('div');
+          overlay.className = 'resume-overlay';
+          overlay.innerHTML = '<div class="btn-spinner"></div><p>Payment received — finalizing your event…</p>';
+          document.body.appendChild(overlay);
+
+          try {
+            const { event } = await createEvent();
+            location.href = `/dashboard?slug=${event.slug}&upgraded=${params.get('upgraded') || ''}`;
+            // `return` would be a SyntaxError at module top-level. The
+            // browser is navigating away — any remaining init below is
+            // harmless DOM wiring on a page that's about to unload.
+          } catch (err) {
+            overlay.remove();
+            showToast('Payment went through but we couldn\'t auto-create the event: ' + err.message, 'error');
+            // Fall through to normal wizard so they can retry manually.
+          }
+        } else {
+          sessionStorage.removeItem('reelday:pendingEvent');
+        }
+      } catch { /* corrupt stash — ignore */ }
     }
   }
 
