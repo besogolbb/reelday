@@ -124,6 +124,47 @@ GETs. By the time the tally runs, either (a) the host explicitly clicked
 Generate — a rare, owner-authed, debounced action — or (b) uploads have
 closed and wall traffic is, by definition, zero.
 
+### Attributing a tap to a slide — the "now-showing" beacon
+
+**Current gap:** the guest reaction POST does *not* send an `upload_id`
+([upload.html:1892](frontend/upload.html#L1892) — body is just
+`{ emoji, guest_name }`), so every `reactions` row today has
+`upload_id = NULL`. Reactions are ambient. Without fixing this, the
+Curator's `GROUP BY upload_id` has **zero signal**. This beacon is
+therefore load-bearing — it ships in Batch 0, before the Curator.
+
+The guest's phone and the venue TV are decoupled; only the wall knows
+what the wall is showing. So:
+
+```
+WALL  → on each slide change, reports its current upload id to the
+        server, piggybacked as `&showing=<uploadId>` on the reactions
+        GET poll it ALREADY makes every 1 s ([wall.html:4089]). The
+        wall already tracks the current item id ([wall.html:3238]).
+SERVER → keeps an in-memory pointer  Map<slug, { uploadId, since }>.
+         No DB write. Per-process (see §10 multi-instance caveat).
+GUEST  → taps ❤️ (still POSTs just { emoji, guest_name }).
+SERVER → stamps the reaction with the pointer's current uploadId for
+         that slug at insert time → reaction row gets upload_id set.
+```
+
+Cost on the live wall: **no new request** (param on an existing poll),
+**no new DB query** (in-memory pointer), **no extra rows** (`upload_id`
+goes `NULL`→UUID, +16 B/row). The only real delta: the existing INSERT
+validation subquery in [reactions.js:116](backend/routes/reactions.js#L116)
+now actually runs — a PK point lookup on the already-hot `uploads`
+table, sub-ms. Negligible but non-zero.
+
+Attribution is **approximate by design**: a tap lands ~1–2 s after the
+guest sees the slide (network + the 350 ms button debounce), so taps
+near a slide boundary can land on the neighbour. We don't fight this — a
+genuinely loved photo gets a *burst* over its whole ~6 s on screen, so
+boundary noise averages out. This is exactly why reaction score is a
+soft re-rank, not a hard truth (host pin/exclude is the spine). Edge
+cases: two TVs on one event = ambiguous, accept the noise; no TV
+running = reaction stays unattributed, doesn't help the Curator,
+doesn't hurt anything.
+
 Hardening on the tally query:
 - Wrap in `SET LOCAL statement_timeout = '8s'` so a pathological event
   can never hang a pooled connection.
@@ -263,11 +304,19 @@ rights" attestation in `music_tracks.license_info`.
 
 Each batch is independently shippable and leaves the product working.
 
-### Batch 0 — Foundations
+### Batch 0 — Foundations + the now-showing beacon
 - `sde` flag in `backend/lib/plans.js` + mirror `frontend/js/plans.js`.
 - Migration: `event_sde` table, `uploads.sde_pinned/sde_excluded`,
   `events.sde_play_requested_at/cleared_at`; mirror into `schema.sql`.
-- **Done = ** schema in place, gate resolves Dalisay/Hiraya only.
+- **Now-showing beacon (§3):** wall appends `&showing=<uploadId>` to its
+  existing 1 s reactions poll; server keeps an in-memory
+  `Map<slug,{uploadId,since}>`; the reaction `INSERT` in `reactions.js`
+  stamps `upload_id` from that pointer when the guest sends none. Verify
+  the single-Node-process assumption first (§10); fall back to an
+  `events.current_slide_upload_id` column only if multi-instance.
+- **Done = ** schema in place, gate resolves Dalisay/Hiraya only, and
+  new reactions are attributed to a slide (so Batch 1 has real signal).
+  Net live-wall cost ≈ noise: no new request, no new query, no new rows.
 
 ### Batch 1 — The Curator (selection only, no video yet)
 - `backend/lib/sdeSelect.js` with the request-time tally, the
@@ -350,6 +399,21 @@ re-render).
   runs once per render, owner-triggered, `statement_timeout`-guarded,
   debounced, never on a poll, never during the live storm. Reaction
   score is a soft re-rank, not a hard dependency.
+- **Beacon live-wall cost ≈ noise:** no new request (param on the
+  existing 1 s poll), no new DB query (in-memory pointer), no new rows
+  (`upload_id` NULL→UUID). Only real delta: the existing reaction-INSERT
+  validation subquery now runs — a sub-ms PK lookup on the hot `uploads`
+  table. Benchmark before/after with the reactions stress script and
+  append a row to `docs/perf-test-database.md` (the perf log notes wall
+  reaction bursts are the known pool-drain scenario — confirm the beacon
+  doesn't regress it).
+- **Beacon multi-instance caveat:** the in-memory pointer is
+  per-process. Correct and free on a single Node process (codebase
+  implies this — KVM in-process model). If the backend is ever scaled
+  horizontally, the wall's beacon and a guest's tap can hit different
+  instances; fall back to an `events.current_slide_upload_id` column
+  (cross-instance-safe, ≈1 cheap UPDATE per slide change). **Verify the
+  process model before building Batch 0.**
 - **Lambda ceiling:** ≤25 clips concat is a single long job — dedicated
   function with bumped `/tmp` + memory + timeout, isolated from the live
   per-upload transcoder. ~1–3 min render keeps the "5-minute SDE"
