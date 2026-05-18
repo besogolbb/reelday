@@ -102,20 +102,11 @@
       font-weight: 400; letter-spacing: .08em;
     }
 
-    /* Usage bar — only renders when the plan has a finite event limit. */
-    .usage { margin-top: 1.25rem; }
-    .usage-row { display: flex; justify-content: space-between; font-size: .85rem; margin-bottom: .35rem; }
-    .usage-row .lbl { color: var(--ink-faint); }
-    .usage-row .num { color: var(--ink); font-weight: 600; }
-    .usage-bar { height: 8px; background: rgba(196,90,58,.12); border-radius: 999px; overflow: hidden; }
-    .usage-bar .fill {
-      height: 100%;
-      background: linear-gradient(90deg, var(--accent), var(--accent-deep));
-      border-radius: 999px;
-      transition: width .4s ease;
-    }
-    .usage-warn { background: rgba(225,80,40,.15) !important; }
-    .usage-warn .fill { background: linear-gradient(90deg, #e15028, #b03515); }
+    /* The .usage / .usage-bar block was removed when the per-event
+       model made an "X of Y events used" gauge misleading (you're
+       always at 1-of-1 on Sinag/Dalisay until you buy another
+       credit). The limits row above still shows the plan's event
+       quota as a static figure. */
 
     .features { margin-top: 1.25rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: .5rem; }
     .feat {
@@ -220,13 +211,9 @@
     return `<div class="feat ${on ? 'on' : 'off'}">${on ? checkOn : checkOff}<span>${label}</span></div>`;
   }
 
-  function render({ user, events }) {
+  function render({ user }) {
     const tier = user.subscription_tier || 'tala';
     const plan = resolvePlan(tier);
-    const ownedEvents = (events || []).filter(e => e.is_active !== false).length;
-    const eventLimit  = plan.eventLimit;
-    const usagePct    = Math.min(100, Math.round((ownedEvents / Math.max(1, eventLimit)) * 100));
-    const nearLimit   = ownedEvents >= eventLimit;
 
     const upTier = nextTier(tier);
     const upPlan = upTier ? PLANS[upTier] : null;
@@ -277,16 +264,6 @@
           </div>
         </div>
 
-        <div class="usage">
-          <div class="usage-row">
-            <span class="lbl">Events used</span>
-            <span class="num">${ownedEvents} of ${eventLimit}</span>
-          </div>
-          <div class="usage-bar ${nearLimit ? 'usage-warn' : ''}">
-            <div class="fill" style="width:${usagePct}%"></div>
-          </div>
-        </div>
-
         <div class="features">
           ${featureRow('Video messages', plan.features.videoMessage)}
           ${featureRow('Live reactions', plan.features.reactions)}
@@ -298,7 +275,7 @@
         ${upPlan ? `
           <div class="upgrade">
             <div class="upgrade-copy">
-              <div class="upgrade-title">${nearLimit ? "You're at the limit on " + escapeHtml(plan.name) + '.' : 'Unlock more with ' + escapeHtml(upPlan.name) + '.'}</div>
+              <div class="upgrade-title">Unlock more with ${escapeHtml(upPlan.name)}.</div>
               <div class="upgrade-sub">${escapeHtml(buildUpgradeBlurb(plan, upPlan))}</div>
             </div>
             <a class="upgrade-cta" href="/#pricing">Upgrade to ${escapeHtml(upPlan.name)} →</a>
