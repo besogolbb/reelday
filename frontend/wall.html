@@ -4149,6 +4149,7 @@
   let reactionDropFrame = false;
   let sdePlayingRequestedAt = null; // remembers the last requested_at we acted on
   let sdeWasMusicPlaying    = false; // whether bg music was playing pre-takeover (restore on exit)
+  let sdeFirstPollDone      = false; // page-load swallow flag (see handleSdePlay)
   async function pollReactions() {
     // Tier gate: Tala doesn't include live reactions, so don't even
     // hit the endpoint — keeps the wall quiet and the network log clean.
@@ -4207,6 +4208,22 @@
     if (!overlay || !video) return;
 
     const loadingEl = document.getElementById('sde-loading');
+
+    // First poll after page load: if the server reports an active
+    // play signal, don't auto-enter takeover — refreshing the wall
+    // shouldn't surprise-resume a reveal mid-event (and avoids stale
+    // signals from forgotten Stops yesterday turning into ghost
+    // playback on next event setup). Remember the requested_at so
+    // we don't fire when subsequent polls return the same one; only
+    // a NEW requested_at (host clicks Play again) triggers takeover.
+    if (!sdeFirstPollDone) {
+      sdeFirstPollDone = true;
+      if (playSig) {
+        sdePlayingRequestedAt = playSig.requested_at;
+        console.info('[sde] page-load: ignoring active play signal, host must re-click to start');
+        return;
+      }
+    }
 
     if (!playSig) {
       if (sdePlayingRequestedAt !== null) {
