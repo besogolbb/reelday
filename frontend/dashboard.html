@@ -1400,6 +1400,11 @@
       .body { padding: 0 12px 88px; margin-top: 28px; }
       .info-hero { padding: 0 12px; }
 
+      /* QR card — thinner frame so the code isn't cut on small screens */
+      .qr-card { padding: 16px; }
+      .qr-card .qr { border-width: 8px; padding: 6px; }
+      .qr-card .qr img { max-height: 100%; }
+
       /* Tabs */
       .tab-row { padding: 10px 14px; gap: 4px; }
       .tab { font-size: 12px; padding: 6px 10px; }
@@ -1695,11 +1700,16 @@
         position: fixed;
         bottom: 0; left: 0; right: 0;
         z-index: 900;
-        background: rgba(42,26,20,.96);
-        backdrop-filter: blur(14px);
-        -webkit-backdrop-filter: blur(14px);
-        border-top: 1px solid rgba(255,255,255,.10);
-        padding: 6px 0 max(6px, env(safe-area-inset-bottom));
+        background: linear-gradient(
+          to bottom,
+          rgba(251,245,236,0) 0%,
+          rgba(251,245,236,.88) 28%,
+          rgba(251,245,236,.97) 60%
+        );
+        -webkit-backdrop-filter: blur(18px) saturate(140%);
+        backdrop-filter: blur(18px) saturate(140%);
+        border-top: 1px solid rgba(83,48,33,.08);
+        padding: 8px 0 max(12px, env(safe-area-inset-bottom));
         justify-content: space-around;
         align-items: stretch;
       }
@@ -1708,23 +1718,36 @@
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 4px;
+        gap: 5px;
         flex: 1;
         background: none;
         border: none;
-        color: rgba(251,245,236,.60);
+        color: var(--dash-muted, #7f6b62);
         font-family: var(--mono);
-        font-size: 10px;
-        letter-spacing: .08em;
+        font-size: 9px;
+        letter-spacing: .10em;
         text-transform: uppercase;
         cursor: pointer;
-        padding: 8px 4px;
-        border-radius: 10px;
-        transition: color .15s, background .15s;
+        padding: 8px 6px;
         -webkit-tap-highlight-color: transparent;
+        transition: color .15s;
       }
-      .mnav-btn:active { color: #fff; background: rgba(255,255,255,.10); }
-      .mnav-btn svg { width: 22px; height: 22px; flex-shrink: 0; }
+      .mnav-btn:active { color: var(--accent, #c45a3a); }
+      .mnav-btn .mnav-icon {
+        width: 44px; height: 44px;
+        border-radius: 50%;
+        background: rgba(255,255,255,.72);
+        border: 1px solid rgba(83,48,33,.10);
+        box-shadow: 0 2px 8px rgba(63,35,24,.10), inset 0 1px 0 rgba(255,255,255,.8);
+        display: flex; align-items: center; justify-content: center;
+        transition: background .15s, box-shadow .15s, border-color .15s;
+      }
+      .mnav-btn:active .mnav-icon {
+        background: rgba(196,90,58,.12);
+        border-color: rgba(196,90,58,.30);
+        box-shadow: 0 2px 12px rgba(196,90,58,.18), inset 0 1px 0 rgba(255,255,255,.6);
+      }
+      .mnav-btn svg { width: 20px; height: 20px; flex-shrink: 0; }
     }
   </style>
 </head>
@@ -6218,27 +6241,33 @@
 <!-- ── Mobile sticky bottom nav ──────────────────────────── -->
 <nav class="mobile-bottom-nav" aria-label="Quick navigation">
   <button type="button" class="mnav-btn" id="mnav-home" aria-label="Back to top">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1z"/>
-      <path d="M9 21V12h6v9"/>
-    </svg>
+    <div class="mnav-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1z"/>
+        <path d="M9 21V12h6v9"/>
+      </svg>
+    </div>
     Home
   </button>
   <button type="button" class="mnav-btn" id="mnav-qr" aria-label="View QR Code">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <rect x="3" y="3" width="7" height="7" rx="1"/>
-      <rect x="14" y="3" width="7" height="7" rx="1"/>
-      <rect x="3" y="14" width="7" height="7" rx="1"/>
-      <circle cx="17.5" cy="17.5" r="1.5" fill="currentColor" stroke="none"/>
-    </svg>
+    <div class="mnav-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="3" width="7" height="7" rx="1"/>
+        <rect x="14" y="3" width="7" height="7" rx="1"/>
+        <rect x="3" y="14" width="7" height="7" rx="1"/>
+        <circle cx="17.5" cy="17.5" r="1.5" fill="currentColor" stroke="none"/>
+      </svg>
+    </div>
     QR Code
   </button>
   <button type="button" class="mnav-btn" id="mnav-details" aria-label="Event Details">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <circle cx="12" cy="12" r="10"/>
-      <line x1="12" y1="8" x2="12" y2="8.01"/>
-      <line x1="12" y1="12" x2="12" y2="16"/>
-    </svg>
+    <div class="mnav-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="8.01"/>
+        <line x1="12" y1="12" x2="12" y2="16"/>
+      </svg>
+    </div>
     Details
   </button>
 </nav>
