@@ -1033,6 +1033,19 @@
           document.body.appendChild(overlay);
 
           try {
+            // Reconcile payment before creating the event — the webhook may
+            // not have fired yet when PayMongo bounces the user back here,
+            // so the tier upgrade wouldn't be applied and createEvent() would
+            // get another plan_limit_events 403.
+            const token = getToken();
+            await fetch('/api/payments/reconcile', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+              },
+            }).catch(() => {/* non-fatal — createEvent may still work if webhook fired */});
+
             const { event } = await createEvent();
             location.href = `/dashboard?slug=${event.slug}&upgraded=${params.get('upgraded') || ''}`;
             // `return` would be a SyntaxError at module top-level. The
