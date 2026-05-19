@@ -122,6 +122,8 @@
     .layer.has-video .vid { display: block; }
     .layer.has-video.video-visible .vid { opacity: 1; }
     .layer.has-video.video-visible .pic { display: none; }
+    /* Keep .pic hidden on a fading-out video layer regardless of video-visible state */
+    .layer.out.has-video .pic { display: none !important; }
     .layer.has-video {
       background: transparent !important;
     }
@@ -2830,6 +2832,7 @@
       try {
         outVid.pause();
         outVid.removeAttribute('src');
+        outVid.removeAttribute('poster'); // prevent poster re-appearing after src removal
         outVid.classList.remove('video-visible');
         outVid.load();
       } catch {}
@@ -2840,14 +2843,7 @@
       try { outAud.pause(); outAud.removeAttribute('src'); outAud.load(); } catch {}
     }
     if (!reuseActive) outLayer.classList.remove('has-audio', 'has-audio-overlay');
-    // Do NOT remove video-visible from the outgoing layer here.
-    // Removing it would instantly un-hide .pic (CSS display:none only
-    // applies while BOTH has-video AND video-visible are present) while
-    // .vid fades out over 0.7 s — the poster/prethumb flashes into view
-    // for the full duration of that fade. Leaving video-visible on the
-    // outgoing layer keeps .pic hidden throughout the 1.6 s crossfade.
-    // The class is cleaned up on the incoming side (below) when the layer
-    // is next reused.
+    if (!reuseActive) outLayer.classList.remove('video-visible');
     outLoader?.classList.remove('visible');
     // Make the incoming layer the bandwidth-priority one; the other can
     // stay on metadata-only until it becomes active again.
