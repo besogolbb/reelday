@@ -907,6 +907,7 @@ export default async function adminRoutes(fastify) {
       `SELECT u.id, u.email, u.full_name, u.phone,
               u.is_verified, u.is_active,
               u.subscription_tier, u.subscription_expires_at,
+              u.events_remaining,
               u.created_at,
               COUNT(e.id) FILTER (WHERE e.is_active IS NOT FALSE)::int AS active_event_count,
               COUNT(e.id)::int AS total_event_count

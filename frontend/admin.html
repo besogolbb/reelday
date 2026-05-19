@@ -654,7 +654,7 @@
         <table>
           <thead>
             <tr>
-              <th>Name / Email</th><th>Events</th><th>Verified</th><th>Status</th><th>Joined</th><th>Actions</th>
+              <th>Name / Email</th><th>Events</th><th>Credits</th><th>Verified</th><th>Status</th><th>Joined</th><th>Actions</th>
             </tr>
           </thead>
           <tbody id="users-tbody"></tbody>
@@ -865,7 +865,7 @@
       document.getElementById('nav-users-count').textContent = allUsers.length.toString();
       renderUsers(allUsers);
     } catch {
-      document.getElementById('users-tbody').innerHTML = '<tr><td colspan="6" class="empty-state">Error loading users.</td></tr>';
+      document.getElementById('users-tbody').innerHTML = '<tr><td colspan="7" class="empty-state">Error loading users.</td></tr>';
     }
   }
 
@@ -1348,6 +1348,9 @@
           <span style="color:var(--ink-faint);font-size:.82rem">${esc(u.email)}</span>
         </td>
         <td>${u.active_event_count}${u.total_event_count !== u.active_event_count ? ` <span style="color:var(--ink-faint);font-size:.78rem">(${u.total_event_count})</span>` : ''}</td>
+        <td>${u.events_remaining != null
+          ? `<span style="display:inline-block;min-width:1.6rem;text-align:center;background:${u.events_remaining > 0 ? 'rgba(196,90,58,.12)' : 'var(--paper-2)'};color:${u.events_remaining > 0 ? 'var(--accent-deep)' : 'var(--ink-faint)'};border-radius:999px;padding:.15rem .6rem;font-size:.82rem;font-weight:700">${u.events_remaining}</span>`
+          : `<span style="color:var(--ink-faint);font-size:.78rem">—</span>`}</td>
         <td>${verifiedPill}</td>
         <td>${statusPill}</td>
         <td style="font-size:.8rem;color:var(--ink-faint)">${fmtDate(u.created_at)}</td>
@@ -1358,7 +1361,7 @@
   function renderUsers(list) {
     const tbody = document.getElementById('users-tbody');
     if (!list.length) {
-      tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No users match.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No users match.</td></tr>';
       return;
     }
     tbody.innerHTML = list.map(renderUserRow).join('');
