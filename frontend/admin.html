@@ -625,7 +625,7 @@
         <table>
           <thead>
             <tr>
-              <th>User</th><th>Amount</th><th>Plan</th><th>Status</th><th>Reference</th><th>Date</th><th>Actions</th>
+              <th>User</th><th>Event</th><th>Amount</th><th>Plan</th><th>Status</th><th>Reference</th><th>Date</th><th>Actions</th>
             </tr>
           </thead>
           <tbody id="payments-tbody"></tbody>
@@ -861,7 +861,7 @@
       document.getElementById('nav-payments-count').textContent = payments.length.toString();
       renderPayments(payments);
     } catch {
-      document.getElementById('payments-tbody').innerHTML = `<tr><td colspan="7" class="empty-state">Error loading payments.</td></tr>`;
+      document.getElementById('payments-tbody').innerHTML = `<tr><td colspan="8" class="empty-state">Error loading payments.</td></tr>`;
     }
   }
 
@@ -1159,7 +1159,7 @@
 
     const tbody = document.getElementById('events-tbody');
     if (!filtered.length) {
-      tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No events match.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No events match.</td></tr>';
       return;
     }
     tbody.innerHTML = filtered.map(e => `
@@ -1428,7 +1428,7 @@
   function renderPayments(payments) {
     const tbody = document.getElementById('payments-tbody');
     if (!payments.length) {
-      tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No payments match this filter.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No payments match this filter.</td></tr>';
       return;
     }
     tbody.innerHTML = payments.map(p => `
@@ -1436,7 +1436,12 @@
         <td>
           <strong>${esc(p.user_name || p.user_email || '—')}</strong>
           ${p.user_email ? `<br><span style="color:var(--ink-faint);font-size:.8rem">${esc(p.user_email)}</span>` : ''}
-          ${p.slug ? `<br><a href="/dashboard?slug=${esc(p.slug)}" target="_blank" style="color:var(--accent);font-size:.78rem">${esc(p.slug)}</a>` : ''}
+        </td>
+        <td>
+          ${p.slug
+            ? `<a href="/dashboard?slug=${esc(p.slug)}" target="_blank" style="color:var(--accent);font-weight:600;font-size:.88rem">${esc(p.couple_names || p.slug)}</a>
+               <br><span style="color:var(--ink-faint);font-size:.75rem">${esc(p.slug)}</span>`
+            : `<span style="color:var(--ink-faint);font-size:.78rem">—</span>`}
         </td>
         <td>${formatAmount(p.amount)}</td>
         <td>${esc(p.plan || p.tier || '—')}</td>
