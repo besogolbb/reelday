@@ -118,7 +118,7 @@
 <div class="meta">Last updated 17 May 2026 · Source: <code>docs/launch-readiness-checklist.md</code></div>
 
 <div class="gate-note">
-<strong>How to use this page:</strong> Open in a browser and check the boxes as you complete each item. The progress bars below tick live as you go. Boxes are not saved — print to PDF if you need a permanent record. Sections 2 and 3 must be fully checked before launch.
+<strong>How to use this page:</strong> Open in a browser and check the boxes as you complete each item. The progress bars below tick live as you go. Checked boxes are saved in this browser — they survive page refreshes. Sections 2 and 3 must be fully checked before launch.
 </div>
 
 <div class="progress-block">
@@ -414,8 +414,30 @@ Reelday operations · Launch checklist version 1 · 17 May 2026 · Companion doc
     });
   }
 
+  // Persist checked state across refreshes.
+  const STORE_KEY = 'reelday-launch-checklist-v1';
+  function saveState() {
+    const state = {};
+    document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+      if (cb.id) state[cb.id] = cb.checked;
+    });
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (_) {}
+  }
+  function restoreState() {
+    let state;
+    try { state = JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); } catch (_) {}
+    if (!state) return;
+    document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+      if (cb.id && state[cb.id]) cb.checked = true;
+    });
+  }
+
+  restoreState();
   document.addEventListener('change', e => {
-    if (e.target && e.target.matches && e.target.matches('input[type="checkbox"]')) render();
+    if (e.target && e.target.matches && e.target.matches('input[type="checkbox"]')) {
+      saveState();
+      render();
+    }
   });
   render();
 })();
