@@ -59,6 +59,14 @@ async function sendBookingConfirmationEmail(db, { userId, tier, slug }, log) {
       : '';
     const dashUrl = `https://reelday.ph/dashboard${slug ? `?slug=${encodeURIComponent(slug)}` : ''}`;
 
+    const faqRow = (q, a) => `
+      <tr>
+        <td style="padding:.75rem 0;border-bottom:1px solid #f0f0f0;vertical-align:top">
+          <p style="margin:0 0 .25rem;font-size:.9rem;font-weight:700;color:#333">${q}</p>
+          <p style="margin:0;font-size:.85rem;color:#555;line-height:1.5">${a}</p>
+        </td>
+      </tr>`;
+
     await withTimeout(resend().emails.send({
       from:    'Reelday <noreply@reelday.ph>',
       to:      email,
@@ -73,10 +81,34 @@ async function sendBookingConfirmationEmail(db, { userId, tier, slug }, log) {
             Go to Dashboard
           </a>
           <hr style="border:none;border-top:1px solid #eee;margin:1.5rem 0">
-          <p style="font-size:.85rem;color:#666">
-            <strong>Heads up for larger events:</strong> For events over 500 guests, if they will all simultaneously upload at the same time, your wall may take 5&ndash;10 minutes to fully display all guest videos during peak upload moments. Nothing is lost &mdash; the wall catches up automatically.
-          </p>
-          <p style="font-size:.85rem;color:#888">Questions? Reply to this email or visit <a href="https://reelday.ph" style="color:#e8735a">reelday.ph</a>.</p>
+          <h3 style="font-size:1rem;color:#333;margin:0 0 .5rem">Things to know before your event</h3>
+          <table style="width:100%;border-collapse:collapse">
+            ${faqRow(
+              '&#127916; 500-guest video upload peak',
+              'For events over 500 guests, if everyone uploads videos at the same time, your wall may take 5&ndash;10 minutes to fully display all guest videos during peak moments. Nothing is lost &mdash; the wall catches up automatically.',
+            )}
+            ${faqRow(
+              '&#8987; Know your upload window',
+              'Guests can only upload within the upload window tied to your plan. Make sure to share the wall link with guests before it opens &mdash; check your dashboard for the exact dates.',
+            )}
+            ${faqRow(
+              '&#128100; Assign a dedicated wall operator',
+              'For the best experience, have one person in charge of the wall display during the event. They can control which uploads appear, keeping the show running smoothly.',
+            )}
+            ${faqRow(
+              '&#128187; Use Microsoft Edge on the wall device',
+              'Edge uses significantly less RAM than Chrome, which matters when the wall is displaying high-res videos for hours. We recommend Edge as your wall browser.',
+            )}
+            ${faqRow(
+              '&#128246; Stable internet at your venue',
+              'The wall streams video and receives live uploads in real time. Test your venue WiFi ahead of time, or bring a dedicated mobile hotspot as backup.',
+            )}
+            ${faqRow(
+              '&#9989; Do a dry run before guests arrive',
+              'Open the wall on the actual venue screen and do a test upload the day before or a few hours before the event. Confirm the display, audio levels, and internet connection.',
+            )}
+          </table>
+          <p style="font-size:.85rem;color:#888;margin-top:1.5rem">Questions? Reply to this email or visit <a href="https://reelday.ph" style="color:#e8735a">reelday.ph</a>.</p>
         </div>`,
     }), 10_000, 'Resend (booking-confirm)');
   } catch (err) {
