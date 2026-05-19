@@ -5749,7 +5749,30 @@
   // dashboard script). Batch 1: preview the curated reel + pin/exclude.
   const slug  = new URLSearchParams(location.search).get('slug');
   const panel = document.getElementById('sde-panel');
-  if (slug && panel) {
+
+  // SDE soft-launch gate (2026-05-19). The feature is listed as
+  // "coming soon" in the customer-facing tier copy (landing + upgrade
+  // modal + PRODUCT.md) while we wait on the AWS 10 GB Lambda quota.
+  // The panel is therefore hidden from every host EXCEPT the beta
+  // allowlist below, so existing Dalisay/Hiraya buyers don't see a
+  // panel that contradicts the marketing copy. This is a UX gate, NOT
+  // a security boundary — the SDE backend endpoints stay auth+tier
+  // gated, and any allowlisted host gets the full working feature
+  // (curate, generate, watch, play on wall). To onboard another beta
+  // tester, add their lowercase email here and redeploy.
+  const SDE_BETA_EMAILS = new Set([
+    'demo@reelday.ph',
+    'besogol.bb@gmail.com',
+  ]);
+  function isSdeBetaAllowed() {
+    try {
+      const user = JSON.parse(localStorage.getItem('reelday_user') || 'null');
+      const email = String(user?.email || '').toLowerCase();
+      return SDE_BETA_EMAILS.has(email);
+    } catch { return false; }
+  }
+
+  if (slug && panel && isSdeBetaAllowed()) {
     const token     = localStorage.getItem('reelday_token');
     const AH        = token ? { 'Authorization': `Bearer ${token}` } : {};
     const lockedEl  = document.getElementById('sde-locked');
