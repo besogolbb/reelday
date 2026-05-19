@@ -602,6 +602,18 @@
         <button class="pay-filter" data-status="rejected">Rejected</button>
         <button class="pay-filter" data-status="refunded">Refunded</button>
       </div>
+      <div class="filters" style="margin-bottom:.65rem">
+        <input type="search" id="pf-user"  placeholder="Search user…" />
+        <input type="search" id="pf-event" placeholder="Search event…" />
+        <select id="pf-plan">
+          <option value="">All plans</option>
+          <option value="sinag">Sinag</option>
+          <option value="dalisay">Dalisay</option>
+          <option value="hiraya">Hiraya</option>
+        </select>
+        <input type="date" id="pf-from" title="From date" style="flex:0 0 auto;min-width:140px" />
+        <input type="date" id="pf-to"   title="To date"   style="flex:0 0 auto;min-width:140px" />
+      </div>
       <div class="manual-form" id="manual-form" style="display:none">
         <div class="manual-grid">
           <label>User <select id="m-user"></select></label>
@@ -797,8 +809,11 @@
       host.innerHTML = `<button class="btn btn-accent" id="btn-new-event" style="padding:.55rem 1.1rem">+ New event</button>`;
       document.getElementById('btn-new-event').onclick = () => openEventEditor(null);
     } else if (name === 'payments') {
-      host.innerHTML = `<button class="btn btn-accent" id="btn-open-manual" style="padding:.55rem 1.1rem">+ Record payment</button>`;
+      host.innerHTML = `
+        <button class="btn-ghost-sm" id="btn-download-csv" style="padding:.55rem 1.1rem">↓ CSV</button>
+        <button class="btn btn-accent" id="btn-open-manual" style="padding:.55rem 1.1rem">+ Record payment</button>`;
       document.getElementById('btn-open-manual').onclick = openManualPayment;
+      document.getElementById('btn-download-csv').onclick = downloadPaymentsCSV;
     } else {
       host.innerHTML = '';
     }
@@ -809,6 +824,7 @@
   // ────────────────────────────────────────────────────────────────
   let allUsers    = [];
   let allEvents   = [];
+  let allPayments = [];
   let paymentStatusFilter = '';
 
   async function loadAll() {
@@ -858,8 +874,9 @@
       const qs = paymentStatusFilter ? `?status=${encodeURIComponent(paymentStatusFilter)}` : '';
       const r = await adminFetch(`/api/admin/payments${qs}`);
       const { payments } = await r.json();
+      allPayments = payments;
       document.getElementById('nav-payments-count').textContent = payments.length.toString();
-      renderPayments(payments);
+      applyPaymentFilters();
     } catch {
       document.getElementById('payments-tbody').innerHTML = `<tr><td colspan="8" class="empty-state">Error loading payments.</td></tr>`;
     }
@@ -1452,6 +1469,50 @@
       </tr>`).join('');
   }
 
+  function getFilteredPayments() {
+    const userQ  = (document.getElementById('pf-user')?.value  || '').toLowerCase().trim();
+    const eventQ = (document.getElementById('pf-event')?.value || '').toLowerCase().trim();
+    const planQ  = (document.getElementById('pf-plan')?.value  || '').toLowerCase();
+    const fromQ  = document.getElementById('pf-from')?.value || '';
+    const toQ    = document.getElementById('pf-to')?.value   || '';
+    return allPayments.filter(p => {
+      if (userQ  && !`${p.user_name||''} ${p.user_email||''}`.toLowerCase().includes(userQ))  return false;
+      if (eventQ && !`${p.couple_names||''} ${p.slug||''}`.toLowerCase().includes(eventQ))    return false;
+      if (planQ  && (p.plan||p.tier||'').toLowerCase() !== planQ)                             return false;
+      if (fromQ  && (!p.created_at || p.created_at.slice(0,10) < fromQ))                     return false;
+      if (toQ    && (!p.created_at || p.created_at.slice(0,10) > toQ))                       return false;
+      return true;
+    });
+  }
+
+  function applyPaymentFilters() {
+    renderPayments(getFilteredPayments());
+  }
+
+  function downloadPaymentsCSV() {
+    const data = getFilteredPayments();
+    const csvQ = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const headers = ['Date', 'User Name', 'User Email', 'Event', 'Slug', 'Plan', 'Amount (PHP)', 'Status', 'Reference'];
+    const rows = data.map(p => [
+      fmtDate(p.created_at),
+      p.user_name || '',
+      p.user_email || '',
+      p.couple_names || '',
+      p.slug || '',
+      p.plan || p.tier || '',
+      ((p.amount || 0) / 100).toFixed(2),
+      p.status || '',
+      p.gcash_reference || p.paymongo_payment_id || '',
+    ].map(csvQ).join(','));
+    const csv = [headers.map(csvQ).join(','), ...rows].join('\n');
+    const a = Object.assign(document.createElement('a'), {
+      href: URL.createObjectURL(new Blob([csv], { type: 'text/csv' })),
+      download: `payments-${new Date().toISOString().slice(0,10)}.csv`,
+    });
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
   document.querySelectorAll('.pay-filter').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.pay-filter').forEach(b => b.classList.remove('active'));
@@ -1459,6 +1520,10 @@
       paymentStatusFilter = btn.dataset.status || '';
       loadPayments();
     });
+  });
+
+  ['pf-user', 'pf-event', 'pf-plan', 'pf-from', 'pf-to'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', applyPaymentFilters);
   });
 
   function openManualPayment() {
