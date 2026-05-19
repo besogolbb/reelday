@@ -3016,33 +3016,43 @@
     const now           = new Date();
     const startsAt      = event.upload_window_starts_at ? new Date(event.upload_window_starts_at) : null;
     const endsAt        = event.upload_window_ends_at   ? new Date(event.upload_window_ends_at)   : null;
-    const _sidePlan     = resolvePlan(event.plan);
-    const _sideDemoOpen = _sidePlan.demoDays && event.created_at
-      ? Date.now() < new Date(event.created_at).getTime() + _sidePlan.demoDays * 86400000
-      : false;
+    const _sidePlan    = resolvePlan(event.plan);
+    const _sideDemoEnd = _sidePlan.demoDays && event.created_at
+      ? new Date(new Date(event.created_at).getTime() + _sidePlan.demoDays * 86400000)
+      : null;
+    const _sideDemoOpen = !!(_sideDemoEnd && _sideDemoEnd > now);
     const notYetOpen    = !_sideDemoOpen && !!(startsAt && startsAt > now);
     const uploadsClosed = !_sideDemoOpen && !!(endsAt   && endsAt   < now);
+    const isTala        = _sidePlan.id === 'tala';
 
     // 3-state access pill: Pending → Open now → Closed.
     // NULL window dates (legacy events) fall through to "Open now",
     // which matches backend behaviour (uploads allowed until gallery expiry).
+    // Tala: "Opens soon" replaced with "Demo ended" so it's clear why uploads
+    // are closed rather than implying a future event-date window.
     const miniAccess = $('mini-access');
     if (miniAccess) {
-      miniAccess.textContent = notYetOpen ? 'Opens soon'
+      miniAccess.textContent = notYetOpen ? (isTala ? 'Demo ended' : 'Opens soon')
                               : uploadsClosed ? 'Closed'
                               : 'Open now';
       miniAccess.classList.toggle('is-pending', notYetOpen);
       miniAccess.classList.toggle('is-closed', !notYetOpen && uploadsClosed);
     }
 
-    // Next-action hint matches the state.
+    // Next-action hint: Tala shows its demo date range instead of the
+    // event-date window so hosts see when they had access, not a confusing
+    // future date that implies a different plan's window.
     const miniNext = $('mini-next');
     if (miniNext) {
-      miniNext.textContent = notYetOpen
-        ? `Opens ${formatDate(event.upload_window_starts_at)}`
-        : uploadsClosed
-          ? 'Extend upload window'
-          : 'Share the QR';
+      if (notYetOpen && isTala && _sideDemoEnd) {
+        miniNext.textContent = `Demo: ${formatDate(event.created_at)} – ${formatDate(_sideDemoEnd)}`;
+      } else if (notYetOpen) {
+        miniNext.textContent = `Opens ${formatDate(event.upload_window_starts_at)}`;
+      } else if (uploadsClosed) {
+        miniNext.textContent = 'Extend upload window';
+      } else {
+        miniNext.textContent = 'Share the QR';
+      }
     }
 
     const wallBtn = $('btn-open-wall');
@@ -3114,17 +3124,28 @@
       $('lb-msg').textContent   =
         `The ${plan.name} plan's gallery retention for this event ended on ${formatDate(event.gallery_expires_at)}. Photos remain visible — upgrade to keep accepting new ones and extend retention.`;
     } else if (!demoOpen && startsAt && startsAt > now) {
-      // Pre-window state — host can still upload (owner bypass) but
-      // guests will see the friendly "stay tuned" banner. Reassure
-      // the host their event is set up correctly.
       banner.classList.remove('hidden');
-      $('lb-title').textContent = 'Uploads open soon';
-      $('lb-msg').textContent   =
-        `Guests can start uploading on ${formatDate(event.upload_window_starts_at)}. ` +
-        (endsAt
-          ? `The window stays open through ${formatDate(event.upload_window_ends_at)}. `
-          : '') +
-        `You can upload anytime as the host.`;
+      if (plan.id === 'tala' && plan.demoDays && event.created_at) {
+        // Tala: demo window has closed; event day not yet arrived.
+        // Show demo dates + explain when uploads reopen + upgrade CTA.
+        const demoEnd = new Date(new Date(event.created_at).getTime() + plan.demoDays * 86400000);
+        $('lb-title').textContent = 'Demo window ended';
+        $('lb-msg').textContent   =
+          `Your 2-day demo window ended on ${formatDate(demoEnd)}. ` +
+          `Guests can upload again on the event day (${formatDate(event.upload_window_starts_at)}). ` +
+          `Upgrade to unlock a longer window. You can upload anytime as the host.`;
+      } else {
+        // Pre-window state — host can still upload (owner bypass) but
+        // guests will see the friendly "stay tuned" banner. Reassure
+        // the host their event is set up correctly.
+        $('lb-title').textContent = 'Uploads open soon';
+        $('lb-msg').textContent   =
+          `Guests can start uploading on ${formatDate(event.upload_window_starts_at)}. ` +
+          (endsAt
+            ? `The window stays open through ${formatDate(event.upload_window_ends_at)}. `
+            : '') +
+          `You can upload anytime as the host.`;
+      }
     } else if (!demoOpen && endsAt && endsAt < now) {
       banner.classList.remove('hidden');
       $('lb-title').textContent = 'Upload window closed';
