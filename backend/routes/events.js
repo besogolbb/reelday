@@ -60,8 +60,7 @@ function tryGetUser(request) {
 async function loadUserWithPlan(db, userId) {
   if (!userId) return null;
   const { rows } = await db.query(
-    `SELECT id, subscription_tier, subscription_expires_at,
-            sinag_credits, dalisay_credits, hiraya_credits, tala_used
+    `SELECT id, subscription_tier, subscription_expires_at, tala_used
        FROM users WHERE id = $1`,
     [userId],
   );
@@ -92,53 +91,32 @@ export default async function eventRoutes(fastify) {
       return reply.status(404).send({ error: true, message: 'User not found' });
     }
 
-    // Map each paid tier to its credit column on the users row.
-    const TIER_CREDIT = { sinag: 'sinag_credits', dalisay: 'dalisay_credits', hiraya: 'hiraya_credits' };
-    const creditCol   = TIER_CREDIT[requestedPlan] ?? null;
+    // Use the requested plan if valid; fall back to the user's current tier.
+    const planForEvent = resolvePlan(requestedPlan || user.subscription_tier);
 
-    let planForEvent;
-    let paidByCredit = false;
+    // Tala lifetime cap — one free event per account, ever.
+    if (planForEvent.id === 'tala' && user.tala_used) {
+      return reply.status(403).send({
+        error: true,
+        code:     'plan_limit_events',
+        message:  `You've already used your free Tala event. Upgrade to add more.`,
+        plan:     planForEvent.id,
+        tala_used: true,
+      });
+    }
 
-    if (creditCol) {
-      // ── Paid tier requested — check per-tier credit bucket ──
-      if ((user[creditCol] || 0) <= 0) {
+    // Tala eventLimit fallback (counts active events vs the 1-event cap).
+    if (planForEvent.id === 'tala') {
+      const existing = await countUserActiveEvents(fastify.db, userId);
+      if (existing >= planForEvent.eventLimit) {
         return reply.status(403).send({
           error: true,
-          code:    'plan_limit_events',
-          message: `No ${requestedPlan} credits remaining. Purchase to continue.`,
-          plan:    requestedPlan,
+          code:         'plan_limit_events',
+          message:      `Your Tala plan allows ${planForEvent.eventLimit} active event. Upgrade to add more.`,
+          plan:         planForEvent.id,
+          event_limit:  planForEvent.eventLimit,
+          active_events: existing,
         });
-      }
-      planForEvent = resolvePlan(requestedPlan);
-      paidByCredit = true;
-    } else {
-      // ── Free tier (Tala) or no plan specified ──
-      planForEvent = resolvePlan(user.subscription_tier);
-
-      // Tala lifetime cap — one free event per account, ever.
-      if (planForEvent.id === 'tala' && user.tala_used) {
-        return reply.status(403).send({
-          error: true,
-          code:     'plan_limit_events',
-          message:  `You've already used your free Tala event. Upgrade to add more.`,
-          plan:     planForEvent.id,
-          tala_used: true,
-        });
-      }
-
-      // Tala eventLimit fallback (counts active events vs the 1-event cap).
-      if (planForEvent.id === 'tala') {
-        const existing = await countUserActiveEvents(fastify.db, userId);
-        if (existing >= planForEvent.eventLimit) {
-          return reply.status(403).send({
-            error: true,
-            code:         'plan_limit_events',
-            message:      `Your Tala plan allows ${planForEvent.eventLimit} active event. Upgrade to add more.`,
-            plan:         planForEvent.id,
-            event_limit:  planForEvent.eventLimit,
-            active_events: existing,
-          });
-        }
       }
     }
 
@@ -172,7 +150,7 @@ export default async function eventRoutes(fastify) {
             event_date ?? null,
             planForEvent.id,
             userId,
-            paidByCredit,
+            false,
             galleryExpiresAt,
             uploadWindowStartsAt,
             uploadWindowEndsAt,
@@ -195,14 +173,6 @@ export default async function eventRoutes(fastify) {
         error: true,
         message: 'Could not allocate a unique URL — please try a slightly different name.',
       });
-    }
-
-    // Consume one credit from the tier bucket used for this event.
-    if (creditCol) {
-      await fastify.db.query(
-        `UPDATE users SET ${creditCol} = GREATEST(${creditCol} - 1, 0) WHERE id = $1`,
-        [userId],
-      );
     }
 
     // Burn the free-Tala slot on first Tala insert. After this, the
