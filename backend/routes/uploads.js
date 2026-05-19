@@ -239,7 +239,7 @@ export default async function uploadRoutes(fastify) {
     // Tala demo window: allow uploads for 48h after event creation so new
     // users can try the product before their event date arrives. Both
     // window gates are bypassed while the demo window is open.
-    const demoOpen = !isOwner && isDemoWindowOpen(effectiveTier, event.created_at);
+    const demoOpen = !isOwner && isDemoWindowOpen(plan.id, event.created_at);
 
     // Start-of-window gate: NULL means legacy event (centered model
     // wasn't a thing when it was created) — skip the check so those
