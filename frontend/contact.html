@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#fdfaf5" />
+  <title>Contact — Reelday</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=5" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=5" />
+  <link rel="shortcut icon" href="/favicon.ico?v=5" />
+  <link rel="stylesheet" href="/css/shared.css" />
+  <style>
+    body { min-height: 100dvh; display: flex; flex-direction: column; background: var(--bg); }
+
+    .page-wrap {
+      flex: 1;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 3rem 1rem 4rem;
+    }
+
+    .contact-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+      max-width: 820px;
+      width: 100%;
+      align-items: start;
+    }
+
+    @media (max-width: 640px) {
+      .contact-grid { grid-template-columns: 1fr; gap: 32px; }
+    }
+
+    /* ── Form card ── */
+    .contact-card {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: var(--r-xl);
+      box-shadow: var(--shadow-card);
+      padding: clamp(1.75rem, 5vw, 2.5rem);
+    }
+
+    .brand-link {
+      display: block; text-align: center; margin-bottom: 2rem;
+    }
+
+    h1 {
+      font-family: var(--display);
+      font-size: 1.7rem;
+      text-align: center;
+      color: var(--ink);
+      margin-bottom: .35rem;
+    }
+
+    .sub {
+      text-align: center;
+      color: var(--ink-soft);
+      font-size: .9rem;
+      margin-bottom: 2rem;
+    }
+
+    .field { margin-bottom: 1.1rem; }
+
+    label {
+      display: block;
+      font-size: .82rem;
+      font-weight: 600;
+      color: var(--ink-soft);
+      margin-bottom: .4rem;
+    }
+
+    input, textarea, select {
+      width: 100%;
+      padding: .75rem 1rem;
+      background: #fff;
+      border: 1.5px solid var(--line-2);
+      border-radius: var(--r);
+      color: var(--ink);
+      font-family: inherit;
+      font-size: .95rem;
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+      resize: vertical;
+    }
+
+    input:focus, textarea:focus, select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(196,90,58,.12);
+    }
+
+    textarea { min-height: 120px; }
+
+    .btn-submit {
+      width: 100%;
+      margin-top: .5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: .5rem;
+      min-height: 50px;
+    }
+
+    .inline-spinner {
+      width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+      display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .result-msg {
+      border-radius: var(--r);
+      padding: .65rem .9rem;
+      font-size: .85rem;
+      margin-top: .75rem;
+      display: none;
+    }
+    .result-msg.success {
+      background: rgba(45,122,74,.08);
+      border: 1px solid rgba(45,122,74,.25);
+      color: #1e5c36;
+    }
+    .result-msg.error {
+      background: rgba(196,90,58,.08);
+      border: 1px solid rgba(196,90,58,.25);
+      color: var(--accent-deep);
+    }
+
+    /* ── Viber panel ── */
+    .viber-panel {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: var(--r-xl);
+      box-shadow: var(--shadow-card);
+      padding: clamp(1.75rem, 5vw, 2.5rem);
+      text-align: center;
+    }
+
+    .viber-panel h2 {
+      font-family: var(--display);
+      font-size: 1.25rem;
+      color: var(--ink);
+      margin-bottom: .4rem;
+    }
+
+    .viber-panel p {
+      font-size: .88rem;
+      color: var(--ink-soft);
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+    }
+
+    .viber-qr {
+      width: 100%;
+      max-width: 220px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      display: block;
+      margin: 0 auto 1rem;
+    }
+
+    .viber-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: #7360F2;
+      color: #fff;
+      font-size: .82rem;
+      font-weight: 600;
+      padding: .45rem .9rem;
+      border-radius: 999px;
+      text-decoration: none;
+      letter-spacing: .02em;
+    }
+    .viber-badge svg { flex-shrink: 0; }
+
+    .contact-email-note {
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--line);
+      font-size: .82rem;
+      color: var(--ink-faint);
+      line-height: 1.5;
+    }
+    .contact-email-note a { color: var(--accent); text-decoration: none; }
+    .contact-email-note a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="site-header-inner">
+    <a class="brand brand-lockup" href="/" aria-label="Reelday.ph — home">
+      <img src="/cdn-cgi/image/width=360,quality=86,format=auto/images/LOGO.png?v=2" alt="Reelday.ph" class="brand-img" />
+    </a>
+    <nav class="site-nav">
+      <a href="/#pricing">Pricing</a>
+      <a href="/#faq">FAQ</a>
+      <a href="/login" class="btn btn-ghost btn-sm">Log in</a>
+      <a href="/start" class="btn btn-accent btn-sm">Get started</a>
+    </nav>
+  </div>
+</header>
+
+<div class="page-wrap">
+  <div class="contact-grid">
+
+    <!-- Email form -->
+    <div class="contact-card">
+      <a class="brand-link brand brand-lockup" href="/" aria-label="Reelday.ph">
+        <img src="/images/LOGO.png?v=2" alt="Reelday.ph" class="brand-img" style="height:60px;" />
+      </a>
+      <h1>Get in touch</h1>
+      <p class="sub">We usually reply within one business day.</p>
+
+      <form id="contact-form" novalidate>
+        <div class="field">
+          <label for="name">Name</label>
+          <input type="text" id="name" name="name" placeholder="Your name" autocomplete="name" required />
+        </div>
+        <div class="field">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" placeholder="you@email.com" autocomplete="email" required />
+        </div>
+        <div class="field">
+          <label for="subject">Subject</label>
+          <select id="subject" name="subject">
+            <option value="General inquiry">General inquiry</option>
+            <option value="Pricing question">Pricing question</option>
+            <option value="Technical support">Technical support</option>
+            <option value="Partnership">Partnership</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="message">Message</label>
+          <textarea id="message" name="message" placeholder="How can we help?" required></textarea>
+        </div>
+        <button class="btn btn-accent btn-submit" id="btn-submit" type="submit">
+          <div class="inline-spinner" id="spinner"></div>
+          <span id="btn-text">Send message</span>
+        </button>
+        <div class="result-msg" id="result-msg"></div>
+      </form>
+    </div>
+
+    <!-- Viber QR -->
+    <div class="viber-panel">
+      <h2>Chat with us on Viber</h2>
+      <p>Prefer messaging? Scan the QR below to start a conversation with our Viber business account.</p>
+      <img src="/images/viberContact.png" alt="Scan to chat with ReeldayPH on Viber" class="viber-qr" />
+      <span class="viber-badge">
+        <svg width="14" height="14" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="8" fill="white" fill-opacity=".25"/><path d="M16 5C10.477 5 6 9.134 6 14.222c0 2.9 1.448 5.49 3.71 7.21L9 25l3.78-1.68C13.77 23.75 14.87 24 16 24c5.523 0 10-4.134 10-9.222S21.523 5 16 5z" fill="white"/></svg>
+        ReeldayPH on Viber
+      </span>
+      <div class="contact-email-note">
+        You can also email us directly at<br>
+        <a href="mailto:admin@reelday.ph">admin@reelday.ph</a>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script type="module">
+  const form    = document.getElementById('contact-form');
+  const btn     = document.getElementById('btn-submit');
+  const spinner = document.getElementById('spinner');
+  const btnText = document.getElementById('btn-text');
+  const result  = document.getElementById('result-msg');
+
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    result.className = 'result-msg';
+    result.style.display = 'none';
+    btn.disabled = true;
+    spinner.style.display = 'block';
+    btnText.textContent = 'Sending…';
+
+    try {
+      const res = await fetch('/api/contact', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name:    document.getElementById('name').value.trim(),
+          email:   document.getElementById('email').value.trim(),
+          subject: document.getElementById('subject').value,
+          message: document.getElementById('message').value.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Something went wrong');
+
+      result.textContent = 'Message sent! We\'ll get back to you soon.';
+      result.className = 'result-msg success';
+      result.style.display = 'block';
+      form.reset();
+    } catch (err) {
+      result.textContent = err.message;
+      result.className = 'result-msg error';
+      result.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      spinner.style.display = 'none';
+      btnText.textContent = 'Send message';
+    }
+  });
+</script>
+</body>
+</html>

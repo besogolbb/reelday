@@ -23,6 +23,7 @@ import paymentRoutes from './routes/payments.js';
 import webhookRoutes from './routes/webhooks.js';
 import authRoutes from './routes/auth.js';
 import adminRoutes from './routes/admin.js';
+import contactRoutes from './routes/contact.js';
 import presenceRoutes from './routes/presence.js';
 import eventSiteRoutes, { renderEventSitePage } from './routes/event-site.js';
 import { reconcilePendingTranscodes } from './lib/videoTranscode.js';
@@ -168,6 +169,7 @@ await fastify.register(paymentRoutes, { prefix: '/api' });
 await fastify.register(webhookRoutes, { prefix: '/api' });
 await fastify.register(authRoutes,    { prefix: '/api' });
 await fastify.register(adminRoutes,   { prefix: '/api' });
+await fastify.register(contactRoutes, { prefix: '/api' });
 await fastify.register(eventSiteRoutes,{ prefix: '/api' });
 await fastify.register(presenceRoutes,{ prefix: '' });
 
@@ -237,6 +239,7 @@ fastify.get('/reset-password',   (_r, reply) => reply.sendFile('reset-password.h
 fastify.get('/my-events',        (_r, reply) => reply.sendFile('my-events.html'));
 fastify.get('/account',          (_r, reply) => reply.sendFile('account.html'));
 fastify.get('/terms',            (_r, reply) => reply.sendFile('terms.html'));
+fastify.get('/contact',          (_r, reply) => reply.sendFile('contact.html'));
 
 // In-memory ring buffer of recent 5xx errors so we can fetch them via HTTP
 // without scrolling through Easypanel logs. GET /api/_errors?key=<DEBUG_KEY>
