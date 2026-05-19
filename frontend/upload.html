@@ -2898,7 +2898,7 @@ body { background: var(--paper); min-height: 100dvh; }
             if (i === 0) showToast(RATE_LIMIT_MSG);
           } else {
             if (s) s.textContent = 'Failed: ' + (errData.message || 'Error');
-            if (i === 0) alert(errData.message || 'Failed to initialize upload. Please check your login status.');
+            if (i === 0) alert(errData.message || 'Upload failed. Please refresh and try again.');
           }
           throw new Error(errData.message || 'presigned failed');
         }

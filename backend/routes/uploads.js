@@ -289,7 +289,7 @@ export default async function uploadRoutes(fastify) {
     try {
       ({ event, plan } = await getValidatedEvent(slug, tryGetUser(request)));
     } catch (e) {
-      return reply.status(e.statusCode || 500).send({ error: true, ...e });
+      return reply.status(e.statusCode || 500).send({ error: true, message: e.message || 'Upload error', ...e });
     }
 
     const fields = {};
@@ -408,7 +408,7 @@ export default async function uploadRoutes(fastify) {
     try {
       ({ plan: presignPlan } = await getValidatedEvent(slug, request.user));
     } catch (e) {
-      return reply.status(e.statusCode || 500).send({ error: true, ...e });
+      return reply.status(e.statusCode || 500).send({ error: true, message: e.message || 'Upload error', ...e });
     }
 
     // Plan gate at the door — reject before issuing the PUT URL so
@@ -453,7 +453,7 @@ export default async function uploadRoutes(fastify) {
     try {
       ({ event, plan } = await getValidatedEvent(slug, request.user));
     } catch (e) {
-      return reply.status(e.statusCode || 500).send({ error: true, ...e });
+      return reply.status(e.statusCode || 500).send({ error: true, message: e.message || 'Upload error', ...e });
     }
 
     const publicBase = (process.env.R2_PUBLIC_URL || 'https://media.reelday.ph').replace(/\/+$/, '');
