@@ -2252,6 +2252,21 @@
 
   import { resolvePlan, nextTier } from '/js/plans.js';
 
+  // ── Auth guard ────────────────────────────────────────
+  // The dashboard is the host control surface — it must never render
+  // for an unauthenticated visitor. /dashboard is served as a static
+  // file (no server-side auth, by SPA design), so the gate lives here
+  // and runs BEFORE any data fetch or UI build. Without this, pasting
+  // /dashboard?slug=<any-slug> in a fresh/incognito browser showed the
+  // full host UI populated from the public GET /api/events/:slug.
+  // location.replace (not href) so the unauthenticated URL doesn't
+  // linger in history; ?next= lets login bounce the host back.
+  if (!localStorage.getItem('reelday_token')) {
+    location.replace('/login?next=' +
+      encodeURIComponent(location.pathname + location.search));
+    throw new Error('redirecting to login'); // halt module execution
+  }
+
   // ── Nav ───────────────────────────────────────────────
   {
     let user = null;
@@ -5459,13 +5474,9 @@
       });
       renderCash();
 
-      // publish + view (last step)
-      const pubLbl = document.createElement('label');
-      pubLbl.style.cssText = 'display:flex;align-items:center;gap:10px;margin:10px 0;font-weight:700;color:var(--ink);';
-      const pub = document.createElement('input');
-      pub.type = 'checkbox'; pub.checked = !!state.is_published;
-      pub.style.cssText = 'width:18px;height:18px;accent-color:var(--accent);';
-      pubLbl.appendChild(pub); pubLbl.appendChild(document.createTextNode('Publish — make the site live to guests'));
+      // view link (last step) — publishing now happens on Save itself;
+      // the separate Publish checkbox was removed because hosts kept
+      // saving a draft without realising the site wasn't live.
       const viewLink = document.createElement('a');
       viewLink.href = `/e/${slug}`; viewLink.target = '_blank'; viewLink.rel = 'noopener';
       viewLink.className = 'btn btn-ghost';
@@ -5481,7 +5492,7 @@
       // ── steps ──
       const steps = [
         { title: 'Welcome', nodes: [
-          txt('Fill these steps in any order — your event details are pre-filled. Nothing goes live until you tick Publish on the last step.', true),
+          txt('Fill these steps in any order — your event details are pre-filled. Your site goes live the moment you tap “Save & publish” on the last step.', true),
           row('Cover photo', 'Hero background + the Viber/Messenger share card', cstat),
           (() => { const w = document.createElement('div'); w.style.marginBottom = '14px'; w.appendChild(cpick); return w; })(),
           row('Hero kicker', '', heroKicker),
@@ -5531,8 +5542,8 @@
           (() => { const w = document.createElement('div'); w.style.marginBottom = '16px'; w.appendChild(addCashBtn); return w; })(),
         ]},
         { title: 'Review & publish', nodes: [
-          txt('Review, then publish. You can come back and edit anytime — saved changes go live immediately.', true),
-          pubLbl, viewLink,
+          txt('Tap “Save & publish” below to make your site live. You can come back and edit anytime — saved changes go live immediately.', true),
+          viewLink,
         ]},
       ];
 
@@ -5594,7 +5605,7 @@
         stepTitle.textContent = steps[idx].title;
         stepCount.textContent = `Step ${idx + 1} of ${steps.length}`;
         backBtn.style.visibility = idx === 0 ? 'hidden' : 'visible';
-        nextBtn.textContent = idx === steps.length - 1 ? 'Save & apply' : 'Next →';
+        nextBtn.textContent = idx === steps.length - 1 ? 'Save & publish' : 'Next →';
         if (scroll) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
       backBtn.addEventListener('click', () => goTo(idx - 1, true));
@@ -5692,9 +5703,9 @@
             headers: { 'Content-Type': 'application/json', ...AH },
             // theme_override omitted on purpose — backend only updates it
             // when present, so any existing override is preserved untouched.
-            body: JSON.stringify({ config: gather(), is_published: pub.checked }) });
-          if (r.ok) { setSummary(pub.checked ? 'Published' : 'Draft — tap to set up'); }
-          note(r.ok ? (pub.checked ? '✓ Saved & live' : '✓ Saved (draft)') : 'Save failed.', r.ok);
+            body: JSON.stringify({ config: gather(), is_published: true }) });
+          if (r.ok) { setSummary('Published'); }
+          note(r.ok ? '✓ Saved & live' : 'Save failed.', r.ok);
         } catch { note('Save failed — try again.', false); }
         finally { nextBtn.disabled = false; }
       }
