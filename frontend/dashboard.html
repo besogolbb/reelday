@@ -4337,8 +4337,12 @@
       opt.classList.toggle('active', opt.querySelector('input').value === editingKind);
     });
     const hint = document.getElementById('poll-correct-hint');
-    if (hint) hint.style.display = editingKind === 'question' ? '' : 'none';
+    if (hint) {
+      hint.style.display = editingKind === 'question' ? '' : 'none';
+      hint.style.color = '';  // reset any error colour when type changes
+    }
     pollModalTitle.textContent = (editingPollId ? 'Edit ' : 'Create ') + editingKind;
+    pollSaveBtn.textContent    = editingKind === 'question' ? 'Save question' : 'Save poll';
   }
   pollModal?.querySelectorAll('#poll-kind-toggle input').forEach(input => {
     input.addEventListener('change', () => setKind(input.value));
@@ -4395,6 +4399,12 @@
     });
     if (options.length < 2) { showToast('Add at least 2 options'); return; }
     if (editingKind === 'question' && !correct_key) {
+      const hint = document.getElementById('poll-correct-hint');
+      if (hint) {
+        hint.style.display = '';
+        hint.style.color = '#c44a2a';
+        hint.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
       showToast('Pick the correct answer (tap the ✓)');
       return;
     }
