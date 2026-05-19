@@ -719,10 +719,9 @@ export default async function adminRoutes(fastify) {
   });
 
   // DELETE /api/admin/users/:id — hard-delete a user and all their data.
-  // Events cascade (uploads, reactions, polls, etc.). Payments and music_tracks
-  // have no cascade so we null out the FK first to preserve audit rows.
-  // sde_renders.requested_by_user_id is also nulled for the same reason.
-  // Storage for all owned events is reaped best-effort after the DB commit.
+  // Order matters: payments have no FK cascade so we null event/user refs
+  // first. Then delete events (cascades uploads, music_tracks, reactions,
+  // polls, event_sde, etc.). Then delete the user.
   fastify.delete('/admin/users/:id', async (request, reply) => {
     const { id } = request.params;
     const client = await fastify.db.connect();
@@ -738,39 +737,37 @@ export default async function adminRoutes(fastify) {
         return reply.status(404).send({ error: true, message: 'User not found' });
       }
 
-      // Snapshot all event IDs so we can reap R2 storage after commit.
+      // Snapshot event IDs so we can reap R2 storage after commit.
       const { rows: evRows } = await client.query(
         'SELECT id FROM events WHERE user_id = $1', [id],
       );
       eventIds = evRows.map(r => r.id);
 
-      // Snapshot storage keys for all events before cascade removes the rows.
       if (eventIds.length) {
-        const { rows: uRows } = await client.query(
+        // Snapshot storage keys before cascade removes the rows.
+        ({ rows: allUploadRows } = await client.query(
           `SELECT original_key, compressed_key, file_url, web_url, poster_url
              FROM uploads WHERE event_id = ANY($1)`,
           [eventIds],
-        );
-        allUploadRows = uRows;
-        const { rows: mRows } = await client.query(
+        ));
+        ({ rows: allMusicRows } = await client.query(
           `SELECT r2_key FROM music_tracks
             WHERE event_id = ANY($1) AND r2_key IS NOT NULL`,
           [eventIds],
-        );
-        allMusicRows = mRows;
+        ));
 
-        // Null out payment event_id links so audit rows survive the cascade.
+        // Null payment event_id refs before events are deleted (no cascade on payments).
         await client.query(
           'UPDATE payments SET event_id = NULL WHERE event_id = ANY($1)', [eventIds],
         );
+
+        // Delete events — cascades uploads, music_tracks, reactions, polls, event_sde, etc.
+        await client.query('DELETE FROM events WHERE user_id = $1', [id]);
       }
 
-      // Null out user FK references that lack CASCADE so the user row can be deleted.
-      await client.query('UPDATE payments       SET user_id              = NULL WHERE user_id              = $1', [id]);
-      await client.query('UPDATE music_tracks   SET uploaded_by_user_id  = NULL WHERE uploaded_by_user_id  = $1', [id]);
-      await client.query('UPDATE sde_renders    SET requested_by_user_id = NULL WHERE requested_by_user_id = $1', [id]);
+      // Null remaining user FK refs that have no cascade.
+      await client.query('UPDATE payments SET user_id = NULL WHERE user_id = $1', [id]);
 
-      // Deleting the user cascades events → uploads, reactions, polls, etc.
       await client.query('DELETE FROM users WHERE id = $1', [id]);
       await client.query('COMMIT');
     } catch (err) {
