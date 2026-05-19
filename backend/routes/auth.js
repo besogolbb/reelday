@@ -160,6 +160,11 @@ export default async function authRoutes(fastify) {
       sendWelcomeEmail(email, full_name, buildAppUrl(request)).catch(err => {
         fastify.log.warn({ err: err.message }, 'Failed to send welcome email');
       });
+    } else {
+      fastify.log.warn(
+        { email, resendKeySet: resendKey.length > 0 },
+        'RESEND_API_KEY missing or placeholder — registration emails skipped, user auto-verified',
+      );
     }
 
     // Return a token so the client can auto-login (always safe since account is active)
