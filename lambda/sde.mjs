@@ -252,77 +252,101 @@ async function normalizePhoto(srcPath, outPath, durSec, { kenBurns = true, index
   const frames = Math.max(1, Math.round(durSec * TARGET_FPS));
   const useKenBurns = kenBurns && KEN_BURNS_ENABLED;
 
-  // Two paths:
-  //  - kenBurns: upscale + slow zoompan, anchor cycles per clip-index
-  //    for visual variety. Still uses pad=color=black on the upscale
-  //    stage because zoompan reads the padded frame; revisit when the
-  //    10 GB quota lands and we can afford the blur on the larger frame.
-  //  - flat: blur-fill background so portrait phone photos don't get
-  //    letterbox bars. Defined as BLUR_FILL_GRAPH at module top.
-  let filterArgs;
-  if (useKenBurns) {
-    // 0.0006/frame = ~0.0144 per second at 24fps → a 3 s photo drifts
-    // from 1.000 to 1.043 (4.3 % zoom), a 5 s photo to 1.072. Plenty
-    // to feel "alive" without ever feeling rushed. 1.10 cap is a
-    // belt-and-suspenders against runaway long durations.
-    // (Was 0.0015/frame with 1.15 cap — felt frantic at TV viewing
-    // distance, hit the cap in ~4 s.)
-    const [xExpr, yExpr] = KEN_BURNS_ANCHORS[index % KEN_BURNS_ANCHORS.length];
-    // Supersample fix for the "stair-step / ladder" jitter on slow pans:
-    // zoompan truncates the crop-window x/y to INTEGER input-pixel units
-    // every output frame. At the old 2400 px working size one step was
-    // ≈0.8 output px → visibly notchy. We now cover-fill a 3×-output
-    // canvas and let zoompan emit the final 1920×1080 directly, so one
-    // integer input-pixel step is ≈0.33 output px → sub-pixel, smooth.
-    // `increase`+`crop` (cover, NOT the old decrease+pad=color=black)
-    // also removes the black letterbox bars on portrait phone photos —
-    // that was the "doesn't cover the whole screen" report; every other
-    // path (video, flat photo, card bg) already cover-fills, only this
-    // one didn't. Cost is ~9× the zoompan input area but the encode
-    // (libx264 veryfast, still 1080p) is unchanged: the 2026-05-19
-    // 900 s-timeout run used only ~140 s wall (~6× headroom) and
-    // 1.6/3 GB RAM, so this stays well inside budget. Tunable: drop the
-    // 3× to 2× (TARGET_*×2) if a future larger reel gets tight on time.
-    const SS_W = TARGET_W * 3; // 5760
-    const SS_H = TARGET_H * 3; // 3240
-    const vf = [
-      `scale=${SS_W}:${SS_H}:force_original_aspect_ratio=increase`,
-      `crop=${SS_W}:${SS_H}`,
-      `zoompan=z='min(zoom+0.0006\\,1.10)':d=${frames}:` +
-        `x='${xExpr}':y='${yExpr}':` +
-        `s=${TARGET_W}x${TARGET_H}:fps=${TARGET_FPS}`,
-      `fps=${TARGET_FPS}`, `format=yuv420p`, `setsar=1`,
-    ].join(',');
-    filterArgs = ['-vf', vf];
-  } else {
-    filterArgs = ['-filter_complex', BLUR_FILL_GRAPH, '-map', '[outv]', '-map', '1:a'];
+  // Flat path (title/endcard PNGs, or KEN_BURNS disabled): blur-fill
+  // cover in one pass. Portrait stays whole over its own blurred copy;
+  // no zoom. BLUR_FILL_GRAPH is defined at module top.
+  if (!useKenBurns) {
+    await runFfmpeg([
+      '-y', '-nostdin', '-hide_banner', '-loglevel', 'error',
+      '-max_interleave_delta', '100M',
+      '-loop', '1', '-t', String(durSec),
+      '-i', srcPath,
+      '-f', 'lavfi', '-i', `anullsrc=r=48000:cl=mono:d=${durSec}`,
+      '-filter_complex', BLUR_FILL_GRAPH, '-map', '[outv]', '-map', '1:a',
+      '-shortest',
+      '-c:v', 'libx264', '-preset', SDE_X264_PRESET, '-crf', '22',
+      '-pix_fmt', 'yuv420p', '-profile:v', 'high', '-level', '4.0',
+      '-c:a', 'aac', '-b:a', '64k', '-ar', '48000', '-ac', '1',
+      '-r', String(TARGET_FPS),
+      '-movflags', '+faststart',
+      outPath,
+    ], { label: `normalize-photo-flat` });
+    return;
   }
 
-  await runFfmpeg([
-    '-y', '-nostdin', '-hide_banner', '-loglevel', 'error',
-    // -max_interleave_delta keeps the muxer from holding back packets
-    // waiting for an interleave window, which combined with the finite
-    // anullsrc below + -shortest makes filter_complex bricks end cleanly.
-    // (NB: an earlier version also passed `-fflags +shortest`; `shortest`
-    // is NOT a documented fflags constant, FFmpeg 4.x silently ignored
-    // it, FFmpeg 7+ rejects it as "Undefined constant" and refuses to
-    // open the input. The real trimming work is done by the finite
-    // anullsrc + -shortest combo below.)
-    '-max_interleave_delta', '100M',
-    '-loop', '1', '-t', String(durSec),
-    '-i', srcPath,
-    // Anullsrc with explicit d= so both streams are FINITE — lets
-    // -shortest reliably pick min(video, audio).
-    '-f', 'lavfi', '-i', `anullsrc=r=48000:cl=mono:d=${durSec}`,
-    ...filterArgs,
-    '-shortest',
-    '-c:v', 'libx264', '-preset', SDE_X264_PRESET, '-crf', '22',
-    '-pix_fmt', 'yuv420p', '-profile:v', 'high', '-level', '4.0',
-    '-c:a', 'aac', '-b:a', '64k', '-ar', '48000', '-ac', '1',
-    '-r', String(TARGET_FPS),
-    '-movflags', '+faststart',
-    outPath,
-  ], { label: `normalize-photo` });
+  // Ken Burns path — two stages so the photo keeps its OWN resolution
+  // (portrait stays portrait, framed by its blurred backdrop — NOT
+  // cropped to 16:9) AND the motion is smooth:
+  //
+  //   Stage 1 (runs ONCE per photo): build the blur-fill composite at a
+  //     3×-output canvas (5760×3240). The photo is fitted (aspect kept,
+  //     never cropped) and centered over a heavily-blurred, cover-scaled
+  //     copy of itself — identical look to the video/flat blur-fill,
+  //     just supersampled. A vertical phone photo therefore keeps its
+  //     full frame with a blurred backdrop instead of black bars.
+  //   Stage 2 (per frame): slow zoompan of that finished 16:9 composite
+  //     straight down to 1920×1080. zoompan truncates its crop-window
+  //     x/y to INTEGER input pixels every frame; doing the pan in
+  //     5760-wide space makes one step ≈0.33 output px → sub-pixel, so
+  //     the motion is smooth instead of the stair-step "ladder" the host
+  //     reported (it was ≈0.8 px at the old 2400 px size). Compositing
+  //     once — not per looped frame — is what keeps this inside the ~6×
+  //     wall-clock headroom seen on the 2026-05-19 run. Tunable: drop
+  //     the 3× to 2× (TARGET_*×2) if a larger reel ever gets tight.
+  //
+  // 0.0006/frame zoom = ~0.0144/s at 24fps → a 3 s photo drifts 1.000→
+  // 1.043 (4.3 %); 1.10 cap guards runaway long durations. (Was
+  // 0.0015/frame/1.15 cap — felt frantic at TV viewing distance.)
+  const [xExpr, yExpr] = KEN_BURNS_ANCHORS[index % KEN_BURNS_ANCHORS.length];
+  const SS_W = TARGET_W * 3; // 5760
+  const SS_H = TARGET_H * 3; // 3240
+  const compositePath = `${outPath}.kb-src.jpg`;
+
+  const compositeGraph =
+    `[0:v]split=2[bg][fg];` +
+    `[bg]scale=${SS_W}:${SS_H}:force_original_aspect_ratio=increase,` +
+      `crop=${SS_W}:${SS_H},boxblur=30:2[blurred];` +
+    `[fg]scale=${SS_W}:${SS_H}:force_original_aspect_ratio=decrease[scaled];` +
+    `[blurred][scaled]overlay=(W-w)/2:(H-h)/2,format=yuv420p[outv]`;
+
+  try {
+    // Stage 1: single-frame composite. -q:v 2 ≈ visually lossless and it
+    // gets re-encoded at crf 22 in stage 2 anyway (bg is blurred).
+    await runFfmpeg([
+      '-y', '-nostdin', '-hide_banner', '-loglevel', 'error',
+      '-i', srcPath,
+      '-filter_complex', compositeGraph, '-map', '[outv]',
+      '-frames:v', '1', '-q:v', '2',
+      compositePath,
+    ], { label: `kenburns-composite` });
+
+    // Stage 2: smooth zoom on the supersampled composite → 1080p. Same
+    // proven loop/anullsrc/-shortest shape as the original single-pass
+    // (only the inline scale/pad moved into the stage-1 composite).
+    await runFfmpeg([
+      '-y', '-nostdin', '-hide_banner', '-loglevel', 'error',
+      '-max_interleave_delta', '100M',
+      '-loop', '1', '-t', String(durSec),
+      '-i', compositePath,
+      '-f', 'lavfi', '-i', `anullsrc=r=48000:cl=mono:d=${durSec}`,
+      '-vf',
+        `zoompan=z='min(zoom+0.0006\\,1.10)':d=${frames}:` +
+          `x='${xExpr}':y='${yExpr}':` +
+          `s=${TARGET_W}x${TARGET_H}:fps=${TARGET_FPS},` +
+        `fps=${TARGET_FPS},format=yuv420p,setsar=1`,
+      '-shortest',
+      '-c:v', 'libx264', '-preset', SDE_X264_PRESET, '-crf', '22',
+      '-pix_fmt', 'yuv420p', '-profile:v', 'high', '-level', '4.0',
+      '-c:a', 'aac', '-b:a', '64k', '-ar', '48000', '-ac', '1',
+      '-r', String(TARGET_FPS),
+      '-movflags', '+faststart',
+      outPath,
+    ], { label: `normalize-photo` });
+  } finally {
+    // Drop the big supersample JPEG immediately — /tmp is shared across
+    // all 68 bricks; serial render means only one exists at a time.
+    await rm(compositePath, { force: true }).catch(() => {});
+  }
 }
 
 // Render a card with up to two centered text lines (title + subtitle,
