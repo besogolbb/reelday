@@ -557,13 +557,23 @@
     .polls-locked a { color: var(--accent); font-weight: 600; text-decoration: none; }
 
     .poll-row {
-      background: linear-gradient(145deg, #fff 0%, #fdf7ef 100%);
-      border: 1px solid rgba(196,90,58,.15);
-      border-left: 4px solid var(--accent);
-      border-radius: 14px;
-      padding: 14px 16px 14px 14px;
-      display: grid; grid-template-columns: 1fr auto; gap: 10px 14px; align-items: center;
-      box-shadow: 0 4px 18px rgba(63,35,24,.09), 0 1px 4px rgba(63,35,24,.05);
+      background: #fff;
+      border: 1px solid rgba(63,35,24,.06);
+      border-radius: 18px;
+      padding: 18px 20px;
+      display: grid; grid-template-columns: 1fr auto; gap: 10px 16px; align-items: center;
+      box-shadow:
+        0 8px 32px rgba(63,35,24,.11),
+        0 2px 8px  rgba(63,35,24,.07),
+        0 0 0 1px  rgba(83,48,33,.03);
+      transition: box-shadow .2s ease, transform .2s ease;
+    }
+    .poll-row:hover {
+      box-shadow:
+        0 14px 42px rgba(63,35,24,.15),
+        0 4px 12px  rgba(63,35,24,.09),
+        0 0 0 1px   rgba(83,48,33,.05);
+      transform: translateY(-2px);
     }
     .poll-row .poll-status {
       display: inline-flex; align-items: center; gap: 6px;
@@ -574,8 +584,13 @@
     .poll-row .poll-status.draft { background: var(--paper-3); color: var(--ink-soft); }
     .poll-row .poll-status.live  { background: rgba(229,76,59,.14); color: #b03022; }
     .poll-row .poll-status.live::before { content: '●'; margin-right: 4px; animation: pollPulse 1s infinite; }
-    /* Live row gets a vivid left stripe */
-    .poll-row:has(.poll-status.live) { border-left-color: #e54c3b; box-shadow: 0 4px 22px rgba(229,76,59,.16), 0 1px 4px rgba(63,35,24,.06); }
+    /* Live row glows red to stand out */
+    .poll-row:has(.poll-status.live) {
+      box-shadow:
+        0 8px 32px rgba(229,76,59,.18),
+        0 2px 8px  rgba(229,76,59,.10),
+        0 0 0 1px  rgba(229,76,59,.12);
+    }
     .poll-row .poll-status.ended { background: rgba(45,122,74,.14); color: #1f5e3b; }
     .poll-row .poll-kind-badge {
       display: inline-block; margin-left: 6px; padding: 3px 8px;
@@ -5639,7 +5654,7 @@
 
       // White inset card holds the form — pops against the cream body bg.
       const card = document.createElement('div');
-      card.style.cssText = 'background:#fff;border:1px solid var(--line);border-radius:18px;padding:24px;box-shadow:0 1px 2px rgba(42,26,20,.04);';
+      card.style.cssText = 'background:#fff;border:1px solid rgba(63,35,24,.06);border-radius:20px;padding:26px 24px;box-shadow:0 8px 32px rgba(63,35,24,.11),0 2px 8px rgba(63,35,24,.07),0 0 0 1px rgba(83,48,33,.03);';
       const content = document.createElement('div');
       card.appendChild(content);
 
