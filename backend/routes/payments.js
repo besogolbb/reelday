@@ -1,6 +1,88 @@
 import { createHmac, timingSafeEqual } from 'crypto';
+import { Resend } from 'resend';
 import { buildAppUrl } from '../utils/appUrl.js';
 import { PLANS, resolvePlan, galleryExpiryFor, uploadWindowStartFor, uploadWindowEndFor } from '../lib/plans.js';
+
+/**
+ * Verify a PayMongo webhook signature.
+ * Header format: `t=<unix_ts>,te=<test_sig>,li=<live_sig>`.
+ * The signed payload is `${timestamp}.${rawBody}` and the algorithm is
+ * HMAC-SHA256 using the per-webhook secret.
+ * Without this check anyone could POST a fake "payment.paid" event and
+ * upgrade arbitrary user_id values for free.
+ */
+function resend() {
+  return new Resend(process.env.RESEND_API_KEY);
+}
+
+function withTimeout(promise, ms, label) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(
+      () => reject(new Error(`${label} timed out after ${ms}ms`)),
+      ms,
+    )),
+  ]);
+}
+
+async function sendBookingConfirmationEmail(db, { userId, tier, slug }, log) {
+  if (!process.env.RESEND_API_KEY) return;
+  try {
+    const { rows: userRows } = await db.query(
+      `SELECT email, full_name FROM users WHERE id = $1`,
+      [userId],
+    );
+    if (!userRows.length) return;
+    const { email, full_name: name } = userRows[0];
+
+    let coupleNames  = null;
+    let eventDateStr = null;
+    if (slug) {
+      const { rows: evRows } = await db.query(
+        `SELECT couple_names, event_date FROM events WHERE slug = $1 AND user_id = $2`,
+        [slug, userId],
+      );
+      if (evRows.length) {
+        coupleNames = evRows[0].couple_names;
+        eventDateStr = evRows[0].event_date
+          ? new Date(evRows[0].event_date).toLocaleDateString('en-PH', {
+              year: 'numeric', month: 'long', day: 'numeric',
+            })
+          : null;
+      }
+    }
+
+    const tierLabels = { sinag: 'Sinag', dalisay: 'Dalisay', hiraya: 'Hiraya' };
+    const tierLabel  = tierLabels[tier] || tier;
+    const eventLine  = coupleNames
+      ? `<p><strong>Event:</strong> ${coupleNames}${eventDateStr ? ` &mdash; ${eventDateStr}` : ''}</p>`
+      : '';
+    const dashUrl = `https://reelday.ph/dashboard${slug ? `?slug=${encodeURIComponent(slug)}` : ''}`;
+
+    await withTimeout(resend().emails.send({
+      from:    'Reelday <noreply@reelday.ph>',
+      to:      email,
+      subject: `Booking Confirmed — Reelday ${tierLabel}`,
+      html: `
+        <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:2rem">
+          <h2 style="color:#e8735a">Booking Confirmed!</h2>
+          <p>Hi ${name},</p>
+          <p>Your <strong>Reelday ${tierLabel}</strong> plan is now active. Thank you for choosing Reelday to capture your special moments.</p>
+          ${eventLine}
+          <a href="${dashUrl}" style="display:inline-block;background:#e8735a;color:#fff;padding:.75rem 1.5rem;border-radius:8px;text-decoration:none;font-weight:700;margin:1rem 0">
+            Go to Dashboard
+          </a>
+          <hr style="border:none;border-top:1px solid #eee;margin:1.5rem 0">
+          <p style="font-size:.85rem;color:#666">
+            <strong>Heads up for larger events:</strong> For events over 500 guests, if they will all simultaneously upload at the same time, your wall may take 5&ndash;10 minutes to fully display all guest videos during peak upload moments. Nothing is lost &mdash; the wall catches up automatically.
+          </p>
+          <p style="font-size:.85rem;color:#888">Questions? Reply to this email or visit <a href="https://reelday.ph" style="color:#e8735a">reelday.ph</a>.</p>
+        </div>`,
+    }), 10_000, 'Resend (booking-confirm)');
+  } catch (err) {
+    log?.warn({ err: err.message }, 'sendBookingConfirmationEmail failed (non-fatal)');
+  }
+}
 
 /**
  * Verify a PayMongo webhook signature.
@@ -414,6 +496,7 @@ export default async function paymentRoutes(fastify) {
           `UPDATE payments SET status = 'succeeded' WHERE paymongo_payment_id = $1`,
           [resourceId],
         );
+        sendBookingConfirmationEmail(fastify.db, { userId, tier, slug: slug || null }, request.log).catch(() => {});
         applied = true;
       }
     }
@@ -476,6 +559,7 @@ export default async function paymentRoutes(fastify) {
             `UPDATE payments SET status = 'succeeded' WHERE paymongo_payment_id = $1`, [resourceId],
           );
         }
+        sendBookingConfirmationEmail(fastify.db, { userId, tier, slug: slug || null }, request.log).catch(() => {});
         applied = true;
       }
     }
@@ -494,6 +578,7 @@ export default async function paymentRoutes(fastify) {
           await applyTierUpgrade(fastify.db, {
             userId: payment.user_id, tier: payment.tier, slug: null,
           });
+          sendBookingConfirmationEmail(fastify.db, { userId: payment.user_id, tier: payment.tier, slug: null }, request.log).catch(() => {});
           applied = true;
         }
       }
