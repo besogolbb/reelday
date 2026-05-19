@@ -638,6 +638,64 @@
   ════════════════════════════════════════════════════════ */
   .pricing { padding: 100px 28px; background: var(--paper-2); }
   .pricing .container { max-width: 1240px; margin: 0 auto; text-align: center; }
+
+  /* ── Payment logos row ──────────────────────────────── */
+  .payment-strip {
+    margin-top: 40px;
+    padding-top: 32px;
+    border-top: 1px solid rgba(83,48,33,.12);
+  }
+  .payment-strip-label {
+    font-family: var(--mono); font-size: 11px; font-weight: 700;
+    letter-spacing: .14em; text-transform: uppercase;
+    color: var(--ink-soft); margin-bottom: 16px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .qrph-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: #003087; color: #fff;
+    font-family: var(--mono); font-size: 10px; font-weight: 700;
+    letter-spacing: .10em; text-transform: uppercase;
+    padding: 4px 10px; border-radius: 6px;
+  }
+  .payment-logos {
+    display: flex; align-items: center; justify-content: center;
+    gap: 10px; flex-wrap: wrap;
+  }
+  .pay-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 9px 16px;
+    background: #fff;
+    border: 1.5px solid rgba(83,48,33,.10);
+    border-radius: 10px;
+    font-size: 13px; font-weight: 700; font-family: var(--sans);
+    letter-spacing: -.01em;
+    box-shadow: 0 2px 8px rgba(63,35,24,.07), inset 0 1px 0 rgba(255,255,255,.9);
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .pay-pill:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(63,35,24,.12), inset 0 1px 0 rgba(255,255,255,.9);
+  }
+  .pay-pill .pay-dot {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  }
+  .pay-pill.gcash     { color: #007DFE; border-color: rgba(0,125,254,.22); }
+  .pay-pill.gcash     .pay-dot { background: #007DFE; }
+  .pay-pill.maya      { color: #27C5B0; border-color: rgba(39,197,176,.22); }
+  .pay-pill.maya      .pay-dot { background: #27C5B0; }
+  .pay-pill.maribank  { color: #E8340A; border-color: rgba(232,52,10,.22); }
+  .pay-pill.maribank  .pay-dot { background: #E8340A; }
+  .pay-pill.grabpay   { color: #00B14F; border-color: rgba(0,177,79,.22); }
+  .pay-pill.grabpay   .pay-dot { background: #00B14F; }
+  .pay-pill.bpi       { color: #C0392B; border-color: rgba(192,57,43,.22); }
+  .pay-pill.bpi       .pay-dot { background: #C0392B; }
+  .pay-pill.bdo       { color: #003087; border-color: rgba(0,48,135,.22); }
+  .pay-pill.bdo       .pay-dot { background: #003087; }
+  @media (max-width: 600px) {
+    .payment-logos { gap: 8px; }
+    .pay-pill { padding: 7px 12px; font-size: 12px; }
+  }
   .pricing h2 {
     font-family: var(--display); font-weight: 400;
     font-size: clamp(36px, 4.5vw, 60px);
@@ -1188,6 +1246,37 @@
           <li>1-year retention</li>
         </ul>
         <a class="btn btn-ghost" href="/start?plan=hiraya" data-tier-cta="hiraya">Choose Hiraya</a>
+      </div>
+    </div>
+
+    <!-- ── Payment logos ──────────────────────────────── -->
+    <div class="payment-strip">
+      <p class="payment-strip-label">
+        Payments processed via PayMongo &nbsp;·&nbsp; Accepted via
+        <span class="qrph-badge">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><circle cx="17.5" cy="17.5" r="1.5" fill="currentColor" stroke="none"/></svg>
+          QR Ph
+        </span>
+      </p>
+      <div class="payment-logos">
+        <div class="pay-pill gcash">
+          <span class="pay-dot"></span>GCash
+        </div>
+        <div class="pay-pill maya">
+          <span class="pay-dot"></span>Maya
+        </div>
+        <div class="pay-pill maribank">
+          <span class="pay-dot"></span>Maribank
+        </div>
+        <div class="pay-pill grabpay">
+          <span class="pay-dot"></span>GrabPay
+        </div>
+        <div class="pay-pill bpi">
+          <span class="pay-dot"></span>BPI
+        </div>
+        <div class="pay-pill bdo">
+          <span class="pay-dot"></span>BDO
+        </div>
       </div>
     </div>
   </div>
