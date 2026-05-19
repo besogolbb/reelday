@@ -663,13 +663,11 @@
     gap: 10px; flex-wrap: wrap;
   }
   .pay-pill {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 9px 16px;
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 8px 14px;
     background: #fff;
     border: 1.5px solid rgba(83,48,33,.10);
     border-radius: 10px;
-    font-size: 13px; font-weight: 700; font-family: var(--sans);
-    letter-spacing: -.01em;
     box-shadow: 0 2px 8px rgba(63,35,24,.07), inset 0 1px 0 rgba(255,255,255,.9);
     transition: transform .15s ease, box-shadow .15s ease;
   }
@@ -677,24 +675,20 @@
     transform: translateY(-2px);
     box-shadow: 0 6px 18px rgba(63,35,24,.12), inset 0 1px 0 rgba(255,255,255,.9);
   }
-  .pay-pill .pay-dot {
-    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  .pay-logo {
+    height: 28px; width: auto; max-width: 80px;
+    object-fit: contain; display: block; flex-shrink: 0;
   }
-  .pay-pill.gcash     { color: #007DFE; border-color: rgba(0,125,254,.22); }
-  .pay-pill.gcash     .pay-dot { background: #007DFE; }
-  .pay-pill.maya      { color: #27C5B0; border-color: rgba(39,197,176,.22); }
-  .pay-pill.maya      .pay-dot { background: #27C5B0; }
-  .pay-pill.maribank  { color: #E8340A; border-color: rgba(232,52,10,.22); }
-  .pay-pill.maribank  .pay-dot { background: #E8340A; }
-  .pay-pill.grabpay   { color: #00B14F; border-color: rgba(0,177,79,.22); }
-  .pay-pill.grabpay   .pay-dot { background: #00B14F; }
-  .pay-pill.bpi       { color: #C0392B; border-color: rgba(192,57,43,.22); }
-  .pay-pill.bpi       .pay-dot { background: #C0392B; }
-  .pay-pill.bdo       { color: #003087; border-color: rgba(0,48,135,.22); }
-  .pay-pill.bdo       .pay-dot { background: #003087; }
+  .pay-logo--icon { height: 24px; width: 24px; border-radius: 4px; }
+  .pay-name {
+    font-family: var(--sans); font-size: 13px; font-weight: 600;
+    color: var(--ink-soft); letter-spacing: -.01em; white-space: nowrap;
+  }
   @media (max-width: 600px) {
     .payment-logos { gap: 8px; }
-    .pay-pill { padding: 7px 12px; font-size: 12px; }
+    .pay-pill { padding: 7px 11px; }
+    .pay-logo { height: 22px; max-width: 64px; }
+    .pay-name { font-size: 12px; }
   }
   .pricing h2 {
     font-family: var(--display); font-weight: 400;
@@ -1259,23 +1253,41 @@
         </span>
       </p>
       <div class="payment-logos">
-        <div class="pay-pill gcash">
-          <span class="pay-dot"></span>GCash
+        <div class="pay-pill">
+          <img class="pay-logo"
+            src="https://upload.wikimedia.org/wikipedia/commons/5/52/GCash_logo.svg"
+            alt="GCash" loading="lazy">
+          <span class="pay-name">GCash</span>
         </div>
-        <div class="pay-pill maya">
-          <span class="pay-dot"></span>Maya
+        <div class="pay-pill">
+          <img class="pay-logo"
+            src="https://www.maya.ph/hubfs/Maya/MAYA-Mint%20Green.svg"
+            alt="Maya" loading="lazy">
+          <span class="pay-name">Maya</span>
         </div>
-        <div class="pay-pill maribank">
-          <span class="pay-dot"></span>Maribank
+        <div class="pay-pill">
+          <img class="pay-logo pay-logo--icon"
+            src="https://www.google.com/s2/favicons?domain=maribank.ph&sz=64"
+            alt="Maribank" loading="lazy">
+          <span class="pay-name">Maribank</span>
         </div>
-        <div class="pay-pill grabpay">
-          <span class="pay-dot"></span>GrabPay
+        <div class="pay-pill">
+          <img class="pay-logo"
+            src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f6/Grab_Logo.svg/200px-Grab_Logo.svg.png"
+            alt="GrabPay" loading="lazy">
+          <span class="pay-name">GrabPay</span>
         </div>
-        <div class="pay-pill bpi">
-          <span class="pay-dot"></span>BPI
+        <div class="pay-pill">
+          <img class="pay-logo"
+            src="https://upload.wikimedia.org/wikipedia/en/thumb/9/99/Bank_of_the_Philippine_Islands_logo.svg/200px-Bank_of_the_Philippine_Islands_logo.svg.png"
+            alt="BPI" loading="lazy">
+          <span class="pay-name">BPI</span>
         </div>
-        <div class="pay-pill bdo">
-          <span class="pay-dot"></span>BDO
+        <div class="pay-pill">
+          <img class="pay-logo"
+            src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/49/BDO_Unibank_%28logo%29.svg/250px-BDO_Unibank_%28logo%29.svg.png"
+            alt="BDO" loading="lazy">
+          <span class="pay-name">BDO</span>
         </div>
       </div>
     </div>
