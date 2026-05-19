@@ -74,6 +74,41 @@
   @media screen {
     body { padding: 24pt 18pt; }
   }
+  /* Progress bar (overall + per-section). Inline styles kept terse so the print stylesheet works without extra rules. */
+  .progress-block { margin: 14pt 0 18pt; }
+  .progress-bar {
+    position: relative; height: 14pt; background: #ececec;
+    border: 1px solid #ccc; border-radius: 7pt; overflow: hidden;
+    margin: 4pt 0 10pt;
+  }
+  .progress-bar > .fill {
+    height: 100%; width: 0%; background: #1a5d29;
+    transition: width 0.25s ease;
+  }
+  .progress-bar > .label {
+    position: absolute; inset: 0; text-align: center;
+    font-size: 9pt; line-height: 14pt; color: #1a1a1a; font-weight: 600;
+  }
+  .progress-badge {
+    display: inline-block; margin-left: 10pt;
+    font-size: 10pt; font-weight: 600; opacity: 0.95;
+    background: rgba(255,255,255,0.18); padding: 1pt 7pt; border-radius: 8pt;
+  }
+  .progress-badge .mini-bar {
+    display: inline-block; vertical-align: middle;
+    width: 60pt; height: 5pt; background: rgba(255,255,255,0.3);
+    border-radius: 3pt; overflow: hidden; margin: 0 6pt 0 4pt;
+  }
+  .progress-badge .mini-bar > .fill {
+    height: 100%; width: 0%; background: #fff;
+    transition: width 0.25s ease;
+  }
+  @media print {
+    .progress-bar, .progress-bar > .fill,
+    .progress-badge, .progress-badge .mini-bar, .progress-badge .mini-bar > .fill {
+      -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    }
+  }
 </style>
 </head>
 <body>
@@ -83,7 +118,25 @@
 <div class="meta">Last updated 17 May 2026 · Source: <code>docs/launch-readiness-checklist.md</code></div>
 
 <div class="gate-note">
-<strong>How to use this page:</strong> Open in a browser and check the boxes as you complete each item. Boxes are not saved — print to PDF if you need a permanent record. Sections 2 and 3 must be fully checked before launch.
+<strong>How to use this page:</strong> Open in a browser and check the boxes as you complete each item. The progress bars below tick live as you go. Boxes are not saved — print to PDF if you need a permanent record. Sections 2 and 3 must be fully checked before launch.
+</div>
+
+<div class="progress-block">
+  <h2 style="margin-top:0">Progress</h2>
+  <div class="progress-bar" data-progress="overall">
+    <div class="fill"></div>
+    <div class="label"><span data-done>0</span> / <span data-total>54</span> actionable items complete (<span data-pct>0%</span>)</div>
+  </div>
+  <table>
+    <tr><th>Section</th><th style="width:8%" class="center">Done</th><th style="width:8%" class="center">Total</th><th style="width:8%" class="center">%</th><th>Status</th></tr>
+    <tr><td>1. Backend Performance</td><td class="center">—</td><td class="center">—</td><td class="center">—</td><td>✅ validated phase (no checkboxes; re-confirmed 19 May)</td></tr>
+    <tr data-progress-row="2"><td>2. Operational Readiness (blockers)</td><td class="center"><span data-done>0</span></td><td class="center"><span data-total>8</span></td><td class="center"><span data-pct>0%</span></td><td>⛔ launch-gating</td></tr>
+    <tr data-progress-row="3"><td>3. User Flow Validation</td><td class="center"><span data-done>0</span></td><td class="center"><span data-total>25</span></td><td class="center"><span data-pct>0%</span></td><td>manual test on devices</td></tr>
+    <tr data-progress-row="4"><td>4. Day-of-Launch</td><td class="center"><span data-done>0</span></td><td class="center"><span data-total>9</span></td><td class="center"><span data-pct>0%</span></td><td>run launch morning</td></tr>
+    <tr data-progress-row="5"><td>5. Communication Readiness</td><td class="center"><span data-done>0</span></td><td class="center"><span data-total>7</span></td><td class="center"><span data-pct>0%</span></td><td>marketing surface</td></tr>
+    <tr><td>6. Rollback / Incident Plan</td><td class="center">—</td><td class="center">—</td><td class="center">—</td><td>📖 reference only (no checkboxes)</td></tr>
+    <tr data-progress-row="7"><td>7. Post-Launch (Days 1–7)</td><td class="center"><span data-done>0</span></td><td class="center"><span data-total>5</span></td><td class="center"><span data-pct>0%</span></td><td>week-one follow-through</td></tr>
+  </table>
 </div>
 
 <!-- ====================================================================== -->
@@ -104,7 +157,7 @@
 <div class="callout"><strong>Aggregate</strong>~13,000 requests across the full deep-check suite with 0 backend failures. The only failures observed (91 out of one 1000c run) were client-side Windows TIME_WAIT pressure — confirmed by clean re-run.</div>
 
 <!-- ====================================================================== -->
-<div class="section-banner banner-blocker">⛔ 2 · Operational Readiness — Blockers</div>
+<div class="section-banner banner-blocker" data-section="2">⛔ 2 · Operational Readiness — Blockers <span class="progress-badge"><span data-done>0</span>/<span data-total>8</span><span class="mini-bar"><span class="fill"></span></span><span data-pct>0%</span></span></div>
 
 <div class="sub">Each unchecked row blocks launch. These are the gaps identified during the perf review.</div>
 
@@ -152,7 +205,7 @@
 </ul>
 
 <!-- ====================================================================== -->
-<div class="section-banner banner-action">📱 3 · User Flow Validation — Manual on Real Devices</div>
+<div class="section-banner banner-action" data-section="3">📱 3 · User Flow Validation — Manual on Real Devices <span class="progress-badge"><span data-done>0</span>/<span data-total>25</span><span class="mini-bar"><span class="fill"></span></span><span data-pct>0%</span></span></div>
 
 <div class="sub">Synthetic load tests don't catch device-specific bugs. Run these flows by hand on actual phones before launch.</div>
 
@@ -202,7 +255,7 @@
 </ul>
 
 <!-- ====================================================================== -->
-<div class="section-banner banner-neutral">🚀 4 · Day-of-Launch (Tuesday Morning)</div>
+<div class="section-banner banner-neutral" data-section="4">🚀 4 · Day-of-Launch (Tuesday Morning) <span class="progress-badge"><span data-done>0</span>/<span data-total>9</span><span class="mini-bar"><span class="fill"></span></span><span data-pct>0%</span></span></div>
 
 <div class="sub">Run these on launch morning before flipping any "go live" switches.</div>
 
@@ -219,7 +272,7 @@
 </ul>
 
 <!-- ====================================================================== -->
-<div class="section-banner banner-neutral">📣 5 · Communication Readiness</div>
+<div class="section-banner banner-neutral" data-section="5">📣 5 · Communication Readiness <span class="progress-badge"><span data-done>0</span>/<span data-total>7</span><span class="mini-bar"><span class="fill"></span></span><span data-pct>0%</span></span></div>
 
 <ul class="checklist">
   <li><input type="checkbox" id="c1"><label for="c1">Landing page (<code>reelday.ph</code>) has clear CTA to book or try demo</label></li>
@@ -270,7 +323,7 @@
 <div class="callout"><strong>Backup contact</strong>Set one trusted person who can reach you (or check the site) if you're unreachable during an event.</div>
 
 <!-- ====================================================================== -->
-<div class="section-banner banner-neutral">📈 7 · Post-Launch (Days 1–7)</div>
+<div class="section-banner banner-neutral" data-section="7">📈 7 · Post-Launch (Days 1–7) <span class="progress-badge"><span data-done>0</span>/<span data-total>5</span><span class="mini-bar"><span class="fill"></span></span><span data-pct>0%</span></span></div>
 
 <ul class="checklist">
   <li><input type="checkbox" id="p1"><label for="p1">Day 1: monitor every 2 hours, respond to all DMs within 2 hours</label></li>
@@ -298,6 +351,75 @@
 <div class="footer">
 Reelday operations · Launch checklist version 1 · 17 May 2026 · Companion docs: <code>perf-test-database.md</code>, <code>perf-check-prompt.md</code>, <code>reelday-event-capacity.html</code>
 </div>
+
+<script>
+(function () {
+  // Group every checkbox by the data-section banner that precedes it. We
+  // walk the document once at load time, then re-render on any change —
+  // O(n) and plenty fast for ~60 items.
+  const sections = new Map();
+  let current = null;
+  document.querySelectorAll('.section-banner, input[type="checkbox"]').forEach(el => {
+    if (el.classList && el.classList.contains('section-banner')) {
+      current = el.dataset.section || null;
+      if (current && !sections.has(current)) sections.set(current, []);
+    } else if (current) {
+      sections.get(current).push(el);
+    }
+  });
+
+  const sectionTotals = {};
+  sections.forEach((boxes, id) => { sectionTotals[id] = boxes.length; });
+
+  function pct(done, total) { return total ? Math.round((done / total) * 100) : 0; }
+
+  function setText(scope, sel, val) {
+    scope.querySelectorAll(sel).forEach(n => { n.textContent = val; });
+  }
+  function setFill(scope, p) {
+    scope.querySelectorAll('.fill').forEach(n => { n.style.width = p + '%'; });
+  }
+
+  function render() {
+    let overallDone = 0, overallTotal = 0;
+
+    sections.forEach((boxes, id) => {
+      const done  = boxes.filter(b => b.checked).length;
+      const total = boxes.length;
+      const p     = pct(done, total);
+      overallDone  += done;
+      overallTotal += total;
+
+      // Banner badge
+      document.querySelectorAll('.section-banner[data-section="' + id + '"]').forEach(b => {
+        setText(b, '[data-done]', done);
+        setText(b, '[data-total]', total);
+        setText(b, '[data-pct]', p + '%');
+        setFill(b, p);
+      });
+      // Progress table row
+      document.querySelectorAll('[data-progress-row="' + id + '"]').forEach(r => {
+        setText(r, '[data-done]', done);
+        setText(r, '[data-total]', total);
+        setText(r, '[data-pct]', p + '%');
+      });
+    });
+
+    const op = pct(overallDone, overallTotal);
+    document.querySelectorAll('[data-progress="overall"]').forEach(bar => {
+      setText(bar, '[data-done]', overallDone);
+      setText(bar, '[data-total]', overallTotal);
+      setText(bar, '[data-pct]', op + '%');
+      setFill(bar, op);
+    });
+  }
+
+  document.addEventListener('change', e => {
+    if (e.target && e.target.matches && e.target.matches('input[type="checkbox"]')) render();
+  });
+  render();
+})();
+</script>
 
 </body>
 </html>
