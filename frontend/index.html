@@ -676,10 +676,10 @@
     box-shadow: 0 6px 18px rgba(63,35,24,.12), inset 0 1px 0 rgba(255,255,255,.9);
   }
   .pay-logo {
-    height: 28px; width: auto; max-width: 80px;
+    height: 26px; width: auto; max-width: 100px;
     object-fit: contain; display: block; flex-shrink: 0;
   }
-  .pay-logo--icon { height: 24px; width: 24px; border-radius: 4px; }
+  .pay-logo--icon { height: 26px; width: 26px; border-radius: 5px; object-fit: cover; }
   .pay-name {
     font-family: var(--sans); font-size: 13px; font-weight: 600;
     color: var(--ink-soft); letter-spacing: -.01em; white-space: nowrap;
@@ -687,7 +687,8 @@
   @media (max-width: 600px) {
     .payment-logos { gap: 8px; }
     .pay-pill { padding: 7px 11px; }
-    .pay-logo { height: 22px; max-width: 64px; }
+    .pay-logo { height: 20px; max-width: 80px; }
+    .pay-logo--icon { height: 20px; width: 20px; }
     .pay-name { font-size: 12px; }
   }
   .pricing h2 {
@@ -1248,8 +1249,7 @@
       <p class="payment-strip-label">
         Payments processed via PayMongo &nbsp;·&nbsp; Accepted via
         <span class="qrph-badge">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><circle cx="17.5" cy="17.5" r="1.5" fill="currentColor" stroke="none"/></svg>
-          QR Ph
+          <img src="images/QR_Ph_Logo.svg" alt="QR Ph" style="height:14px;width:auto;display:inline-block;vertical-align:middle;filter:brightness(0) invert(1);" loading="lazy">
         </span>
       </p>
       <div class="payment-logos">
@@ -1267,19 +1267,19 @@
         </div>
         <div class="pay-pill">
           <img class="pay-logo pay-logo--icon"
-            src="https://www.google.com/s2/favicons?domain=maribank.ph&sz=64"
+            src="images/Maribank.jpg"
             alt="Maribank" loading="lazy">
           <span class="pay-name">Maribank</span>
         </div>
         <div class="pay-pill">
           <img class="pay-logo"
-            src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f6/Grab_Logo.svg/200px-Grab_Logo.svg.png"
+            src="images/Grabpay.png"
             alt="GrabPay" loading="lazy">
           <span class="pay-name">GrabPay</span>
         </div>
         <div class="pay-pill">
           <img class="pay-logo"
-            src="https://upload.wikimedia.org/wikipedia/en/thumb/9/99/Bank_of_the_Philippine_Islands_logo.svg/200px-Bank_of_the_Philippine_Islands_logo.svg.png"
+            src="images/BPI.png"
             alt="BPI" loading="lazy">
           <span class="pay-name">BPI</span>
         </div>
