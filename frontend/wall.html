@@ -2840,7 +2840,25 @@
       try { outAud.pause(); outAud.removeAttribute('src'); outAud.load(); } catch {}
     }
     if (!reuseActive) outLayer.classList.remove('has-audio', 'has-audio-overlay');
-    if (!reuseActive) outLayer.classList.remove('video-visible');
+    if (!reuseActive) {
+      // Before removing video-visible, ensure the outgoing layer's .pic has
+      // a backgroundImage. Removing video-visible un-hides .pic (the CSS rule
+      // `.layer.has-video.video-visible .pic { display:none }` no longer applies),
+      // and if the poster probe from our progressive-load fix hadn't fired yet
+      // .pic.backgroundImage is empty — transparent .pic reveals the backdrop's
+      // split ::before/::after halves (the same split-image glitch, but on exit).
+      // Recover from the backdrop's --poster-img; quality doesn't matter since
+      // the outgoing layer is already fading to opacity 0.
+      if (outLayer.classList.contains('has-video') && outLayer.classList.contains('video-visible')) {
+        const outPic      = outLayer === layerA ? picA : picB;
+        const outBackdrop = outLayer === layerA ? backdropA : backdropB;
+        const savedPoster = outBackdrop?.style.getPropertyValue('--poster-img');
+        if (outPic && savedPoster && !outPic.style.backgroundImage) {
+          outPic.style.backgroundImage = savedPoster;
+        }
+      }
+      outLayer.classList.remove('video-visible');
+    }
     outLoader?.classList.remove('visible');
     // Make the incoming layer the bandwidth-priority one; the other can
     // stay on metadata-only until it becomes active again.
