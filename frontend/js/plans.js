@@ -28,6 +28,7 @@ export const PLANS = {
     uploadLimit: 25,
     galleryDays: 1,            // 24-hour retention
     uploadWindowDays: 1,        // event-day uploads only
+    demoDays: 2,                // 48h post-creation demo window (see backend/lib/plans.js)
     features: {
       videoUpload:  false,     // photos only
       videoMessage: false,

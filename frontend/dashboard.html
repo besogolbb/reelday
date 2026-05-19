@@ -2622,7 +2622,11 @@
     document.title         = `Reelday — ${event.couple_names}`;
 
     const meta = THEME_MAP[event.event_type] || THEME_MAP.wedding;
-    const uploadsClosed = !!(event.upload_window_ends_at && new Date(event.upload_window_ends_at) < new Date());
+    const _headerPlan = resolvePlan(event.plan);
+    const _headerDemoOpen = _headerPlan.demoDays && event.created_at
+      ? Date.now() < new Date(event.created_at).getTime() + _headerPlan.demoDays * 86400000
+      : false;
+    const uploadsClosed = !_headerDemoOpen && !!(event.upload_window_ends_at && new Date(event.upload_window_ends_at) < new Date());
 
     if (event.event_date) {
       eventDate.textContent = formatDate(event.event_date) + ' · ' + meta.label;
@@ -3012,8 +3016,12 @@
     const now           = new Date();
     const startsAt      = event.upload_window_starts_at ? new Date(event.upload_window_starts_at) : null;
     const endsAt        = event.upload_window_ends_at   ? new Date(event.upload_window_ends_at)   : null;
-    const notYetOpen    = !!(startsAt && startsAt > now);
-    const uploadsClosed = !!(endsAt   && endsAt   < now);
+    const _sidePlan     = resolvePlan(event.plan);
+    const _sideDemoOpen = _sidePlan.demoDays && event.created_at
+      ? Date.now() < new Date(event.created_at).getTime() + _sidePlan.demoDays * 86400000
+      : false;
+    const notYetOpen    = !_sideDemoOpen && !!(startsAt && startsAt > now);
+    const uploadsClosed = !_sideDemoOpen && !!(endsAt   && endsAt   < now);
 
     // 3-state access pill: Pending → Open now → Closed.
     // NULL window dates (legacy events) fall through to "Open now",
@@ -3096,13 +3104,16 @@
     const now      = new Date();
     const startsAt = event.upload_window_starts_at ? new Date(event.upload_window_starts_at) : null;
     const endsAt   = event.upload_window_ends_at   ? new Date(event.upload_window_ends_at)   : null;
+    const demoOpen = plan.demoDays && event.created_at
+      ? Date.now() < new Date(event.created_at).getTime() + plan.demoDays * 86400000
+      : false;
 
     if (event.gallery_expires_at && new Date(event.gallery_expires_at) < now) {
       banner.classList.remove('hidden');
       $('lb-title').textContent = 'Gallery archived';
       $('lb-msg').textContent   =
         `The ${plan.name} plan's gallery retention for this event ended on ${formatDate(event.gallery_expires_at)}. Photos remain visible — upgrade to keep accepting new ones and extend retention.`;
-    } else if (startsAt && startsAt > now) {
+    } else if (!demoOpen && startsAt && startsAt > now) {
       // Pre-window state — host can still upload (owner bypass) but
       // guests will see the friendly "stay tuned" banner. Reassure
       // the host their event is set up correctly.
@@ -3114,7 +3125,7 @@
           ? `The window stays open through ${formatDate(event.upload_window_ends_at)}. `
           : '') +
         `You can upload anytime as the host.`;
-    } else if (endsAt && endsAt < now) {
+    } else if (!demoOpen && endsAt && endsAt < now) {
       banner.classList.remove('hidden');
       $('lb-title').textContent = 'Upload window closed';
       $('lb-msg').textContent   =

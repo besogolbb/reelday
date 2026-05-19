@@ -37,6 +37,9 @@ export const PLANS = {
     uploadLimit: 25,           // 25 photos only
     galleryDays: 1,            // 24-hour retention
     uploadWindowDays: 1,
+    // 48h post-creation demo window so new users can try uploads immediately.
+    // Reopens on event day via the normal centered window (uploadWindowDays=1).
+    demoDays: 2,
     features: {
       videoUpload:  false,     // photos only
       videoMessage: false,
@@ -195,6 +198,18 @@ export function uploadWindowSplit(planId) {
     before: Math.floor((days - 1) / 2),
     after:  Math.ceil((days - 1) / 2),
   };
+}
+
+/**
+ * Returns true if the plan's post-creation demo window is still open.
+ * Tala gets demoDays=2 so new users can try uploads on creation, before
+ * the event date arrives. All other plans return false (no demo window).
+ */
+export function isDemoWindowOpen(planId, eventCreatedAt) {
+  const plan = resolvePlan(planId);
+  if (!plan.demoDays || !eventCreatedAt) return false;
+  const demoEnd = new Date(eventCreatedAt).getTime() + plan.demoDays * 86_400_000;
+  return Date.now() < demoEnd;
 }
 
 /**

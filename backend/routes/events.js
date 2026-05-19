@@ -1,6 +1,6 @@
 import { Resend } from 'resend';
 import { generateQR } from '../utils/qr.js';
-import { resolvePlan, galleryExpiryFor, uploadWindowStartFor, uploadWindowEndFor } from '../lib/plans.js';
+import { resolvePlan, galleryExpiryFor, uploadWindowStartFor, uploadWindowEndFor, isDemoWindowOpen } from '../lib/plans.js';
 import { verifyToken } from '../plugins/auth.js';
 
 // Event dates are admin-managed (the host PATCH can't move them — see the
@@ -273,12 +273,12 @@ export default async function eventRoutes(fastify) {
       : false;
     // uploads_not_yet_open is the centered-window pre-opening state.
     // NULL on legacy rows -> false (no pre-event gating, just like before).
-    const uploadsNotYetOpen = event.upload_window_starts_at
-      ? new Date(event.upload_window_starts_at) > now
-      : false;
-    const uploadsClosed = event.upload_window_ends_at
-      ? new Date(event.upload_window_ends_at) < now
-      : false;
+    // Tala's 48h post-creation demo window overrides both pre-open and closed states.
+    const demoWindowOpen = isDemoWindowOpen(event.plan, event.created_at);
+    const uploadsNotYetOpen = !demoWindowOpen && !!(event.upload_window_starts_at
+      && new Date(event.upload_window_starts_at) > now);
+    const uploadsClosed = !demoWindowOpen && !!(event.upload_window_ends_at
+      && new Date(event.upload_window_ends_at) < now);
 
     return {
       event,
