@@ -25,7 +25,7 @@ Use these as the reference for "is today's run healthy?" Updated whenever a mean
 | Mixed peak (600u + 1500r + walls / 30s) | rx p95 11 ms · wall p95 526 ms · upload p95 2.0 s · 0 fail | 2026-05-18 | local |
 | Sustained 3-min mix | 0 fail · flat latency · upload/rx p95 ~86 ms · wall p95 261 ms | 2026-05-18 | remote (PH laptop) |
 | Multi-wall + 150 spammers | 0 fail · wall p95 < 700 ms | 2026-05-17 | remote |
-| Cross-event isolation (200 spammers, 90s) | Wall B p95 611 ms · 0 fail | 2026-05-17 | remote |
+| Cross-event isolation (200 spammers, 30s) | Wall B p95 168 ms · 0 fail | 2026-05-18 | remote |
 | Poll vote storm (300 voters) | p95 1.74 s · 0 fail | 2026-05-15 | local |
 | Single-user E2E upload | p50 1.7 s · p95 2.3 s · 0 fail | 2026-05-17 | remote |
 
@@ -94,6 +94,12 @@ Use these as the reference for "is today's run healthy?" Updated whenever a mean
 | 35 | Mixed peak 600 + 1500 / 30s (post SDE-beacon, local) | `stress-mixed cxzv-fe0y 600 1500 30` | local | uploads p95 2006 ms · **reactions p50 4 ms · p95 11 ms** · wall p95 526 ms · 0 fail (600/600, 1500/1500, 10/10) | ✅ | **First `local` mixed-peak run = backend-truth baseline.** Beacon definitively cleared: reaction-write p95 11 ms with the beacon stamping `upload_id` on every write *during* the 600-row upload burst ⇒ the added INSERT validation subquery is free. Entry 34's 1009 ms was ~99 % laptop upstream noise. Reaction tail p99 1396 ms / max 2114 ms = ~1 % of writes coinciding with peak upload-insert pool contention (the upload storm itself, uploads p95 2.0 s), not beacon-specific. |
 | 36 | perf:full suite (post SDE-beacon) | `npm run perf:full` + standalone `stress-cross-event … 200 30` | remote | health 775 ms · upload 1000c p95 3334 ms **p99 3417 ms** 0 fail · mixed 0 fail (up p95 2500 / rx p95 783 / wall p95 1626) · sustained 3 min 0 fail **flat** (up/rx p95 ~780 / wall p95 1016) · multi-wall 0 fail/2453 (rx-poll p95 1013) · cross-event Wall B p95 861 ms (<1 s) 0 fail | ✅ | Full remote suite, beacon live, **0 backend failures (~10.5 k req)**. Upload 1000c p99 **3.42 s = new remote best** (beats entry 17's 5.30 s; ≈ CI entry 23). Absolute p95s elevated vs the unusually-quiet entry 32 = documented back-to-back full-suite TIME_WAIT pressure on one laptop, not backend: sustained stayed flat across all 6 × 30 s buckets (no drift/leak — the real criterion), and the beacon was already cleared in `local` entry 35 (rx p95 11 ms). Hairline ⚠: multi-wall reactions-poll p95 1013 ms (just over the script's 1 s line) — same laptop-pressure cause; optional `local` multi-wall re-check. Cross-event Wall A≈B (937/861 ms) ⇒ isolation intact, N=9 small-sample. |
 
+### 2026-05-19 — Post SDE Ken Burns rework + warm-film LUT (render-only changes)
+
+| # | Test | Cmd | Env | Result | Verdict | Note |
+|---|---|---|---|---|---|---|
+| 37 | perf:full suite (SDE Lambda rework live, render in flight) | `npm run perf:full` | remote | health 396 ms (server_ms 1) · upload 1000c p95 5411 ms **p99 5501 ms** 0 fail · mixed 0 fail (up p95 2348 / **rx p95 79** / wall p95 2334 n=9) · sustained 3 min 0 fail **flat** (up p95 81 / rx p95 78 / wall p95 ~231) · multi-wall 0 fail/2727 (uploads-poll p95 185 / rx-poll p95 103) · cross-event **Wall B p95 193 ms** / Wall A 99 ms 0 fail | ✅ | Run with the SDE Lambda rework live (`3da4a12` two-stage Ken Burns + `9029df2` warm-film LUT) and a Regenerate render in flight on AWS Lambda. **0 backend failures (~11 k req).** Positive proof the SDE work is render-only: every steady-state path at or **better** than the remote baseline — sustained flat 6/6 at up/rx p95 ~80 ms (vs entry 36's laptop-pressured ~780 ms ⇒ this run's network was clean), cross-event Wall B 193 ms ≈ entry 30's 168 ms (well under the 611 ms one-pager value; N≈10 noise), remote mixed rx p95 79 ms = entry 31 territory. Only elevated metric: upload 1000c p95/p99 5.4/5.5 s vs entry 36's 3.33/3.42 s best — the **documented single-laptop 1000c TIME_WAIT artifact** (matches entry 12 p99 5.2 s / entry 17 5.3 s), 0 fail, *no backend code changed this session* and the SDE render is on AWS (no backend CPU contention) ⇒ not a regression. Mixed/cross-event wall p95 are N=9/N=10 small-sample. |
+
 ---
 
 ## Aggregate scorecard
@@ -105,7 +111,8 @@ Use these as the reference for "is today's run healthy?" Updated whenever a mean
 | 2026-05-16 | 7 | ~10,000 | 0 | Upload optimization + first remote full suite |
 | 2026-05-17 | 9 | ~20,000 | 91 (client-side, not backend) | Pre-launch deep check |
 | 2026-05-18 | 14 | ~41,700 | 2 (client-side socket aborts in CI mixed test) | CI full suite + warm-up validation + local steady-state baselines + post SDE-beacon perf check (entries 33–36, 0 fail; beacon cleared; full remote suite re-pass + new 1000c remote best) |
-| **Total** | **35** | **~78,700** | **0 backend failures** | |
+| 2026-05-19 | 6 | ~11,000 | 0 | perf:full (entry 37) with SDE Lambda rework live (`3da4a12`+`9029df2`) + a render in flight on AWS — confirms zero backend impact; only the documented 1000c single-laptop artifact, steady-state at/above baseline |
+| **Total** | **41** | **~89,700** | **0 backend failures** | |
 
 ---
 
@@ -120,6 +127,7 @@ Use these as the reference for "is today's run healthy?" Updated whenever a mean
 | 2026-05-17 | (No code changes — pure validation runs) | Confirmed all baselines hold; cross-event re-verified with larger sample |
 | 2026-05-18 | Cross-event test: 3 discarded warm-up polls per slug before storm clock starts (commit bc8d7d6) | Wall B p95 805 ms → 526 ms (CI) and 168 ms (local). Eliminated cold-connection / cold prepared-statement bias that was making the quiet event look slower than the spammed one at N=10. |
 | 2026-05-18 | SDE now-showing beacon (commit 85c32f4): reaction INSERT now stamps `upload_id` from an in-memory wall pointer; the existing validation subquery now executes a real `uploads` PK lookup instead of short-circuiting on NULL | **No measurable cost — confirmed.** Isolated cross-event (entry 33): reaction p95 192 ms remote. Local mixed-peak (entry 35): reaction p95 **11 ms** with the beacon stamping every write during a 600-row upload burst. Entry 34's remote 1009 ms was laptop-bandwidth noise, not the beacon. |
+| 2026-05-19 | SDE Lambda render rework (`3da4a12` two-stage Ken Burns + `9029df2` warm-film LUT) — **no backend code touched**; all changes in `lambda/sde.mjs` (separate async function, no DB) | **Zero backend impact — confirmed.** Entry 37 perf:full run *with the heavier render in flight on AWS*: 0 fail ~11 k req, every steady-state path at or above the remote baseline (sustained flat up/rx p95 ~80 ms, cross-event Wall B 193 ms). Cost lands entirely in Lambda wall-clock (140 s → 220 s, tracked in SDE-HANDOVER.md), never the request path. The 1000c burst elevation was the documented single-laptop TIME_WAIT artifact. |
 
 ---
 
