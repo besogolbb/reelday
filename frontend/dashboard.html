@@ -30,7 +30,8 @@
        common descendants min-width: 0 lets the layout actually shrink
        instead of getting clipped. */
     .body, .body > *, .panel, .panel-head, .panel-head-copy,
-    .tab-row, .photo-grid, .polls-body, .polls-head-main { min-width: 0; }
+    .tab-row, .photo-grid, .polls-body, .polls-head-main,
+    .sidebar-stack, .sidebar-stack > *, .actions-stack { min-width: 0; }
     /* Long words (URLs, slugs in copy) should wrap, not blow the row. */
     .panel-head-copy p, .polls-summary { overflow-wrap: anywhere; }
     /* The "Select" button used margin-left:auto inside a wrapping
@@ -989,7 +990,7 @@
     .qr-card {
       background: var(--dash-surface); border: 1px solid var(--dash-border);
       border-radius: 24px; padding: 24px; text-align: center;
-      box-shadow: var(--dash-shadow);
+      box-shadow: var(--dash-shadow); overflow: hidden;
     }
     .qr-card .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; color: var(--ink-faint); text-transform: uppercase; margin-bottom: 14px; }
     .qr-card .qr {
@@ -1007,6 +1008,7 @@
     }
     .qr-card .url { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; color: var(--ink-soft); margin-bottom: 16px; word-break: break-all; }
     .actions-stack { display: grid; gap: 8px; }
+    .actions-stack .btn { width: 100%; min-width: 0; }
     .sidebar-stack { display: grid; gap: 16px; }
     .mini-card {
       background: var(--dash-surface);
@@ -1014,6 +1016,7 @@
       border-radius: 22px;
       padding: 20px;
       box-shadow: var(--dash-shadow);
+      overflow: hidden;
     }
     .mini-card h3 {
       font-family: var(--display);
@@ -1051,7 +1054,8 @@
       font-weight: 400;
     }
     .details-field input,
-    .details-field textarea {
+    .details-field textarea,
+    .details-field select {
       width: 100%; background: #fff;
       border: 1px solid var(--line);
       border-radius: 12px;
