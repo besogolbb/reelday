@@ -43,13 +43,19 @@
   }
   .wizard-progress .pip.done   { background: var(--accent-deep); }
   .wizard-progress .pip.active { background: var(--accent); }
-  .wizard-back {
-    background: none; border: none; cursor: pointer;
-    color: var(--ink-soft); font-size: 14px; font-family: var(--sans);
-    padding: 6px 10px; border-radius: 8px;
+  .wizard-back { display: none; } /* replaced by inline back buttons */
+
+  .btn-back-slide {
+    background: transparent;
+    color: var(--ink-soft);
+    border: 1.5px solid var(--line-2);
+    border-radius: 999px;
+    padding: 11px 20px;
+    font-family: var(--sans); font-size: 14px; font-weight: 500;
+    cursor: pointer; flex-shrink: 0;
+    transition: background .15s, color .15s, border-color .15s;
   }
-  .wizard-back:hover { color: var(--ink); background: rgba(0,0,0,.04); }
-  .wizard-back:disabled { opacity: 0; pointer-events: none; }
+  .btn-back-slide:hover { background: var(--paper-2); color: var(--ink); border-color: var(--line-2); }
 
   .wizard-stage {
     flex: 1;
@@ -268,7 +274,7 @@
 
   /* ── Slide actions ──────────────────────────── */
   .slide-actions {
-    display: flex; justify-content: flex-end; gap: 12px;
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
     margin-top: 36px;
   }
 
@@ -449,8 +455,7 @@
     .wizard-header { padding: 14px 18px; }
     .wizard-progress { margin: 0 12px; }
     .wizard-stage { padding: 18px 18px 60px; }
-    .slide-actions { justify-content: stretch; }
-    .slide-actions .btn-next, .slide-actions .btn-finish { width: 100%; justify-content: center; }
+    .slide-actions .btn-next, .slide-actions .btn-finish { flex: 1; justify-content: center; }
   }
 </style>
 </head>
@@ -522,6 +527,7 @@
       <div class="field-error" id="err-name">Please enter a name.</div>
 
       <div class="slide-actions">
+        <button class="btn-back-slide" type="button" data-back>← Back</button>
         <button class="btn-next" type="button" data-next>Continue →</button>
       </div>
     </section>
@@ -552,6 +558,7 @@
       <div class="field-error" id="err-date">Please pick a date.</div>
 
       <div class="slide-actions">
+        <button class="btn-back-slide" type="button" data-back>← Back</button>
         <button class="btn-next" type="button" data-next id="btn-after-date">Continue →</button>
       </div>
     </section>
@@ -590,6 +597,7 @@
       </div>
 
       <div class="slide-actions">
+        <button class="btn-back-slide" type="button" data-back>← Back</button>
         <button class="btn-finish" type="button" id="btn-finish">
           <div class="btn-spinner"></div>
           <span>Create my Reelday →</span>
@@ -700,6 +708,9 @@
   }
 
   btnBack.addEventListener('click', () => goTo(currentSlide - 1));
+  document.querySelectorAll('[data-back]').forEach(btn => {
+    btn.addEventListener('click', () => goTo(currentSlide - 1));
+  });
 
   // Generic "Continue" handler
   document.querySelectorAll('[data-next]').forEach(btn => {
