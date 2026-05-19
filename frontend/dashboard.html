@@ -536,7 +536,7 @@
     /* Slide reveal — max-height transition is the cheapest trick that
        still animates smoothly without measuring children every frame. */
     .polls-body {
-      padding: 16px 18px 20px;
+      padding: 16px 18px 28px;
       background: var(--paper);
       border-top: 1px solid var(--dash-border);
       max-height: 1500px; opacity: 1;
@@ -553,28 +553,34 @@
     .polls-runall-btn.running:hover { background: #8a2418; }
     .polls-runall-btn:disabled { opacity: .5; cursor: not-allowed; }
 
-    .polls-list { display: flex; flex-direction: column; gap: 10px; }
+    .polls-list { display: flex; flex-direction: column; gap: 14px; }
     .polls-empty { font-size: 13px; color: var(--dash-muted); padding: 18px 0; text-align: center; font-style: italic; }
     .polls-locked { padding: 16px; border-radius: 10px; background: rgba(196,90,58,.08); color: var(--ink-soft); font-size: 13px; text-align: center; border: 1px dashed rgba(196,90,58,.3); }
     .polls-locked a { color: var(--accent); font-weight: 600; text-decoration: none; }
 
     .poll-row {
       background: #fff;
-      border: 1px solid rgba(83,48,33,.13);
+      border: 1px solid rgba(83,48,33,.10);
       border-radius: 18px;
       padding: 18px 20px;
       display: grid; grid-template-columns: 1fr auto; gap: 10px 16px; align-items: center;
+      /* 3-layer 3D float: contact · spread · ambient + top highlight */
       box-shadow:
-        0 4px 18px rgba(63,35,24,.10),
-        0 1px 4px  rgba(63,35,24,.06);
-      transition: box-shadow .2s ease, transform .2s ease;
+        0 2px 5px  rgba(63,35,24,.18),   /* contact — tight & dark */
+        0 8px 24px rgba(63,35,24,.12),   /* spread */
+        0 20px 48px rgba(63,35,24,.07),  /* ambient glow */
+        inset 0 1px 0 rgba(255,255,255,.95); /* top-edge highlight */
+      transform: translateY(-3px);
+      transition: box-shadow .22s ease, transform .22s ease;
     }
     @media (hover: hover) {
       .poll-row:hover {
         box-shadow:
-          0 12px 36px rgba(63,35,24,.14),
-          0 3px 8px   rgba(63,35,24,.08);
-        transform: translateY(-2px);
+          0 4px 10px  rgba(63,35,24,.22),
+          0 16px 40px rgba(63,35,24,.16),
+          0 32px 64px rgba(63,35,24,.09),
+          inset 0 1px 0 rgba(255,255,255,.95);
+        transform: translateY(-6px);
       }
     }
     .poll-row .poll-status {
@@ -586,12 +592,14 @@
     .poll-row .poll-status.draft { background: var(--paper-3); color: var(--ink-soft); }
     .poll-row .poll-status.live  { background: rgba(229,76,59,.14); color: #b03022; }
     .poll-row .poll-status.live::before { content: '●'; margin-right: 4px; animation: pollPulse 1s infinite; }
-    /* Live row: red border + glow */
+    /* Live row: red tint on the 3D shadow layers */
     .poll-row:has(.poll-status.live) {
-      border-color: rgba(229,76,59,.35);
+      border-color: rgba(229,76,59,.30);
       box-shadow:
-        0 4px 18px rgba(229,76,59,.18),
-        0 1px 4px  rgba(229,76,59,.10);
+        0 2px 5px  rgba(176,48,34,.22),
+        0 8px 24px rgba(229,76,59,.18),
+        0 20px 48px rgba(229,76,59,.10),
+        inset 0 1px 0 rgba(255,255,255,.95);
     }
     .poll-row .poll-status.ended { background: rgba(45,122,74,.14); color: #1f5e3b; }
     .poll-row .poll-kind-badge {
@@ -1079,6 +1087,21 @@
       border: 1px solid rgba(83,48,33,.08);
       border-left-width: 3px;
       border-left-color: var(--accent);
+      box-shadow:
+        0 2px 5px  rgba(63,35,24,.12),
+        0 6px 18px rgba(63,35,24,.07),
+        inset 0 1px 0 rgba(255,255,255,.90);
+      transform: translateY(-2px);
+      transition: box-shadow .2s ease, transform .2s ease;
+    }
+    @media (hover: hover) {
+      .details-field:hover {
+        box-shadow:
+          0 4px 10px  rgba(63,35,24,.16),
+          0 12px 30px rgba(63,35,24,.10),
+          inset 0 1px 0 rgba(255,255,255,.95);
+        transform: translateY(-4px);
+      }
     }
     /* ── 4-colour cycle so every field has its own identity ── */
     .details-form > .details-field:nth-child(4n+1) {
@@ -5688,7 +5711,7 @@
 
       // White inset card holds the form — pops against the cream body bg.
       const card = document.createElement('div');
-      card.style.cssText = 'background:#fff;border:1px solid rgba(83,48,33,.13);border-radius:20px;padding:26px 24px;box-shadow:0 4px 18px rgba(63,35,24,.10),0 1px 4px rgba(63,35,24,.06);';
+      card.style.cssText = 'background:#fff;border:1px solid rgba(83,48,33,.10);border-radius:20px;padding:26px 24px;box-shadow:0 2px 5px rgba(63,35,24,.18),0 8px 24px rgba(63,35,24,.12),0 20px 48px rgba(63,35,24,.07),inset 0 1px 0 rgba(255,255,255,.95);transform:translateY(-3px);';
       const content = document.createElement('div');
       card.appendChild(content);
 
