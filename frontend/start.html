@@ -789,6 +789,7 @@
     grid.querySelectorAll('.type-card').forEach(c => c.classList.remove('selected'));
     card.classList.add('selected');
     state.type = card.dataset.type;
+    setTimeout(() => goTo(1), 180);
   });
 
   // ── Toast ──────────────────────────────────────
