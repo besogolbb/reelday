@@ -1070,12 +1070,43 @@
       font-size: 12px; color: var(--dash-muted); line-height: 1.5;
       margin: -8px 0 14px;
     }
-    .details-form { display: grid; gap: 12px; }
-    .details-field { display: grid; gap: 5px; }
+    .details-form { display: grid; gap: 10px; }
+    .details-field {
+      display: grid; gap: 8px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: rgba(251,245,236,.5);
+      border: 1px solid rgba(83,48,33,.08);
+      border-left-width: 3px;
+      border-left-color: var(--accent);
+    }
+    /* ── 4-colour cycle so every field has its own identity ── */
+    .details-form > .details-field:nth-child(4n+1) {
+      border-left-color: #c45a3a;
+      background: rgba(196,90,58,.04);
+    }
+    .details-form > .details-field:nth-child(4n+2) {
+      border-left-color: #2d7a4a;
+      background: rgba(45,122,74,.04);
+    }
+    .details-form > .details-field:nth-child(4n+3) {
+      border-left-color: #b07a2e;
+      background: rgba(176,122,46,.04);
+    }
+    .details-form > .details-field:nth-child(4n+4) {
+      border-left-color: #7a4a9e;
+      background: rgba(122,74,158,.04);
+    }
+    /* Label colour matches the left stripe */
     .details-field label {
       font-family: var(--mono); font-size: 11px; font-weight: 700;
-      letter-spacing: .12em; text-transform: uppercase; color: var(--ink);
+      letter-spacing: .12em; text-transform: uppercase;
+      color: #c45a3a;
     }
+    .details-form > .details-field:nth-child(4n+1) label { color: #c45a3a; }
+    .details-form > .details-field:nth-child(4n+2) label { color: #2d7a4a; }
+    .details-form > .details-field:nth-child(4n+3) label { color: #b07a2e; }
+    .details-form > .details-field:nth-child(4n+4) label { color: #7a4a9e; }
     .details-field label .opt {
       letter-spacing: .04em; text-transform: none; color: var(--ink-soft);
       font-weight: 500;
@@ -1084,8 +1115,8 @@
     .details-field textarea,
     .details-field select {
       width: 100%; background: #fff;
-      border: 1px solid var(--line);
-      border-radius: 12px;
+      border: 1px solid rgba(83,48,33,.12);
+      border-radius: 10px;
       padding: 10px 12px;
       font-family: var(--sans); font-size: 13px;
       color: var(--ink);
