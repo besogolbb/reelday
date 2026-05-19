@@ -2454,6 +2454,10 @@
   const MONTHS = ['January','February','March','April','May','June',
                   'July','August','September','October','November','December'];
 
+  // Mirrors demoDays=2 in plans.js — defined locally so the display logic
+  // works even when the browser has an old cached version of plans.js.
+  const TALA_DEMO_MS = 2 * 86_400_000;
+
   // ── State ─────────────────────────────────────────────
   const params  = new URLSearchParams(location.search);
   const slug    = params.get('slug');
@@ -2623,8 +2627,8 @@
 
     const meta = THEME_MAP[event.event_type] || THEME_MAP.wedding;
     const _headerPlan = resolvePlan(event.plan);
-    const _headerDemoOpen = _headerPlan.demoDays && event.created_at
-      ? Date.now() < new Date(event.created_at).getTime() + _headerPlan.demoDays * 86400000
+    const _headerDemoOpen = _headerPlan.id === 'tala' && event.created_at
+      ? Date.now() < new Date(event.created_at).getTime() + TALA_DEMO_MS
       : false;
     const uploadsClosed = !_headerDemoOpen && !!(event.upload_window_ends_at && new Date(event.upload_window_ends_at) < new Date());
 
@@ -3017,8 +3021,8 @@
     const startsAt      = event.upload_window_starts_at ? new Date(event.upload_window_starts_at) : null;
     const endsAt        = event.upload_window_ends_at   ? new Date(event.upload_window_ends_at)   : null;
     const _sidePlan    = resolvePlan(event.plan);
-    const _sideDemoEnd = _sidePlan.demoDays && event.created_at
-      ? new Date(new Date(event.created_at).getTime() + _sidePlan.demoDays * 86400000)
+    const _sideDemoEnd = _sidePlan.id === 'tala' && event.created_at
+      ? new Date(new Date(event.created_at).getTime() + TALA_DEMO_MS)
       : null;
     const _sideDemoOpen = !!(_sideDemoEnd && _sideDemoEnd > now);
     const notYetOpen    = !_sideDemoOpen && !!(startsAt && startsAt > now);
@@ -3114,8 +3118,8 @@
     const now      = new Date();
     const startsAt = event.upload_window_starts_at ? new Date(event.upload_window_starts_at) : null;
     const endsAt   = event.upload_window_ends_at   ? new Date(event.upload_window_ends_at)   : null;
-    const demoOpen = plan.demoDays && event.created_at
-      ? Date.now() < new Date(event.created_at).getTime() + plan.demoDays * 86400000
+    const demoOpen = plan.id === 'tala' && event.created_at
+      ? Date.now() < new Date(event.created_at).getTime() + TALA_DEMO_MS
       : false;
 
     if (event.gallery_expires_at && new Date(event.gallery_expires_at) < now) {
@@ -3125,10 +3129,10 @@
         `The ${plan.name} plan's gallery retention for this event ended on ${formatDate(event.gallery_expires_at)}. Photos remain visible — upgrade to keep accepting new ones and extend retention.`;
     } else if (!demoOpen && startsAt && startsAt > now) {
       banner.classList.remove('hidden');
-      if (plan.id === 'tala' && plan.demoDays && event.created_at) {
+      if (plan.id === 'tala' && event.created_at) {
         // Tala: demo window has closed; event day not yet arrived.
         // Show demo dates + explain when uploads reopen + upgrade CTA.
-        const demoEnd = new Date(new Date(event.created_at).getTime() + plan.demoDays * 86400000);
+        const demoEnd = new Date(new Date(event.created_at).getTime() + TALA_DEMO_MS);
         $('lb-title').textContent = 'Demo window ended';
         $('lb-msg').textContent   =
           `Your 2-day demo window ended on ${formatDate(demoEnd)}. ` +
