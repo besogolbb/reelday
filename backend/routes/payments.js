@@ -162,7 +162,7 @@ function paymongoAuth() {
  *  - subscription_expires_at gets +1 year for Hiraya (yearly sub), NULL otherwise
  *  - if a slug was passed, the targeted event is also marked is_paid + plan upgraded
  */
-async function applyTierUpgrade(db, { userId, tier, slug }) {
+export async function applyTierUpgrade(db, { userId, tier, slug }) {
   const plan = resolvePlan(tier);
 
   // Sinag accumulates (one credit per ₱1,490); Dalisay replaces (1-event package);

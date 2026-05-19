@@ -1,6 +1,7 @@
 import { timingSafeEqual } from 'crypto';
 import { ListObjectsV2Command, DeleteObjectsCommand } from '@aws-sdk/client-s3';
 import { resolvePlan, galleryExpiryFor, uploadWindowStartFor, uploadWindowEndFor } from '../lib/plans.js';
+import { applyTierUpgrade } from './payments.js';
 import { extractStorageKey } from '../lib/storageKeys.js';
 import { syncEventToGcal, deleteGcalEvent } from '../lib/gcal.js';
 import { baseSlug, randomSuffix, isSlugCollision } from './events.js';
@@ -233,17 +234,10 @@ export default async function adminRoutes(fastify) {
          RETURNING id, created_at`,
         [user_id, eventId, ref, amt, tierLower],
       );
-      await client.query(
-        `UPDATE users SET subscription_tier = $2 WHERE id = $1`,
-        [user_id, tierLower],
-      );
-      if (eventId) {
-        await client.query(
-          `UPDATE events SET is_paid = true, plan = $2 WHERE id = $1`,
-          [eventId, tierLower],
-        );
-      }
       await client.query('COMMIT');
+      // applyTierUpgrade uses its own db queries (not the transaction client)
+      // but the payment row is already committed above so the user credit is safe.
+      await applyTierUpgrade(fastify.db, { userId: user_id, tier: tierLower, slug: slug ?? null });
       return { success: true, payment_id: ins[0].id, created_at: ins[0].created_at };
     } catch (err) {
       try { await client.query('ROLLBACK'); } catch {}
@@ -611,21 +605,28 @@ export default async function adminRoutes(fastify) {
     const { id } = request.params;
 
     const { rows } = await fastify.db.query(
-      `WITH verified AS (
-         UPDATE payments SET status = 'succeeded'
-         WHERE id = $1 AND status = 'manual_pending'
-         RETURNING event_id, plan
-       )
-       UPDATE events SET is_paid = true, plan = verified.plan
-       FROM verified
-       WHERE events.id = verified.event_id
-       RETURNING events.id`,
+      `UPDATE payments SET status = 'succeeded'
+        WHERE id = $1 AND status = 'manual_pending'
+        RETURNING user_id, event_id, tier`,
       [id],
     );
 
     if (!rows.length) {
       return reply.status(404).send({ error: true, message: 'Payment not found or already processed' });
     }
+
+    const { user_id, event_id, tier } = rows[0];
+
+    // Resolve slug so applyTierUpgrade can re-stamp the event's windows.
+    let slug = null;
+    if (event_id) {
+      const { rows: evRows } = await fastify.db.query(
+        'SELECT slug FROM events WHERE id = $1', [event_id],
+      );
+      slug = evRows[0]?.slug ?? null;
+    }
+
+    await applyTierUpgrade(fastify.db, { userId: user_id, tier, slug });
 
     return { success: true };
   });
