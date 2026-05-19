@@ -432,6 +432,9 @@ body { background: var(--paper); min-height: 100dvh; }
   transition: transform .25s ease, opacity .25s ease;
 }
 .cta-bar.hidden { transform: translateY(110%); opacity: 0; pointer-events: none; }
+.cta-consent { text-align: center; font-size: 11px; color: var(--ink-faint); margin-top: 6px; }
+.cta-consent a { color: var(--ink-faint); text-decoration: underline; text-underline-offset: 2px; }
+.cta-consent a:hover { color: var(--accent); }
 .cta-bar .cta-btn {
   pointer-events: auto;
   width: 100%; max-width: 460px;
@@ -1357,6 +1360,7 @@ body { background: var(--paper); min-height: 100dvh; }
      Hidden on React/Poll (those flows submit inline). -->
 <div class="cta-bar hidden" id="ctaBar" aria-hidden="true">
   <button class="cta-btn" id="ctaBtn" type="button" onclick="ctaBarClick(event)">Share moments →</button>
+  <p class="cta-consent">By uploading, you agree to our <a href="/terms#privacy" target="_blank" rel="noopener">Privacy Policy</a>.</p>
 </div>
 
 <script>
