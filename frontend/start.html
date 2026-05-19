@@ -179,23 +179,40 @@
   .big-input:focus { border-color: var(--accent); }
   .big-input::placeholder { color: var(--ink-faint); opacity: .5; }
 
-  .big-date {
+  /* Three-column date picker — avoids type="date" mobile rendering bugs */
+  .date-row {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr 1.4fr;
+    gap: 10px;
+  }
+  .date-sel {
     display: block;
     width: 100%;
-    max-width: 100%;
     min-width: 0;
     background: #fff;
     border: 1.5px solid var(--line-2);
     border-radius: var(--r);
     font-family: var(--sans);
-    font-size: 18px;
+    font-size: 17px;
     color: var(--ink);
-    padding: 18px 16px;
+    padding: 16px 14px;
     outline: none;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238a7468' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
     transition: border-color .2s;
     box-sizing: border-box;
   }
-  .big-date:focus { border-color: var(--accent); }
+  .date-sel:focus { border-color: var(--accent); }
+  .date-sel option[value=""] { color: var(--ink-faint); }
+  @media (max-width: 560px) {
+    .date-row { gap: 8px; }
+    .date-sel { font-size: 15px; padding: 14px 10px; padding-right: 28px; }
+  }
 
   .field-error {
     font-size: 13px; color: var(--accent-deep);
@@ -434,7 +451,6 @@
     .wizard-stage { padding: 18px 18px 60px; }
     .slide-actions { justify-content: stretch; }
     .slide-actions .btn-next, .slide-actions .btn-finish { width: 100%; justify-content: center; }
-    .big-date { font-size: 16px; padding: 14px 12px; }
   }
 </style>
 </head>
@@ -515,7 +531,24 @@
       <h1>When's the <em>big day?</em></h1>
       <p class="sub">We'll use this to set your gallery's open window.</p>
 
-      <input type="date" class="big-date" id="event-date" />
+      <div class="date-row">
+        <select class="date-sel" id="ev-month" aria-label="Month">
+          <option value="">Month</option>
+          <option value="01">January</option><option value="02">February</option>
+          <option value="03">March</option><option value="04">April</option>
+          <option value="05">May</option><option value="06">June</option>
+          <option value="07">July</option><option value="08">August</option>
+          <option value="09">September</option><option value="10">October</option>
+          <option value="11">November</option><option value="12">December</option>
+        </select>
+        <select class="date-sel" id="ev-day" aria-label="Day">
+          <option value="">Day</option>
+        </select>
+        <select class="date-sel" id="ev-year" aria-label="Year">
+          <option value="">Year</option>
+        </select>
+      </div>
+      <input type="hidden" id="event-date" />
       <div class="field-error" id="err-date">Please pick a date.</div>
 
       <div class="slide-actions">
@@ -703,7 +736,39 @@
   function hideErr(id) { document.getElementById(id).classList.remove('show'); }
 
   document.getElementById('event-name')?.addEventListener('input', () => hideErr('err-name'));
-  document.getElementById('event-date')?.addEventListener('change', () => hideErr('err-date'));
+
+  // ── Date selects setup ─────────────────────────
+  (function() {
+    const mSel = document.getElementById('ev-month');
+    const dSel = document.getElementById('ev-day');
+    const ySel = document.getElementById('ev-year');
+    const hidden = document.getElementById('event-date');
+
+    // Populate days 1–31
+    for (let d = 1; d <= 31; d++) {
+      const o = document.createElement('option');
+      o.value = String(d).padStart(2, '0');
+      o.textContent = d;
+      dSel.appendChild(o);
+    }
+    // Populate years: current year → current + 5
+    const now = new Date().getFullYear();
+    for (let y = now; y <= now + 5; y++) {
+      const o = document.createElement('option');
+      o.value = y;
+      o.textContent = y;
+      ySel.appendChild(o);
+    }
+
+    function sync() {
+      const m = mSel.value, d = dSel.value, y = ySel.value;
+      hidden.value = (m && d && y) ? `${y}-${m}-${d}` : '';
+      if (hidden.value) hideErr('err-date');
+    }
+    mSel.addEventListener('change', sync);
+    dSel.addEventListener('change', sync);
+    ySel.addEventListener('change', sync);
+  })();
 
   // Enter-key advances slides 1 & 2
   document.getElementById('event-name')?.addEventListener('keydown', e => {
