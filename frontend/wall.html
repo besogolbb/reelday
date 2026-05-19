@@ -2926,6 +2926,26 @@
       inLayer.classList.remove('video-visible');
       inLoader?.classList.remove('visible');
 
+      // Clear .pic immediately — the line above this branch already set it
+      // to posterBackground, but if that image isn't decoded yet the
+      // transparent .pic reveals the split backdrop halves (::before left-
+      // edge / ::after right-edge of the same image with no center fill).
+      // Instead: keep .pic dark during loading and set it only after the
+      // poster image is fully decoded, at which point it snaps in cleanly.
+      // .pic is hidden anyway once video-visible fires (display:none in CSS).
+      inPic.style.backgroundImage = '';
+      if (posterUrl) {
+        const posterProbe  = new Image();
+        const capturedLayer = inLayer;
+        posterProbe.onload = () => {
+          if (capturedLayer.classList.contains('has-video') &&
+              !capturedLayer.classList.contains('video-visible')) {
+            inPic.style.backgroundImage = posterBackground;
+          }
+        };
+        posterProbe.src = posterUrl;
+      }
+
       if (posterUrl) {
         inVid.setAttribute('poster', posterUrl);
       } else {
