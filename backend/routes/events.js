@@ -240,6 +240,16 @@ export default async function eventRoutes(fastify) {
     }
 
     const event = rows[0];
+    // This endpoint is intentionally PUBLIC (the wall + guest upload
+    // page consume it without a host token). `SELECT *` was leaking the
+    // event's `user_id` — a direct join key to the users PII row —
+    // which no public consumer reads and was visible in incognito
+    // (2026-05-19 host report). Strip before returning. The remaining
+    // fields are all things the wall/upload/event-site already render
+    // publicly (couple names, plan, dates, etc.) so no further trim is
+    // needed; owner-only mutations (PATCH, play-videos, …) are still
+    // gated by their own `fastify.authenticate` preHandlers.
+    delete event.user_id;
 
     const { rows: countRows } = await fastify.db.query(
       'SELECT COUNT(*)::int AS count FROM uploads WHERE event_id = $1 AND is_approved = true',
