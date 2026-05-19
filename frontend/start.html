@@ -861,7 +861,7 @@
     button.classList.add('loading');
     try {
       const { event } = await createEvent();
-      if (PLAN_LABELS[event.plan]?.paid) {
+      if (PLAN_LABELS[event.plan]?.paid && !event.is_paid) {
         await startCheckout(event.slug);
       } else {
         location.href = `/dashboard?slug=${event.slug}`;
@@ -1107,7 +1107,7 @@
 
       saveAuth(data.token, data.user);
       const { event } = await createEvent();
-      if (PLAN_LABELS[event.plan]?.paid) {
+      if (PLAN_LABELS[event.plan]?.paid && !event.is_paid) {
         await startCheckout(event.slug);
       } else {
         location.href = `/dashboard?slug=${event.slug}`;
@@ -1134,7 +1134,7 @@
       if (!res.ok) throw new Error(data.message || 'Google sign-in failed');
       saveAuth(data.token, data.user);
       const { event } = await createEvent();
-      if (PLAN_LABELS[event.plan]?.paid) {
+      if (PLAN_LABELS[event.plan]?.paid && !event.is_paid) {
         await startCheckout(event.slug);
       } else {
         location.href = `/dashboard?slug=${event.slug}`;

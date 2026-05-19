@@ -141,6 +141,12 @@ export default async function eventRoutes(fastify) {
     const uploadWindowStartsAt = uploadWindowStartFor(planForEvent.id, stampDate);
     const uploadWindowEndsAt   = uploadWindowEndFor(planForEvent.id, stampDate);
 
+    // If the user has event credits (events_remaining > 0), this create
+    // consumes one credit and the event is immediately paid — no checkout
+    // needed. Tala users always have events_remaining = null so this is
+    // only ever true for previously-paid sinag/dalisay/hiraya accounts.
+    const paidByCredit = user.events_remaining != null && user.events_remaining > 0;
+
     // Slug allocation: try the clean name first ("juan-and-maria"); only
     // append a random suffix when that exact slug already exists. We
     // attempt the INSERT and react to the Postgres unique_violation
@@ -155,9 +161,9 @@ export default async function eventRoutes(fastify) {
         const { rows } = await fastify.db.query(
           `INSERT INTO events (
              slug, couple_names, event_type, event_date, plan, user_id,
-             gallery_expires_at, upload_window_starts_at, upload_window_ends_at
+             is_paid, gallery_expires_at, upload_window_starts_at, upload_window_ends_at
            )
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
            RETURNING *`,
           [
             slug,
@@ -166,6 +172,7 @@ export default async function eventRoutes(fastify) {
             event_date ?? null,
             planForEvent.id,
             userId,
+            paidByCredit,
             galleryExpiresAt,
             uploadWindowStartsAt,
             uploadWindowEndsAt,
