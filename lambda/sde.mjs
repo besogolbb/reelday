@@ -211,18 +211,32 @@ const TARGET_W   = 1920;
 const TARGET_H   = 1080;
 const TARGET_FPS = 24;
 
+// Warm-film colour grade (host pick, 2026-05-19). Built from stock
+// point filters — deliberately NO `.cube` asset to ship (that's the
+// same fragile path dependency as the drawtext font). Reds nudged up /
+// blues down at the midtones for gentle golden warmth; curve endpoints
+// pinned at 0 and 1 so neither highlights nor shadows clip; a small
+// contrast + saturation lift for "pop". Applied once per guest brick
+// (photo Ken Burns path, flat photo, video) — the title/endcard keep
+// their own treatment. Cost is two point filters per brick:
+// headroom-trivial (the 2026-05-19 run had ~4× wall-clock spare).
+const COLOR_GRADE =
+  `curves=r='0/0 0.5/0.52 1/1':b='0/0 0.5/0.48 1/1',` +
+  `eq=contrast=1.06:saturation=1.08`;
+
 // Blur-fill background trick — the canonical way to handle vertical
 // phone content inside a 16:9 reel without black letterbox bars. Splits
 // the source into two streams: one is scaled to FILL the frame (with
 // excess cropped) and heavily blurred; the other is scaled to FIT
 // (preserving aspect ratio); the fit version overlays centered on top
 // of the blurred fill. Same approach Instagram/Reels uses. Cost is
-// ~10-15% extra per-clip encode vs. plain `pad=color=black`.
+// ~10-15% extra per-clip encode vs. plain `pad=color=black`. The grade
+// runs on the finished composite so blurred bg + sharp photo match.
 const BLUR_FILL_GRAPH = (
   `[0:v]split=2[bg][fg];` +
   `[bg]scale=${TARGET_W}:${TARGET_H}:force_original_aspect_ratio=increase,crop=${TARGET_W}:${TARGET_H},boxblur=30:2[blurred];` +
   `[fg]scale=${TARGET_W}:${TARGET_H}:force_original_aspect_ratio=decrease[scaled];` +
-  `[blurred][scaled]overlay=(W-w)/2:(H-h)/2,fps=${TARGET_FPS},format=yuv420p,setsar=1[outv]`
+  `[blurred][scaled]overlay=(W-w)/2:(H-h)/2,${COLOR_GRADE},fps=${TARGET_FPS},format=yuv420p,setsar=1[outv]`
 );
 
 function safeCardName(i) {
@@ -333,7 +347,7 @@ async function normalizePhoto(srcPath, outPath, durSec, { kenBurns = true, index
         `zoompan=z='min(zoom+0.0006\\,1.10)':d=${frames}:` +
           `x='${xExpr}':y='${yExpr}':` +
           `s=${TARGET_W}x${TARGET_H}:fps=${TARGET_FPS},` +
-        `fps=${TARGET_FPS},format=yuv420p,setsar=1`,
+        `${COLOR_GRADE},fps=${TARGET_FPS},format=yuv420p,setsar=1`,
       '-shortest',
       '-c:v', 'libx264', '-preset', SDE_X264_PRESET, '-crf', '22',
       '-pix_fmt', 'yuv420p', '-profile:v', 'high', '-level', '4.0',
