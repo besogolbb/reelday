@@ -2752,6 +2752,7 @@
      pillarboxed portrait case). Token is generation-guarded so a slow
      probe from a previous slide can't clobber a newer slide's class. */
   let orientationToken = 0;
+  let photoLoadToken   = 0;
   function applyOrientationClass(item, activeVidEl) {
     const token = ++orientationToken;
     const setClass = (w, h) => {
@@ -2807,6 +2808,7 @@
   ══════════════════════════════════════════════════════════ */
   function showSlide(idx, options = {}) {
     if (items.length === 0) return;
+    ++photoLoadToken; // cancel any pending photo progressive-load from a previous slide
     const reuseActive = options.reuseActive === true;
     const item  = items[idx % items.length];
     const kbAnim = KB_ANIMS[idx % KB_ANIMS.length];
@@ -3021,6 +3023,24 @@
       void inPic.offsetWidth; // force reflow
       inPic.style.animation = `${kbAnim} ${KB_DURATION}s ease-out forwards`;
       inLoader?.classList.remove('visible');
+
+      // Progressive reveal: paint the prethumb (small JPEG already in CDN
+      // edge cache from the upload moment) immediately, then silently swap
+      // to the full-res once the browser has decoded it. The token guard
+      // prevents a slow network response from a previous slide clobbering
+      // a slide that has already advanced.
+      if (videoPreThumb && videoPreThumb !== mediaUrl) {
+        inPic.style.backgroundImage = `url('${videoPreThumb}')`;
+        inBackdrop.style.setProperty('--poster-img', `url('${videoPreThumb}')`);
+        const token   = photoLoadToken;
+        const fullImg = new Image();
+        fullImg.onload = () => {
+          if (token !== photoLoadToken) return;
+          inPic.style.backgroundImage = `url('${mediaUrl}')`;
+          inBackdrop.style.setProperty('--poster-img', `url('${mediaUrl}')`);
+        };
+        fullImg.src = mediaUrl;
+      }
     }
 
     // Stash so advance()/goTo() know whether this slide is a video.
