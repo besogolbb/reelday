@@ -43,6 +43,9 @@ raise — see operating-state table below).
 | `4ca705e` | wall-fix | FULLY release gallery videos (`pause` + `removeAttribute('src')` + `load()`) — paused-but-loaded still holds decoder/memory |
 | `6b862bd` | wall-fix | First-poll swallow: refreshing the wall must NOT auto-resume a takeover from a still-active play signal |
 | `70b9da7` | **wall arch** | **iframe-isolated player.** New [frontend/sde-play.html](../frontend/sde-play.html); wall mounts it in an `<iframe>` instead of an in-page `<video>`. The wall runtime (1Hz polls + gallery + music + emoji + DOM) was starving in-page playback; the iframe gets its own JS context / network pool / decoder slot. `handleSdePlay` slimmed to lifecycle-only. |
+| `b3636d3` | polish | SDE cards: event cover photo as blurred-darkened title/endcard background (fallback: tinted navy) |
+| `3da4a12` | polish | **Ken Burns rework** — two-stage: blur-fill composite (portrait keeps aspect, no black bars) at 5760×3240 supersample → smooth sub-pixel zoom to 1080p (kills the stair-step "ladder"). Replaces `pad=color=black`. +80 s total, still ~4× headroom on 3 GB. |
+| `9029df2` | polish | **Warm-film colour grade** (`COLOR_GRADE`, stock curves+eq, no `.cube` asset) on every guest brick — flat photo + video via `BLUR_FILL_GRAPH`, photos via KB stage-2. Cards untouched. LUT pulled forward from Batch 3 on host go. |
 
 ## Curation model (current truth)
 
@@ -58,7 +61,7 @@ raise — see operating-state table below).
 - **SDE strip read-only** — host curates via the Feature pin in stream tiles, never inside the panel.
 - **Lambda renders silent if `audioKey` null** — backend picks defaults (Slice 2B). Silent path is a safety net, not the product experience.
 - ~~Cards = pre-rendered PNG overlays~~ **SUPERSEDED 2026-05-18:** cards are `drawtext`-on-black, rendered in the Lambda (`705eafc`). The PNG `titleCardKey`/`endcardKey` payload fields still exist for compatibility but the backend never sets them. Decision reversed via the Q&A at 2B kickoff — no PNG generation anywhere.
-- **Beat-sync, transitions, LUT = Batch 3.** Slice 2A produces hard cuts; this is intentional.
+- **Beat-sync + transitions = still Batch 3.** Slice 2A produces hard cuts; this is intentional. **LUT — SHIPPED 2026-05-19** (`9029df2`, warm-film grade, host pick): the capacity premise behind parking it was disproven by the measured ~4× headroom; pulled forward on explicit host go. Don't revert as a "locked violation" — it's a host-approved decision now.
 - **Counting backend-only; Lambda never touches DB.** Curator runs request-time only.
 - **No new npm deps** (Easypanel 502 footgun).
 - **Beacon settled** — local mixed rx p95 11 ms, single Node process confirmed; safe.
@@ -87,9 +90,9 @@ lands** — just remove the env vars and restore the polished defaults.
 
 ### When the quota raise lands — also queued for then
 
-- **Transitions (Batch 3)**: 0.3 s xfade between every clip. ~6-8 min single-pass re-encode of the stitched output — fits comfortably in 10 GB / 6 vCPU but blows the 15-min ceiling on 3 GB. Decision deferred 2026-05-18 explicitly.
-- **Blur-fill in Ken Burns path**: currently the kenBurns:true branch in [normalizePhoto](../lambda/sde.mjs) still uses `pad=color=black` on the 2400×1350 upscale because zoompan reads that frame. When Ken Burns comes back on, apply BLUR_FILL_GRAPH to the upscale too.
-- **Beat-sync + LUT**: original Batch 3 scope, still parked.
+- **Transitions (Batch 3)**: 0.3 s xfade between every clip. Originally estimated ~6-8 min single-pass re-encode "blows the 15-min ceiling on 3 GB" — but the 2026-05-19 measured run (220 s of 900 s, **with** the heavier two-stage Ken Burns) shows that premise no longer holds; xfade almost certainly fits on 3 GB now. Still parked only because it kills the `-c copy` concat fast path (full timeline re-encode + cumulative offsets + music crossfade) — a real architectural change, not a capacity blocker. Awaiting explicit host go.
+- ~~Blur-fill in Ken Burns path~~ **SHIPPED 2026-05-19** (`3da4a12`): the kenBurns branch was reworked to a two-stage pipeline — stage 1 builds a blur-fill composite (portrait keeps aspect, no black bars) at a 5760×3240 supersample canvas, stage 2 runs the slow zoompan straight to 1080p so integer crop steps are sub-pixel (kills the stair-step "ladder"). `pad=color=black` is gone. Cost: normalize 114 s → 193 s, total 140 s → 220 s — still ~4× headroom on 3 GB.
+- **Beat-sync**: original Batch 3 scope, still parked (needs beat detection; "no new npm deps" applies). **LUT shipped** — see locked-decisions note above (`9029df2`).
 
 ## Slice 2C — DONE (frontend render controls shipped)
 
@@ -202,14 +205,19 @@ host plays on wall when ready. Remaining roadmap depends on the AWS
 10 GB quota raise (see [3 GB Lambda — current operating state](#3-gb-lambda--current-operating-state)
 above):
 
-- Transitions (xfade) — single-pass re-encode, fits in 10 GB
-- Ken Burns blur-fill on upscale — currently OFF
-- Beat-sync + LUT — original Batch 3 polish
+- Transitions (xfade) — single-pass re-encode; measured to fit on 3 GB
+  now (220/900 s), parked only on the `-c copy` architectural cost +
+  awaiting host go (not capacity)
+- ~~Ken Burns blur-fill~~ — **SHIPPED `3da4a12`** (two-stage, smooth)
+- ~~LUT~~ — **SHIPPED `9029df2`** (warm-film grade)
+- Beat-sync — still parked (beat detection; no new npm deps)
 
-When the quota lands, all three flip back on by unsetting two env
-vars + one Lambda config change + dropping in the xfade chain in
-`concatNormalized`. Otherwise the feature is ready to ship to real
-events as-is.
+Visual polish (Ken Burns smoothing + blur-fill + warm-film grade) is
+done on the live 3 GB Lambda — the old "wait for the 10 GB quota"
+framing for those is obsolete. Only xfade transitions + beat-sync
+remain, and xfade is now a host-decision/architecture call, not a
+capacity one. **All three new commits require a Lambda redeploy** —
+git push does not update AWS.
 
 ## Operator: pre-flight before first render
 
