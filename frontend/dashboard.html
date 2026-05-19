@@ -536,7 +536,9 @@
     /* Slide reveal — max-height transition is the cheapest trick that
        still animates smoothly without measuring children every frame. */
     .polls-body {
-      padding: 0 22px 22px;
+      padding: 16px 18px 20px;
+      background: var(--paper);
+      border-top: 1px solid var(--dash-border);
       max-height: 1500px; opacity: 1;
       transition: max-height .35s ease, opacity .25s ease, padding .35s ease;
     }
@@ -558,22 +560,22 @@
 
     .poll-row {
       background: #fff;
-      border: 1px solid rgba(63,35,24,.06);
+      border: 1px solid rgba(83,48,33,.13);
       border-radius: 18px;
       padding: 18px 20px;
       display: grid; grid-template-columns: 1fr auto; gap: 10px 16px; align-items: center;
       box-shadow:
-        0 8px 32px rgba(63,35,24,.11),
-        0 2px 8px  rgba(63,35,24,.07),
-        0 0 0 1px  rgba(83,48,33,.03);
+        0 4px 18px rgba(63,35,24,.10),
+        0 1px 4px  rgba(63,35,24,.06);
       transition: box-shadow .2s ease, transform .2s ease;
     }
-    .poll-row:hover {
-      box-shadow:
-        0 14px 42px rgba(63,35,24,.15),
-        0 4px 12px  rgba(63,35,24,.09),
-        0 0 0 1px   rgba(83,48,33,.05);
-      transform: translateY(-2px);
+    @media (hover: hover) {
+      .poll-row:hover {
+        box-shadow:
+          0 12px 36px rgba(63,35,24,.14),
+          0 3px 8px   rgba(63,35,24,.08);
+        transform: translateY(-2px);
+      }
     }
     .poll-row .poll-status {
       display: inline-flex; align-items: center; gap: 6px;
@@ -584,12 +586,12 @@
     .poll-row .poll-status.draft { background: var(--paper-3); color: var(--ink-soft); }
     .poll-row .poll-status.live  { background: rgba(229,76,59,.14); color: #b03022; }
     .poll-row .poll-status.live::before { content: '●'; margin-right: 4px; animation: pollPulse 1s infinite; }
-    /* Live row glows red to stand out */
+    /* Live row: red border + glow */
     .poll-row:has(.poll-status.live) {
+      border-color: rgba(229,76,59,.35);
       box-shadow:
-        0 8px 32px rgba(229,76,59,.18),
-        0 2px 8px  rgba(229,76,59,.10),
-        0 0 0 1px  rgba(229,76,59,.12);
+        0 4px 18px rgba(229,76,59,.18),
+        0 1px 4px  rgba(229,76,59,.10);
     }
     .poll-row .poll-status.ended { background: rgba(45,122,74,.14); color: #1f5e3b; }
     .poll-row .poll-kind-badge {
@@ -5654,7 +5656,7 @@
 
       // White inset card holds the form — pops against the cream body bg.
       const card = document.createElement('div');
-      card.style.cssText = 'background:#fff;border:1px solid rgba(63,35,24,.06);border-radius:20px;padding:26px 24px;box-shadow:0 8px 32px rgba(63,35,24,.11),0 2px 8px rgba(63,35,24,.07),0 0 0 1px rgba(83,48,33,.03);';
+      card.style.cssText = 'background:#fff;border:1px solid rgba(83,48,33,.13);border-radius:20px;padding:26px 24px;box-shadow:0 4px 18px rgba(63,35,24,.10),0 1px 4px rgba(63,35,24,.06);';
       const content = document.createElement('div');
       card.appendChild(content);
 
