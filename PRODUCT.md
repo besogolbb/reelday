@@ -265,8 +265,8 @@ So Dalisay's 7 is 3 + day-of + 3, Hiraya's 31 is 15 + day-of + 15.
 |---|---|---|---|---|---|---|
 | **Tala** | Free | 1 | 25 photos | 24 hours | 1 day (event day only) | Photos only |
 | **Sinag** | ₱1,490 / event | 1 | unlimited | 30 days | 3 days (1 before + day-of + 1 after) | + Reactions, Video messages |
-| **Dalisay** | ₱2,990 / event | 1 | unlimited | 90 days | 7 days (3 before + day-of + 3 after) | + Audio notes, Polls, Event website |
-| **Hiraya** | ₱9,990 / year | 10 / yr | unlimited | 365 days | 31 days (15 before + day-of + 15 after) | Yearly subscription for coordinators, photographers & venues; + Custom domain |
+| **Dalisay** | ₱2,990 / event | 1 | unlimited | 90 days | 7 days (3 before + day-of + 3 after) | + Audio notes, Polls, Event website, **Same Day Edit recap reel _(coming soon)_** |
+| **Hiraya** | ₱9,990 / year | 10 / yr | unlimited | 365 days | 31 days (15 before + day-of + 15 after) | Yearly subscription for coordinators, photographers & venues; + Custom domain, **Same Day Edit recap reel _(coming soon)_** |
 
 ---
 
