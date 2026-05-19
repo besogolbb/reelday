@@ -1046,10 +1046,11 @@
     }
     .mini-card h3 {
       font-family: var(--display);
-      font-size: 20px;
-      font-weight: 500;
+      font-size: 22px;
+      font-weight: 700;
       margin-bottom: 14px;
       color: var(--ink);
+      letter-spacing: -.01em;
     }
     .mini-list { display: grid; gap: 10px; }
     .mini-row {
@@ -1072,12 +1073,12 @@
     .details-form { display: grid; gap: 12px; }
     .details-field { display: grid; gap: 5px; }
     .details-field label {
-      font-family: var(--mono); font-size: 10px; letter-spacing: .14em;
-      text-transform: uppercase; color: var(--ink-soft);
+      font-family: var(--mono); font-size: 11px; font-weight: 700;
+      letter-spacing: .12em; text-transform: uppercase; color: var(--ink);
     }
     .details-field label .opt {
-      letter-spacing: .04em; text-transform: none; color: var(--ink-faint);
-      font-weight: 400;
+      letter-spacing: .04em; text-transform: none; color: var(--ink-soft);
+      font-weight: 500;
     }
     .details-field input,
     .details-field textarea,
@@ -5645,9 +5646,9 @@
       const stepHeader = document.createElement('div');
       stepHeader.style.cssText = 'display:flex;align-items:baseline;justify-content:space-between;gap:8px 14px;margin-bottom:10px;flex-wrap:wrap;';
       const stepTitle = document.createElement('h4');
-      stepTitle.style.cssText = 'font-family:var(--display);font-size:clamp(18px,5vw,22px);font-weight:600;color:var(--ink);margin:0;letter-spacing:-.01em;min-width:0;';
+      stepTitle.style.cssText = 'font-family:var(--display);font-size:clamp(22px,5vw,28px);font-weight:700;color:var(--ink);margin:0;letter-spacing:-.02em;min-width:0;';
       const stepCount = document.createElement('span');
-      stepCount.style.cssText = 'font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint);white-space:nowrap;';
+      stepCount.style.cssText = 'font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-soft);white-space:nowrap;';
       stepHeader.appendChild(stepTitle); stepHeader.appendChild(stepCount);
 
       // Pill-dot progress (one per step; click to jump; hover = step name)
