@@ -841,7 +841,7 @@
     return data;
   }
 
-  async function startCheckout(slug) {
+  async function startCheckout(slug, tier) {
     const token = getToken();
     const res = await fetch('/api/payments/create', {
       method: 'POST',
@@ -849,7 +849,7 @@
         'Content-Type': 'application/json',
         ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
       },
-      body: JSON.stringify({ slug, tier: state.plan }),
+      body: JSON.stringify({ slug, tier: tier || state.plan }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || 'Could not start checkout.');
@@ -863,7 +863,7 @@
     try {
       const { event } = await createEvent();
       if (PLAN_LABELS[event.plan]?.paid && !event.is_paid) {
-        await startCheckout(event.slug);
+        await startCheckout(event.slug, event.plan);
       } else {
         location.href = `/dashboard?slug=${event.slug}`;
       }
@@ -1109,7 +1109,7 @@
       saveAuth(data.token, data.user);
       const { event } = await createEvent();
       if (PLAN_LABELS[event.plan]?.paid && !event.is_paid) {
-        await startCheckout(event.slug);
+        await startCheckout(event.slug, event.plan);
       } else {
         location.href = `/dashboard?slug=${event.slug}`;
       }
@@ -1136,7 +1136,7 @@
       saveAuth(data.token, data.user);
       const { event } = await createEvent();
       if (PLAN_LABELS[event.plan]?.paid && !event.is_paid) {
-        await startCheckout(event.slug);
+        await startCheckout(event.slug, event.plan);
       } else {
         location.href = `/dashboard?slug=${event.slug}`;
       }
