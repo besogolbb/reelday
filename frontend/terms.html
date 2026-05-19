@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#fdfaf5" />
+<meta name="description" content="Reelday Terms of Service and Privacy Policy." />
+<title>Reelday — Terms &amp; Privacy</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=5" />
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=5" />
+<link rel="shortcut icon" href="/favicon.ico?v=5" />
+<link rel="stylesheet" href="/css/shared.css" />
+<style>
+  html, body { min-height: 100dvh; }
+  body { background: #fdfaf5; display: flex; flex-direction: column; }
+
+  /* ── Header ─────────────────────────────────────────────── */
+  .site-header { background: rgba(253,250,245,.95); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 100; }
+  .site-header-inner { max-width: 1100px; margin: 0 auto; padding: 12px 28px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .brand-img { height: 52px; width: auto; display: block; }
+  @media (max-width: 600px) { .brand-img { height: 36px; } .site-header-inner { padding: 10px 16px; } }
+
+  /* ── Page layout ─────────────────────────────────────────── */
+  main { flex: 1; max-width: 860px; margin: 0 auto; padding: 3rem 28px 5rem; width: 100%; }
+
+  .page-eyebrow { font-size: .78rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-bottom: .75rem; }
+  .page-title { font-family: var(--display); font-size: clamp(2rem, 5vw, 3rem); font-weight: 400; color: var(--ink); line-height: 1.1; margin-bottom: .6rem; }
+  .page-meta  { font-size: .85rem; color: var(--ink-faint); margin-bottom: 2.5rem; }
+
+  /* ── Tabs ────────────────────────────────────────────────── */
+  .tab-bar { display: flex; gap: 4px; border-bottom: 2px solid var(--line); margin-bottom: 2.5rem; }
+  .tab-btn {
+    padding: .65rem 1.25rem; font-size: .9rem; font-weight: 600;
+    color: var(--ink-soft); background: none; border: none; cursor: pointer;
+    border-bottom: 2px solid transparent; margin-bottom: -2px;
+    transition: color .15s, border-color .15s;
+    font-family: var(--sans);
+  }
+  .tab-btn:hover { color: var(--ink); }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ── Legal prose ─────────────────────────────────────────── */
+  .legal h2 {
+    font-family: var(--display); font-size: 1.4rem; font-weight: 500;
+    color: var(--ink); margin: 2.5rem 0 .6rem;
+    padding-bottom: .4rem; border-bottom: 1px solid var(--line);
+  }
+  .legal h2:first-child { margin-top: 0; }
+  .legal h3 { font-size: 1rem; font-weight: 700; color: var(--ink); margin: 1.4rem 0 .4rem; }
+  .legal p  { font-size: .95rem; color: var(--ink-soft); line-height: 1.75; margin-bottom: .85rem; }
+  .legal ul { padding-left: 1.4rem; margin-bottom: .85rem; }
+  .legal ul li { font-size: .95rem; color: var(--ink-soft); line-height: 1.7; margin-bottom: .3rem; }
+  .legal a  { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+  .legal a:hover { color: var(--accent-deep); }
+
+  .notice {
+    background: rgba(216,160,90,.1); border-left: 3px solid var(--gold);
+    border-radius: 0 var(--r-sm) var(--r-sm) 0;
+    padding: .85rem 1rem; margin-bottom: 1.5rem;
+    font-size: .875rem; color: var(--ink-soft); line-height: 1.6;
+  }
+
+  /* ── Footer ──────────────────────────────────────────────── */
+  footer { border-top: 1px solid var(--line); background: var(--paper-2); }
+  .footer-inner { max-width: 1100px; margin: 0 auto; padding: 2rem 28px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .footer-inner p { font-size: .8rem; color: var(--ink-faint); }
+  .footer-inner a { font-size: .8rem; color: var(--ink-soft); text-decoration: none; }
+  .footer-inner a:hover { color: var(--accent); }
+  .footer-links { display: flex; gap: 20px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+
+<!-- ════ HEADER ════════════════════════════════════════════ -->
+<header class="site-header">
+  <div class="site-header-inner">
+    <a href="/" aria-label="Reelday.ph — home">
+      <img src="/cdn-cgi/image/width=360,quality=86,format=auto/images/LOGO.png?v=2" alt="Reelday.ph" class="brand-img" />
+    </a>
+    <a class="btn btn-ghost" href="/login" style="padding:9px 18px;font-size:.875rem">Log in</a>
+  </div>
+</header>
+
+<!-- ════ MAIN ═══════════════════════════════════════════════ -->
+<main>
+  <p class="page-eyebrow">Legal</p>
+  <h1 class="page-title">Terms &amp; Privacy</h1>
+  <p class="page-meta">Effective date: May 19, 2026 · Reelday Inc · Manila, Philippines</p>
+
+  <div class="tab-bar" role="tablist">
+    <button class="tab-btn active" role="tab" aria-selected="true"  aria-controls="panel-terms"   id="tab-terms"   onclick="switchTab('terms')">Terms of Service</button>
+    <button class="tab-btn"        role="tab" aria-selected="false" aria-controls="panel-privacy" id="tab-privacy" onclick="switchTab('privacy')">Privacy Policy</button>
+  </div>
+
+  <!-- ── TERMS OF SERVICE ─────────────────────────────────── -->
+  <div class="tab-panel active legal" id="panel-terms" role="tabpanel" aria-labelledby="tab-terms">
+
+    <div class="notice">
+      Please read these Terms carefully. By creating a Reelday account or using the Service, you agree to be bound by them.
+    </div>
+
+    <h2>1. About Reelday</h2>
+    <p>Reelday ("we," "us," or "our") is a live photo and video wall platform operated by Reelday Inc., a company registered in the Republic of the Philippines. We allow event organizers ("Hosts") to create a shareable wall where guests can upload photos and videos in real time during celebrations.</p>
+
+    <h2>2. Eligibility</h2>
+    <p>You must be at least 18 years old to create a Host account. By registering, you represent that all information you provide is accurate and that you have the legal capacity to enter into these Terms. Guests who upload media do not create accounts and are not subject to registration requirements, but are bound by Section 6 (Acceptable Use) and Section 7 (Guest Uploads).</p>
+
+    <h2>3. Accounts</h2>
+    <p>You are responsible for keeping your login credentials confidential. You are liable for all activity that occurs under your account. Notify us immediately at <a href="mailto:hello@reelday.ph">hello@reelday.ph</a> if you suspect unauthorized access. We may suspend or terminate accounts that violate these Terms.</p>
+
+    <h2>4. Subscription Plans &amp; Payments</h2>
+    <h3>4.1 Available Plans</h3>
+    <p>Reelday offers a free tier (Tala) and paid per-event plans (Sinag and Dalisay), as well as a yearly subscription (Hiraya). Plan features, pricing, event limits, upload windows, and gallery retention periods are described on the <a href="/#pricing">Pricing page</a> and may be updated from time to time with reasonable notice.</p>
+
+    <h3>4.2 Payment Processing</h3>
+    <p>Payments are processed by PayMongo, a third-party payment gateway. By completing a purchase you also agree to PayMongo's terms of service. Reelday does not store your card or GCash credentials.</p>
+
+    <h3>4.3 Refunds</h3>
+    <p>Because digital access to the Service is granted immediately upon payment, all sales are final. We will consider refunds only where a technical failure on our end prevented you from using the Service at all. To request a review, email <a href="mailto:hello@reelday.ph">hello@reelday.ph</a> within 7 days of purchase with your payment reference number.</p>
+
+    <h3>4.4 Plan Upgrades</h3>
+    <p>Upgrading a plan mid-event applies the new plan's upload window and gallery retention from the date of the event (not the date of payment), so you do not lose time already elapsed.</p>
+
+    <h2>5. The Service</h2>
+    <h3>5.1 Wall &amp; Upload Window</h3>
+    <p>Each plan includes a defined upload window during which guests may submit media. Uploads submitted outside this window will be rejected. The wall remains viewable until the gallery expires; after expiry the wall and all associated media are permanently deleted.</p>
+
+    <h3>5.2 Media Processing</h3>
+    <p>Videos are automatically compressed to web-friendly H.264 format by our processing pipeline. This may take a few minutes per clip. The original file is retained during the gallery window and deleted together with the processed version upon expiry.</p>
+
+    <h3>5.3 High-Volume Events</h3>
+    <p>For events with over 500 guests, simultaneous video uploads during peak moments may cause a 5–10 minute delay before all videos appear on the wall. No media is lost — the wall updates automatically as processing completes.</p>
+
+    <h3>5.4 Availability</h3>
+    <p>We target high availability but do not guarantee uninterrupted service. Scheduled maintenance will be communicated in advance when possible. Reelday is not liable for losses caused by downtime during your event.</p>
+
+    <h2>6. Acceptable Use</h2>
+    <p>You and your guests must not use the Service to upload, share, or display content that:</p>
+    <ul>
+      <li>Is sexually explicit, obscene, or involves minors in any inappropriate manner;</li>
+      <li>Is defamatory, harassing, threatening, or discriminatory;</li>
+      <li>Infringes any third-party intellectual property, privacy, or publicity rights;</li>
+      <li>Contains malware, phishing links, or deceptive content;</li>
+      <li>Violates any applicable law of the Republic of the Philippines or the country of the uploader.</li>
+    </ul>
+    <p>We reserve the right to remove any content that violates these rules and to suspend the responsible account or block the responsible device without prior notice.</p>
+
+    <h2>7. Guest Uploads &amp; Host Responsibility</h2>
+    <p>Guests upload anonymously without creating an account. As the Host, you are responsible for informing your guests that their media will be displayed on a shared wall and processed by Reelday's systems. You represent that you have the right to collect and share guest media in this manner under applicable law, including the Data Privacy Act of 2012 (RA 10173).</p>
+    <p>Reelday provides an optional moderation feature so Hosts can control which uploads appear on the wall. We encourage Hosts of large events to assign a dedicated operator to manage the wall display throughout the event.</p>
+
+    <h2>8. Intellectual Property</h2>
+    <p>You and your guests retain ownership of all photos and videos uploaded to the Service. By uploading content, you grant Reelday a limited, non-exclusive, royalty-free license to store, process, compress, display, and transmit that content solely for the purpose of operating the Service. This license ends when the gallery expires and the content is deleted.</p>
+    <p>Reelday's platform, branding, and software are our exclusive property. Nothing in these Terms transfers any intellectual property rights to you.</p>
+
+    <h2>9. Data Retention &amp; Deletion</h2>
+    <p>Media (photos and videos) associated with an event is automatically and permanently deleted when the gallery expires according to your plan. Account data (name, email, event metadata) is retained while your account is active. You may request deletion of your account and associated data by emailing <a href="mailto:hello@reelday.ph">hello@reelday.ph</a>.</p>
+
+    <h2>10. Disclaimer of Warranties</h2>
+    <p>The Service is provided "as is" and "as available" without warranties of any kind, express or implied. We do not warrant that the Service will be error-free, uninterrupted, or free from loss, corruption, or security breach.</p>
+
+    <h2>11. Limitation of Liability</h2>
+    <p>To the maximum extent permitted by Philippine law, Reelday's total liability to you for any claim arising out of or related to these Terms or the Service shall not exceed the amount you paid us in the 30 days preceding the claim. We are not liable for any indirect, incidental, special, consequential, or exemplary damages, including loss of data, revenue, or goodwill.</p>
+
+    <h2>12. Governing Law &amp; Disputes</h2>
+    <p>These Terms are governed by the laws of the Republic of the Philippines. Any dispute shall first be attempted to be resolved amicably. If unresolved within 30 days, disputes shall be submitted to the proper courts of Quezon City, Metro Manila.</p>
+
+    <h2>13. Changes to These Terms</h2>
+    <p>We may update these Terms at any time. Material changes will be notified by email or by a prominent notice on the site at least 14 days before taking effect. Continued use of the Service after the effective date constitutes acceptance of the revised Terms.</p>
+
+    <h2>14. Contact</h2>
+    <p>Questions about these Terms? Email us at <a href="mailto:hello@reelday.ph">hello@reelday.ph</a>.</p>
+
+  </div><!-- /panel-terms -->
+
+  <!-- ── PRIVACY POLICY ────────────────────────────────────── -->
+  <div class="tab-panel legal" id="panel-privacy" role="tabpanel" aria-labelledby="tab-privacy">
+
+    <div class="notice">
+      This Privacy Policy explains how Reelday Inc. collects, uses, and protects your personal information in compliance with the Republic Act No. 10173 (Data Privacy Act of 2012) and its Implementing Rules and Regulations.
+    </div>
+
+    <h2>1. Who We Are</h2>
+    <p>Reelday Inc. is the personal information controller for data collected through reelday.ph. Our Data Protection Officer can be reached at <a href="mailto:privacy@reelday.ph">privacy@reelday.ph</a>.</p>
+
+    <h2>2. Information We Collect</h2>
+    <h3>2.1 Host Account Data</h3>
+    <ul>
+      <li><strong>Registration:</strong> full name, email address, phone number, password (stored as a one-way hash).</li>
+      <li><strong>Event data:</strong> couple/celebrant names, event type, event date, selected plan.</li>
+      <li><strong>Payment data:</strong> transaction reference numbers and payment status. We do not store card numbers, CVVs, or GCash PINs — these are handled exclusively by PayMongo.</li>
+    </ul>
+    <h3>2.2 Guest Upload Data</h3>
+    <p>Guests upload photos and videos without creating an account. We do not collect guest names, email addresses, or device identifiers beyond what is technically necessary to deliver the upload (IP address for abuse prevention, which is not stored permanently).</p>
+    <h3>2.3 Technical Data</h3>
+    <ul>
+      <li>Server logs: request timestamps, IP addresses, HTTP status codes. Retained for up to 30 days for security and debugging purposes.</li>
+      <li>Browser local storage: used client-side to preserve session state (e.g., guest upload tokens). No tracking cookies are used for advertising.</li>
+    </ul>
+
+    <h2>3. How We Use Your Information</h2>
+    <ul>
+      <li>To create and manage your Host account;</li>
+      <li>To process payments and send booking confirmation emails;</li>
+      <li>To operate the live wall — displaying uploaded photos and videos to attendees;</li>
+      <li>To compress and deliver guest videos via our processing pipeline;</li>
+      <li>To send transactional emails (account verification, password reset, booking confirmation) via Resend;</li>
+      <li>To detect and prevent abuse, fraud, and violations of our Terms of Service;</li>
+      <li>To improve the platform based on aggregated, anonymized usage patterns.</li>
+    </ul>
+    <p>We do not sell, rent, or trade your personal information to third parties. We do not use your data for behavioral advertising.</p>
+
+    <h2>4. Third-Party Services</h2>
+    <p>Reelday uses the following sub-processors to operate the Service. Each is bound by its own privacy commitments and applicable data protection law:</p>
+    <ul>
+      <li><strong>PayMongo</strong> — payment processing (Philippines). Handles card and GCash transactions.</li>
+      <li><strong>Amazon Web Services (AWS)</strong> — cloud storage (S3) and serverless video compression (Lambda) in the ap-southeast-1 (Singapore) region.</li>
+      <li><strong>Cloudflare</strong> — CDN delivery, image resizing, and DDoS protection. Images are served through Cloudflare's global edge network.</li>
+      <li><strong>Resend</strong> — transactional email delivery. We share your email address and name solely for the purpose of sending you emails you requested (e.g., booking confirmation).</li>
+    </ul>
+
+    <h2>5. Data Retention</h2>
+    <ul>
+      <li><strong>Guest media (photos &amp; videos):</strong> deleted automatically when the event's gallery expires according to your plan (Tala: 14 days; Sinag: 30 days; Dalisay: 6 months; Hiraya: 12 months). Expiry is calculated from the event date.</li>
+      <li><strong>Account data:</strong> retained while your account is active. Upon account deletion, account data is removed within 30 days.</li>
+      <li><strong>Payment records:</strong> retained for 5 years to comply with Philippine tax and accounting regulations.</li>
+      <li><strong>Server logs:</strong> retained for up to 30 days.</li>
+    </ul>
+
+    <h2>6. Data Security</h2>
+    <p>We apply industry-standard security measures including HTTPS encryption in transit, hashed password storage (bcrypt), webhook signature verification for payment events, and access controls on cloud storage. No system is perfectly secure; we cannot guarantee absolute security but we commit to notifying affected users without undue delay in the event of a data breach, as required by RA 10173.</p>
+
+    <h2>7. Your Rights Under RA 10173</h2>
+    <p>As a data subject, you have the right to:</p>
+    <ul>
+      <li><strong>Be informed</strong> — know what personal data we collect and how we use it;</li>
+      <li><strong>Access</strong> — request a copy of the personal data we hold about you;</li>
+      <li><strong>Rectification</strong> — correct inaccurate or incomplete data;</li>
+      <li><strong>Erasure / Right to be Forgotten</strong> — request deletion of your personal data, subject to legal retention requirements;</li>
+      <li><strong>Object</strong> — object to specific processing of your personal data;</li>
+      <li><strong>Data Portability</strong> — receive your data in a structured, commonly used format;</li>
+      <li><strong>Lodge a Complaint</strong> — file a complaint with the National Privacy Commission (NPC) at <a href="https://www.privacy.gov.ph" target="_blank" rel="noopener">privacy.gov.ph</a>.</li>
+    </ul>
+    <p>To exercise any of these rights, email our DPO at <a href="mailto:privacy@reelday.ph">privacy@reelday.ph</a>. We will respond within 15 business days.</p>
+
+    <h2>8. Cookies &amp; Local Storage</h2>
+    <p>Reelday uses:</p>
+    <ul>
+      <li><strong>Session cookies</strong> — to keep you logged in during your browser session. These are strictly necessary and cannot be disabled without breaking the Service.</li>
+      <li><strong>Browser local storage</strong> — to store guest upload state and wall preferences on the client side. This data never leaves your device.</li>
+    </ul>
+    <p>We do not use analytics cookies, advertising cookies, or any third-party tracking scripts.</p>
+
+    <h2>9. Children's Privacy</h2>
+    <p>Reelday accounts are for users 18 and older. We do not knowingly collect personal data from children under 18. If you believe a child has provided us with personal data without parental consent, please contact us and we will delete it promptly.</p>
+
+    <h2>10. Changes to This Policy</h2>
+    <p>We may update this Privacy Policy to reflect changes in our practices or legal requirements. Material changes will be communicated by email or by notice on the site at least 14 days before taking effect. The effective date at the top of this page will always reflect the latest version.</p>
+
+    <h2>11. Contact &amp; DPO</h2>
+    <p>For privacy-related questions, access requests, or complaints:</p>
+    <ul>
+      <li>Email: <a href="mailto:privacy@reelday.ph">privacy@reelday.ph</a></li>
+      <li>General enquiries: <a href="mailto:hello@reelday.ph">hello@reelday.ph</a></li>
+    </ul>
+
+  </div><!-- /panel-privacy -->
+
+</main>
+
+<!-- ════ FOOTER ════════════════════════════════════════════ -->
+<footer>
+  <div class="footer-inner">
+    <p>© 2026 Reelday Inc · Made in Manila</p>
+    <nav class="footer-links" aria-label="Footer">
+      <a href="/">Home</a>
+      <a href="/terms">Terms</a>
+      <a href="/terms#privacy" onclick="switchTab('privacy');return false;">Privacy</a>
+      <a href="mailto:hello@reelday.ph">Contact</a>
+    </nav>
+  </div>
+</footer>
+
+<script>
+function switchTab(id) {
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    const isActive = b.id === `tab-${id}`;
+    b.classList.toggle('active', isActive);
+    b.setAttribute('aria-selected', isActive);
+  });
+  document.querySelectorAll('.tab-panel').forEach(p => {
+    p.classList.toggle('active', p.id === `panel-${id}`);
+  });
+  history.replaceState(null, '', id === 'privacy' ? '#privacy' : location.pathname);
+}
+
+// Open to the correct tab if URL has #privacy
+if (location.hash === '#privacy') switchTab('privacy');
+</script>
+</body>
+</html>
