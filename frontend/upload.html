@@ -432,9 +432,9 @@ body { background: var(--paper); min-height: 100dvh; }
   transition: transform .25s ease, opacity .25s ease;
 }
 .cta-bar.hidden { transform: translateY(110%); opacity: 0; pointer-events: none; }
-.cta-consent { text-align: center; font-size: 11px; color: var(--ink-faint); margin-top: 6px; }
-.cta-consent a { color: var(--ink-faint); text-decoration: underline; text-underline-offset: 2px; }
-.cta-consent a:hover { color: var(--accent); }
+.upload-consent { font-size: 11px; color: var(--ink-faint); margin: 10px 0 4px; text-align: center; }
+.upload-consent a { color: var(--ink-faint); text-decoration: underline; text-underline-offset: 2px; }
+.upload-consent a:hover { color: var(--accent); }
 .cta-bar .cta-btn {
   pointer-events: auto;
   width: 100%; max-width: 460px;
@@ -1246,6 +1246,8 @@ body { background: var(--paper); min-height: 100dvh; }
       <div class="mp-char-count" id="charCount" style="margin-top:4px;">0 / 160</div>
     </div>
 
+    <p class="upload-consent">By uploading, you agree to our <a href="/terms#privacy" target="_blank" rel="noopener">Privacy Policy</a>.</p>
+
     <button class="btn btn-primary send-btn" onclick="handleSend('gallery', event)">Share moments →</button>
     <div class="success-banner" id="gallerySuccess">
       <div class="s-icon">★</div>
@@ -1360,7 +1362,6 @@ body { background: var(--paper); min-height: 100dvh; }
      Hidden on React/Poll (those flows submit inline). -->
 <div class="cta-bar hidden" id="ctaBar" aria-hidden="true">
   <button class="cta-btn" id="ctaBtn" type="button" onclick="ctaBarClick(event)">Share moments →</button>
-  <p class="cta-consent">By uploading, you agree to our <a href="/terms#privacy" target="_blank" rel="noopener">Privacy Policy</a>.</p>
 </div>
 
 <script>
