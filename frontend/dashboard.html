@@ -993,18 +993,17 @@
     }
     .qr-card .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; color: var(--ink-faint); text-transform: uppercase; margin-bottom: 14px; }
     .qr-card .qr {
-      aspect-ratio: 1; margin-bottom: 16px;
+      margin-bottom: 16px;
       border-radius: 8px; padding: 8px;
       border: 12px solid #fff;
       box-shadow: 0 0 0 1px var(--line);
-      display: flex; align-items: center; justify-content: center;
       background: var(--paper-2);
       overflow: hidden;
+      /* Let the image drive the height so the QR is never clipped */
     }
     .qr-card .qr img {
-      width: 100%; height: 100%;
+      display: block; width: 100%; height: auto;
       border-radius: 4px;
-      object-fit: contain;
     }
     .qr-card .url { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; color: var(--ink-soft); margin-bottom: 16px; word-break: break-all; }
     .actions-stack { display: grid; gap: 8px; }
@@ -1396,14 +1395,13 @@
       .stat .num { font-size: 30px; margin-bottom: 4px; }
       .stat .delta { font-size: 9px; }
 
-      /* Body — extra bottom padding for mobile sticky nav */
-      .body { padding: 0 12px 88px; margin-top: 28px; }
+      /* Body — extra bottom padding so sticky nav doesn't cover content */
+      .body { padding: 0 12px 120px; margin-top: 28px; }
       .info-hero { padding: 0 12px; }
 
-      /* QR card — thinner frame so the code isn't cut on small screens */
+      /* QR card — thinner frame on small screens */
       .qr-card { padding: 16px; }
       .qr-card .qr { border-width: 8px; padding: 6px; }
-      .qr-card .qr img { max-height: 100%; }
 
       /* Tabs */
       .tab-row { padding: 10px 14px; gap: 4px; }
