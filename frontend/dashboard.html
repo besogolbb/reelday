@@ -4772,8 +4772,12 @@
         if (recData?.reconciled) {
           showToast(`Upgraded to ${upgradedParam[0].toUpperCase()}${upgradedParam.slice(1)} — enjoy!`);
         } else if (recData?.reason === 'not_paid_yet') {
-          showToast('Payment not confirmed yet — refresh in a moment.');
+          showToast('Payment not confirmed yet — refresh in a moment.', 'error');
         }
+        // reason === 'no_pending_payments' means either the webhook already
+        // fired, or the event was created with is_paid=true (Hiraya active sub
+        // or upgrade-panel path). Either way, nothing to do — loadEvent below
+        // will show the correct state.
       } catch { /* fall through; loadEvent will surface whatever the DB has */ }
       // Strip ?upgraded= so a refresh doesn't re-run reconcile against an
       // already-applied payment.

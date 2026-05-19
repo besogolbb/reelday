@@ -91,8 +91,14 @@ export default async function eventRoutes(fastify) {
       return reply.status(404).send({ error: true, message: 'User not found' });
     }
 
-    // Use the requested plan if valid; fall back to the user's current tier.
-    const planForEvent = resolvePlan(requestedPlan || user.subscription_tier);
+    // Explicit paid-tier requests from the URL (?plan=sinag etc.) are
+    // honoured. Tala requests or missing values fall back to the user's
+    // actual subscription_tier — so a Hiraya user visiting /start without
+    // a plan param still gets a Hiraya event, not a Tala one.
+    const PAID_PLAN_IDS = new Set(['sinag', 'dalisay', 'hiraya']);
+    const planForEvent = PAID_PLAN_IDS.has(requestedPlan)
+      ? resolvePlan(requestedPlan)
+      : resolvePlan(user.subscription_tier);
 
     // Tala lifetime cap — one free event per account, ever.
     if (planForEvent.id === 'tala' && user.tala_used) {
@@ -117,6 +123,31 @@ export default async function eventRoutes(fastify) {
           event_limit:  planForEvent.eventLimit,
           active_events: existing,
         });
+      }
+    }
+
+    // Determine whether this event is already covered by an existing payment.
+    // Two cases where we can skip checkout:
+    //   1. Hiraya yearly sub: subscription_expires_at is still in the future.
+    //   2. Sinag/Dalisay upgrade-panel path: the user paid moments ago via the
+    //      upgrade panel (which has no slug at checkout time), so there is a
+    //      recent succeeded payment row with event_id still NULL.
+    let isPaid = false;
+    let claimPaymentId = null;
+
+    if (planForEvent.id === 'hiraya') {
+      isPaid = !!(user.subscription_expires_at && new Date(user.subscription_expires_at) > new Date());
+    } else if (PAID_PLAN_IDS.has(planForEvent.id)) {
+      const { rows: pmtRows } = await fastify.db.query(
+        `SELECT id FROM payments
+         WHERE user_id = $1 AND tier = $2 AND status = 'succeeded'
+           AND event_id IS NULL AND created_at > NOW() - INTERVAL '30 minutes'
+         ORDER BY created_at DESC LIMIT 1`,
+        [userId, planForEvent.id],
+      );
+      if (pmtRows.length) {
+        isPaid = true;
+        claimPaymentId = pmtRows[0].id;
       }
     }
 
@@ -150,7 +181,7 @@ export default async function eventRoutes(fastify) {
             event_date ?? null,
             planForEvent.id,
             userId,
-            false,
+            isPaid,
             galleryExpiresAt,
             uploadWindowStartsAt,
             uploadWindowEndsAt,
@@ -182,6 +213,15 @@ export default async function eventRoutes(fastify) {
       await fastify.db.query(
         `UPDATE users SET tala_used = true WHERE id = $1`,
         [userId],
+      );
+    }
+
+    // Link the pre-claimed payment to this event (upgrade-panel path where
+    // payment completed before event creation, leaving event_id NULL).
+    if (claimPaymentId) {
+      await fastify.db.query(
+        `UPDATE payments SET event_id = $1 WHERE id = $2`,
+        [inserted.id, claimPaymentId],
       );
     }
 

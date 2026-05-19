@@ -112,7 +112,7 @@
 </div>
 
 <main class="main">
-  <a class="btn btn-accent" href="/start" style="margin-bottom:2rem;display:inline-flex">+ New Event</a>
+  <a class="btn btn-accent" href="/start" id="new-event-link" style="margin-bottom:2rem;display:inline-flex">+ New Event</a>
 
   <div class="loading" id="loading"><div class="spinner"></div></div>
   <div id="events-container" style="display:none"></div>
@@ -157,6 +157,14 @@
 
       document.getElementById('page-sub').textContent =
         `${events.length} event${events.length !== 1 ? 's' : ''} · ${u.email}`;
+
+      // Point "New Event" at the user's current tier so they don't
+      // accidentally land in the Tala wizard when they already have a
+      // paid subscription.
+      const tier = u.subscription_tier;
+      if (tier && tier !== 'tala') {
+        document.getElementById('new-event-link').href = `/start?plan=${tier}`;
+      }
 
       document.getElementById('loading').style.display = 'none';
       const container = document.getElementById('events-container');
