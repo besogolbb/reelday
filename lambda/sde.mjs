@@ -268,9 +268,26 @@ async function normalizePhoto(srcPath, outPath, durSec, { kenBurns = true, index
     // (Was 0.0015/frame with 1.15 cap — felt frantic at TV viewing
     // distance, hit the cap in ~4 s.)
     const [xExpr, yExpr] = KEN_BURNS_ANCHORS[index % KEN_BURNS_ANCHORS.length];
+    // Supersample fix for the "stair-step / ladder" jitter on slow pans:
+    // zoompan truncates the crop-window x/y to INTEGER input-pixel units
+    // every output frame. At the old 2400 px working size one step was
+    // ≈0.8 output px → visibly notchy. We now cover-fill a 3×-output
+    // canvas and let zoompan emit the final 1920×1080 directly, so one
+    // integer input-pixel step is ≈0.33 output px → sub-pixel, smooth.
+    // `increase`+`crop` (cover, NOT the old decrease+pad=color=black)
+    // also removes the black letterbox bars on portrait phone photos —
+    // that was the "doesn't cover the whole screen" report; every other
+    // path (video, flat photo, card bg) already cover-fills, only this
+    // one didn't. Cost is ~9× the zoompan input area but the encode
+    // (libx264 veryfast, still 1080p) is unchanged: the 2026-05-19
+    // 900 s-timeout run used only ~140 s wall (~6× headroom) and
+    // 1.6/3 GB RAM, so this stays well inside budget. Tunable: drop the
+    // 3× to 2× (TARGET_*×2) if a future larger reel gets tight on time.
+    const SS_W = TARGET_W * 3; // 5760
+    const SS_H = TARGET_H * 3; // 3240
     const vf = [
-      `scale=2400:1350:force_original_aspect_ratio=decrease`,
-      `pad=2400:1350:(ow-iw)/2:(oh-ih)/2:color=black`,
+      `scale=${SS_W}:${SS_H}:force_original_aspect_ratio=increase`,
+      `crop=${SS_W}:${SS_H}`,
       `zoompan=z='min(zoom+0.0006\\,1.10)':d=${frames}:` +
         `x='${xExpr}':y='${yExpr}':` +
         `s=${TARGET_W}x${TARGET_H}:fps=${TARGET_FPS}`,
