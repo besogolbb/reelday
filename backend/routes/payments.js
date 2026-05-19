@@ -467,6 +467,7 @@ export default async function paymentRoutes(fastify) {
         `UPDATE payments SET status = 'succeeded' WHERE id = $1`,
         [pmt.id],
       );
+      sendBookingConfirmationEmail(fastify.db, { userId, tier: pmt.tier, slug }, request.log).catch(() => {});
       appliedTier = pmt.tier;
       appliedSlug = slug;
       break; // one upgrade per call — Sinag accumulates per row, but the
