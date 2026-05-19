@@ -813,7 +813,7 @@
   }
 
   // ── Create event ───────────────────────────────
-  async function createEvent() {
+  async function createEvent(planOverride) {
     const token = getToken();
     const res = await fetch('/api/events', {
       method: 'POST',
@@ -825,6 +825,7 @@
         couple_names: state.name,
         event_type:   state.type,
         event_date:   state.date || null,
+        plan:         planOverride || state.plan,
       }),
     });
     const data = await res.json();
@@ -1046,7 +1047,7 @@
               },
             }).catch(() => {/* non-fatal — createEvent may still work if webhook fired */});
 
-            const { event } = await createEvent();
+            const { event } = await createEvent(params.get('upgraded') || state.plan);
             location.href = `/dashboard?slug=${event.slug}&upgraded=${params.get('upgraded') || ''}`;
             // `return` would be a SyntaxError at module top-level. The
             // browser is navigating away — any remaining init below is

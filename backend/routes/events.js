@@ -61,7 +61,7 @@ async function loadUserWithPlan(db, userId) {
   if (!userId) return null;
   const { rows } = await db.query(
     `SELECT id, subscription_tier, subscription_expires_at,
-            events_remaining, tala_used
+            sinag_credits, dalisay_credits, hiraya_credits, tala_used
        FROM users WHERE id = $1`,
     [userId],
   );
@@ -80,7 +80,7 @@ async function countUserActiveEvents(db, userId) {
 export default async function eventRoutes(fastify) {
   // POST /api/events — create a new event (auth required)
   fastify.post('/events', { preHandler: fastify.authenticate }, async (request, reply) => {
-    const { couple_names, event_type, event_date } = request.body ?? {};
+    const { couple_names, event_type, event_date, plan: requestedPlan } = request.body ?? {};
 
     if (!couple_names) {
       return reply.status(400).send({ error: true, message: 'couple_names is required' });
@@ -92,47 +92,53 @@ export default async function eventRoutes(fastify) {
       return reply.status(404).send({ error: true, message: 'User not found' });
     }
 
-    const planForEvent = resolvePlan(user.subscription_tier);
+    // Map each paid tier to its credit column on the users row.
+    const TIER_CREDIT = { sinag: 'sinag_credits', dalisay: 'dalisay_credits', hiraya: 'hiraya_credits' };
+    const creditCol   = TIER_CREDIT[requestedPlan] ?? null;
 
-    // ── Tala lifetime cap (1 free event per account, ever) ──
-    // Hard rule that overrides the count-based check below — a Tala user
-    // who deletes their event must NOT be able to claim another free
-    // slot. tala_used is set the first time a plan='tala' row is
-    // inserted (below) and is never cleared.
-    if (planForEvent.id === 'tala' && user.tala_used) {
-      return reply.status(403).send({
-        error: true,
-        code: 'plan_limit_events',
-        message: `You've already used your free Tala event. Upgrade to add more.`,
-        plan: planForEvent.id,
-        tala_used: true,
-      });
-    }
+    let planForEvent;
+    let paidByCredit = false;
 
-    // ── Enforce events_remaining first (paid tiers), eventLimit second (Tala) ──
-    if (user.events_remaining !== null && user.events_remaining !== undefined) {
-      // User has a finite credit balance from a paid tier
-      if (user.events_remaining <= 0) {
+    if (creditCol) {
+      // ── Paid tier requested — check per-tier credit bucket ──
+      if ((user[creditCol] || 0) <= 0) {
         return reply.status(403).send({
           error: true,
-          code: 'plan_limit_events',
-          message: `Your ${planForEvent.name} plan has no event credits left. Upgrade to add more.`,
-          plan: planForEvent.id,
-          events_remaining: 0,
+          code:    'plan_limit_events',
+          message: `No ${requestedPlan} credits remaining. Purchase to continue.`,
+          plan:    requestedPlan,
         });
       }
+      planForEvent = resolvePlan(requestedPlan);
+      paidByCredit = true;
     } else {
-      // No credit balance — fall back to counting active events vs eventLimit
-      const existing = await countUserActiveEvents(fastify.db, userId);
-      if (existing >= planForEvent.eventLimit) {
+      // ── Free tier (Tala) or no plan specified ──
+      planForEvent = resolvePlan(user.subscription_tier);
+
+      // Tala lifetime cap — one free event per account, ever.
+      if (planForEvent.id === 'tala' && user.tala_used) {
         return reply.status(403).send({
           error: true,
-          code: 'plan_limit_events',
-          message: `Your ${planForEvent.name} plan allows ${planForEvent.eventLimit} active event${planForEvent.eventLimit === 1 ? '' : 's'}. Upgrade to add more.`,
-          plan: planForEvent.id,
-          event_limit: planForEvent.eventLimit,
-          active_events: existing,
+          code:     'plan_limit_events',
+          message:  `You've already used your free Tala event. Upgrade to add more.`,
+          plan:     planForEvent.id,
+          tala_used: true,
         });
+      }
+
+      // Tala eventLimit fallback (counts active events vs the 1-event cap).
+      if (planForEvent.id === 'tala') {
+        const existing = await countUserActiveEvents(fastify.db, userId);
+        if (existing >= planForEvent.eventLimit) {
+          return reply.status(403).send({
+            error: true,
+            code:         'plan_limit_events',
+            message:      `Your Tala plan allows ${planForEvent.eventLimit} active event. Upgrade to add more.`,
+            plan:         planForEvent.id,
+            event_limit:  planForEvent.eventLimit,
+            active_events: existing,
+          });
+        }
       }
     }
 
@@ -140,12 +146,6 @@ export default async function eventRoutes(fastify) {
     const galleryExpiresAt     = galleryExpiryFor(planForEvent.id, stampDate);
     const uploadWindowStartsAt = uploadWindowStartFor(planForEvent.id, stampDate);
     const uploadWindowEndsAt   = uploadWindowEndFor(planForEvent.id, stampDate);
-
-    // If the user has event credits (events_remaining > 0), this create
-    // consumes one credit and the event is immediately paid — no checkout
-    // needed. Tala users always have events_remaining = null so this is
-    // only ever true for previously-paid sinag/dalisay/hiraya accounts.
-    const paidByCredit = user.events_remaining != null && user.events_remaining > 0;
 
     // Slug allocation: try the clean name first ("juan-and-maria"); only
     // append a random suffix when that exact slug already exists. We
@@ -197,10 +197,10 @@ export default async function eventRoutes(fastify) {
       });
     }
 
-    // Decrement events_remaining if it's set (paid-tier credit pool)
-    if (user.events_remaining !== null && user.events_remaining !== undefined) {
+    // Consume one credit from the tier bucket used for this event.
+    if (creditCol) {
       await fastify.db.query(
-        `UPDATE users SET events_remaining = GREATEST(events_remaining - 1, 0) WHERE id = $1`,
+        `UPDATE users SET ${creditCol} = GREATEST(${creditCol} - 1, 0) WHERE id = $1`,
         [userId],
       );
     }

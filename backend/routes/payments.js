@@ -158,21 +158,23 @@ function paymongoAuth() {
 /**
  * Apply a successful payment to the buyer's account.
  *  - subscription_tier is bumped to the purchased tier
- *  - events_remaining is replaced with the tier's eventLimit (Sinag accumulates by 1 each time)
+ *  - the matching per-tier credit bucket is incremented (sinag/dalisay/hiraya)
  *  - subscription_expires_at gets +1 year for Hiraya (yearly sub), NULL otherwise
  *  - if a slug was passed, the targeted event is also marked is_paid + plan upgraded
  */
 export async function applyTierUpgrade(db, { userId, tier, slug }) {
   const plan = resolvePlan(tier);
 
-  // Sinag accumulates (one credit per ₱1,490); Dalisay replaces (1-event package);
-  // Hiraya replaces with a 10-event yearly bucket.
+  // All tiers now accumulate into their own credit bucket.
+  // Sinag:   +1 per purchase
+  // Dalisay: +1 per purchase (eventLimit = 1)
+  // Hiraya:  +eventLimit (10) per yearly purchase
   let updateSql, params;
   if (plan.id === 'sinag') {
     updateSql = `
       UPDATE users
          SET subscription_tier        = 'sinag',
-             events_remaining         = COALESCE(events_remaining, 0) + 1,
+             sinag_credits            = sinag_credits + 1,
              subscription_expires_at  = NULL
        WHERE id = $1`;
     params = [userId];
@@ -180,7 +182,7 @@ export async function applyTierUpgrade(db, { userId, tier, slug }) {
     updateSql = `
       UPDATE users
          SET subscription_tier        = 'hiraya',
-             events_remaining         = $2,
+             hiraya_credits           = hiraya_credits + $2,
              subscription_expires_at  = NOW() + INTERVAL '1 year'
        WHERE id = $1`;
     params = [userId, plan.eventLimit];
@@ -188,7 +190,7 @@ export async function applyTierUpgrade(db, { userId, tier, slug }) {
     updateSql = `
       UPDATE users
          SET subscription_tier        = $2,
-             events_remaining         = $3,
+             dalisay_credits          = dalisay_credits + $3,
              subscription_expires_at  = NULL
        WHERE id = $1`;
     params = [userId, plan.id, plan.eventLimit];

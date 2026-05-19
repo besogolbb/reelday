@@ -1348,9 +1348,15 @@
           <span style="color:var(--ink-faint);font-size:.82rem">${esc(u.email)}</span>
         </td>
         <td>${u.active_event_count}${u.total_event_count !== u.active_event_count ? ` <span style="color:var(--ink-faint);font-size:.78rem">(${u.total_event_count})</span>` : ''}</td>
-        <td>${u.events_remaining != null
-          ? `<span style="display:inline-block;min-width:1.6rem;text-align:center;background:${u.events_remaining > 0 ? 'rgba(196,90,58,.12)' : 'var(--paper-2)'};color:${u.events_remaining > 0 ? 'var(--accent-deep)' : 'var(--ink-faint)'};border-radius:999px;padding:.15rem .6rem;font-size:.82rem;font-weight:700">${u.events_remaining}</span>`
-          : `<span style="color:var(--ink-faint);font-size:.78rem">—</span>`}</td>
+        <td>
+          ${[['S', u.sinag_credits], ['D', u.dalisay_credits], ['H', u.hiraya_credits]].map(([lbl, n]) =>
+            `<span style="display:inline-block;margin:.1rem .15rem;min-width:1.4rem;text-align:center;
+              background:${n > 0 ? 'rgba(196,90,58,.12)' : 'var(--paper-2)'};
+              color:${n > 0 ? 'var(--accent-deep)' : 'var(--ink-faint)'};
+              border-radius:999px;padding:.12rem .45rem;font-size:.75rem;font-weight:700"
+            >${lbl}:${n}</span>`
+          ).join('')}
+        </td>
         <td>${verifiedPill}</td>
         <td>${statusPill}</td>
         <td style="font-size:.8rem;color:var(--ink-faint)">${fmtDate(u.created_at)}</td>

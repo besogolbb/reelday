@@ -75,11 +75,22 @@ ALTER TABLE events ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES users(id);
 -- subscription_tier: 'tala' | 'sinag' | 'dalisay' | 'hiraya'
 -- subscription_expires_at: NULL for free / per-event purchases; set to NOW()+1yr
 --   for Hiraya, the only yearly tier.
--- events_remaining: NULL = unlimited per the tier; set to 1 for Sinag/Dalisay
---   one-time purchases (accumulates on Sinag re-buy), and to 10 for Hiraya.
+-- Per-tier credit pools — each payment adds to the matching bucket.
+-- Event creation consumes one credit from the requested tier's bucket.
+-- events_remaining is kept for backward-compat reads but is no longer written.
 ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_tier       VARCHAR(20)   DEFAULT 'tala';
 ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_expires_at TIMESTAMPTZ;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS events_remaining        INTEGER;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS sinag_credits           INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS dalisay_credits         INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS hiraya_credits          INTEGER NOT NULL DEFAULT 0;
+-- One-time migration: move any legacy events_remaining into the right bucket.
+UPDATE users SET sinag_credits   = GREATEST(COALESCE(events_remaining, 0), 0)
+  WHERE subscription_tier = 'sinag'   AND events_remaining > 0 AND sinag_credits   = 0;
+UPDATE users SET dalisay_credits = GREATEST(COALESCE(events_remaining, 0), 0)
+  WHERE subscription_tier = 'dalisay' AND events_remaining > 0 AND dalisay_credits = 0;
+UPDATE users SET hiraya_credits  = GREATEST(COALESCE(events_remaining, 0), 0)
+  WHERE subscription_tier = 'hiraya'  AND events_remaining > 0 AND hiraya_credits  = 0;
 
 -- tala_used: lifetime "1 free Tala event per account" flag. Set to true
 -- the first time a user creates a plan='tala' event and never cleared,
