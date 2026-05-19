@@ -642,7 +642,7 @@
         <table>
           <thead>
             <tr>
-              <th>Name / Email</th><th>Plan</th><th>Events</th><th>Verified</th><th>Status</th><th>Joined</th><th>Actions</th>
+              <th>Name / Email</th><th>Events</th><th>Verified</th><th>Status</th><th>Joined</th><th>Actions</th>
             </tr>
           </thead>
           <tbody id="users-tbody"></tbody>
@@ -849,7 +849,7 @@
       document.getElementById('nav-users-count').textContent = allUsers.length.toString();
       renderUsers(allUsers);
     } catch {
-      document.getElementById('users-tbody').innerHTML = '<tr><td colspan="7" class="empty-state">Error loading users.</td></tr>';
+      document.getElementById('users-tbody').innerHTML = '<tr><td colspan="6" class="empty-state">Error loading users.</td></tr>';
     }
   }
 
@@ -1312,8 +1312,6 @@
   // Users view
   // ────────────────────────────────────────────────────────────────
   function renderUserRow(u) {
-    const tier = (u.subscription_tier || 'tala').toLowerCase();
-    const tierClass = TIERS.includes(tier) ? `tier-${tier}` : 'tier-tala';
     const verifiedPill = u.is_verified
       ? '<span class="pill pill-succeeded">Verified</span>'
       : '<span class="pill pill-pending">Not verified</span>';
@@ -1326,19 +1324,11 @@
     const activeBtn = u.is_active === false
       ? `<button class="btn-activate"   onclick="setActive('${esc(u.id)}', true)">↺ Reactivate</button>`
       : `<button class="btn-deactivate" onclick="setActive('${esc(u.id)}', false)">🔒 Deactivate</button>`;
-    const tierOptions = TIERS.map(t =>
-      `<option value="${t}"${t === tier ? ' selected' : ''}>${esc(TIER_LABELS[t])}</option>`
-    ).join('');
     return `
       <tr id="urow-${esc(u.id)}">
         <td>
           <strong>${esc(u.full_name || '—')}</strong><br>
           <span style="color:var(--ink-faint);font-size:.82rem">${esc(u.email)}</span>
-        </td>
-        <td>
-          <select class="tier-select ${tierClass}" onchange="setPlan('${esc(u.id)}', this.value, this)" title="Manual plan override">
-            ${tierOptions}
-          </select>
         </td>
         <td>${u.active_event_count}${u.total_event_count !== u.active_event_count ? ` <span style="color:var(--ink-faint);font-size:.78rem">(${u.total_event_count})</span>` : ''}</td>
         <td>${verifiedPill}</td>
@@ -1351,7 +1341,7 @@
   function renderUsers(list) {
     const tbody = document.getElementById('users-tbody');
     if (!list.length) {
-      tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No users match.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No users match.</td></tr>';
       return;
     }
     tbody.innerHTML = list.map(renderUserRow).join('');
@@ -1365,25 +1355,6 @@
       (u.full_name || '').toLowerCase().includes(q)
     ));
   });
-
-  async function setPlan(id, tier, selectEl) {
-    const prev = selectEl.dataset.prev || allUsers.find(u => u.id === id)?.subscription_tier || 'tala';
-    selectEl.dataset.prev = tier;
-    try {
-      const r = await adminFetch(`/api/admin/users/${id}/plan`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tier }),
-      });
-      if (!r.ok) throw new Error();
-      const u = allUsers.find(u => u.id === id);
-      if (u) u.subscription_tier = tier;
-      selectEl.className = `tier-select tier-${tier}`;
-      toast(`Plan updated to ${TIER_LABELS[tier] || tier}.`, 'success');
-    } catch {
-      selectEl.value = prev;
-      toast('Failed to change plan.', 'error');
-    }
-  }
 
   async function setVerified(id, verified) {
     try {
@@ -1556,7 +1527,7 @@
   }
 
   // Expose for inline handlers
-  window.setPlan = setPlan; window.setVerified = setVerified; window.setActive = setActive;
+  window.setVerified = setVerified; window.setActive = setActive;
   window.deleteUser = deleteUser;
   window.verify = verify; window.reject = reject; window.refundPayment = refundPayment;
   window.openEventEditor = openEventEditor; window.deleteEvent = deleteEvent;
