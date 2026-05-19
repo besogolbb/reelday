@@ -39,6 +39,66 @@ async function sendVerifyEmail(email, fullName, token, appUrl) {
   }), 10_000, 'Resend (verify)');
 }
 
+async function sendWelcomeEmail(email, fullName, appUrl) {
+  const firstName  = (fullName || '').split(' ')[0] || 'there';
+  const dashUrl    = `${appUrl}/dashboard`;
+  const pricingUrl = `${appUrl}/#pricing`;
+  await withTimeout(resend().emails.send({
+    from:    'Reelday <noreply@reelday.ph>',
+    to:      email,
+    subject: `Welcome to Reelday, ${firstName}! Here's how to get started`,
+    html: `
+      <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:1.5rem;color:#3f2318">
+        <h2 style="color:#c45a3a;margin:0 0 .75rem">Kamusta, ${firstName}! 🎉</h2>
+        <p style="margin:0 0 1rem;line-height:1.6">
+          Your Reelday account is ready. You're on the <strong>Tala (Free)</strong> plan —
+          here's what you get:
+        </p>
+        <table style="border-collapse:collapse;font-size:14px;width:100%;margin-bottom:1.25rem">
+          <tr style="background:#faf3ec">
+            <td style="padding:9px 14px">📸</td>
+            <td style="padding:9px 14px">Up to <strong>25 photos</strong> per event</td>
+          </tr>
+          <tr>
+            <td style="padding:9px 14px">⏱️</td>
+            <td style="padding:9px 14px"><strong>2-day demo window</strong> — uploads open right after you create your event</td>
+          </tr>
+          <tr style="background:#faf3ec">
+            <td style="padding:9px 14px">📅</td>
+            <td style="padding:9px 14px">Uploads <strong>reopen on your event day</strong> automatically</td>
+          </tr>
+          <tr>
+            <td style="padding:9px 14px">🖼️</td>
+            <td style="padding:9px 14px">Live photo wall your guests can watch in real time</td>
+          </tr>
+        </table>
+        <p style="margin:0 0 1.25rem;line-height:1.6">
+          Ready to try it? Create your event, grab the QR code, and share it with a few guests.
+        </p>
+        <a href="${dashUrl}"
+           style="display:inline-block;background:#c45a3a;color:#fff;text-decoration:none;
+                  padding:12px 28px;border-radius:8px;font-weight:700;font-size:15px">
+          Create your event →
+        </a>
+        <hr style="border:none;border-top:1px solid #eadbce;margin:1.75rem 0">
+        <p style="margin:0 0 .5rem;font-size:13px;color:#888">Want more for your big day?</p>
+        <table style="border-collapse:collapse;font-size:13px;width:100%">
+          <tr>
+            <td style="padding:6px 14px 6px 0;font-weight:700;color:#c45a3a;white-space:nowrap">Sinag — ₱1,490</td>
+            <td style="padding:6px 0;color:#555">Unlimited photos &amp; videos · 30-day gallery · reactions</td>
+          </tr>
+          <tr>
+            <td style="padding:6px 14px 6px 0;font-weight:700;color:#c45a3a;white-space:nowrap">Dalisay — ₱2,990</td>
+            <td style="padding:6px 0;color:#555">+ Audio notes · polls · event website · Same Day Edit reel</td>
+          </tr>
+        </table>
+        <p style="margin:1rem 0 0;font-size:13px">
+          <a href="${pricingUrl}" style="color:#c45a3a">View all plans →</a>
+        </p>
+      </div>`,
+  }), 10_000, 'Resend (welcome)');
+}
+
 async function sendResetEmail(email, token, appUrl) {
   const link = `${appUrl}/reset-password?token=${token}`;
   await withTimeout(resend().emails.send({
@@ -95,6 +155,11 @@ export default async function authRoutes(fastify) {
       } catch (err) {
         fastify.log.warn({ err }, 'Failed to send verification email');
       }
+      // Welcome email is fire-and-forget — a delivery failure here must
+      // never block registration or make the verify email look broken.
+      sendWelcomeEmail(email, full_name, buildAppUrl(request)).catch(err => {
+        fastify.log.warn({ err: err.message }, 'Failed to send welcome email');
+      });
     }
 
     // Return a token so the client can auto-login (always safe since account is active)
