@@ -55,7 +55,7 @@
     flex: 1;
     display: flex; align-items: center; justify-content: center;
     padding: 32px 24px 80px;
-    overflow: hidden;
+    overflow-x: hidden; /* clips slide transitions; allows date input to show fully */
   }
 
   .wizard-track {
@@ -180,7 +180,10 @@
   .big-input::placeholder { color: var(--ink-faint); opacity: .5; }
 
   .big-date {
+    display: block;
     width: 100%;
+    max-width: 100%;
+    min-width: 0;
     background: #fff;
     border: 1.5px solid var(--line-2);
     border-radius: var(--r);
@@ -190,6 +193,7 @@
     padding: 18px 16px;
     outline: none;
     transition: border-color .2s;
+    box-sizing: border-box;
   }
   .big-date:focus { border-color: var(--accent); }
 
@@ -223,6 +227,17 @@
     transition: border-color .2s;
   }
   .auth-form input:focus { border-color: var(--accent); }
+
+  .pw-wrap { position: relative; }
+  .pw-wrap input { padding-right: 48px; }
+  .pw-toggle {
+    position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; cursor: pointer; padding: 4px;
+    color: var(--ink-faint); display: flex; align-items: center; justify-content: center;
+    transition: color .15s;
+  }
+  .pw-toggle:hover { color: var(--ink-soft); }
+  .pw-toggle svg { width: 18px; height: 18px; display: block; }
 
   .auth-divider {
     display: flex; align-items: center; gap: .75rem;
@@ -419,6 +434,7 @@
     .wizard-stage { padding: 18px 18px 60px; }
     .slide-actions { justify-content: stretch; }
     .slide-actions .btn-next, .slide-actions .btn-finish { width: 100%; justify-content: center; }
+    .big-date { font-size: 16px; padding: 14px 12px; }
   }
 </style>
 </head>
@@ -527,7 +543,15 @@
         </div>
         <div>
           <label for="a-pw">Password</label>
-          <input type="password" id="a-pw" placeholder="At least 8 characters" autocomplete="new-password" />
+          <div class="pw-wrap">
+            <input type="password" id="a-pw" placeholder="At least 8 characters" autocomplete="new-password" />
+            <button type="button" class="pw-toggle" id="pw-toggle" aria-label="Show password">
+              <svg id="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            </button>
+          </div>
         </div>
         <div class="field-error" id="err-auth"></div>
       </div>
@@ -1030,6 +1054,17 @@
       errEl.classList.add('show');
     }
   }
+
+  // ── Password show/hide toggle ──────────────────
+  document.getElementById('pw-toggle')?.addEventListener('click', function () {
+    const inp = document.getElementById('a-pw');
+    const isHidden = inp.type === 'password';
+    inp.type = isHidden ? 'text' : 'password';
+    this.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+    document.getElementById('eye-icon').innerHTML = isHidden
+      ? '<path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/>'
+      : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+  });
 
   if (!isLoggedIn) {
     const cfg = await fetch('/api/auth/config').then(r => r.json()).catch(() => ({}));
