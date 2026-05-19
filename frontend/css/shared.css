@@ -283,9 +283,29 @@ footer .brand-img { height: 80px; }
   max-width: 1200px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr;
+  grid-template-columns: 2fr 1fr 1fr 1fr auto;
   gap: 48px;
   align-items: start;
+}
+.footer-viber { text-align: center; }
+.footer-viber img {
+  width: 110px; height: 110px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  display: block; margin: 0 auto 8px;
+}
+.footer-viber-label {
+  font-size: 11px;
+  color: var(--ink-soft);
+  line-height: 1.4;
+}
+@media (max-width: 900px) {
+  .site-footer-inner { grid-template-columns: 1fr 1fr; }
+  .footer-viber { grid-column: span 2; }
+}
+@media (max-width: 540px) {
+  .site-footer-inner { grid-template-columns: 1fr; }
+  .footer-viber { grid-column: unset; }
 }
 .site-footer h4 {
   font-family: var(--mono);
