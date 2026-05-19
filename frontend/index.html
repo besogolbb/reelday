@@ -190,26 +190,6 @@
     transform: rotate(3deg);
   }
 
-  /* ── Hero stats strip ──────────────────────────────────── */
-  .hero-strip {
-    max-width: 1100px; margin: 64px auto 0;
-    background: var(--ink); color: var(--paper);
-    border-radius: var(--r-xl);
-    padding: 36px 48px;
-    display: grid; grid-template-columns: repeat(4,1fr);
-    gap: 32px; position: relative; z-index: 5;
-  }
-  .hstat .num {
-    font-family: var(--display); font-size: 52px; font-weight: 400;
-    line-height: 1; letter-spacing: -.02em; margin-bottom: 8px;
-  }
-  .hstat .num em { color: var(--accent-soft); font-style: italic; }
-  .hstat .lbl {
-    font-family: var(--mono); font-size: 11px;
-    letter-spacing: .14em; text-transform: uppercase;
-    color: rgba(251,245,236,.55);
-  }
-
   /* ════════════════════════════════════════════════════════
      HOW IT WORKS — cinematic 4-step
   ════════════════════════════════════════════════════════ */
@@ -553,53 +533,6 @@
   .wall-thumb.wt-active { opacity: 1; border-color: var(--accent); }
 
   /* ════════════════════════════════════════════════════════
-     TESTIMONIALS
-  ════════════════════════════════════════════════════════ */
-  .testimonials {
-    padding: 100px 28px;
-    background: linear-gradient(160deg, #160b07 0%, #241209 50%, #160b07 100%);
-    position: relative; overflow: hidden;
-  }
-  .testimonials-inner { max-width: 1100px; margin: 0 auto; position: relative; }
-  .testimonials-head { text-align: center; margin-bottom: 56px; }
-  .testimonials-head h2 {
-    font-family: var(--display); font-weight: 400;
-    font-size: clamp(36px, 4.5vw, 56px);
-    letter-spacing: -.025em; line-height: 1.06; color: #fdfaf5;
-    margin-top: 16px;
-  }
-  .testimonials-head h2 em { font-style: italic; color: rgba(216,160,90,.9); }
-  .testi-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 20px; }
-  .testi-card {
-    background: rgba(253,250,245,.04); border: 1px solid rgba(253,250,245,.08);
-    border-radius: 20px; padding: 32px;
-    display: flex; flex-direction: column; gap: 20px;
-    box-shadow: 0 2px 8px rgba(0,0,0,.35), 0 20px 50px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.06);
-    transition: transform .35s cubic-bezier(.22,1,.36,1), box-shadow .35s ease;
-  }
-  .testi-card:hover {
-    transform: translateY(-6px);
-    box-shadow: 0 6px 20px rgba(0,0,0,.5), 0 40px 80px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.10);
-  }
-  .testi-stars { color: rgba(216,160,90,.9); font-size: 14px; letter-spacing: 3px; }
-  .testi-quote {
-    font-family: var(--display); font-style: italic;
-    font-size: clamp(15px, 1.6vw, 19px); line-height: 1.5;
-    color: rgba(253,250,245,.88); letter-spacing: -.01em; font-weight: 400; flex: 1;
-  }
-  .testi-attr {
-    display: flex; align-items: center; gap: 14px;
-    padding-top: 20px; border-top: 1px solid rgba(253,250,245,.08);
-  }
-  .testi-avatar {
-    width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
-    border: 1px solid rgba(253,250,245,.12);
-    object-fit: cover; background: rgba(253,250,245,.08);
-  }
-  .testi-name { font-weight: 600; font-size: 14px; color: #fdfaf5; }
-  .testi-meta { font-family: var(--mono); font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: rgba(216,160,90,.6); margin-top: 3px; }
-
-  /* ════════════════════════════════════════════════════════
      FEATURES
   ════════════════════════════════════════════════════════ */
   .features { padding: 100px 28px; background: var(--paper-2); }
@@ -821,10 +754,6 @@
     .hero-cta { flex-direction: column; }
     .hero-cta .btn { width: 100%; justify-content: center; }
 
-    /* stats strip */
-    .hstat .num { font-size: 36px; }
-    .hero-strip { gap: 20px; padding: 20px; }
-
     /* live wall */
     .wl-stats { display: none; }
     .wl-frame-inner { flex-direction: column; align-items: flex-start; padding: 0 16px 16px; gap: 8px; }
@@ -833,9 +762,7 @@
     .wall-thumbs { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 6px; -webkit-overflow-scrolling: touch; }
     .wall-thumb { flex: 0 0 80px; }
 
-    /* testimonials */
-    .testi-grid { grid-template-columns: 1fr; }
-    .testi-card { padding: 24px; }
+
 
     /* events */
     .event-tile { aspect-ratio: auto; min-height: 130px; padding: 16px 14px; }
@@ -972,13 +899,6 @@
     </div>
   </div>
 
-  <!-- Stats strip -->
-  <div class="hero-strip">
-    <div class="hstat"><div class="num"><em>2,140</em></div><div class="lbl" data-i18n="stat-events">Events hosted</div></div>
-    <div class="hstat"><div class="num"><em>180k</em></div><div class="lbl" data-i18n="stat-photos">Photos uploaded</div></div>
-    <div class="hstat"><div class="num"><em>52s</em></div><div class="lbl" data-i18n="stat-setup">Setup time avg</div></div>
-    <div class="hstat"><div class="num"><em>4.9★</em></div><div class="lbl" data-i18n="stat-rating">Event rating</div></div>
-  </div>
 </section>
 
 <!-- ════ FEATURES ══════════════════════════════════════════ -->
@@ -1163,55 +1083,6 @@
       <div class="wl-progress"><div class="wl-progress-fill" id="wlFill"></div></div>
     </div>
     <div class="wall-thumbs" id="wallThumbs"></div>
-  </div>
-</section>
-
-<!-- ════ TESTIMONIALS ══════════════════════════════════════ -->
-<section class="testimonials">
-  <div class="testimonials-inner">
-    <div class="testimonials-head">
-      <div class="eyebrow" style="justify-content:center;margin-bottom:16px;color:rgba(216,160,90,.7);">— What people say</div>
-      <h2>Real moments.<br/><em>Real reactions.</em></h2>
-    </div>
-    <div class="testi-grid">
-
-      <div class="testi-card">
-        <div class="testi-stars">★★★★★</div>
-        <div class="testi-quote">"By the end of the night we had 412 photos we'd never have seen otherwise. Tita Marivic's blurry first-dance shot is still my favorite frame in the whole reel."</div>
-        <div class="testi-attr">
-          <img class="testi-avatar" src="/cdn-cgi/image/width=200,quality=82,format=auto/images/newlyweds.png" decoding="async" alt="Andrea & JM Cabrera" style="object-position: 38% 32%;" loading="lazy" />
-          <div>
-            <div class="testi-name">Andrea &amp; JM Cabrera</div>
-            <div class="testi-meta">Wedding · Manila · June 2026</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="testi-card">
-        <div class="testi-stars">★★★★★</div>
-        <div class="testi-quote">"Every table had the QR card. By midnight we had 300+ photos from all our titas and lolos — people I didn't even know could use their phones like that."</div>
-        <div class="testi-attr">
-          <img class="testi-avatar" src="/cdn-cgi/image/width=200,quality=82,format=auto/images/Birthday.png" decoding="async" alt="Clarissa Santos" style="object-position: center 38%;" loading="lazy" />
-          <div>
-            <div class="testi-name">Clarissa Santos</div>
-            <div class="testi-meta">Debut · Quezon City · March 2026</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="testi-card">
-        <div class="testi-stars">★★★★★</div>
-        <div class="testi-quote">"First time all 47 of us were in one place after 12 years. The wall captured every angle — even Lolo's speech that someone filmed from across the room."</div>
-        <div class="testi-attr">
-          <img class="testi-avatar" src="/cdn-cgi/image/width=200,quality=82,format=auto/images/The%20whole%20family%20finally%20in%20one%20frame.png" decoding="async" alt="The Reyes Family" style="object-position: center 50%;" loading="lazy" />
-          <div>
-            <div class="testi-name">The Reyes Family</div>
-            <div class="testi-meta">Reunion · Batangas · February 2026</div>
-          </div>
-        </div>
-      </div>
-
-    </div>
   </div>
 </section>
 
@@ -1410,11 +1281,6 @@ const i18n = {
     'hero-desc':        'Guests scan one code and upload photos straight to your live cinematic wall — no app, no sign-up, no missed moments.',
     'hero-cta1':        'Start free →',
     'hero-cta2':        'See live demo',
-    'hero-trust':       'Trusted by 2,140+ celebrations across PH',
-    'stat-events':      'Events hosted',
-    'stat-photos':      'Photos uploaded',
-    'stat-setup':       'Setup time avg',
-    'stat-rating':      'Event rating',
     'how-eyebrow':      '— How it works',
     'how-h2':           'Three steps.<br/>Done before <em>cocktail hour.</em>',
     'how-1-h3':         'Print your QR',
@@ -1456,11 +1322,6 @@ const i18n = {
     'hero-desc':        'Mag-scan ang mga bisita ng isang code at mag-upload ng mga larawan diretso sa inyong live cinematic wall — walang app, walang sign-up, walang napalampas na sandali.',
     'hero-cta1':        'Magsimula nang libre →',
     'hero-cta2':        'Panoorin ang live demo',
-    'hero-trust':       'Pinagkakatiwalaan ng 2,140+ selebrasyon sa buong Pilipinas',
-    'stat-events':      'Mga event',
-    'stat-photos':      'Mga larawang na-upload',
-    'stat-setup':       'Avg na oras ng setup',
-    'stat-rating':      'Rating ng event',
     'how-eyebrow':      '— Paano gumagana',
     'how-h2':           'Tatlong hakbang.<br/>Tapos bago mag-<em>cocktail hour.</em>',
     'how-1-h3':         'I-print ang inyong QR',
