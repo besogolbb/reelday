@@ -3024,14 +3024,16 @@
       inPic.style.animation = `${kbAnim} ${KB_DURATION}s ease-out forwards`;
       inLoader?.classList.remove('visible');
 
-      // Progressive reveal: paint the prethumb (small JPEG already in CDN
-      // edge cache from the upload moment) immediately, then silently swap
-      // to the full-res once the browser has decoded it. The token guard
-      // prevents a slow network response from a previous slide clobbering
-      // a slide that has already advanced.
-      if (videoPreThumb && videoPreThumb !== mediaUrl) {
-        inPic.style.backgroundImage = `url('${videoPreThumb}')`;
-        inBackdrop.style.setProperty('--poster-img', `url('${videoPreThumb}')`);
+      // Progressive reveal: paint a 640px CDN-resized preview of the same
+      // file immediately (downloads ~9× faster than 1920px), then swap to
+      // the full-res once decoded. Both URLs hit the same R2 object; CF
+      // Image Resizing serves each width from its own edge-cache entry.
+      // Token guard prevents a stale load from clobbering a newer slide.
+      const rawFileUrl   = absoluteMediaUrl(item?.file_url);
+      const photoPreview = rawFileUrl ? cdnImage(rawFileUrl, 640) : null;
+      if (photoPreview && photoPreview !== mediaUrl) {
+        inPic.style.backgroundImage = `url('${photoPreview}')`;
+        inBackdrop.style.setProperty('--poster-img', `url('${photoPreview}')`);
         const token   = photoLoadToken;
         const fullImg = new Image();
         fullImg.onload = () => {
