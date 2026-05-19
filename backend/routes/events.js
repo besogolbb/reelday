@@ -223,6 +223,59 @@ export default async function eventRoutes(fastify) {
         : 'reelday.ph');
     const qr_code = await generateQR(`${protocol}://${host}/upload/${slug}`);
 
+    // Schedule the demo-window-close nudge email for Tala events.
+    // Fires exactly when demoDays expires (48h after created_at) via
+    // Resend's scheduledAt — no cron or background job needed.
+    if (planForEvent.id === 'tala' && planForEvent.demoDays) {
+      const demoEndsAt = new Date(
+        new Date(event.created_at).getTime() + planForEvent.demoDays * 86_400_000,
+      );
+      const firstName = (request.user.full_name || '').split(' ')[0] || 'there';
+      const eventLabel = escapeHtml(event.couple_names);
+      const dashUrl = `https://reelday.ph/dashboard?slug=${encodeURIComponent(event.slug)}`;
+      const pricingUrl = 'https://reelday.ph/#pricing';
+
+      withTimeout(resend().emails.send({
+        from:        'Reelday <noreply@reelday.ph>',
+        to:          request.user.email,
+        subject:     `Your Reelday demo window just closed — ready to upgrade?`,
+        scheduledAt: demoEndsAt.toISOString(),
+        html: `
+          <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:1.5rem;color:#3f2318">
+            <h2 style="color:#c45a3a;margin:0 0 .75rem">Your 2-day demo has ended, ${escapeHtml(firstName)}!</h2>
+            <p style="margin:0 0 1rem;line-height:1.6">
+              Thanks for trying Reelday with <strong>${eventLabel}</strong>.
+              Your free demo window is now closed — but your event-day upload window
+              will still open automatically on the day of the event.
+            </p>
+            <p style="margin:0 0 1.5rem;line-height:1.6">
+              Want to give your guests a fuller experience? Upgrading unlocks:
+            </p>
+            <table style="border-collapse:collapse;font-size:14px;width:100%;margin-bottom:1.5rem">
+              <tr style="background:#faf3ec">
+                <td style="padding:10px 14px;font-weight:700;color:#c45a3a">Sinag — ₱1,490</td>
+                <td style="padding:10px 14px">Unlimited photos &amp; videos · 30-day gallery · reactions</td>
+              </tr>
+              <tr>
+                <td style="padding:10px 14px;font-weight:700;color:#c45a3a">Dalisay — ₱2,990</td>
+                <td style="padding:10px 14px">+ Audio notes · live polls · event website · Same Day Edit reel</td>
+              </tr>
+            </table>
+            <a href="${pricingUrl}"
+               style="display:inline-block;background:#c45a3a;color:#fff;text-decoration:none;
+                      padding:12px 28px;border-radius:8px;font-weight:700;font-size:15px">
+              View plans &amp; upgrade →
+            </a>
+            <p style="margin:1.5rem 0 0;font-size:13px;color:#999">
+              You can also manage your event anytime from your
+              <a href="${dashUrl}" style="color:#c45a3a">dashboard</a>.
+            </p>
+          </div>`,
+      }), 10_000, 'Resend (demo-window-close nudge)').catch(err => {
+        fastify.log.warn({ err: err.message, slug: event.slug }, 'demo-window nudge email schedule failed');
+      });
+    }
+
     return reply.status(201).send({ event, qr_code });
   });
 
