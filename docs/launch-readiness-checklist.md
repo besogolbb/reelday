@@ -7,6 +7,24 @@ Use this checklist to confirm everything is in place before the public launch. W
 
 ---
 
+## Progress
+
+**Overall: 0 / 69 actionable items complete (0%)**
+
+| Section | Done | Total | % | Status |
+|---|---|---|---|---|
+| 1. Backend Performance | — | — | — | ✅ validated phase (no checkboxes; perf re-confirmed 19 May, entries 37–39) |
+| 2. Operational Readiness (blockers) | 0 | 11 | 0% | ⛔ launch-gating |
+| 3. User Flow Validation | 0 | 37 | 0% | manual test on devices |
+| 4. Day-of-Launch | 0 | 9 | 0% | run launch morning |
+| 5. Communication Readiness | 0 | 7 | 0% | marketing surface |
+| 6. Rollback / Incident Plan | — | — | — | 📖 reference only (no checkboxes) |
+| 7. Post-Launch (Days 1–7) | 0 | 5 | 0% | week-one follow-through |
+
+_Update by hand as you tick boxes — markdown can't auto-count. If you want a one-shot recount later, the `node -e` snippet in `bc79d14`'s commit history walks `- [ ]` vs `- [x]` per `##` heading._
+
+---
+
 ## 1. Backend Performance — ✅ Validated 17 May
 
 All items below were proven by stress tests run from PowerShell (production-truth, through Cloudflare).
@@ -38,7 +56,7 @@ Three additional `perf:full` runs after today's Ken Burns + warm-film LUT rework
 
 ---
 
-## 2. Operational Readiness — Close Before Launch (Blockers)
+## 2. Operational Readiness — Close Before Launch (Blockers) — 0/11 (0%)
 
 These are the gaps flagged from the perf review. Each one is a launch blocker.
 
@@ -97,7 +115,7 @@ These are the gaps flagged from the perf review. Each one is a launch blocker.
 
 ---
 
-## 3. User Flow Validation — Manual Test on Real Devices
+## 3. User Flow Validation — Manual Test on Real Devices — 0/37 (0%)
 
 Synthetic load tests don't catch device-specific bugs. Run through these flows by hand before launch.
 
@@ -158,7 +176,7 @@ Synthetic load tests don't catch device-specific bugs. Run through these flows b
 
 ---
 
-## 4. Day-of-Launch (Tuesday) — Final Checks
+## 4. Day-of-Launch (Tuesday) — Final Checks — 0/9 (0%)
 
 Run these on launch morning before flipping any "go live" switches.
 
@@ -174,7 +192,7 @@ Run these on launch morning before flipping any "go live" switches.
 
 ---
 
-## 5. Communication Readiness
+## 5. Communication Readiness — 0/7 (0%)
 
 Before announcing publicly, make sure the basics are in place.
 
@@ -207,7 +225,7 @@ If something breaks on launch day:
 
 ---
 
-## 7. Post-Launch (Days 1–7)
+## 7. Post-Launch (Days 1–7) — 0/5 (0%)
 
 - [ ] Day 1: monitor every 2 hours, respond to all DMs within 2 hours
 - [ ] Day 2: ask first 3 users for honest feedback (one question: "what would have made this 10× better?")
