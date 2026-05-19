@@ -648,6 +648,19 @@ export default async function adminRoutes(fastify) {
     return { success: true };
   });
 
+  // DELETE /api/admin/payments/:id — hard-delete a payment record.
+  // Does NOT undo any subscription/tier changes that were applied when
+  // the payment was verified; use refund first if that matters.
+  fastify.delete('/admin/payments/:id', async (request, reply) => {
+    const { id } = request.params;
+    const { rowCount } = await fastify.db.query(
+      'DELETE FROM payments WHERE id = $1',
+      [id],
+    );
+    if (!rowCount) return reply.status(404).send({ error: true, message: 'Payment not found' });
+    return { success: true };
+  });
+
   // POST /api/admin/events/:slug/deactivate
   fastify.post('/admin/events/:slug/deactivate', async (request, reply) => {
     const { slug } = request.params;

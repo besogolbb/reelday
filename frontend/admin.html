@@ -1399,16 +1399,18 @@
   // Payments view
   // ────────────────────────────────────────────────────────────────
   function actionsForPayment(p) {
+    const delBtn = `<button class="btn-reject" style="margin-left:.35rem" onclick="deletePayment('${esc(p.id)}')">🗑 Delete</button>`;
     if (p.status === 'manual_pending') {
       return `<div class="action-btns">
         <button class="btn-verify" onclick="verify('${esc(p.id)}')">✅ Verify</button>
         <button class="btn-reject" onclick="reject('${esc(p.id)}')">❌ Reject</button>
+        ${delBtn}
       </div>`;
     }
     if (p.status === 'succeeded') {
-      return `<button class="btn-reject" onclick="refundPayment('${esc(p.id)}')">↩ Refund</button>`;
+      return `<div class="action-btns"><button class="btn-reject" onclick="refundPayment('${esc(p.id)}')">↩ Refund</button>${delBtn}</div>`;
     }
-    return `<span style="color:var(--ink-faint);font-size:.78rem">—</span>`;
+    return `<div class="action-btns">${delBtn}</div>`;
   }
 
   function statusPill(status) {
@@ -1526,10 +1528,21 @@
     } catch { toast('Failed to reject payment.', 'error'); }
   }
 
+  async function deletePayment(id) {
+    if (!confirm('Permanently delete this payment record? This does NOT undo any subscription changes — refund first if needed.')) return;
+    try {
+      const r = await adminFetch(`/api/admin/payments/${id}`, { method: 'DELETE' });
+      if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d.message || 'Failed'); }
+      toast('Payment deleted.', 'success');
+      await Promise.all([loadStats(), loadPayments()]);
+    } catch (e) { toast('Failed to delete payment: ' + (e.message || ''), 'error'); }
+  }
+
   // Expose for inline handlers
   window.setVerified = setVerified; window.setActive = setActive;
   window.deleteUser = deleteUser;
   window.verify = verify; window.reject = reject; window.refundPayment = refundPayment;
+  window.deletePayment = deletePayment;
   window.openEventEditor = openEventEditor; window.deleteEvent = deleteEvent;
 </script>
 </body>
