@@ -3352,12 +3352,44 @@
       : false;
 
     const lbIcon = $('lb-icon');
+    const lbCta  = $('lb-cta');
+    // When there's no upgrade path (Dalisay during Hiraya private launch,
+    // Hiraya at any time), the Upgrade button at the right of the lock
+    // banner has nowhere to send the user — /#pricing doesn't show their
+    // next tier. Hide it and let the body text carry the whole message.
+    const upgradeTarget = nextTier(plan.id);
+    if (lbCta) {
+      lbCta.style.display = upgradeTarget ? '' : 'none';
+      if (upgradeTarget) {
+        lbCta.textContent = `Upgrade →`;
+        lbCta.href = '/#pricing';
+      }
+    }
 
     if (event.gallery_expires_at && new Date(event.gallery_expires_at) < now) {
       banner.classList.remove('hidden');
-      $('lb-title').textContent = 'Gallery archived';
-      $('lb-msg').textContent   =
-        `The ${plan.name} plan's gallery retention for this event ended on ${formatDate(event.gallery_expires_at)}. Photos remain visible — upgrade to keep accepting new ones and extend retention.`;
+      const archived = !!event.archived_at;
+      const galleryEndStr = formatDate(event.gallery_expires_at);
+      if (archived) {
+        $('lb-title').textContent = 'Gallery permanently archived';
+        $('lb-msg').textContent   =
+          `The retention window ended on ${galleryEndStr} and the 7-day grace period has passed. ` +
+          `Your photos, videos, and audio notes have been removed from our storage and cannot be recovered.`;
+      } else if (upgradeTarget) {
+        $('lb-title').textContent = 'Gallery archived';
+        $('lb-msg').textContent   =
+          `The ${plan.name} plan's gallery retention for this event ended on ${galleryEndStr}. ` +
+          `Photos remain visible — upgrade to keep accepting new ones and extend retention.`;
+      } else {
+        // Dalisay (top public tier during Hiraya private launch) and any
+        // future no-upgrade-path tier. Dropping the "upgrade" pitch and
+        // pointing at the 7-day grace + download path instead.
+        $('lb-title').textContent = 'Gallery archived';
+        $('lb-msg').textContent   =
+          `The ${plan.name} plan's gallery retention ended on ${galleryEndStr}. ` +
+          `You have 7 days to download all photos and videos before they're permanently removed from our storage. ` +
+          `Use the Download all (.zip) button in the Backup row above.`;
+      }
     } else if (demoOpen && plan.id === 'tala') {
       // Tala demo window currently open. Friendly info banner so the
       // host knows uploads are real but time-limited, and what happens
@@ -3401,7 +3433,8 @@
       banner.classList.remove('hidden');
       $('lb-title').textContent = 'Upload window closed';
       $('lb-msg').textContent   =
-        `The ${plan.name} plan's upload window for this event ended on ${formatDate(event.upload_window_ends_at)}. Upgrade to extend it.`;
+        `The ${plan.name} plan's upload window for this event ended on ${formatDate(event.upload_window_ends_at)}.` +
+        (upgradeTarget ? ' Upgrade to extend it.' : '');
     } else {
       banner.classList.add('hidden');
     }
