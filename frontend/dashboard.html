@@ -1480,6 +1480,21 @@
     }
     .lock-banner .lb-cta:hover { background: var(--ink); }
 
+    /* Informational variant — used during Tala's 2-day demo window
+       when the wall is healthy + uploads are legitimately open but
+       the host needs to know the window is time-limited and what
+       happens next. Mint-warm tint instead of warning-amber + no
+       upgrade CTA (we're informing, not nagging). */
+    .lock-banner.is-info {
+      background: linear-gradient(135deg, #f1f7f3 0%, #e6f0e8 100%);
+      border-color: rgba(45,122,74,.22);
+    }
+    .lock-banner.is-info .lb-icon {
+      background: rgba(45,122,74,.14);
+      color: #2d6a4a;
+    }
+    .lock-banner.is-info .lb-cta { display: none; }
+
     /* ── Wall playback errors banner + tile badge ───────── */
     .wall-err-banner {
       display: flex; align-items: center; gap: 14px;
@@ -2034,7 +2049,7 @@
   <!-- ── Photo stream panel (left) ─────────────────────── -->
   <div>
     <div class="lock-banner hidden" id="lock-banner">
-      <div class="lb-icon">⚠</div>
+      <div class="lb-icon" id="lb-icon">⚠</div>
       <div class="lb-body">
         <div class="lb-title" id="lb-title">Upload limit reached</div>
         <div class="lb-msg" id="lb-msg">You've used all 50 uploads on the Tala plan. Existing photos remain visible — upgrade to keep accepting new ones.</div>
@@ -3198,6 +3213,16 @@
     const banner     = $('lock-banner');
     if (!block || !banner) return;
 
+    // Reset banner variant + icon at the top of every render so any
+    // branch below (limit-reached straight-warning, Tala-demo info
+    // mint, gallery-archived warning, etc.) starts from a known state.
+    // Without this a banner that flipped into is-info during a Tala
+    // demo would keep mint styling after the demo closes and the
+    // message switches to a real warning.
+    const lbIcon0 = $('lb-icon');
+    banner.classList.remove('is-info');
+    if (lbIcon0) lbIcon0.textContent = '⚠';
+
     // Hide everything if the plan has no upload cap
     if (!plan.uploadLimit) {
       block.style.display = 'none';
@@ -3251,11 +3276,29 @@
       ? Date.now() < new Date(event.created_at).getTime() + TALA_DEMO_MS
       : false;
 
+    const lbIcon = $('lb-icon');
+
     if (event.gallery_expires_at && new Date(event.gallery_expires_at) < now) {
       banner.classList.remove('hidden');
       $('lb-title').textContent = 'Gallery archived';
       $('lb-msg').textContent   =
         `The ${plan.name} plan's gallery retention for this event ended on ${formatDate(event.gallery_expires_at)}. Photos remain visible — upgrade to keep accepting new ones and extend retention.`;
+    } else if (demoOpen && plan.id === 'tala') {
+      // Tala demo window currently open. Friendly info banner so the
+      // host knows uploads are real but time-limited, and what happens
+      // next (event-day window reopens automatically). No upgrade
+      // hard-sell — that's covered by the inline Plan-row "Upgrade"
+      // link and the scheduled 48h follow-up email.
+      banner.classList.remove('hidden');
+      banner.classList.add('is-info');
+      if (lbIcon) lbIcon.textContent = '⏱';
+      const demoEnd = new Date(new Date(event.created_at).getTime() + TALA_DEMO_MS);
+      $('lb-title').textContent = `You're in your 2-day demo window`;
+      $('lb-msg').textContent   =
+        `Try uploads with a few friends until ${formatDate(demoEnd)}. ` +
+        (event.upload_window_starts_at
+          ? `After that the wall stays quiet until your event day on ${formatDate(event.upload_window_starts_at)}, when it reopens automatically.`
+          : `After that the wall stays quiet until your event day, when it reopens automatically.`);
     } else if (!demoOpen && startsAt && startsAt > now) {
       banner.classList.remove('hidden');
       if (plan.id === 'tala' && event.created_at) {
