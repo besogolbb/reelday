@@ -22,9 +22,9 @@ Last updated: 2026-05-21
 | Cap-reached UX panel (`/start` shows support contact, not rebuy) | ✅ shipped 2026-05-20 |
 | Sinag production price restored (₱1,490) | ✅ shipped 2026-05-20 |
 | Marketing copy honest about what's actually built | ✅ shipped 2026-05-21 |
-| Renewal reminder emails (T-30 / T-7 / T-0) | ⛔ pending — Phase 2 |
-| Lapsed-sub UX (specific 402 code + dashboard banner) | ⛔ pending — Phase 2 |
-| One-click renewal endpoint | ⛔ pending — Phase 2 |
+| Renewal reminder emails (T-30 / T-7 / T-0) | ✅ shipped 2026-05-21 |
+| Lapsed-sub UX (specific 402 code + dashboard banner) | ✅ shipped 2026-05-21 |
+| One-click renewal endpoint | ✅ shipped 2026-05-21 |
 | At least one Hiraya-exclusive perk wired in code | ⛔ pending — Phase 3 |
 | Production PayMongo end-to-end purchase verified | ⛔ pending — Phase 4 |
 

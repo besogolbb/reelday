@@ -98,6 +98,15 @@ UPDATE users SET hiraya_credits  = GREATEST(COALESCE(events_remaining, 0), 0)
 -- Backfilled at boot from existing plan='tala' rows. See backend/routes/events.js.
 ALTER TABLE users ADD COLUMN IF NOT EXISTS tala_used BOOLEAN NOT NULL DEFAULT false;
 
+-- renewal_reminders_sent: per-cycle tracking of which Hiraya renewal
+-- reminders have already been sent (T-30, T-7, T-0). Keyed by stage name
+-- with an ISO date as the value. Cleared on successful renewal (see
+-- payments.js applyTierUpgrade) so the next cycle starts fresh. The
+-- renewal-reminders cron uses an atomic CAS update on this column to
+-- claim each reminder before sending, so concurrent runs / restarts
+-- can't double-fire. Schema: { t30: "2026-05-08", t7: "...", t0: "..." }.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS renewal_reminders_sent JSONB NOT NULL DEFAULT '{}'::jsonb;
+
 -- ── Per-event expiry stamps (computed from plan at creation time) ──
 -- gallery_expires_at:      when the wall + downloads soft-lock
 -- upload_window_starts_at: when guests can BEGIN uploading. NULL on

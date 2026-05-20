@@ -204,6 +204,25 @@ export default async function eventRoutes(fastify) {
     // to checkout. Tala still flows through unchanged (it has its own
     // lifetime/cap checks above).
     if (PAID_PLAN_IDS.has(planForEvent.id) && !isPaid) {
+      // Differentiate a lapsed Hiraya subscription from "never paid". A
+      // user whose subscription_tier is still 'hiraya' but whose
+      // expires_at has passed needs the renew flow, not the wizard's
+      // upgrade-from-Tala flow. The frontend reads `subscription_lapsed`
+      // to surface a dedicated renew panel + dashboard banner; without
+      // the differentiator they'd see a generic "payment required" wall
+      // and assume the system broke.
+      if (planForEvent.id === 'hiraya'
+          && user.subscription_tier === 'hiraya'
+          && user.subscription_expires_at
+          && new Date(user.subscription_expires_at) < new Date()) {
+        return reply.status(402).send({
+          error: true,
+          code:       'subscription_lapsed',
+          message:    `Your Hiraya subscription expired on ${new Date(user.subscription_expires_at).toLocaleDateString('en-PH', { year:'numeric', month:'long', day:'numeric' })}. Renew to create more events.`,
+          plan:       'hiraya',
+          expired_at: user.subscription_expires_at,
+        });
+      }
       return reply.status(402).send({
         error: true,
         code:    'payment_required',

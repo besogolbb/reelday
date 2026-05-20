@@ -1207,12 +1207,13 @@
     });
     const data = await res.json();
     if (!res.ok) {
-      // Enrich so the caller can branch on plan_limit_events without
-      // re-parsing the message string.
+      // Enrich so the caller can branch on plan_limit_events /
+      // subscription_lapsed without re-parsing the message string.
       const err = new Error(data.message || 'Could not create event.');
-      err.status = res.status;
-      err.code   = data.code;
-      err.plan   = data.plan;
+      err.status     = res.status;
+      err.code       = data.code;
+      err.plan       = data.plan;
+      err.expired_at = data.expired_at;
       throw err;
     }
     return data;
@@ -1259,6 +1260,13 @@
       if (err.code === 'plan_limit_events' && err.plan && getToken()) {
         stashPendingEvent();
         showUpgradePanel(err.plan, err.message);
+        return;
+      }
+      // Lapsed Hiraya — server returned a dedicated code so we know to
+      // show the renew panel instead of the generic upgrade grid.
+      if (err.code === 'subscription_lapsed' && getToken()) {
+        stashPendingEvent();
+        showLapsedPanel(err.expired_at);
         return;
       }
       showToast(err.message, 'error');
@@ -1396,6 +1404,81 @@
       btnBack.disabled = currentSlide === 0;
       goTo(currentSlide);
     };
+  }
+
+  // Dedicated panel for a lapsed Hiraya sub. Mirrors the cap-reached
+  // pattern: full-width single card, one CTA. The CTA fires the same
+  // PayMongo checkout flow as showUpgradePanel but with success_path:
+  // 'renew' so the buyer drops on /my-events?renewed=1 after.
+  function showLapsedPanel(expiredAtIso) {
+    const panel    = document.getElementById('upgrade-panel');
+    const grid     = document.getElementById('upgrade-grid');
+    const reasonEl = document.getElementById('upgrade-reason');
+    const expired  = expiredAtIso
+      ? new Date(expiredAtIso).toLocaleDateString('en-PH', { year:'numeric', month:'long', day:'numeric' })
+      : null;
+    if (reasonEl) {
+      reasonEl.textContent = expired
+        ? `Your Hiraya year ended on ${expired}.`
+        : `Your Hiraya year has ended.`;
+    }
+    grid.innerHTML = `
+      <div class="upgrade-card featured" style="grid-column:1/-1;text-align:center;">
+        <div class="uc-tag">Renew</div>
+        <div class="uc-tier">Hiraya</div>
+        <div class="uc-price">₱9,990<sub> / year</sub></div>
+        <div class="uc-tagline" style="margin-top:8px;">
+          Your existing events stay safe — galleries don't expire when the
+          subscription does. Renew to start creating new Hiraya events again.
+        </div>
+        <button type="button" class="uc-cta" data-renew-hiraya style="margin-top:18px;">
+          <span class="btn-spinner"></span>
+          <span>Renew Hiraya → ₱9,990</span>
+        </button>
+      </div>
+    `;
+    grid.querySelector('[data-renew-hiraya]').addEventListener('click', (e) => {
+      startRenewCheckout(e.currentTarget);
+    });
+    slides.forEach(el => el.classList.remove('active'));
+    panel.classList.add('active');
+    panel.setAttribute('aria-hidden', 'false');
+    btnBack.disabled = false;
+    btnBack.onclick = () => {
+      panel.classList.remove('active');
+      panel.setAttribute('aria-hidden', 'true');
+      btnBack.onclick = null;
+      btnBack.disabled = currentSlide === 0;
+      goTo(currentSlide);
+    };
+  }
+
+  // Hiraya renewal checkout — same PayMongo flow as the upgrade panel,
+  // but with success_path: 'renew' (server routes the buyer back to
+  // /my-events?renewed=1 instead of /start).
+  async function startRenewCheckout(button) {
+    button.disabled = true;
+    button.classList.add('loading');
+    const token = getToken();
+    try {
+      const res = await fetch('/api/payments/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ tier: 'hiraya', success_path: 'renew' }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.checkout_url) {
+        throw new Error(data.message || 'Could not start checkout.');
+      }
+      location.href = data.checkout_url;
+    } catch (err) {
+      button.disabled = false;
+      button.classList.remove('loading');
+      showToast(err.message, 'error');
+    }
   }
 
   async function startUpgradeCheckout(tierId, button) {

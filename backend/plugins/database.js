@@ -275,6 +275,16 @@ const MIGRATIONS = `
   -- takeover. "Stop" sets sde_play_cleared_at.
   ALTER TABLE events ADD COLUMN IF NOT EXISTS sde_play_requested_at TIMESTAMPTZ;
   ALTER TABLE events ADD COLUMN IF NOT EXISTS sde_play_cleared_at   TIMESTAMPTZ;
+
+  -- ── Hiraya renewal reminders ──
+  -- Per-cycle log of which T-30 / T-7 / T-0 emails the renewal-reminders
+  -- cron has already sent. Keyed by stage with an ISO-date value, e.g.
+  -- { t30: "2026-05-08", t7: "...", t0: "..." }. Cleared to '{}' in
+  -- payments.js applyTierUpgrade on every Hiraya renewal so the next
+  -- cycle starts fresh. The cron in backend/jobs/renewal-reminders.js
+  -- claims each stage atomically (CAS update) before sending so two
+  -- instances or two ticks can never double-fire the same reminder.
+  ALTER TABLE users ADD COLUMN IF NOT EXISTS renewal_reminders_sent JSONB NOT NULL DEFAULT '{}'::jsonb;
 `;
 
 async function dbPlugin(fastify) {

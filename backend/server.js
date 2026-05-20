@@ -27,6 +27,7 @@ import contactRoutes from './routes/contact.js';
 import presenceRoutes from './routes/presence.js';
 import eventSiteRoutes, { renderEventSitePage } from './routes/event-site.js';
 import { reconcilePendingTranscodes } from './lib/videoTranscode.js';
+import { startRenewalReminderJob } from './jobs/renewal-reminders.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -337,6 +338,11 @@ try {
   reconcilePendingTranscodes(fastify).catch(err =>
     fastify.log.warn({ err: err.message }, 'Startup transcode reconcile failed'),
   );
+
+  // In-process cron: walks Hiraya users daily-ish and sends T-30 / T-7 /
+  // T-0 renewal reminders. CAS-based idempotency on users.renewal_reminders_sent
+  // makes it safe across restarts and multiple instances.
+  startRenewalReminderJob(fastify);
 } catch (err) {
   fastify.log.error(err);
   process.exit(1);

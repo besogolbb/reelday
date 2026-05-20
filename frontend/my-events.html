@@ -105,6 +105,46 @@
     /* ── Loading ── */
     .loading { display: flex; align-items: center; justify-content: center; padding: 5rem; }
 
+    /* Lapsed-Hiraya banner — amber, dismissible by acting on the CTA.
+       Shown at the top of /my-events when a user's subscription_tier is
+       still 'hiraya' but subscription_expires_at has passed. The CTA
+       fires /api/payments/create with success_path='renew' so they drop
+       back here with ?renewed=1 after PayMongo. */
+    .lapsed-banner {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 1rem; flex-wrap: wrap;
+      background: #fef3c7;
+      border: 1px solid #f59e0b;
+      border-left: 4px solid #d97706;
+      border-radius: var(--r);
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+    .lapsed-banner-copy { flex: 1; min-width: 220px; }
+    .lapsed-banner-title { font-weight: 700; color: #78350f; margin-bottom: .15rem; font-size: .95rem; }
+    .lapsed-banner-sub { font-size: .85rem; color: #92400e; line-height: 1.5; }
+    .lapsed-banner-cta {
+      background: #d97706; color: #fff;
+      padding: .6rem 1.25rem;
+      border: none; border-radius: var(--r);
+      font-weight: 700; font-size: .9rem; cursor: pointer;
+      white-space: nowrap;
+      transition: background .15s;
+    }
+    .lapsed-banner-cta:hover { background: #b45309; }
+    .lapsed-banner-cta:disabled { opacity: .6; cursor: wait; }
+
+    /* "Renewed!" success flash — green, auto-hides. */
+    .renewed-flash {
+      background: #dcfce7;
+      border: 1px solid #4ade80;
+      color: #166534;
+      padding: .75rem 1.25rem;
+      border-radius: var(--r);
+      margin-bottom: 1.5rem;
+      font-size: .9rem;
+    }
+
     @media (max-width: 600px) {
       .main { padding-inline: 1rem; }
       .site-header-inner { padding-inline: 1rem; }
@@ -131,6 +171,7 @@
 </div>
 
 <main class="main">
+  <div id="sub-status"></div>
   <a class="btn btn-accent" href="/start" id="new-event-link" style="margin-bottom:2rem;display:inline-flex">+ New Event</a>
 
   <div class="loading" id="loading"><div class="spinner"></div></div>
@@ -176,11 +217,82 @@
 
   function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
+  // ── Subscription status helpers ──
+  // Renders the lapsed-Hiraya banner (or the "Renewed!" success flash)
+  // above the events grid. Reads ?renewed=1 and ?renew=1 from the URL —
+  // the former clears after surfacing the flash, the latter auto-starts
+  // a Hiraya renewal checkout (used by the reminder-email CTA so the
+  // user doesn't have to find the renew button themselves).
+  function renderSubStatus(user) {
+    const slot = document.getElementById('sub-status');
+    if (!slot) return;
+
+    const params = new URLSearchParams(location.search);
+    if (params.get('renewed') === '1') {
+      slot.innerHTML = `<div class="renewed-flash">Renewed! Your Hiraya year starts now. 🎉</div>`;
+      // Strip the query so a refresh doesn't re-flash.
+      history.replaceState({}, '', location.pathname);
+      setTimeout(() => { slot.innerHTML = ''; }, 6000);
+      return;
+    }
+
+    const isHiraya  = user?.subscription_tier === 'hiraya';
+    const expiresAt = user?.subscription_expires_at;
+    const lapsed    = isHiraya && expiresAt && new Date(expiresAt) < new Date();
+    if (!lapsed) return;
+
+    const daysAgo = Math.floor((Date.now() - new Date(expiresAt).getTime()) / 86_400_000);
+    slot.innerHTML = `
+      <div class="lapsed-banner">
+        <div class="lapsed-banner-copy">
+          <div class="lapsed-banner-title">Hiraya expired ${daysAgo === 0 ? 'today' : daysAgo + ' day' + (daysAgo === 1 ? '' : 's') + ' ago'}</div>
+          <div class="lapsed-banner-sub">Your existing events are unaffected — galleries stay open. Renew to create new Hiraya events again.</div>
+        </div>
+        <button type="button" class="lapsed-banner-cta" data-renew-hiraya>Renew — ₱9,990</button>
+      </div>
+    `;
+    slot.querySelector('[data-renew-hiraya]').addEventListener('click', startRenewCheckout);
+  }
+
+  async function startRenewCheckout(evt) {
+    const btn = evt?.currentTarget;
+    if (btn) { btn.disabled = true; btn.textContent = 'Opening checkout…'; }
+    try {
+      const res = await fetch('/api/payments/create', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ tier: 'hiraya', success_path: 'renew' }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.checkout_url) {
+        throw new Error(data.message || 'Could not start renewal checkout.');
+      }
+      location.href = data.checkout_url;
+    } catch (err) {
+      if (btn) { btn.disabled = false; btn.textContent = 'Renew — ₱9,990'; }
+      alert(err.message);
+    }
+  }
+
+  // ?renew=1 deep link (from reminder emails): auto-fire the checkout
+  // once the page is authed. Strip the query first so a back-navigation
+  // doesn't re-trigger.
+  function maybeAutoRenew() {
+    const params = new URLSearchParams(location.search);
+    if (params.get('renew') !== '1') return;
+    history.replaceState({}, '', location.pathname);
+    // No event arg — startRenewCheckout handles a null button gracefully.
+    startRenewCheckout();
+  }
+
   async function load() {
     try {
       const res  = await fetch('/api/auth/me', { headers: authHeaders() });
       if (res.status === 401) { logout(); return; }
       const { user: u, events } = await res.json();
+
+      renderSubStatus(u);
+      maybeAutoRenew();
 
       document.getElementById('page-sub').textContent =
         `${events.length} event${events.length !== 1 ? 's' : ''} · ${u.email}`;

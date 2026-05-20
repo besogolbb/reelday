@@ -155,6 +155,95 @@ export async function sendBookingConfirmationEmail(db, { userId, tier, slug }, l
 }
 
 /**
+ * Hiraya renewal reminder. `stage` is one of 't30' / 't7' / 't0'.
+ *   - t30 = 30 days before expiry, friendly heads-up
+ *   - t7  = 7 days before expiry, "you'll lose new-event creation"
+ *   - t0  = day of / day after expiry, lapsed nudge
+ * The renew CTA links to /my-events?renew=1 — the page reads that query
+ * param and auto-creates a Hiraya checkout, dropping the user straight
+ * onto the PayMongo flow without re-walking the wizard.
+ * Caller is responsible for idempotency (the cron in backend/jobs/
+ * renewal-reminders.js atomically claims the stage via a CAS update on
+ * users.renewal_reminders_sent before invoking this).
+ */
+export async function sendHirayaRenewalEmail({ email, fullName, expiresAt, stage }, log) {
+  if (!process.env.RESEND_API_KEY) return;
+  if (!email || !stage) return;
+  try {
+    const renewUrl = 'https://reelday.ph/my-events?renew=1';
+    const expiryStr = expiresAt
+      ? new Date(expiresAt).toLocaleDateString('en-PH', {
+          year: 'numeric', month: 'long', day: 'numeric',
+        })
+      : 'soon';
+    const name = fullName || 'there';
+
+    const COPY = {
+      t30: {
+        subject: `Your Hiraya year ends ${expiryStr}`,
+        headline: 'A heads-up about your Hiraya subscription',
+        intro: `Your Reelday Hiraya year ends on <strong>${expiryStr}</strong>. That's about a month away — no rush, just letting you know.`,
+        body: `Renewing keeps your ability to create new Hiraya events with the full 30-day upload window and 1-year galleries. Your existing events stay safe either way — galleries don't expire when the subscription does.`,
+        cta: 'Renew Hiraya — ₱9,990',
+      },
+      t7: {
+        subject: 'One week left on your Hiraya subscription',
+        headline: 'Your Hiraya year ends in a week',
+        intro: `Heads up — your Reelday Hiraya year ends on <strong>${expiryStr}</strong>, about 7 days from now.`,
+        body: `After that date you won't be able to create new Hiraya events until you renew. The events you've already created are unaffected — their galleries stay open until each one's own 1-year mark.`,
+        cta: 'Renew now — ₱9,990',
+      },
+      t0: {
+        subject: 'Your Hiraya subscription has expired',
+        headline: 'Your Hiraya year is up',
+        intro: `Your Reelday Hiraya year ended on <strong>${expiryStr}</strong>.`,
+        body: `New event creation is paused until you renew. Don't worry — every event you've already created is unaffected. Their galleries, uploads, and walls all keep working until each one's individual 1-year mark.`,
+        cta: 'Renew Hiraya — ₱9,990',
+      },
+    };
+
+    const c = COPY[stage];
+    if (!c) return;
+
+    const plainText = [
+      c.headline,
+      '',
+      `Hi ${name},`,
+      '',
+      c.intro.replace(/<[^>]+>/g, ''),
+      '',
+      c.body,
+      '',
+      `Renew here: ${renewUrl}`,
+      '',
+      'Questions? Reply to this email.',
+    ].join('\n');
+
+    await withTimeout(resend().emails.send({
+      from:    'Reelday <noreply@reelday.ph>',
+      to:      email,
+      bcc:     'admin@reelday.ph',
+      replyTo: 'admin@reelday.ph',
+      subject: c.subject,
+      text:    plainText,
+      html: `
+        <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:2rem">
+          <h2 style="color:#e8735a;margin-bottom:1rem">${c.headline}</h2>
+          <p>Hi ${name},</p>
+          <p>${c.intro}</p>
+          <p>${c.body}</p>
+          <a href="${renewUrl}" style="display:inline-block;background:#e8735a;color:#fff;padding:.85rem 1.75rem;border-radius:8px;text-decoration:none;font-weight:700;margin:1rem 0">
+            ${c.cta} &rarr;
+          </a>
+          <p style="font-size:.85rem;color:#888;margin-top:1.5rem">Questions? Reply to this email or visit <a href="https://reelday.ph" style="color:#e8735a">reelday.ph</a>.</p>
+        </div>`,
+    }), 10_000, `Resend (hiraya-renewal-${stage})`);
+  } catch (err) {
+    log?.warn({ err: err.message, stage }, 'sendHirayaRenewalEmail failed (non-fatal)');
+  }
+}
+
+/**
  * Verify a PayMongo webhook signature.
  * Header format: `t=<unix_ts>,te=<test_sig>,li=<live_sig>`.
  * The signed payload is `${timestamp}.${rawBody}` and the algorithm is
@@ -232,6 +321,10 @@ export async function applyTierUpgrade(db, { userId, tier, slug }) {
        WHERE id = $1`;
     params = [userId];
   } else if (plan.id === 'hiraya') {
+    // Renewal also resets renewal_reminders_sent so the next cycle starts
+    // fresh — without this, a user who renewed last year would never get
+    // T-30 / T-7 / T-0 reminders for the new cycle (keys would already
+    // be present).
     updateSql = `
       UPDATE users
          SET subscription_tier        = 'hiraya',
@@ -239,7 +332,8 @@ export async function applyTierUpgrade(db, { userId, tier, slug }) {
              subscription_expires_at  = GREATEST(
                COALESCE(subscription_expires_at, NOW()),
                NOW()
-             ) + INTERVAL '1 year'
+             ) + INTERVAL '1 year',
+             renewal_reminders_sent   = '{}'::jsonb
        WHERE id = $1`;
     params = [userId, plan.eventLimit];
   } else { // dalisay
@@ -327,17 +421,21 @@ export default async function paymentRoutes(fastify) {
     const userId = request.user.id;
     const appUrl = buildAppUrl(request);
     // success_path is a tiny enum (NOT a free-form URL) so we can't be tricked
-    // into an open-redirect by a crafted body. Today the only non-default
-    // case is 'start_resume' — used by the /start wizard when the user hits
-    // a plan_limit_events 403 mid-create, pays for credits, and needs to be
-    // bounced back to /start to finalize the in-progress event payload that
-    // sessionStorage stashed pre-checkout.
+    // into an open-redirect by a crafted body. Today the cases are:
+    //   • 'start_resume' — wizard flow that hits plan_limit_events mid-create,
+    //     pays for credits, then bounces back to /start to finalize the
+    //     sessionStorage-stashed event payload.
+    //   • 'renew' — Hiraya yearly-sub renewal. Drops the buyer back on
+    //     /my-events with ?renewed=1 so the dashboard banner can clear.
     const resumeStart = success_path === 'start_resume' && !slug;
+    const renewFlow   = success_path === 'renew' && !slug && tier === 'hiraya';
     const successUrl = slug
       ? `${appUrl}/dashboard?slug=${slug}&upgraded=${tier}`
       : resumeStart
         ? `${appUrl}/start?resumeCreate=1&upgraded=${tier}`
-        : `${appUrl}/my-events?upgraded=${tier}`;
+        : renewFlow
+          ? `${appUrl}/my-events?renewed=1`
+          : `${appUrl}/my-events?upgraded=${tier}`;
     const cancelUrl  = `${appUrl}/#pricing`;
     request.log.info({ appUrl, successUrl, cancelUrl, tier }, 'Creating PayMongo checkout session');
 
