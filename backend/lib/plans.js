@@ -135,15 +135,21 @@ export const PLANS = {
   },
 };
 
-// ── Matrix rows NOT enforced in code (intentionally) ──────────────
-// These differentiate tiers in marketing but have no code gate yet —
-// documented here so nobody assumes they're enforced:
+// ── Matrix rows NOT enforced in code ──────────────────────────────
+// Flags / rows that have no real code gate. As of Phase 1 of the
+// Hiraya launch plan these are also pulled from public marketing
+// (index.html / start.html / dashboard.html / account.html) so we
+// don't sell perks we can't deliver. Re-introduce in marketing only
+// when actually wired.
 //   • Wall style (Tala "Static Slideshow" vs Sinag+ "Cinematic /
 //     Ken Burns"): the wall renderer has no per-plan branch.
 //   • White-label / "Your Logo" (Hiraya): no branding-toggle gate.
+//     Note: wall.html DOES hide "Powered by Reelday" for Dalisay+,
+//     but the user-uploaded-logo half is not built.
 //   • Data Export / Leads (Hiraya): RSVP CSV export is owner-only,
 //     not Hiraya-gated.
 //   • Custom domain: `customDomain` flag exists but no route reads it.
+//     Phase 3 will wire this into backend/routes/event-site.js.
 //   • "Priority Processing" (Hiraya): operational, not a code path.
 
 export const LEGACY_PLAN_MAP = {

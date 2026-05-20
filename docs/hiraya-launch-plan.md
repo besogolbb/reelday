@@ -5,7 +5,7 @@ photographers, and venues. Currently functionally usable but not
 launch-ready. This doc tracks what's left so a future session can
 pick up cold without re-deriving the audit.
 
-Last updated: 2026-05-20
+Last updated: 2026-05-21
 
 ---
 
@@ -21,7 +21,7 @@ Last updated: 2026-05-20
 | Dashboard tier theming (gold Plan row + engraved type) | ✅ shipped 2026-05-20 |
 | Cap-reached UX panel (`/start` shows support contact, not rebuy) | ✅ shipped 2026-05-20 |
 | Sinag production price restored (₱1,490) | ✅ shipped 2026-05-20 |
-| Marketing copy honest about what's actually built | ⛔ pending — Phase 1 |
+| Marketing copy honest about what's actually built | ✅ shipped 2026-05-21 |
 | Renewal reminder emails (T-30 / T-7 / T-0) | ⛔ pending — Phase 2 |
 | Lapsed-sub UX (specific 402 code + dashboard banner) | ⛔ pending — Phase 2 |
 | One-click renewal endpoint | ⛔ pending — Phase 2 |

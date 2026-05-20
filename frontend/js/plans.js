@@ -10,7 +10,7 @@
  *   - Tala    = free, 1 event, 25 photos, 24h retention, photos only
  *   - Sinag   = ₱1,490 / event,  1 event,  unlimited photo+video, 30d
  *   - Dalisay = ₱2,990 / event,  1 event,  + audio notes + website, 90d
- *   - Hiraya  = ₱9,990 / year,   up to 10 events / yr, custom domain, 1-year retention
+ *   - Hiraya  = ₱9,990 / year,   up to 10 events / yr, everything in Dalisay, 1-year retention
  *
  * Keep features in 1:1 sync with backend/lib/plans.js — the backend
  * copy is the enforcement source of truth; this is for display +
