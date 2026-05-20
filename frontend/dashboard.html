@@ -1288,6 +1288,56 @@
     }
     .info-card .row.row-highlight span:first-child { color: var(--accent-deep); }
 
+    /* Tier-themed Plan row — set by JS via data-tier on the row.
+       Sinag = copper, Dalisay = silver, Hiraya = gold. Tala uses the
+       default warm-accent row above. Selectors win over the generic
+       .row-highlight span rules above via the extra [data-tier] hop. */
+    .info-card .row.row-highlight[data-tier="sinag"] {
+      background: linear-gradient(135deg, #f7e3cf 0%, #d9925c 55%, #9c5a2e 100%);
+      border-color: #9c5a2e;
+      box-shadow: 0 6px 18px rgba(156,90,46,.22);
+    }
+    .info-card .row.row-highlight[data-tier="sinag"] span:first-child,
+    .info-card .row.row-highlight[data-tier="sinag"] span:last-child {
+      color: #4a2510;
+      text-shadow: 0 1px 0 rgba(255,255,255,.35);
+    }
+
+    .info-card .row.row-highlight[data-tier="dalisay"] {
+      background: linear-gradient(135deg, #f6f7f9 0%, #d8dde4 55%, #9aa2ad 100%);
+      border-color: #9aa2ad;
+      box-shadow: 0 6px 18px rgba(120,128,140,.25);
+    }
+    .info-card .row.row-highlight[data-tier="dalisay"] span:first-child,
+    .info-card .row.row-highlight[data-tier="dalisay"] span:last-child {
+      color: #2a3340;
+      text-shadow: 0 1px 0 rgba(255,255,255,.5);
+    }
+
+    .info-card .row.row-highlight[data-tier="hiraya"] {
+      background: linear-gradient(135deg, #fdf2c4 0%, #f4d06f 50%, #c9a227 100%);
+      border-color: #c9a227;
+      box-shadow: 0 8px 22px rgba(201,162,39,.32), inset 0 1px 0 rgba(255,255,255,.45);
+      position: relative;
+      overflow: hidden;
+    }
+    /* Subtle diagonal sheen on Hiraya so it reads as premium foil */
+    .info-card .row.row-highlight[data-tier="hiraya"]::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(115deg,
+        transparent 30%,
+        rgba(255,255,255,.55) 48%,
+        rgba(255,255,255,.0) 62%);
+      pointer-events: none;
+    }
+    .info-card .row.row-highlight[data-tier="hiraya"] > * { position: relative; z-index: 1; }
+    .info-card .row.row-highlight[data-tier="hiraya"] span:first-child,
+    .info-card .row.row-highlight[data-tier="hiraya"] span:last-child {
+      color: #5a4406;
+      text-shadow: 0 1px 0 rgba(255,255,255,.55);
+    }
+
     /* Always-visible upload-window status pill.
        Scoped by #info-window-row so it beats the generic
        .info-card .row span:first-child/:last-child rules. */
@@ -2661,11 +2711,19 @@
     if (infoPlan) {
       const plan = resolvePlan(event.plan);
       const next = nextTier(plan.id);
-      const star = plan.id === 'dalisay' ? '★ ' : '';
+      // Crown for Hiraya (top tier, gold treatment), star for Dalisay
+      // (premium silver). Sinag and Tala get no glyph.
+      const glyph = plan.id === 'hiraya'  ? '♛ '
+                  : plan.id === 'dalisay' ? '★ '
+                  : '';
       const upgrade = next
-        ? ` <a href="/#pricing" style="font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);text-decoration:none;margin-left:6px;">Upgrade</a>`
+        ? ` <a href="/#pricing" style="font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:inherit;opacity:.7;text-decoration:underline;margin-left:6px;">Upgrade</a>`
         : '';
-      infoPlan.innerHTML = `<span style="font-family:var(--display);font-style:italic;color:var(--accent);">${star}${plan.name}</span>${upgrade}`;
+      // No inline color — the parent row's data-tier picks the palette
+      // (gold/silver/copper for paid tiers, default accent for Tala).
+      infoPlan.innerHTML = `<span style="font-family:var(--display);font-style:italic;">${glyph}${plan.name}</span>${upgrade}`;
+      const planRow = infoPlan.closest('.row');
+      if (planRow) planRow.setAttribute('data-tier', plan.id);
     }
     // Wall/gallery expiry — prefer the new gallery_expires_at, fall back to legacy wall_expires_at
     const expiryDate = event.gallery_expires_at || event.wall_expires_at;
