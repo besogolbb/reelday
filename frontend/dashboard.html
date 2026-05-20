@@ -1779,6 +1779,12 @@
       display: grid; grid-template-columns: repeat(4, 1fr);
       gap: 14px;
     }
+    /* Hard override for [hidden] — without this the `display: flex`
+       below wins via specificity and the Hiraya-hide JS gate does
+       nothing. Companion fix to the start.html price-pick[hidden]
+       override (2026-05-20). */
+    .up-card[hidden] { display: none !important; }
+
     .up-card {
       background: #fff; border: 1px solid var(--line);
       border-radius: 18px; padding: 26px 22px;

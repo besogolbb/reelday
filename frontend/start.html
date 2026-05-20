@@ -465,6 +465,12 @@
   }
   @media (max-width: 760px) { .plan-pick-grid { grid-template-columns: 1fr; gap: 14px; } }
 
+  /* Hard override for [hidden] — without this our `display: flex` below
+     wins via specificity and the JS gate (`hirayaCard.hidden = true`)
+     does nothing. Was the actual bug behind "Hiraya still shows after
+     purging Cloudflare" — 2026-05-20. */
+  .price-pick[hidden] { display: none !important; }
+
   .price-pick {
     /* Full-card button — reset native button defaults so the inner
        layout reads as a clean card, not a control. */
