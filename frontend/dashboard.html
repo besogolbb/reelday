@@ -3171,6 +3171,18 @@
         miniNext.textContent = `Opens ${formatDate(event.upload_window_starts_at)}`;
       } else if (uploadsClosed) {
         miniNext.textContent = 'Extend upload window';
+      } else if (_sideDemoOpen && isTala) {
+        // Currently inside the Tala 2-day demo window. Without this
+        // branch the hint just said "Share the QR" — no signal that
+        // uploads will close in <48h. Surface both the demo end date
+        // and when the wall legitimately reopens (event day) so the
+        // host has the full picture in the info card itself.
+        const demoEndStr  = formatDate(_sideDemoEnd);
+        const nextOpenStr = event.upload_window_starts_at
+          ? formatDate(event.upload_window_starts_at)
+          : null;
+        miniNext.innerHTML = `2-day demo · ends ${demoEndStr}` +
+          (nextOpenStr ? `<br>Opens again on ${nextOpenStr}` : '');
       } else {
         miniNext.textContent = 'Share the QR';
       }
