@@ -432,50 +432,172 @@
   .uc-cta:disabled { opacity: .5; cursor: not-allowed; transform: none; }
   .uc-cta.loading .btn-spinner { display: block; }
 
-  /* ── Plan selection slide ───────────────────── */
+  /* ── Plan selection slide ───────────────────────
+     Mirrors the landing-page .price-card visual language so the
+     wizard's "Choose your plan" step feels like a continuation of
+     the pricing section on /. Adapted for selection: the entire
+     card is a button, picking it adds .selected (dark-ink fill
+     overrides featured/default). Dalisay keeps the landing's
+     "featured" lifted dark theme by default so its visual weight
+     matches /; selection on any card overrides that. */
   .plan-pick-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin-bottom: 4px;
+    gap: 16px;
+    margin-bottom: 8px;
+    /* Featured card scales -8px upward — let the grid breathe so
+       neither it nor its neighbours clip the row above. */
+    padding-top: 10px;
   }
-  @media (max-width: 480px) { .plan-pick-grid { grid-template-columns: 1fr; } }
-  .ppc {
-    background: #fff; border: 1.5px solid var(--line);
+  @media (max-width: 560px) { .plan-pick-grid { grid-template-columns: 1fr; gap: 14px; } }
+
+  .price-pick {
+    /* Full-card button — reset native button defaults so the inner
+       layout reads as a clean card, not a control. */
+    appearance: none;
+    -webkit-appearance: none;
+    background: #fff;
+    border: 1.5px solid var(--line);
     border-radius: var(--r-lg);
-    padding: 18px 16px;
-    text-align: left; cursor: pointer;
-    transition: all .2s ease;
-    font-family: var(--sans); color: var(--ink);
+    padding: 26px 24px;
+    text-align: left;
+    cursor: pointer;
+    color: var(--ink);
+    font-family: var(--sans);
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 2px 8px rgba(42,26,20,.04);
+    transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease, opacity .2s ease;
+    position: relative;
   }
-  .ppc:hover  { border-color: var(--accent); box-shadow: var(--shadow-card); transform: translateY(-1px); }
-  .ppc.featured { border-color: var(--accent); }
-  .ppc.selected { background: var(--ink); border-color: var(--ink); color: var(--paper); }
-  .ppc.disabled {
+  .price-pick:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 28px rgba(42,26,20,.10);
+    border-color: var(--accent);
+  }
+  .price-pick.featured {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: var(--paper);
+    transform: translateY(-8px);
+    box-shadow: 0 14px 36px rgba(42,26,20,.22);
+  }
+  .price-pick.featured:hover { transform: translateY(-10px); }
+
+  .price-pick.selected {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(196,90,58,.22), 0 14px 36px rgba(196,90,58,.18);
+    transform: translateY(-4px);
+  }
+  .price-pick.featured.selected {
+    /* Featured Dalisay when picked: keep the dark fill, swap the
+       ring to the accent so the "you picked this" signal is loud. */
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(196,90,58,.45), 0 18px 40px rgba(42,26,20,.28);
+  }
+
+  .price-pick.disabled {
     cursor: not-allowed;
     opacity: .55;
     background: var(--paper-2, #f5ece2);
+    box-shadow: none;
   }
-  .ppc.disabled:hover { transform: none; box-shadow: none; border-color: var(--line); }
-  .ppc-note {
+  .price-pick.disabled:hover {
+    transform: none;
+    box-shadow: none;
+    border-color: var(--line);
+  }
+
+  .price-pick .pp-tier {
+    font-family: var(--display);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 24px;
+    letter-spacing: -.01em;
+    color: var(--accent);
+    margin-bottom: 12px;
+    line-height: 1;
+  }
+  .price-pick.featured .pp-tier { color: var(--accent-soft, #e6b78f); }
+
+  .price-pick .pp-price {
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: 36px;
+    line-height: 1;
+    letter-spacing: -.025em;
+    margin-bottom: 4px;
+  }
+  .price-pick .pp-price sub {
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--ink-faint);
+    vertical-align: baseline;
+  }
+  .price-pick.featured .pp-price sub { color: rgba(251,245,236,.5); }
+
+  .price-pick .pp-desc {
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin: 0 0 16px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--line);
+    line-height: 1.5;
+  }
+  .price-pick.featured .pp-desc {
+    color: rgba(251,245,236,.65);
+    border-color: rgba(255,255,255,.12);
+  }
+
+  .price-pick ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--ink-soft);
+    flex: 1;
+  }
+  .price-pick.featured ul { color: rgba(251,245,236,.72); }
+  .price-pick li { display: flex; gap: 8px; line-height: 1.45; }
+  .price-pick li::before {
+    content: '✓';
+    color: var(--accent);
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .price-pick.featured li::before { color: var(--accent-soft, #e6b78f); }
+
+  .pp-note {
+    margin-top: 14px;
     font-family: var(--mono);
     font-size: 10px;
-    letter-spacing: .12em;
+    letter-spacing: .14em;
     text-transform: uppercase;
     color: var(--ink-faint);
-    margin-top: 8px;
   }
-  .ppc-name  { font-family: var(--display); font-style: italic; font-size: 22px; margin-bottom: 4px; }
-  .ppc-price { font-family: var(--mono); font-size: 13px; font-weight: 600; margin-bottom: 10px; color: var(--accent); }
-  .ppc.selected .ppc-price { color: var(--paper); opacity: .8; }
-  .ppc-feats {
-    list-style: none; padding: 0; margin: 0;
-    font-size: 12px; color: var(--ink-soft);
-    display: flex; flex-direction: column; gap: 3px;
+  .price-pick.featured .pp-note { color: rgba(251,245,236,.6); }
+
+  /* Tiny "Selected" pill shown on the active card so the state is
+     unambiguous even when colour cues are subtle. */
+  .pp-selected-badge {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    background: var(--accent);
+    color: #fff;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 999px;
+    display: none;
   }
-  .ppc.selected .ppc-feats { color: var(--paper); opacity: .7; }
-  .ppc-feats li::before { content: '✓ '; color: var(--accent); }
-  .ppc.selected .ppc-feats li::before { color: rgba(255,255,255,.6); }
+  .price-pick.selected .pp-selected-badge { display: inline-block; }
 
   /* Resume overlay shown after upgrade checkout while we finalize the event */
   .resume-overlay {
@@ -615,40 +737,56 @@
       <p class="sub">Paid plans go through a quick checkout — your event is created after payment.</p>
 
       <div class="plan-pick-grid" id="plan-pick-grid">
-        <button type="button" class="ppc" data-plan="tala">
-          <div class="ppc-name">Tala</div>
-          <div class="ppc-price">Free</div>
-          <ul class="ppc-feats">
+        <button type="button" class="price-pick" data-plan="tala">
+          <span class="pp-selected-badge">Selected</span>
+          <div class="pp-tier">Tala</div>
+          <div class="pp-price">Free</div>
+          <p class="pp-desc">For testing &amp; small gatherings.</p>
+          <ul>
             <li>1 free event, ever</li>
-            <li>Photos only · 25 limit</li>
-            <li>24-hour gallery</li>
+            <li>25 photos only</li>
+            <li>Event-day uploads</li>
+            <li>24-hour retention</li>
           </ul>
         </button>
-        <button type="button" class="ppc" data-plan="sinag">
-          <div class="ppc-name">Sinag</div>
-          <div class="ppc-price">₱1,490 / event</div>
-          <ul class="ppc-feats">
-            <li>1 event</li>
-            <li>Unlimited photo & video</li>
-            <li>30-day gallery</li>
+        <button type="button" class="price-pick" data-plan="sinag">
+          <span class="pp-selected-badge">Selected</span>
+          <div class="pp-tier">Sinag</div>
+          <div class="pp-price">₱1,490<sub> / event</sub></div>
+          <p class="pp-desc">For birthdays, debuts &amp; parties.</p>
+          <ul>
+            <li>Unlimited photos &amp; videos</li>
+            <li>Cinematic Ken Burns wall</li>
+            <li>Live emoji reactions</li>
+            <li>3-day upload window</li>
+            <li>30-day retention</li>
           </ul>
         </button>
-        <button type="button" class="ppc featured" data-plan="dalisay">
-          <div class="ppc-name">Dalisay ★</div>
-          <div class="ppc-price">₱2,990 / event</div>
-          <ul class="ppc-feats">
-            <li>1 event</li>
-            <li>+ Audio notes & website</li>
-            <li>90-day gallery</li>
+        <button type="button" class="price-pick featured" data-plan="dalisay">
+          <span class="pp-selected-badge">Selected</span>
+          <div class="pp-tier">★ Dalisay</div>
+          <div class="pp-price">₱2,990<sub> / event</sub></div>
+          <p class="pp-desc">For weddings &amp; milestones.</p>
+          <ul>
+            <li>Unlimited + audio notes</li>
+            <li>Live polls &amp; games</li>
+            <li>Full event website</li>
+            <li>Same Day Edit recap reel</li>
+            <li>7-day upload window</li>
+            <li>90-day gallery + download all</li>
           </ul>
         </button>
-        <button type="button" class="ppc" data-plan="hiraya">
-          <div class="ppc-name">Hiraya</div>
-          <div class="ppc-price">₱9,990 / year</div>
-          <ul class="ppc-feats">
+        <button type="button" class="price-pick" data-plan="hiraya">
+          <span class="pp-selected-badge">Selected</span>
+          <div class="pp-tier">Hiraya</div>
+          <div class="pp-price">₱9,990<sub> / year</sub></div>
+          <p class="pp-desc">For coordinators, photographers &amp; venues.</p>
+          <ul>
             <li>Up to 10 events / year</li>
-            <li>All features + custom domain</li>
-            <li>1-year gallery</li>
+            <li>White-label wall (your logo)</li>
+            <li>Custom domains</li>
+            <li>30-day upload window</li>
+            <li>1-year retention</li>
           </ul>
         </button>
       </div>
@@ -945,13 +1083,13 @@
     // discover via a 403 that they can't claim it again. Keeping the card
     // visible (rather than removing it) makes the constraint legible.
     if (talaCard) {
-      const existingNote = talaCard.querySelector('.ppc-note');
+      const existingNote = talaCard.querySelector('.pp-note');
       if (talaUsed) {
         talaCard.classList.add('disabled');
         talaCard.setAttribute('aria-disabled', 'true');
         if (!existingNote) {
           const note = document.createElement('div');
-          note.className = 'ppc-note';
+          note.className = 'pp-note';
           note.textContent = '✓ Already used';
           talaCard.appendChild(note);
         }
@@ -965,11 +1103,11 @@
     // Mark the Hiraya card as "Included" when the yearly sub is active —
     // user knows they aren't paying again to add this event.
     if (hirayaCard) {
-      const existingNote = hirayaCard.querySelector('.ppc-note');
+      const existingNote = hirayaCard.querySelector('.pp-note');
       if (hasHirayaSub) {
         if (!existingNote) {
           const note = document.createElement('div');
-          note.className = 'ppc-note';
+          note.className = 'pp-note';
           note.textContent = '✓ Included in your subscription';
           hirayaCard.appendChild(note);
         }
@@ -982,7 +1120,7 @@
   applyUserStateToPlanGrid();
 
   // Pre-select the resolved default plan.
-  planPickGrid.querySelectorAll('.ppc').forEach(c => {
+  planPickGrid.querySelectorAll('.price-pick').forEach(c => {
     c.classList.toggle('selected', c.dataset.plan === state.plan);
   });
 
@@ -1016,7 +1154,7 @@
           // re-render the pill.
           if (state.plan === 'tala' && talaUsed) {
             state.plan = hasHirayaSub ? 'hiraya' : 'sinag';
-            planPickGrid.querySelectorAll('.ppc').forEach(c => {
+            planPickGrid.querySelectorAll('.price-pick').forEach(c => {
               c.classList.toggle('selected', c.dataset.plan === state.plan);
             });
             const pill = document.getElementById('plan-pill');
@@ -1027,7 +1165,7 @@
     })();
   }
   planPickGrid.addEventListener('click', e => {
-    const card = e.target.closest('.ppc');
+    const card = e.target.closest('.price-pick');
     if (!card) return;
     if (card.classList.contains('disabled')) {
       showErr('err-plan');
@@ -1035,7 +1173,7 @@
         'Your free Tala event has already been used. Pick a paid plan to continue.';
       return;
     }
-    planPickGrid.querySelectorAll('.ppc').forEach(c => c.classList.remove('selected'));
+    planPickGrid.querySelectorAll('.price-pick').forEach(c => c.classList.remove('selected'));
     card.classList.add('selected');
     state.plan = card.dataset.plan;
     hideErr('err-plan');
