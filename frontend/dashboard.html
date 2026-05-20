@@ -3276,14 +3276,16 @@
     if (!block || !banner) return;
 
     // Show the bulk-download row whenever the host has at least one
-    // upload AND the gallery hasn't been archived. Hidden in all other
-    // states (empty event, locked event, gallery expired) so we never
-    // present a button that would 400/403 on click.
+    // upload AND the underlying files still exist in storage. The hard
+    // signal is event.archived_at — set by the gallery-cleanup cron
+    // only AFTER the 7-day grace window past gallery_expires_at. Until
+    // then the soft-lock just blocks new uploads; the host can still
+    // pull a ZIP, which is the whole point of the warning email's
+    // "Download all now →" CTA.
     const dlRow = $('info-download-row');
     if (dlRow) {
-      const galleryArchived = event.gallery_expires_at
-        && new Date(event.gallery_expires_at) < new Date();
-      dlRow.style.display = (uploadCount > 0 && !galleryArchived) ? '' : 'none';
+      const filesGone = !!event.archived_at;
+      dlRow.style.display = (uploadCount > 0 && !filesGone) ? '' : 'none';
     }
 
     // Reset banner variant + icon at the top of every render so any

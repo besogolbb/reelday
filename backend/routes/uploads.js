@@ -886,7 +886,7 @@ export default async function uploadRoutes(fastify) {
   fastify.post('/uploads/:slug/download-token', { preHandler: fastify.authenticate }, async (request, reply) => {
     const { slug } = request.params;
     const { rows } = await fastify.db.query(
-      `SELECT id, user_id, gallery_expires_at, couple_names
+      `SELECT id, user_id, gallery_expires_at, archived_at, couple_names
          FROM events WHERE slug = $1 AND is_active = true`,
       [slug],
     );
@@ -895,12 +895,17 @@ export default async function uploadRoutes(fastify) {
     if (event.user_id !== request.user.id) {
       return reply.status(403).send({ error: true, message: 'Not your event' });
     }
-    if (event.gallery_expires_at && new Date(event.gallery_expires_at) < new Date()) {
+    // Download stays available through the 7-day grace window even
+    // though the wall + new uploads soft-lock on gallery_expires_at.
+    // The hard gate is archived_at — set only after the cleanup cron
+    // has actually purged R2. If that's set, the files don't exist
+    // anymore and we can't honour the download.
+    if (event.archived_at) {
       return reply.status(403).send({
         error: true,
-        code: 'gallery_locked',
-        message: 'This event gallery has been archived. Downloads are no longer available — upgrade to extend retention.',
-        gallery_expires_at: event.gallery_expires_at,
+        code: 'gallery_archived',
+        message: 'This event gallery has been permanently archived. The original files are no longer in our system.',
+        archived_at: event.archived_at,
       });
     }
     const { rows: countRows } = await fastify.db.query(
@@ -938,7 +943,7 @@ export default async function uploadRoutes(fastify) {
     }
 
     const { rows: eventRows } = await fastify.db.query(
-      `SELECT id, user_id, gallery_expires_at, couple_names
+      `SELECT id, user_id, gallery_expires_at, archived_at, couple_names
          FROM events WHERE slug = $1 AND is_active = true`,
       [slug],
     );
@@ -947,11 +952,16 @@ export default async function uploadRoutes(fastify) {
     if (event.user_id !== verified.userId) {
       return reply.status(403).send({ error: true, message: 'Not your event' });
     }
-    if (event.gallery_expires_at && new Date(event.gallery_expires_at) < new Date()) {
+    // Mirrors the download-token gate: archived_at is the hard signal
+    // that the underlying files have been purged. During the 7-day
+    // grace window archived_at IS NULL and the host can still pull
+    // their ZIP even though the rest of the dashboard treats the
+    // gallery as soft-locked.
+    if (event.archived_at) {
       return reply.status(403).send({
         error: true,
-        code: 'gallery_locked',
-        message: 'This event gallery has been archived.',
+        code: 'gallery_archived',
+        message: 'This event gallery has been permanently archived.',
       });
     }
 
