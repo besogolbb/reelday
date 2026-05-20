@@ -104,6 +104,12 @@
   .avatars > div:first-child { margin-left: 0; }
   .stars { color: var(--gold); font-size: 14px; letter-spacing: 2px; line-height: 1; margin-bottom: 2px; }
 
+  /* Mobile-only live demo card stamped below the hero copy. Hidden on
+     desktop (the polaroid stage carries that role at >=600px). On
+     mobile it breaks out of .hero's side padding to go edge-to-edge,
+     filling the empty space the polaroid stage used to occupy. */
+  .hero-mobile-demo { display: none; }
+
   /* ── Polaroid stage ────────────────────────────────────── */
   .polaroid-stage {
     position: relative;
@@ -802,6 +808,17 @@
     /* hide polaroid stack — absolutely-positioned pile breaks on narrow screens */
     .polaroid-stage { display: none; }
 
+    /* surface the live wall demo below the hero copy. Negative side
+       margins break out of .hero's 20px padding so the card runs edge
+       to edge — same fit-width treatment used by the Step 4 demo. */
+    .hero-mobile-demo { display: block; margin: 28px -20px 0; }
+    .hero-mobile-demo .wall-mini-mockup { border-radius: 0; aspect-ratio: 16/11; }
+
+    /* Step 4 (live wall preview) gets the whole row so the demo card
+       isn't squeezed into a 50% column. Steps 1-3 stay in the 2-col
+       grid; the wall demo earns the spotlight. */
+    .how-card:nth-child(4) { grid-column: 1 / -1; }
+
     /* hero text */
     .hero h1 { font-size: clamp(36px, 11vw, 60px); }
     .hero p { font-size: 16px; }
@@ -905,6 +922,20 @@
         <div>
           <div class="stars">★★★★★</div>
           <div data-i18n="hero-trust">Trusted by 2,140+ celebrations across PH</div>
+        </div>
+      </div>
+
+      <!-- Mobile-only live wall demo. Drives off the same .wall-mini-mockup
+           classes as the Step 4 card so the JS cycler updates both in sync. -->
+      <div class="hero-mobile-demo" aria-hidden="true">
+        <div class="wall-mini-mockup">
+          <div class="wm-bg" style="background-image:url(/cdn-cgi/image/width=900,quality=82,format=auto/images/First%20dance%20after%2038%20years.png);background-size:cover;background-position:center"></div>
+          <div class="wm-vignette"></div>
+          <div class="wm-ticker"><span class="wm-dot"></span>Live · Reelday Demo</div>
+          <div class="wm-caption">
+            <div class="wm-who">— Tita Marivic</div>
+            <div class="wm-quote">"First dance, 38 years later."</div>
+          </div>
         </div>
       </div>
     </div>
@@ -1510,12 +1541,17 @@ function setLang(lang, btn) {
   let i = 0;
   setInterval(() => {
     i = (i + 1) % bgs.length;
-    const bg  = document.getElementById('miniWallBg');
-    const who = document.getElementById('miniWho');
-    const q   = document.getElementById('miniQuote');
-    if (bg)  bg.style.backgroundImage = bgs[i];
-    if (who) who.textContent = quotes[i].who;
-    if (q)   q.textContent   = quotes[i].q;
+    // Drive every mini-wall on the page (Step 4 card + the mobile hero
+    // demo). Class-based so adding more wall-mini-mockup instances later
+    // doesn't need a JS edit.
+    document.querySelectorAll('.wall-mini-mockup').forEach(mock => {
+      const bg  = mock.querySelector('.wm-bg');
+      const who = mock.querySelector('.wm-who');
+      const q   = mock.querySelector('.wm-quote');
+      if (bg)  bg.style.backgroundImage = bgs[i];
+      if (who) who.textContent = quotes[i].who;
+      if (q)   q.textContent   = quotes[i].q;
+    });
   }, 3500);
 })();
 
