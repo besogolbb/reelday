@@ -420,6 +420,36 @@
       text-shadow: 0 2px 6px rgba(0,0,0,.6);
     }
 
+    /* Inline brand credit beside LIVE — visible only on free/Sinag walls.
+       Bigger and more "billboard" than the small corner credit so casual
+       guests reading the room from across the venue still see where the
+       wall is from. Display-italic serif + a leading star, separated from
+       the LIVE chip by a hairline divider so the eye reads it as a
+       paired unit (live event, by Reelday) rather than ticker chrome. */
+    .ticker .live .ticker-brand {
+      display: inline-flex; align-items: center; gap: 10px;
+      margin-left: 18px; padding-left: 18px;
+      border-left: 1px solid rgba(255,255,255,.22);
+      font-family: var(--display, 'Fraunces', Georgia, serif);
+      font-style: italic;
+      font-weight: 500;
+      font-size: 22px;
+      letter-spacing: 0;
+      text-transform: none;
+      color: rgba(255,255,255,.92);
+      text-shadow: 0 2px 6px rgba(0,0,0,.6);
+    }
+    .ticker .live .ticker-brand .star {
+      font-size: 32px;
+      line-height: 1;
+      color: #f0a37a; /* accent-soft — matches corner-credit motif */
+      text-shadow: 0 2px 8px rgba(0,0,0,.4);
+    }
+    /* White-label: same rule as the corner credit. Premium tiers hide
+       the new ticker brand too, so Dalisay / Hiraya walls stay clean. */
+    body[data-tier="dalisay"] .ticker .live .ticker-brand,
+    body[data-tier="hiraya"]  .ticker .live .ticker-brand { display: none !important; }
+
     /* Broadcast-red live dot. Solid red core with a pulsing outer
        halo so it reads as "we're live right now" rather than the old
        warm orange that blended into the warm wall palette. */
@@ -1558,6 +1588,10 @@
       }
       .ticker .stats { gap: 14px; font-size: 10px; letter-spacing: .1em; }
       .ticker .live { font-size: 10px; letter-spacing: .14em; }
+      /* Shrink the inline brand for narrow-portrait previews; the
+         wall's real home is always a big landscape display. */
+      .ticker .live .ticker-brand { font-size: 13px; margin-left: 10px; padding-left: 10px; gap: 6px; }
+      .ticker .live .ticker-brand .star { font-size: 18px; }
       .qr-badge {
         left: 14px !important;
         padding: 10px;
@@ -1688,6 +1722,10 @@
   <div class="live">
     <span class="dot"></span>
     Live<span id="ticker-name" style="display:none"></span>
+    <span class="ticker-brand">
+      <span class="star">&#9733;</span>
+      <span class="ticker-brand-text">Powered by reelday.ph</span>
+    </span>
   </div>
   <div class="stats" id="ticker-stats"></div>
 </div>
