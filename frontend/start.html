@@ -432,6 +432,37 @@
   .uc-cta:disabled { opacity: .5; cursor: not-allowed; transform: none; }
   .uc-cta.loading .btn-spinner { display: block; }
 
+  /* ── Plan selection slide ───────────────────── */
+  .plan-pick-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 4px;
+  }
+  @media (max-width: 480px) { .plan-pick-grid { grid-template-columns: 1fr; } }
+  .ppc {
+    background: #fff; border: 1.5px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 18px 16px;
+    text-align: left; cursor: pointer;
+    transition: all .2s ease;
+    font-family: var(--sans); color: var(--ink);
+  }
+  .ppc:hover  { border-color: var(--accent); box-shadow: var(--shadow-card); transform: translateY(-1px); }
+  .ppc.featured { border-color: var(--accent); }
+  .ppc.selected { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+  .ppc-name  { font-family: var(--display); font-style: italic; font-size: 22px; margin-bottom: 4px; }
+  .ppc-price { font-family: var(--mono); font-size: 13px; font-weight: 600; margin-bottom: 10px; color: var(--accent); }
+  .ppc.selected .ppc-price { color: var(--paper); opacity: .8; }
+  .ppc-feats {
+    list-style: none; padding: 0; margin: 0;
+    font-size: 12px; color: var(--ink-soft);
+    display: flex; flex-direction: column; gap: 3px;
+  }
+  .ppc.selected .ppc-feats { color: var(--paper); opacity: .7; }
+  .ppc-feats li::before { content: '✓ '; color: var(--accent); }
+  .ppc.selected .ppc-feats li::before { color: rgba(255,255,255,.6); }
+
   /* Resume overlay shown after upgrade checkout while we finalize the event */
   .resume-overlay {
     position: fixed; inset: 0;
@@ -466,6 +497,7 @@
   <span class="plan-pill" id="plan-pill" style="display:none"></span>
   <div class="wizard-progress" id="progress">
     <div class="pip active"></div>
+    <div class="pip"></div>
     <div class="pip"></div>
     <div class="pip"></div>
     <div class="pip"></div>
@@ -563,8 +595,59 @@
       </div>
     </section>
 
-    <!-- Slide 4: Account -->
+    <!-- Slide 4: Plan selection -->
     <section class="slide" data-slide="3">
+      <h1>Choose your <em>plan.</em></h1>
+      <p class="sub">Paid plans go through a quick checkout — your event is created after payment.</p>
+
+      <div class="plan-pick-grid" id="plan-pick-grid">
+        <button type="button" class="ppc" data-plan="tala">
+          <div class="ppc-name">Tala</div>
+          <div class="ppc-price">Free</div>
+          <ul class="ppc-feats">
+            <li>1 free event, ever</li>
+            <li>Photos only · 25 limit</li>
+            <li>24-hour gallery</li>
+          </ul>
+        </button>
+        <button type="button" class="ppc" data-plan="sinag">
+          <div class="ppc-name">Sinag</div>
+          <div class="ppc-price">₱1,490 / event</div>
+          <ul class="ppc-feats">
+            <li>1 event</li>
+            <li>Unlimited photo & video</li>
+            <li>30-day gallery</li>
+          </ul>
+        </button>
+        <button type="button" class="ppc featured" data-plan="dalisay">
+          <div class="ppc-name">Dalisay ★</div>
+          <div class="ppc-price">₱2,990 / event</div>
+          <ul class="ppc-feats">
+            <li>1 event</li>
+            <li>+ Audio notes & website</li>
+            <li>90-day gallery</li>
+          </ul>
+        </button>
+        <button type="button" class="ppc" data-plan="hiraya">
+          <div class="ppc-name">Hiraya</div>
+          <div class="ppc-price">₱9,990 / year</div>
+          <ul class="ppc-feats">
+            <li>Up to 10 events / year</li>
+            <li>All features + custom domain</li>
+            <li>1-year gallery</li>
+          </ul>
+        </button>
+      </div>
+      <div class="field-error" id="err-plan">Please select a plan to continue.</div>
+
+      <div class="slide-actions">
+        <button class="btn-back-slide" type="button" data-back>← Back</button>
+        <button class="btn-next" type="button" data-next>Continue →</button>
+      </div>
+    </section>
+
+    <!-- Slide 5: Account -->
+    <section class="slide" data-slide="4">
       <h1>Save your <em>Reelday.</em></h1>
       <p class="sub">Create a free account so you can manage your event and download photos.</p>
 
@@ -652,7 +735,7 @@
   }
 
   const isLoggedIn = !!getToken();
-  const totalSlides = isLoggedIn ? 3 : 4;   // skip auth if already signed in
+  const totalSlides = isLoggedIn ? 4 : 5;   // skip auth if already signed in
 
   let currentSlide = 0;
 
@@ -665,10 +748,10 @@
 
   // Hide the auth pip + slide when already logged in
   if (isLoggedIn) {
-    progress[3]?.remove();
-    slides[3]?.remove();
-    // Last slide's "Continue" becomes a finisher
-    const lastNext = slides[2].querySelector('[data-next]');
+    progress[4]?.remove();
+    slides[4]?.remove();
+    // Last slide (plan selection, index 3) Continue → Create button
+    const lastNext = slides[3].querySelector('[data-next]');
     if (lastNext) {
       lastNext.removeAttribute('data-next');
       lastNext.id = 'btn-finish-direct';
@@ -703,7 +786,7 @@
     setTimeout(() => {
       if (index === 1) document.getElementById('event-name')?.focus();
       if (index === 2) document.getElementById('event-date')?.focus();
-      if (index === 3) document.getElementById('a-name')?.focus();
+      if (index === 4) document.getElementById('a-name')?.focus();
     }, 350);
   }
 
@@ -737,6 +820,12 @@
       if (!v) { showErr('err-date'); return false; }
       hideErr('err-date');
       state.date = v;
+      return true;
+    }
+
+    if (currentSlide === 3) {
+      if (!state.plan || !PLAN_LABELS[state.plan]) { showErr('err-plan'); return false; }
+      hideErr('err-plan');
       return true;
     }
 
@@ -803,6 +892,23 @@
     setTimeout(() => goTo(1), 180);
   });
 
+  // ── Plan selection (slide 3) ───────────────────
+  const planPickGrid = document.getElementById('plan-pick-grid');
+  // Pre-select the plan from URL param (or default tala)
+  planPickGrid.querySelectorAll('.ppc').forEach(c => {
+    c.classList.toggle('selected', c.dataset.plan === state.plan);
+  });
+  planPickGrid.addEventListener('click', e => {
+    const card = e.target.closest('.ppc');
+    if (!card) return;
+    planPickGrid.querySelectorAll('.ppc').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    state.plan = card.dataset.plan;
+    hideErr('err-plan');
+    const pill = document.getElementById('plan-pill');
+    if (pill) { pill.textContent = PLAN_LABELS[state.plan]?.label || ''; }
+  });
+
   // ── Toast ──────────────────────────────────────
   let toastTimer;
   function showToast(msg, type = '') {
@@ -841,38 +947,44 @@
     return data;
   }
 
-  async function startCheckout(slug, tier) {
-    const token = getToken();
-    const res = await fetch('/api/payments/create', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify({ slug, tier: tier || state.plan }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Could not start checkout.');
-    if (!data.checkout_url) throw new Error('No checkout URL returned.');
-    location.href = data.checkout_url;
-  }
-
   async function createEventAndGo(button) {
     button.disabled = true;
     button.classList.add('loading');
     try {
-      const { event } = await createEvent();
-      if (PLAN_LABELS[event.plan]?.paid && !event.is_paid) {
-        await startCheckout(event.slug, event.plan);
-      } else {
+      if (!PLAN_LABELS[state.plan]?.paid) {
+        // Free (Tala): create event directly — no checkout needed.
+        const { event } = await createEvent();
         location.href = `/dashboard?slug=${event.slug}`;
+        return;
       }
+
+      // Hiraya with active yearly subscription: create event directly —
+      // subscription already covers it, no checkout needed.
+      const storedUser = getUser();
+      if (state.plan === 'hiraya' &&
+          storedUser?.subscription_expires_at &&
+          new Date(storedUser.subscription_expires_at) > new Date()) {
+        const { event } = await createEvent();
+        location.href = `/dashboard?slug=${event.slug}`;
+        return;
+      }
+
+      // Paid plan — stash event details then open checkout.
+      // The event is created AFTER payment confirms (resumeCreate block),
+      // so an abandoned checkout leaves no orphan events in the account.
+      stashPendingEvent();
+      const token = getToken();
+      const res = await fetch('/api/payments/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ tier: state.plan, success_path: 'start_resume' }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.checkout_url) throw new Error(data.message || 'Could not start checkout.');
+      location.href = data.checkout_url;
     } catch (err) {
       button.disabled = false;
       button.classList.remove('loading');
-      // If the backend blocked us because the user's plan is out of event
-      // credits, stash the in-progress event and reveal the upgrade panel
-      // instead of just toasting — the toast was a dead end.
       if (err.code === 'plan_limit_events' && err.plan && getToken()) {
         stashPendingEvent();
         showUpgradePanel(err.plan, err.message);
@@ -1107,11 +1219,20 @@
       }
 
       saveAuth(data.token, data.user);
-      const { event } = await createEvent();
-      if (PLAN_LABELS[event.plan]?.paid && !event.is_paid) {
-        await startCheckout(event.slug, event.plan);
-      } else {
+      if (!PLAN_LABELS[state.plan]?.paid) {
+        const { event } = await createEvent();
         location.href = `/dashboard?slug=${event.slug}`;
+      } else {
+        stashPendingEvent();
+        const token = getToken();
+        const pmtRes = await fetch('/api/payments/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ tier: state.plan, success_path: 'start_resume' }),
+        });
+        const checkoutData = await pmtRes.json();
+        if (!pmtRes.ok || !checkoutData.checkout_url) throw new Error(checkoutData.message || 'Could not start checkout.');
+        location.href = checkoutData.checkout_url;
       }
     } catch (err) {
       errEl.textContent = err.message;
@@ -1134,11 +1255,20 @@
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Google sign-in failed');
       saveAuth(data.token, data.user);
-      const { event } = await createEvent();
-      if (PLAN_LABELS[event.plan]?.paid && !event.is_paid) {
-        await startCheckout(event.slug, event.plan);
-      } else {
+      if (!PLAN_LABELS[state.plan]?.paid) {
+        const { event } = await createEvent();
         location.href = `/dashboard?slug=${event.slug}`;
+      } else {
+        stashPendingEvent();
+        const token = getToken();
+        const pmtRes = await fetch('/api/payments/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ tier: state.plan, success_path: 'start_resume' }),
+        });
+        const checkoutData = await pmtRes.json();
+        if (!pmtRes.ok || !checkoutData.checkout_url) throw new Error(checkoutData.message || 'Could not start checkout.');
+        location.href = checkoutData.checkout_url;
       }
     } catch (err) {
       errEl.textContent = err.message;

@@ -188,7 +188,7 @@ export default async function authRoutes(fastify) {
     }
 
     const { rows } = await fastify.db.query(
-      'SELECT id, email, full_name, phone, is_verified, is_active, password_hash FROM users WHERE email = $1',
+      'SELECT id, email, full_name, phone, is_verified, is_active, password_hash, subscription_tier, subscription_expires_at FROM users WHERE email = $1',
       [email.toLowerCase()],
     );
 
@@ -206,11 +206,13 @@ export default async function authRoutes(fastify) {
     return {
       token,
       user: {
-        id:          user.id,
-        email:       user.email,
-        full_name:   user.full_name,
-        phone:       user.phone,
-        is_verified: user.is_verified,
+        id:                     user.id,
+        email:                  user.email,
+        full_name:              user.full_name,
+        phone:                  user.phone,
+        is_verified:            user.is_verified,
+        subscription_tier:      user.subscription_tier,
+        subscription_expires_at: user.subscription_expires_at,
       },
     };
   });
@@ -375,7 +377,7 @@ export default async function authRoutes(fastify) {
          SET google_id   = COALESCE(users.google_id, EXCLUDED.google_id),
              is_verified = true,
              full_name   = COALESCE(users.full_name, EXCLUDED.full_name)
-       RETURNING id, email, full_name`,
+       RETURNING id, email, full_name, subscription_tier, subscription_expires_at`,
       [email.toLowerCase(), name ?? email, google_id],
     );
 
