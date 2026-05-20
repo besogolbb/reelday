@@ -1232,6 +1232,13 @@
     .mini-note { font-size: 13px; color: var(--dash-muted); line-height: 1.5; margin-top: 10px; }
 
     /* ── Info hero (promoted from sidebar to a horizontal strip) ─── */
+    /* ── Event info hero (redesigned 2026-05-20) ──────────────
+       Uniform grid of equal-height cells. Single light frame, no
+       multi-gradient cell backgrounds — let typography + a small
+       tier accent do the work instead of competing color fields.
+       Replaces the previous mix of un-boxed Type row + metallic
+       Plan cell + warm-peach siblings, which read as unrelated UI
+       chunks rather than one card. */
     .info-hero {
       max-width: 1200px;
       margin: 24px auto 0;
@@ -1239,147 +1246,140 @@
     }
     .info-card {
       position: relative;
-      overflow: hidden;
-      background:
-        linear-gradient(90deg, rgba(196,90,58,.18) 0 6px, transparent 6px),
-        linear-gradient(135deg, rgba(255,255,255,.96) 0%, rgba(255,244,232,.98) 100%);
-      border: 1px solid rgba(196,90,58,.28);
+      background: #fff;
+      border: 1px solid var(--line, rgba(63,35,24,.10));
       border-radius: 24px;
-      padding: 24px 26px 24px 30px;
-      box-shadow: 0 22px 48px rgba(63,35,24,.15), 0 0 0 4px rgba(196,90,58,.06);
-      display: flex; flex-wrap: wrap; align-items: center;
-      gap: 24px;
-    }
-    .info-card::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      background: radial-gradient(circle at 12% 0%, rgba(196,90,58,.12), transparent 34%);
+      padding: 22px 24px;
+      box-shadow: 0 18px 40px rgba(63,35,24,.07), 0 1px 0 rgba(63,35,24,.03);
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 20px 24px;
+      align-items: center;
     }
     .info-card h3 {
-      flex: 0 0 auto;
+      grid-column: 1;
+      align-self: center;
       font-family: var(--display); font-style: italic;
-      font-size: 24px; font-weight: 600; color: var(--ink);
+      font-size: 22px; font-weight: 600; color: var(--ink);
       letter-spacing: -.01em; margin: 0;
-      padding-right: 24px; border-right: 1px solid var(--line);
-      position: relative; z-index: 1;
+      padding-right: 22px;
+      border-right: 1px solid var(--line, rgba(63,35,24,.10));
+      white-space: nowrap;
     }
+
+    /* Inner grid of equal-height cells. auto-fit + minmax means
+       the layout naturally collapses to 2 columns on tablet and 1
+       on small phones with zero media queries. */
+    .info-card .info-cells {
+      grid-column: 2;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 10px;
+    }
+    /* The .row elements get treated as cells by being children of
+       .info-cells. Selector path stays generic so adding a new row
+       later picks up the styling automatically. */
     .info-card .row {
-      flex: 1 1 120px; min-width: 0;
-      display: flex; flex-direction: column; gap: 4px;
-      padding: 0; border: none; font-size: 14px;
-      position: relative; z-index: 1;
+      background: linear-gradient(180deg, #faf3eb 0%, #f4e9d8 100%);
+      border: 1px solid rgba(196,90,58,.16);
+      border-radius: 14px;
+      padding: 12px 14px;
+      min-height: 76px;
+      display: flex; flex-direction: column;
+      justify-content: center;
+      gap: 4px;
+      position: relative;
+      transition: border-color .2s, box-shadow .2s;
     }
+    .info-card .row:hover { border-color: rgba(196,90,58,.32); }
+
+    /* Eyebrow label — small uppercase mono so every cell has a
+       consistent "header" anchor at the top regardless of content. */
     .info-card .row span:first-child {
       font-family: var(--mono); font-size: 10px;
-      letter-spacing: .16em; text-transform: uppercase;
+      letter-spacing: .18em; text-transform: uppercase;
       color: var(--ink-soft);
+      line-height: 1;
     }
-    .info-card .row span:last-child { font-weight: 700; color: var(--ink); font-size: 16px; }
-
-    /* Highlighted rows — Plan + Wall expires */
-    .info-card .row.row-highlight {
-      background: linear-gradient(135deg, rgba(196,90,58,.10), rgba(216,160,90,.10));
-      border: 1px solid rgba(196,90,58,.25);
-      border-radius: 14px;
-      padding: 10px 14px;
-      box-shadow: 0 4px 14px rgba(196,90,58,.08);
-    }
-    .info-card .row.row-highlight span:first-child { color: var(--accent-deep); }
-
-    /* Tier-themed Plan row — set by JS via data-tier on the row.
-       Sinag = copper, Dalisay = silver, Hiraya = gold. Tala uses the
-       default warm-accent row above. Selectors win over the generic
-       .row-highlight span rules above via the extra [data-tier] hop.
-
-       Typography is treated as if the text were *engraved into* the
-       metal: bumped sizes for nameplate presence, then a two-layer
-       text-shadow per tier — dark from above + light from below —
-       which is the classic CSS recipe for debossed/inset text on a
-       reflective surface. The label uses the same engrave so the row
-       reads as one stamped piece rather than text-over-color. */
-    .info-card .row.row-highlight[data-tier] span:first-child {
-      font-family: var(--mono);
-      font-size: 11px;
+    /* Main value — second span renders large + crisp. Default
+       (Type, Wall expires) gets a sans serif; the Plan row overrides
+       to display-italic via [data-cell="plan"] below. */
+    .info-card .row span:last-child {
+      font-family: var(--sans);
       font-weight: 700;
-      letter-spacing: .22em;
-      text-transform: uppercase;
+      color: var(--ink);
+      font-size: 15px;
+      line-height: 1.25;
+      letter-spacing: -.01em;
     }
-    .info-card .row.row-highlight[data-tier] span:last-child {
+
+    /* Plan cell — display-italic name + subtle tier accent.
+       Tier theming is now a left edge stripe + tier-coloured glyph,
+       not a full metallic background. Keeps the cell visually
+       uniform with its siblings (same warm gradient base) while
+       still signalling the tier at a glance. */
+    .info-card .row[data-cell="plan"] span:last-child {
       font-family: var(--display);
       font-style: italic;
-      font-size: 22px;
       font-weight: 600;
-      letter-spacing: .01em;
+      font-size: 20px;
+      letter-spacing: 0;
+      color: var(--ink);
     }
-    /* Re-target the inline value span (rendered by JS) so the engraved
-       sizing applies to the actual <span> child, not just the row's
-       direct :last-child wrapper. */
-    .info-card .row.row-highlight[data-tier] #info-plan > span {
-      font-family: var(--display);
-      font-style: italic;
-      font-size: 22px;
-      font-weight: 600;
-      letter-spacing: .01em;
+    .info-card .row[data-cell="plan"] {
+      border-left-width: 3px;
+      border-left-color: var(--accent, #c45a3a);
     }
+    /* The inline #info-plan span renders ★/♛ + name + an Upgrade
+       link from JS. Make the link a discreet ghost button anchored
+       under the name, not floating awkwardly inline. */
+    .info-card #info-plan a {
+      display: inline-block;
+      margin-top: 4px;
+      font-family: var(--mono); font-size: 9px; font-weight: 700;
+      letter-spacing: .18em; text-transform: uppercase;
+      color: var(--accent-deep, #7a3b2e);
+      text-decoration: none;
+      padding: 3px 8px;
+      border: 1px solid rgba(196,90,58,.35);
+      border-radius: 999px;
+      transition: background .15s, color .15s;
+      opacity: 1 !important;
+    }
+    .info-card #info-plan a:hover {
+      background: var(--accent, #c45a3a); color: #fff;
+    }
+    .info-card #info-plan > span { display: block; }
 
-    .info-card .row.row-highlight[data-tier="sinag"] {
-      background: linear-gradient(135deg, #f7e3cf 0%, #d9925c 55%, #9c5a2e 100%);
-      border-color: #9c5a2e;
-      box-shadow: 0 6px 18px rgba(156,90,46,.22),
-                  inset 0 1px 0 rgba(255,255,255,.35),
-                  inset 0 -1px 0 rgba(0,0,0,.12);
-    }
-    .info-card .row.row-highlight[data-tier="sinag"] span:first-child,
-    .info-card .row.row-highlight[data-tier="sinag"] #info-plan > span {
-      color: #5a2c14;
-      text-shadow:
-        0 -1px 0 rgba(60,20,5,.45),
-        0  1px 1px rgba(255,225,195,.6);
-    }
+    /* Per-tier accent — single colour swap on the left stripe + the
+       tier glyph (★/♛/etc) injected by JS via the inline span. No
+       gradients, no inset shadows, no engraved text shadows. Tala
+       keeps the default warm accent. */
+    .info-card .row[data-cell="plan"][data-tier="sinag"]   { border-left-color: #b87333; }
+    .info-card .row[data-cell="plan"][data-tier="dalisay"] { border-left-color: #6b7280; }
+    .info-card .row[data-cell="plan"][data-tier="hiraya"]  { border-left-color: #c9a227; }
+    .info-card .row[data-cell="plan"][data-tier="sinag"]   #info-plan > span { color: #8a4416; }
+    .info-card .row[data-cell="plan"][data-tier="dalisay"] #info-plan > span { color: #2a3340; }
+    .info-card .row[data-cell="plan"][data-tier="hiraya"]  #info-plan > span { color: #6b4f08; }
 
-    .info-card .row.row-highlight[data-tier="dalisay"] {
-      background: linear-gradient(135deg, #f6f7f9 0%, #d8dde4 55%, #9aa2ad 100%);
-      border-color: #9aa2ad;
-      box-shadow: 0 6px 18px rgba(120,128,140,.25),
-                  inset 0 1px 0 rgba(255,255,255,.55),
-                  inset 0 -1px 0 rgba(0,0,0,.10);
-    }
-    .info-card .row.row-highlight[data-tier="dalisay"] span:first-child,
-    .info-card .row.row-highlight[data-tier="dalisay"] #info-plan > span {
-      color: #2a3340;
-      text-shadow:
-        0 -1px 0 rgba(20,28,40,.40),
-        0  1px 1px rgba(255,255,255,.75);
-    }
+    /* Backwards-compat alias — old code paths still set the
+       row-highlight class on the JSX side. New design treats every
+       row as a cell, so this class is a no-op visually. */
+    .info-card .row.row-highlight { /* intentionally inherits .row */ }
 
-    .info-card .row.row-highlight[data-tier="hiraya"] {
-      background: linear-gradient(135deg, #fdf2c4 0%, #f4d06f 50%, #c9a227 100%);
-      border-color: #c9a227;
-      box-shadow: 0 8px 22px rgba(201,162,39,.32),
-                  inset 0 1px 0 rgba(255,255,255,.55),
-                  inset 0 -1px 0 rgba(80,55,5,.15);
-      position: relative;
-      overflow: hidden;
-    }
-    /* Subtle diagonal sheen on Hiraya so it reads as premium foil */
-    .info-card .row.row-highlight[data-tier="hiraya"]::before {
-      content: '';
-      position: absolute; inset: 0;
-      background: linear-gradient(115deg,
-        transparent 30%,
-        rgba(255,255,255,.55) 48%,
-        rgba(255,255,255,.0) 62%);
-      pointer-events: none;
-    }
-    .info-card .row.row-highlight[data-tier="hiraya"] > * { position: relative; z-index: 1; }
-    .info-card .row.row-highlight[data-tier="hiraya"] span:first-child,
-    .info-card .row.row-highlight[data-tier="hiraya"] #info-plan > span {
-      color: #5a4406;
-      text-shadow:
-        0 -1px 0 rgba(80,55,5,.45),
-        0  1px 1px rgba(255,245,205,.75);
+    @media (max-width: 720px) {
+      .info-card {
+        grid-template-columns: 1fr;
+        gap: 14px;
+      }
+      .info-card h3 {
+        grid-column: 1;
+        padding-right: 0;
+        padding-bottom: 12px;
+        border-right: none;
+        border-bottom: 1px solid var(--line, rgba(63,35,24,.10));
+      }
+      .info-card .info-cells { grid-column: 1; }
     }
 
     /* Always-visible upload-window status pill.
@@ -1404,9 +1404,19 @@
 
     /* Quota meter slot — only visible on plans that have a cap */
     .info-card .quota {
-      flex: 1 1 220px; margin-top: 0; padding-top: 0;
-      border-top: none; padding-left: 24px;
-      border-left: 1px solid var(--line);
+      /* Sits below the cell grid as a full-width row inside .info-card.
+         Used by Tala (uploadLimit=25) to show the meter; other tiers
+         have plan.uploadLimit=null so the JS hides this block. */
+      grid-column: 1 / -1;
+      margin-top: 4px;
+      padding: 14px 16px;
+      background: linear-gradient(180deg, #faf3eb 0%, #f4e9d8 100%);
+      border: 1px solid rgba(196,90,58,.16);
+      border-radius: 14px;
+      border-top: 1px solid rgba(196,90,58,.16);
+      padding-top: 14px;
+      padding-left: 16px;
+      border-left: 1px solid rgba(196,90,58,.16);
     }
 
     @media (max-width: 720px) {
@@ -2044,29 +2054,31 @@
 <div class="info-hero" id="info-hero" style="display:none">
   <div class="info-card">
     <h3>Event info</h3>
-    <div class="row"><span>Type</span><span id="info-type">—</span></div>
-    <div class="row row-highlight"><span>Plan</span><span id="info-plan">—</span></div>
-    <div class="row row-highlight" id="info-window-row">
-      <span>Uploads</span>
-      <span>
-        <span class="win-pill" id="mini-access">—</span>
-        <span class="win-hint" id="mini-next"></span>
-      </span>
-    </div>
-    <div class="row row-highlight"><span>Wall expires</span><span id="info-expires">—</span></div>
+    <div class="info-cells">
+      <div class="row row-highlight"><span>Type</span><span id="info-type">—</span></div>
+      <div class="row row-highlight" data-cell="plan"><span>Plan</span><span id="info-plan">—</span></div>
+      <div class="row row-highlight" id="info-window-row">
+        <span>Uploads</span>
+        <span>
+          <span class="win-pill" id="mini-access">—</span>
+          <span class="win-hint" id="mini-next"></span>
+        </span>
+      </div>
+      <div class="row row-highlight"><span>Wall expires</span><span id="info-expires">—</span></div>
 
-    <!-- Bulk download — hidden until we know there's at least one upload
-         (renderQuota / renderSidebarState flip its visibility based on
-         the current upload count and the gallery_locked flag). -->
-    <div class="row row-highlight" id="info-download-row" style="display:none">
-      <span>Backup</span>
-      <span>
-        <button type="button" class="info-download-btn" id="btn-download-all" aria-label="Download all uploads as a ZIP">
-          <span class="dl-icon" aria-hidden="true">⬇</span>
-          <span class="dl-label">Download all (.zip)</span>
-          <span class="dl-spinner" aria-hidden="true"></span>
-        </button>
-      </span>
+      <!-- Bulk download — hidden until we know there's at least one upload
+           (renderQuota / renderSidebarState flip its visibility based on
+           the current upload count and the gallery_locked flag). -->
+      <div class="row row-highlight" id="info-download-row" style="display:none">
+        <span>Backup</span>
+        <span>
+          <button type="button" class="info-download-btn" id="btn-download-all" aria-label="Download all uploads as a ZIP">
+            <span class="dl-icon" aria-hidden="true">⬇</span>
+            <span class="dl-label">Download all (.zip)</span>
+            <span class="dl-spinner" aria-hidden="true"></span>
+          </button>
+        </span>
+      </div>
     </div>
 
     <!-- upload quota meter (hidden on plans without a cap) -->
@@ -2839,12 +2851,13 @@
       const glyph = plan.id === 'hiraya'  ? '♛ '
                   : plan.id === 'dalisay' ? '★ '
                   : '';
-      const upgrade = next
-        ? ` <a href="/#pricing" style="font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:inherit;opacity:.7;text-decoration:underline;margin-left:6px;">Upgrade</a>`
-        : '';
+      // Upgrade link styles live in the CSS now — the cell redesign
+      // promoted it from a tiny underlined inline to a proper ghost-
+      // pill button so it reads as an action.
+      const upgrade = next ? ` <a href="/#pricing">Upgrade</a>` : '';
       // No inline color — the parent row's data-tier picks the palette
       // (gold/silver/copper for paid tiers, default accent for Tala).
-      infoPlan.innerHTML = `<span style="font-family:var(--display);font-style:italic;">${glyph}${plan.name}</span>${upgrade}`;
+      infoPlan.innerHTML = `<span>${glyph}${plan.name}</span>${upgrade}`;
       const planRow = infoPlan.closest('.row');
       if (planRow) planRow.setAttribute('data-tier', plan.id);
     }
