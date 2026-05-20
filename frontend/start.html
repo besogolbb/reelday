@@ -1293,6 +1293,41 @@
     const reasonEl = document.getElementById('upgrade-reason');
     if (reasonMsg) reasonEl.textContent = reasonMsg;
 
+    // Hiraya yearly cap: top tier, so no upgrade exists. Re-buying the
+    // year extends expires_at but the cap is a rolling 365-day count of
+    // created events — another purchase won't immediately free a slot.
+    // Show a dedicated dead-end panel pointing at support instead of the
+    // misleading "Buy another" rebuy card.
+    if (currentTierId === 'hiraya') {
+      grid.innerHTML = `
+        <div class="upgrade-card featured" style="grid-column:1/-1;text-align:center;">
+          <div class="uc-tag">You're on our top tier</div>
+          <div class="uc-tier">Hiraya</div>
+          <div class="uc-tagline" style="margin-top:8px;">
+            You've used all 10 of this year's Hiraya events. Your allowance refreshes
+            as your earlier events roll past their 12-month mark, or reach out and
+            we'll extend your account directly.
+          </div>
+          <a href="mailto:support@reelday.ph?subject=Hiraya%20extra%20events"
+             class="uc-cta" style="margin-top:18px;display:inline-block;text-decoration:none;">
+            <span>Email support@reelday.ph →</span>
+          </a>
+        </div>
+      `;
+      slides.forEach(el => el.classList.remove('active'));
+      panel.classList.add('active');
+      panel.setAttribute('aria-hidden', 'false');
+      btnBack.disabled = false;
+      btnBack.onclick = () => {
+        panel.classList.remove('active');
+        panel.setAttribute('aria-hidden', 'true');
+        btnBack.onclick = null;
+        btnBack.disabled = currentSlide === 0;
+        goTo(currentSlide);
+      };
+      return;
+    }
+
     const curIdx = PLAN_ORDER.indexOf(currentTierId);
     // Always offer all three paid tiers — even Sinag for a Dalisay user
     // (per-event model: a small follow-up event may not need Dalisay's
