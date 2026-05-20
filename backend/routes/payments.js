@@ -278,6 +278,23 @@ const PAID_TIERS = {
   hiraya:  { label: 'Hiraya',  amount: 999000 },  // ₱9,990 / year
 };
 
+// ⚠️ END-TO-END PAYMENT TEST OVERRIDE — REMOVE AFTER LAUNCH VERIFY ⚠️
+// When the authenticated buyer's email is in this set, PayMongo is
+// charged a flat ₱50 (5000 centavos) regardless of which tier they
+// picked. Everyone else still pays the real tier price from PAID_TIERS.
+// Scope: only the /payments/create checkout flow. Reconcile + webhook
+// just check tier membership (not amount), so the upgrade still applies
+// when the ₱50 test payment clears.
+//
+// To remove after the launch smoke test:
+//   1. Delete this Set and the TEST_PRICING_AMOUNT constant
+//   2. Delete the `isTestPricingUser` override block in /payments/create
+//   3. Search the file for "END-TO-END PAYMENT TEST" to confirm none left
+const TEST_PRICING_EMAILS = new Set([
+  'besogol.bb@gmail.com',
+]);
+const TEST_PRICING_AMOUNT = 5000;  // ₱50
+
 function paymongoAuth() {
   return `Basic ${Buffer.from(`${process.env.PAYMONGO_SECRET_KEY}:`).toString('base64')}`;
 }
@@ -413,9 +430,25 @@ export default async function paymentRoutes(fastify) {
       return reply.status(400).send({ error: true, message: 'tier is required' });
     }
 
-    const tierConfig = PAID_TIERS[tier];
+    let tierConfig = PAID_TIERS[tier];
     if (!tierConfig) {
       return reply.status(400).send({ error: true, message: `Unknown tier: ${tier}` });
+    }
+
+    // ⚠️ END-TO-END PAYMENT TEST OVERRIDE — REMOVE AFTER LAUNCH VERIFY ⚠️
+    // If the buyer's email is allowlisted, charge ₱50 instead of the real
+    // tier price so the launch smoke test costs ~₱50 per round-trip
+    // instead of ₱1,490 / ₱2,990. Label is tagged [TEST] so the PayMongo
+    // receipt makes the override obvious in audit logs.
+    const buyerEmail = String(request.user.email || '').toLowerCase();
+    const isTestPricingUser = TEST_PRICING_EMAILS.has(buyerEmail);
+    if (isTestPricingUser) {
+      tierConfig = {
+        label:  `${tierConfig.label} [TEST]`,
+        amount: TEST_PRICING_AMOUNT,
+      };
+      request.log.warn({ buyerEmail, tier, override: TEST_PRICING_AMOUNT },
+        'TEST pricing override applied');
     }
 
     const userId = request.user.id;

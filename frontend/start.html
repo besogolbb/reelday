@@ -442,14 +442,18 @@
      matches /; selection on any card overrides that. */
   .plan-pick-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    /* 3-col while Hiraya is hidden (HIRAYA_PUBLIC=false in /js/plans.js).
+       The original 2-col was designed for the 4-tier 2x2 layout — with 3
+       visible cards it left an orphan on row 2. When relaunching Hiraya,
+       revert to `1fr 1fr` and keep the 560px single-column breakpoint. */
+    grid-template-columns: repeat(3, 1fr);
     gap: 16px;
     margin-bottom: 8px;
     /* Featured card scales -8px upward — let the grid breathe so
        neither it nor its neighbours clip the row above. */
     padding-top: 10px;
   }
-  @media (max-width: 560px) { .plan-pick-grid { grid-template-columns: 1fr; gap: 14px; } }
+  @media (max-width: 760px) { .plan-pick-grid { grid-template-columns: 1fr; gap: 14px; } }
 
   .price-pick {
     /* Full-card button — reset native button defaults so the inner

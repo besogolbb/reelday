@@ -5,6 +5,25 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="theme-color" content="#fdfaf5" />
 <meta name="description" content="Every shot from your celebration. One QR code. Instantly. The cinematic photo-sharing platform for Filipino weddings, birthdays, and celebrations." />
+
+<!-- Open Graph / social share previews. Messenger, Viber, FB, IG, and
+     Twitter/X all read these to render the rich card when someone shares
+     reelday.ph in a chat or post. Image must be an absolute URL and
+     ideally 1200×630 PNG/JPG — newlyweds.png is the placeholder; swap
+     it for a dedicated social card when one's ready. -->
+<meta property="og:type"        content="website" />
+<meta property="og:site_name"   content="Reelday" />
+<meta property="og:title"       content="Reelday — Every shot. Every guest. One QR." />
+<meta property="og:description" content="Every shot from your celebration. One QR code. Instantly. Built for Filipino weddings, birthdays, and celebrations." />
+<meta property="og:url"         content="https://reelday.ph/" />
+<meta property="og:image"       content="https://reelday.ph/images/newlyweds.png" />
+<meta property="og:image:alt"   content="A Filipino couple's wedding moment captured by Reelday." />
+<meta property="og:locale"      content="en_PH" />
+<meta name="twitter:card"        content="summary_large_image" />
+<meta name="twitter:title"       content="Reelday — Every shot. Every guest. One QR." />
+<meta name="twitter:description" content="Every shot from your celebration. One QR code. Instantly. Built for Filipino weddings, birthdays, and celebrations." />
+<meta name="twitter:image"       content="https://reelday.ph/images/newlyweds.png" />
+
 <title>Reelday — Every shot. Every guest. One QR.</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=5" />
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=5" />
@@ -704,7 +723,10 @@
   }
   .pricing h2 em { font-style: italic; color: var(--accent); }
   .pricing .sub { font-size: 16px; color: var(--ink-soft); margin-bottom: 52px; }
-  .pricing-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; text-align: left; }
+  /* 3-col since Hiraya is in private launch (see /js/plans.js HIRAYA_PUBLIC).
+     When re-enabling Hiraya publicly, switch back to repeat(4,1fr) + the
+     repeat(2,1fr) tablet breakpoint that used to live below. */
+  .pricing-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; text-align: left; max-width: 980px; margin: 0 auto; }
   .price-card {
     background: #fff; border: 1px solid var(--line);
     border-radius: var(--r-lg); padding: 32px;
@@ -794,7 +816,10 @@
     .feat-wide, .feat-narrow { grid-column: 1; }
     .events-grid { grid-template-columns: repeat(2,1fr); }
     .testi-grid { grid-template-columns: 1fr; gap: 16px; }
-    .pricing-grid { grid-template-columns: repeat(2,1fr); }
+    /* Tablet: collapse straight to single column. The previous 2-col layout
+       orphaned the 3rd card on row 2 once Hiraya was hidden. Single column
+       reads cleaner than a row-of-two + lonely-third. */
+    .pricing-grid { grid-template-columns: 1fr; max-width: 420px; }
     .price-card.featured { transform: none; }
     .site-nav { display: none; }
     .wl-frame-inner { padding: 0 20px 20px; }
