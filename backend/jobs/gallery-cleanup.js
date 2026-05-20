@@ -77,12 +77,20 @@ export function startGalleryCleanupJob(fastify) {
   fastify.log.info('[gallery-cleanup] cron started (6h interval, 7-day grace)');
 }
 
+// Exported so admin can fire a tick on demand from the dashboard
+// instead of waiting up to 6 hours. Returns the per-pass counts so
+// the admin UI can show how many warnings + purges happened.
+export async function runGalleryCleanupOnce(fastify) {
+  return runOnce(fastify);
+}
+
 async function runOnce(fastify) {
   const warned   = await passWarnings(fastify);
   const purged   = await passPurge(fastify);
   if (warned || purged) {
     fastify.log.info({ warned, purged }, '[gallery-cleanup] tick done');
   }
+  return { warned, purged };
 }
 
 // ── Pass 1: send warning emails for galleries that JUST expired ──

@@ -5,6 +5,7 @@ import { applyTierUpgrade } from './payments.js';
 import { extractStorageKey } from '../lib/storageKeys.js';
 import { syncEventToGcal, deleteGcalEvent } from '../lib/gcal.js';
 import { baseSlug, randomSuffix, isSlugCollision } from './events.js';
+import { runGalleryCleanupOnce } from '../jobs/gallery-cleanup.js';
 
 // Best-effort Google Calendar sync after an admin event mutation. Never
 // throws into the request path — a Calendar hiccup must not fail the DB
@@ -1105,5 +1106,21 @@ export default async function adminRoutes(fastify) {
     }
 
     return result;
+  });
+
+  // POST /api/admin/jobs/gallery-cleanup/run — fire the cleanup cron
+  // once on demand instead of waiting for the next 6h tick. Returns
+  // { warned, purged } counts so the operator can see what happened.
+  // Safe to spam — the cron's CAS-based idempotency guarantees that
+  // calling it twice in a row will only ever do work the first time
+  // (any event the first call warned/purged is already filtered out).
+  fastify.post('/admin/jobs/gallery-cleanup/run', async (request, reply) => {
+    try {
+      const result = await runGalleryCleanupOnce(fastify);
+      return { ok: true, ...result };
+    } catch (err) {
+      request.log.error({ err: err.message }, 'manual gallery-cleanup failed');
+      return reply.status(500).send({ ok: false, error: err.message });
+    }
   });
 }
