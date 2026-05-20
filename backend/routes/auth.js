@@ -188,7 +188,7 @@ export default async function authRoutes(fastify) {
     }
 
     const { rows } = await fastify.db.query(
-      'SELECT id, email, full_name, phone, is_verified, is_active, password_hash, subscription_tier, subscription_expires_at FROM users WHERE email = $1',
+      'SELECT id, email, full_name, phone, is_verified, is_active, password_hash, subscription_tier, subscription_expires_at, tala_used FROM users WHERE email = $1',
       [email.toLowerCase()],
     );
 
@@ -213,6 +213,7 @@ export default async function authRoutes(fastify) {
         is_verified:            user.is_verified,
         subscription_tier:      user.subscription_tier,
         subscription_expires_at: user.subscription_expires_at,
+        tala_used:               user.tala_used,
       },
     };
   });
@@ -304,7 +305,7 @@ export default async function authRoutes(fastify) {
   fastify.get('/auth/me', { preHandler: fastify.authenticate }, async (request) => {
     const { rows } = await fastify.db.query(
       `SELECT u.id, u.email, u.full_name, u.phone, u.is_verified, u.created_at,
-              u.subscription_tier, u.subscription_expires_at,
+              u.subscription_tier, u.subscription_expires_at, u.tala_used,
               u.sinag_credits, u.dalisay_credits, u.hiraya_credits,
               json_agg(json_build_object(
                 'slug',        e.slug,
@@ -377,7 +378,7 @@ export default async function authRoutes(fastify) {
          SET google_id   = COALESCE(users.google_id, EXCLUDED.google_id),
              is_verified = true,
              full_name   = COALESCE(users.full_name, EXCLUDED.full_name)
-       RETURNING id, email, full_name, subscription_tier, subscription_expires_at`,
+       RETURNING id, email, full_name, subscription_tier, subscription_expires_at, tala_used`,
       [email.toLowerCase(), name ?? email, google_id],
     );
 

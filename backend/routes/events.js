@@ -91,12 +91,16 @@ export default async function eventRoutes(fastify) {
       return reply.status(404).send({ error: true, message: 'User not found' });
     }
 
-    // Explicit paid-tier requests from the URL (?plan=sinag etc.) are
-    // honoured. Tala requests or missing values fall back to the user's
-    // actual subscription_tier — so a Hiraya user visiting /start without
-    // a plan param still gets a Hiraya event, not a Tala one.
+    // Event-scoped plan model: honour any explicit plan id the client sent
+    // (including 'tala'), and only fall back to the user's subscription_tier
+    // when the body omitted plan entirely. Previously 'tala' was treated as
+    // "missing" and silently overridden by subscription_tier — so a Dalisay
+    // account picking Tala in the wizard got a Dalisay event instead. See
+    // project-plan-tiers-event-scoped: each event carries its own plan and
+    // is bought / gated independently from the user-level tier.
     const PAID_PLAN_IDS = new Set(['sinag', 'dalisay', 'hiraya']);
-    const planForEvent = PAID_PLAN_IDS.has(requestedPlan)
+    const VALID_PLAN_IDS = new Set(['tala', ...PAID_PLAN_IDS]);
+    const planForEvent = VALID_PLAN_IDS.has(requestedPlan)
       ? resolvePlan(requestedPlan)
       : resolvePlan(user.subscription_tier);
 
@@ -149,6 +153,22 @@ export default async function eventRoutes(fastify) {
         isPaid = true;
         claimPaymentId = pmtRows[0].id;
       }
+    }
+
+    // Hard gate: paid plans must actually be paid. The wizard normally
+    // sends the user through PayMongo before this endpoint is called, so a
+    // request landing here without a matching payment is either an aborted
+    // checkout the client forgot to clean up, or a crafted request trying
+    // to mint a paid event for free. Either way: refuse, point them back
+    // to checkout. Tala still flows through unchanged (it has its own
+    // lifetime/cap checks above).
+    if (PAID_PLAN_IDS.has(planForEvent.id) && !isPaid) {
+      return reply.status(402).send({
+        error: true,
+        code:    'payment_required',
+        message: `Please complete checkout for ${planForEvent.name} before creating this event.`,
+        plan:    planForEvent.id,
+      });
     }
 
     const stampDate            = event_date || new Date();

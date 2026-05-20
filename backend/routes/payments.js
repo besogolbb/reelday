@@ -169,13 +169,28 @@ export async function applyTierUpgrade(db, { userId, tier, slug }) {
   // Sinag:   +1 per purchase
   // Dalisay: +1 per purchase (eventLimit = 1)
   // Hiraya:  +eventLimit (10) per yearly purchase
+  //
+  // Hiraya guard: a one-time Sinag/Dalisay purchase no longer wipes a
+  // still-active Hiraya subscription. Previously this routine flipped
+  // subscription_tier to the just-bought one-time tier AND nulled
+  // subscription_expires_at — which yanked the buyer's Hiraya
+  // account-wide perks (white-label, multi-event quota) for the rest of
+  // their paid year. Now: keep tier='hiraya' / expires_at intact when
+  // the sub is still in the future. Per the event-scoped model the new
+  // event still carries plan='sinag'/'dalisay' (set on insert), so
+  // feature-gating for THAT event is unaffected.
   let updateSql, params;
   if (plan.id === 'sinag') {
     updateSql = `
       UPDATE users
-         SET subscription_tier        = 'sinag',
-             sinag_credits            = sinag_credits + 1,
-             subscription_expires_at  = NULL
+         SET subscription_tier        = CASE
+               WHEN subscription_tier = 'hiraya'
+                AND subscription_expires_at IS NOT NULL
+                AND subscription_expires_at > NOW()
+               THEN 'hiraya'
+               ELSE 'sinag'
+             END,
+             sinag_credits            = sinag_credits + 1
        WHERE id = $1`;
     params = [userId];
   } else if (plan.id === 'hiraya') {
@@ -183,15 +198,23 @@ export async function applyTierUpgrade(db, { userId, tier, slug }) {
       UPDATE users
          SET subscription_tier        = 'hiraya',
              hiraya_credits           = hiraya_credits + $2,
-             subscription_expires_at  = NOW() + INTERVAL '1 year'
+             subscription_expires_at  = GREATEST(
+               COALESCE(subscription_expires_at, NOW()),
+               NOW()
+             ) + INTERVAL '1 year'
        WHERE id = $1`;
     params = [userId, plan.eventLimit];
   } else { // dalisay
     updateSql = `
       UPDATE users
-         SET subscription_tier        = $2,
-             dalisay_credits          = dalisay_credits + $3,
-             subscription_expires_at  = NULL
+         SET subscription_tier        = CASE
+               WHEN subscription_tier = 'hiraya'
+                AND subscription_expires_at IS NOT NULL
+                AND subscription_expires_at > NOW()
+               THEN 'hiraya'
+               ELSE $2
+             END,
+             dalisay_credits          = dalisay_credits + $3
        WHERE id = $1`;
     params = [userId, plan.id, plan.eventLimit];
   }

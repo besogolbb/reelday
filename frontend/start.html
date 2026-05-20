@@ -451,6 +451,20 @@
   .ppc:hover  { border-color: var(--accent); box-shadow: var(--shadow-card); transform: translateY(-1px); }
   .ppc.featured { border-color: var(--accent); }
   .ppc.selected { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+  .ppc.disabled {
+    cursor: not-allowed;
+    opacity: .55;
+    background: var(--paper-2, #f5ece2);
+  }
+  .ppc.disabled:hover { transform: none; box-shadow: none; border-color: var(--line); }
+  .ppc-note {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-top: 8px;
+  }
   .ppc-name  { font-family: var(--display); font-style: italic; font-size: 22px; margin-bottom: 4px; }
   .ppc-price { font-family: var(--mono); font-size: 13px; font-weight: 600; margin-bottom: 10px; color: var(--accent); }
   .ppc.selected .ppc-price { color: var(--paper); opacity: .8; }
@@ -718,7 +732,30 @@
   };
 
   const requestedPlan = params.get('plan');
-  const plan = PLAN_LABELS[requestedPlan] ? requestedPlan : 'tala';
+  const isLoggedIn = !!getToken();
+
+  // Use cached user immediately so the wizard's event handlers don't have
+  // to wait on a round-trip before they bind. /auth/me is then fired in
+  // the background and only triggers a re-paint of the plan grid /
+  // header pill if the cache turned out to be stale (talaUsed flipped,
+  // Hiraya sub renewed, etc.).
+  let currentUser = isLoggedIn ? (getUser() || {}) : null;
+  let hasHirayaSub = !!(currentUser?.subscription_expires_at
+    && new Date(currentUser.subscription_expires_at) > new Date());
+  let talaUsed = !!currentUser?.tala_used;
+
+  // Default plan resolution:
+  //   1. Explicit ?plan= URL param wins (so pricing-page CTAs still work)
+  //   2. Active Hiraya sub → default Hiraya (their yearly already covers it)
+  //   3. Otherwise → Tala if still available, else Sinag (cheapest paid)
+  // The plan grid in slide 3 still lets the user override anything here.
+  function pickDefaultPlan() {
+    if (PLAN_LABELS[requestedPlan]) return requestedPlan;
+    if (hasHirayaSub) return 'hiraya';
+    if (!talaUsed)    return 'tala';
+    return 'sinag';
+  }
+  const plan = pickDefaultPlan();
 
   const state = {
     type:  params.get('type') || 'wedding',
@@ -733,8 +770,6 @@
     pill.textContent = PLAN_LABELS[plan].label;
     pill.style.display = '';
   }
-
-  const isLoggedIn = !!getToken();
   const totalSlides = isLoggedIn ? 4 : 5;   // skip auth if already signed in
 
   let currentSlide = 0;
@@ -825,6 +860,12 @@
 
     if (currentSlide === 3) {
       if (!state.plan || !PLAN_LABELS[state.plan]) { showErr('err-plan'); return false; }
+      if (state.plan === 'tala' && talaUsed) {
+        document.getElementById('err-plan').textContent =
+          'Your free Tala event has already been used. Pick a paid plan to continue.';
+        showErr('err-plan');
+        return false;
+      }
       hideErr('err-plan');
       return true;
     }
@@ -894,13 +935,106 @@
 
   // ── Plan selection (slide 3) ───────────────────
   const planPickGrid = document.getElementById('plan-pick-grid');
-  // Pre-select the plan from URL param (or default tala)
+
+  function applyUserStateToPlanGrid() {
+    const talaCard   = planPickGrid.querySelector('[data-plan="tala"]');
+    const hirayaCard = planPickGrid.querySelector('[data-plan="hiraya"]');
+
+    // Disable the Tala card when the lifetime free slot has already been
+    // used — without this the user can pick Tala, hit "Continue", and only
+    // discover via a 403 that they can't claim it again. Keeping the card
+    // visible (rather than removing it) makes the constraint legible.
+    if (talaCard) {
+      const existingNote = talaCard.querySelector('.ppc-note');
+      if (talaUsed) {
+        talaCard.classList.add('disabled');
+        talaCard.setAttribute('aria-disabled', 'true');
+        if (!existingNote) {
+          const note = document.createElement('div');
+          note.className = 'ppc-note';
+          note.textContent = '✓ Already used';
+          talaCard.appendChild(note);
+        }
+      } else {
+        talaCard.classList.remove('disabled');
+        talaCard.removeAttribute('aria-disabled');
+        if (existingNote) existingNote.remove();
+      }
+    }
+
+    // Mark the Hiraya card as "Included" when the yearly sub is active —
+    // user knows they aren't paying again to add this event.
+    if (hirayaCard) {
+      const existingNote = hirayaCard.querySelector('.ppc-note');
+      if (hasHirayaSub) {
+        if (!existingNote) {
+          const note = document.createElement('div');
+          note.className = 'ppc-note';
+          note.textContent = '✓ Included in your subscription';
+          hirayaCard.appendChild(note);
+        }
+      } else if (existingNote) {
+        existingNote.remove();
+      }
+    }
+  }
+
+  applyUserStateToPlanGrid();
+
+  // Pre-select the resolved default plan.
   planPickGrid.querySelectorAll('.ppc').forEach(c => {
     c.classList.toggle('selected', c.dataset.plan === state.plan);
   });
+
+  // Background refresh of the cached user — paints over stale flags
+  // (e.g. Tala still cached as available after the user burned it on
+  // another device) without blocking the wizard's event wiring.
+  if (isLoggedIn) {
+    (async () => {
+      try {
+        const res = await fetch('/api/auth/me', {
+          headers: { 'Authorization': `Bearer ${getToken()}` },
+        });
+        if (!res.ok) return;
+        const { user } = await res.json();
+        if (!user) return;
+        const merged = { ...(getUser() || {}), ...user };
+        saveAuth(getToken(), merged);
+
+        const prevTalaUsed = talaUsed;
+        const prevHasHiraya = hasHirayaSub;
+        currentUser = merged;
+        talaUsed = !!merged.tala_used;
+        hasHirayaSub = !!(merged.subscription_expires_at
+          && new Date(merged.subscription_expires_at) > new Date());
+
+        if (talaUsed !== prevTalaUsed || hasHirayaSub !== prevHasHiraya) {
+          applyUserStateToPlanGrid();
+          // If the current selection just became invalid (Tala that's
+          // now used, or a Tala default that should auto-bump to Hiraya
+          // after a fresh purchase), nudge to a sensible plan and
+          // re-render the pill.
+          if (state.plan === 'tala' && talaUsed) {
+            state.plan = hasHirayaSub ? 'hiraya' : 'sinag';
+            planPickGrid.querySelectorAll('.ppc').forEach(c => {
+              c.classList.toggle('selected', c.dataset.plan === state.plan);
+            });
+            const pill = document.getElementById('plan-pill');
+            if (pill) pill.textContent = PLAN_LABELS[state.plan]?.label || '';
+          }
+        }
+      } catch { /* offline / 401 — keep cached flags */ }
+    })();
+  }
   planPickGrid.addEventListener('click', e => {
     const card = e.target.closest('.ppc');
     if (!card) return;
+    if (card.classList.contains('disabled')) {
+      showErr('err-plan');
+      document.getElementById('err-plan').textContent =
+        'Your free Tala event has already been used. Pick a paid plan to continue.';
+      return;
+    }
     planPickGrid.querySelectorAll('.ppc').forEach(c => c.classList.remove('selected'));
     card.classList.add('selected');
     state.plan = card.dataset.plan;
