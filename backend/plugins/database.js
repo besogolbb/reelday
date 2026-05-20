@@ -285,6 +285,21 @@ const MIGRATIONS = `
   -- claims each stage atomically (CAS update) before sending so two
   -- instances or two ticks can never double-fire the same reminder.
   ALTER TABLE users ADD COLUMN IF NOT EXISTS renewal_reminders_sent JSONB NOT NULL DEFAULT '{}'::jsonb;
+
+  -- ── Gallery cleanup tracking (backend/jobs/gallery-cleanup.js) ──
+  -- archived_at:
+  --   Set the moment the cleanup cron hard-deletes an event's R2 files
+  --   + uploads rows. NULL means the gallery is still recoverable
+  --   (either pre-expiry, or expired but inside the 7-day grace
+  --   window). Once set, the cron never touches the event again — the
+  --   row stays as a tombstone so /my-events can still display "Juan
+  --   & Maria · archived".
+  -- cleanup_warning_sent_at:
+  --   Atomically claimed by the cron before sending the "your gallery
+  --   expired, files delete in 7 days" email. Prevents two instances
+  --   from double-warning the same host.
+  ALTER TABLE events ADD COLUMN IF NOT EXISTS archived_at             TIMESTAMPTZ;
+  ALTER TABLE events ADD COLUMN IF NOT EXISTS cleanup_warning_sent_at TIMESTAMPTZ;
 `;
 
 async function dbPlugin(fastify) {

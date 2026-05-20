@@ -28,6 +28,7 @@ import presenceRoutes from './routes/presence.js';
 import eventSiteRoutes, { renderEventSitePage } from './routes/event-site.js';
 import { reconcilePendingTranscodes } from './lib/videoTranscode.js';
 import { startRenewalReminderJob } from './jobs/renewal-reminders.js';
+import { startGalleryCleanupJob }  from './jobs/gallery-cleanup.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -363,6 +364,12 @@ try {
   // T-0 renewal reminders. CAS-based idempotency on users.renewal_reminders_sent
   // makes it safe across restarts and multiple instances.
   startRenewalReminderJob(fastify);
+
+  // Daily gallery cleanup: 7 days after gallery_expires_at, R2 objects
+  // + uploads rows are permanently removed and events.archived_at is
+  // set. One warning email goes out at the start of the grace window
+  // so the host has time to hit "Download all" before deletion.
+  startGalleryCleanupJob(fastify);
 } catch (err) {
   fastify.log.error(err);
   process.exit(1);
