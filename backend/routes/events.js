@@ -2,6 +2,7 @@ import { Resend } from 'resend';
 import { generateQR } from '../utils/qr.js';
 import { resolvePlan, galleryExpiryFor, uploadWindowStartFor, uploadWindowEndFor, isDemoWindowOpen } from '../lib/plans.js';
 import { verifyToken } from '../plugins/auth.js';
+import { sendBookingConfirmationEmail } from './payments.js';
 
 // Event dates are admin-managed (the host PATCH can't move them — see the
 // hardcoded NULL $3 in the PATCH below). Hosts request a change here and
@@ -141,7 +142,13 @@ export default async function eventRoutes(fastify) {
 
     if (planForEvent.id === 'hiraya') {
       isPaid = !!(user.subscription_expires_at && new Date(user.subscription_expires_at) > new Date());
-    } else if (PAID_PLAN_IDS.has(planForEvent.id)) {
+    }
+    // Also run the claim-search for ALL paid tiers (including Hiraya) so
+    // we can link the matching payment to this event AND fire the deferred
+    // payment-confirmation email with the new slug. For Hiraya, isPaid was
+    // already set above via the subscription window; the claim here is
+    // strictly for the email + payment-event linkage on a fresh purchase.
+    if (PAID_PLAN_IDS.has(planForEvent.id)) {
       const { rows: pmtRows } = await fastify.db.query(
         `SELECT id FROM payments
          WHERE user_id = $1 AND tier = $2 AND status = 'succeeded'
@@ -243,6 +250,15 @@ export default async function eventRoutes(fastify) {
         `UPDATE payments SET event_id = $1 WHERE id = $2`,
         [inserted.id, claimPaymentId],
       );
+      // Deferred payment-confirmation email: reconcile/webhook skipped it
+      // because slug was null at payment time. Now that the event exists,
+      // fire the email with the proper slug so "Go to Dashboard" lands on
+      // the actual event instead of a bare /dashboard.
+      sendBookingConfirmationEmail(
+        fastify.db,
+        { userId, tier: planForEvent.id, slug: inserted.slug },
+        request.log,
+      ).catch(() => {});
     }
 
     const event = inserted;

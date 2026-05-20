@@ -25,7 +25,13 @@ function withTimeout(promise, ms, label) {
   ]);
 }
 
-async function sendBookingConfirmationEmail(db, { userId, tier, slug }, log) {
+// Payment confirmation email. Exported so /api/events can fire it from
+// the event-after-payment wizard path — by the time reconcile/webhook
+// runs in that flow, the event row doesn't exist yet (slug would be
+// null and the "Go to Dashboard" CTA would land on a slug-less URL).
+// Callers must skip this when slug is null; events.js owns the deferred
+// send for the wizard path.
+export async function sendBookingConfirmationEmail(db, { userId, tier, slug }, log) {
   if (!process.env.RESEND_API_KEY) return;
   try {
     const { rows: userRows } = await db.query(
@@ -70,10 +76,12 @@ async function sendBookingConfirmationEmail(db, { userId, tier, slug }, log) {
     await withTimeout(resend().emails.send({
       from:    'Reelday <noreply@reelday.ph>',
       to:      email,
-      subject: `Booking Confirmed — Reelday ${tierLabel}`,
+      cc:      'admin@reelday.ph',
+      replyTo: 'admin@reelday.ph',
+      subject: `Payment Confirmed — Reelday ${tierLabel}`,
       html: `
         <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:2rem">
-          <h2 style="color:#e8735a">Booking Confirmed!</h2>
+          <h2 style="color:#e8735a">Payment Confirmed!</h2>
           <p>Hi ${name},</p>
           <p>Your <strong>Reelday ${tierLabel}</strong> plan is now active. Thank you for choosing Reelday to capture your special moments.</p>
           ${eventLine}
@@ -492,7 +500,13 @@ export default async function paymentRoutes(fastify) {
         `UPDATE payments SET status = 'succeeded' WHERE id = $1`,
         [pmt.id],
       );
-      sendBookingConfirmationEmail(fastify.db, { userId, tier: pmt.tier, slug }, request.log).catch(() => {});
+      // Defer the email when slug is null: the wizard creates the event
+      // AFTER reconcile, so POST /api/events sends the confirmation with
+      // the new slug. Sending here would link to /dashboard with no slug
+      // and the host would land on "No event selected."
+      if (slug) {
+        sendBookingConfirmationEmail(fastify.db, { userId, tier: pmt.tier, slug }, request.log).catch(() => {});
+      }
       appliedTier = pmt.tier;
       appliedSlug = slug;
       break; // one upgrade per call — Sinag accumulates per row, but the
@@ -554,7 +568,9 @@ export default async function paymentRoutes(fastify) {
           `UPDATE payments SET status = 'succeeded' WHERE paymongo_payment_id = $1`,
           [resourceId],
         );
-        sendBookingConfirmationEmail(fastify.db, { userId, tier, slug: slug || null }, request.log).catch(() => {});
+        if (slug) {
+          sendBookingConfirmationEmail(fastify.db, { userId, tier, slug }, request.log).catch(() => {});
+        }
         applied = true;
       }
     }
@@ -617,7 +633,9 @@ export default async function paymentRoutes(fastify) {
             `UPDATE payments SET status = 'succeeded' WHERE paymongo_payment_id = $1`, [resourceId],
           );
         }
-        sendBookingConfirmationEmail(fastify.db, { userId, tier, slug: slug || null }, request.log).catch(() => {});
+        if (slug) {
+          sendBookingConfirmationEmail(fastify.db, { userId, tier, slug }, request.log).catch(() => {});
+        }
         applied = true;
       }
     }
@@ -636,7 +654,7 @@ export default async function paymentRoutes(fastify) {
           await applyTierUpgrade(fastify.db, {
             userId: payment.user_id, tier: payment.tier, slug: null,
           });
-          sendBookingConfirmationEmail(fastify.db, { userId: payment.user_id, tier: payment.tier, slug: null }, request.log).catch(() => {});
+          // No slug on legacy intent path → defer email to event creation.
           applied = true;
         }
       }
