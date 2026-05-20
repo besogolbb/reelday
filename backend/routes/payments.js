@@ -73,12 +73,42 @@ export async function sendBookingConfirmationEmail(db, { userId, tier, slug }, l
         </td>
       </tr>`;
 
+    // Plain-text fallback: Gmail penalizes HTML-only transactional mail.
+    // Mirrors the visible content of the HTML body — keep in rough sync.
+    const eventLineText = coupleNames
+      ? `Event: ${coupleNames}${eventDateStr ? ` — ${eventDateStr}` : ''}\n`
+      : '';
+    const plainText = [
+      `Payment Confirmed!`,
+      ``,
+      `Hi ${name},`,
+      ``,
+      `Your Reelday ${tierLabel} plan is now active. Thank you for choosing Reelday to capture your special moments.`,
+      ``,
+      eventLineText,
+      `Go to your dashboard: ${dashUrl}`,
+      ``,
+      `Things to know before your event:`,
+      `  - 500-guest peak: the wall catches up automatically if everyone uploads at once.`,
+      `  - Know your upload window — share the wall link with guests before it opens.`,
+      `  - Assign one person to operate the wall display during the event.`,
+      `  - Use Microsoft Edge on the wall device (less RAM than Chrome).`,
+      `  - Test venue WiFi ahead of time, or bring a mobile hotspot as backup.`,
+      `  - Do a dry run on the venue screen before guests arrive.`,
+      ``,
+      `Questions? Reply to this email or visit https://reelday.ph`,
+    ].join('\n');
+
+    // BCC (not CC) admin: same internal copy, but hosts don't see admin@
+    // in their headers and admin's spam vote in Gmail doesn't get linked
+    // back to the host's copy via shared headers.
     await withTimeout(resend().emails.send({
-      from:    'Reelday <noreply@reelday.ph>',
+      from:    'Reelday Payments <noreply@reelday.ph>',
       to:      email,
-      cc:      'admin@reelday.ph',
+      bcc:     'admin@reelday.ph',
       replyTo: 'admin@reelday.ph',
       subject: `Payment Confirmed — Reelday ${tierLabel}`,
+      text:    plainText,
       html: `
         <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:2rem">
           <h2 style="color:#e8735a">Payment Confirmed!</h2>
