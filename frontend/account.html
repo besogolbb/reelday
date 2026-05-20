@@ -289,7 +289,6 @@
           ${featureRow('Live reactions', plan.features.reactions)}
           ${featureRow('Live polls & questions', plan.features.polls)}
           ${featureRow('Event website', plan.features.website)}
-          ${featureRow('Custom domain', plan.features.customDomain)}
         </div>
 
         ${upPlan ? `
@@ -330,7 +329,6 @@
     if (!cur.features.reactions    && next.features.reactions)    featGains.push('reactions');
     if (!cur.features.polls        && next.features.polls)        featGains.push('live polls');
     if (!cur.features.website      && next.features.website)      featGains.push('event website');
-    if (!cur.features.customDomain && next.features.customDomain) featGains.push('custom domain');
     const all = [...wins, ...featGains];
     if (!all.length) return `Step up to ${next.name} for more headroom.`;
     return `Get ${all.slice(0, 3).join(', ')}${all.length > 3 ? ', and more' : ''}.`;
