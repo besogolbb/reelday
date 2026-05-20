@@ -730,7 +730,6 @@
   .price-card li::before { content: '✓'; color: var(--accent); font-weight: 700; flex-shrink: 0; }
   .price-card.featured li::before { color: var(--accent-soft); }
   .price-card .btn { margin-top: 24px; width: 100%; }
-  .price-card .price-fineprint { font-size: 11px; color: var(--ink-faint); margin-top: 14px; line-height: 1.5; }
 
   /* ════════════════════════════════════════════════════════
      FAQ
@@ -1185,7 +1184,7 @@
   <div class="container">
     <div class="eyebrow" style="justify-content:center;" data-i18n="pricing-eyebrow">— Simple pricing</div>
     <h2 data-i18n="pricing-h2">One payment.<br/><em>Sulit forever.</em></h2>
-    <p class="sub" data-i18n="pricing-sub">No surprise charges. Pay per event — or go yearly with Hiraya.</p>
+    <p class="sub" data-i18n="pricing-sub">No subscription. No surprise charges. Pick the tier that matches your guest list.</p>
     <div class="pricing-grid">
       <div class="price-card">
         <div class="tier">Tala</div>
@@ -1234,12 +1233,13 @@
         <p class="desc">For coordinators, photographers &amp; venues.</p>
         <ul>
           <li>Up to 10 events / year</li>
-          <li>Everything in Dalisay, on every event</li>
+          <li>White-label wall (your logo)</li>
+          <li>+ Data export (leads)</li>
+          <li>Custom domains</li>
           <li>+ Same Day Edit recap reel <em>(coming soon)</em></li>
-          <li>30-day upload window per event</li>
-          <li>1-year gallery + download all</li>
+          <li>30-day upload window</li>
+          <li>1-year retention</li>
         </ul>
-        <p class="price-fineprint">₱9,990 billed yearly. No auto-renew — your card is never saved.</p>
         <a class="btn btn-ghost" href="/start?plan=hiraya" data-tier-cta="hiraya">Choose Hiraya</a>
       </div>
     </div>
@@ -1401,7 +1401,7 @@ const i18n = {
     'events-h2':        'One platform.<br/><em>Every celebration.</em>',
     'pricing-eyebrow':  '— Simple pricing',
     'pricing-h2':       'One payment.<br/><em>Sulit forever.</em>',
-    'pricing-sub':      'No surprise charges. Pay per event — or go yearly with Hiraya.',
+    'pricing-sub':      'No subscription. No surprise charges. Pick the tier that matches your guest list.',
     'faq-eyebrow':      '— Common questions',
     'faq-h2':           'Mga <em>tanong?</em>',
     'faq-1-q':          'Do guests need to download an app?',
@@ -1444,7 +1444,7 @@ const i18n = {
     'events-h2':        'Isang platform.<br/><em>Bawat selebrasyon.</em>',
     'pricing-eyebrow':  '— Simpleng presyo',
     'pricing-h2':       'Isang bayad.<br/><em>Sulit habang buhay.</em>',
-    'pricing-sub':      'Walang sorpresang bayad. Per-event o yearly sa Hiraya — kayo ang pipili.',
+    'pricing-sub':      'Walang subscription. Walang sorpresang bayad. Piliin ang tier na angkop sa inyong listahan ng bisita.',
     'faq-eyebrow':      '— Mga tanong',
     'faq-h2':           'Mga <em>tanong?</em>',
     'faq-1-q':          'Kailangan bang mag-download ng app ang mga bisita?',
