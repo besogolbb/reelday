@@ -29,6 +29,102 @@ function escapeHtml(value) {
   ));
 }
 
+// "Your event is live" email — fires for every newly-created event, every
+// tier. Warm-first tone: congratulations land before the tool links, since
+// Filipino hosts told us the demo-window-close nudge felt "transactional
+// from the start" with no human moment before it. Sinag/Dalisay/Hiraya
+// still also receive the payment-confirmation email from payments.js;
+// this one is the "event is set up" companion, not a duplicate receipt.
+//
+// Tala adds a single sentence flagging the 48h preview window so the
+// demo-window-close nudge that fires later doesn't feel out of the blue.
+async function sendEventCreatedEmail(opts, log) {
+  if (!process.env.RESEND_API_KEY) return;
+  const {
+    toEmail, firstName, eventLabel, eventDate, planId, demoDays,
+    dashUrl, uploadUrl, qrPngUrl,
+  } = opts;
+  if (!toEmail) return;
+
+  const safeFirst = escapeHtml(firstName || 'kabayan');
+  const safeLabel = escapeHtml(eventLabel || 'your celebration');
+  const safeDate  = eventDate
+    ? new Date(eventDate).toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' })
+    : null;
+
+  const demoNote = planId === 'tala' && demoDays
+    ? `<p style="margin:18px 0 0;font-size:13px;color:#7a6655;line-height:1.55">
+         Heads up — your free Tala plan includes a ${demoDays}-day preview window
+         from now so you can test uploads with a few friends. After that the wall
+         stays quiet until your event day, when it reopens automatically. We'll
+         send a friendly nudge when the preview wraps.
+       </p>`
+    : '';
+
+  try {
+    await withTimeout(resend().emails.send({
+      from:    'Reelday <noreply@reelday.ph>',
+      to:      toEmail,
+      subject: `Your Reelday event is live, ${safeFirst}!`,
+      html: `
+        <div style="font-family:'Helvetica Neue',Arial,sans-serif;max-width:560px;margin:0 auto;padding:28px 24px;color:#3f2318;background:#fbf5ec">
+          <div style="text-align:center;margin-bottom:24px">
+            <div style="font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:30px;color:#c45a3a;line-height:1.15">
+              Maligayang bati, ${safeFirst}!
+            </div>
+            <div style="margin-top:10px;font-size:15px;color:#5a443a;line-height:1.5">
+              Your event for <strong>${safeLabel}</strong>${safeDate ? ` on <strong>${safeDate}</strong>` : ''} is all set up.
+              We're so glad you're celebrating with Reelday — your guests are going to love it.
+            </div>
+          </div>
+
+          <div style="background:#fff;border:1px solid #ebdec6;border-radius:14px;padding:22px;margin-bottom:18px">
+            <div style="font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#c45a3a;margin-bottom:10px">
+              What's next
+            </div>
+            <ol style="padding-left:18px;margin:0 0 16px;font-size:14px;line-height:1.6;color:#3f2318">
+              <li>Open your dashboard to see your QR code and event details.</li>
+              <li>Print or display the QR at your venue so guests can scan to upload.</li>
+              <li>Share the upload link below in your invite or group chat.</li>
+            </ol>
+
+            <div style="text-align:center;margin:18px 0 6px">
+              <a href="${dashUrl}"
+                 style="display:inline-block;background:#c45a3a;color:#fff;text-decoration:none;
+                        padding:13px 30px;border-radius:999px;font-weight:700;font-size:14px;
+                        letter-spacing:.06em">
+                Open your dashboard →
+              </a>
+            </div>
+          </div>
+
+          <div style="background:#fff;border:1px solid #ebdec6;border-radius:14px;padding:18px 22px;margin-bottom:18px">
+            <div style="font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#5a443a;margin-bottom:8px">
+              Share with guests
+            </div>
+            <div style="font-size:13px;line-height:1.5;color:#5a443a;margin-bottom:8px">
+              Copy this link into Messenger, Viber, or your invite — no app, no signup, just scan or tap:
+            </div>
+            <div style="font-family:'SFMono-Regular',Consolas,monospace;font-size:13px;background:#f4ead9;padding:10px 14px;border-radius:8px;word-break:break-all;color:#c45a3a">
+              ${escapeHtml(uploadUrl)}
+            </div>
+          </div>
+
+          ${demoNote}
+
+          <p style="margin:24px 0 0;font-size:12px;color:#8a7468;text-align:center">
+            Need a hand? Just reply to this email and a real human gets back to you.
+          </p>
+          <p style="margin:8px 0 0;font-size:11px;color:#a89683;text-align:center;letter-spacing:.06em">
+            ★ Powered by reelday.ph
+          </p>
+        </div>`,
+    }), 10_000, 'Resend (event-created)');
+  } catch (err) {
+    log?.warn?.({ err: err.message, planId }, 'event-created email failed');
+  }
+}
+
 // Sanitised, no-suffix slug from the couple/celebrant names. We try this
 // first; only when it collides with an existing event do we append a
 // random suffix (see the INSERT retry loop below). Empty/all-junk input
@@ -327,7 +423,25 @@ export default async function eventRoutes(fastify) {
       (process.env.NODE_ENV === 'development'
         ? (request.headers.host || 'localhost:3000')
         : 'reelday.ph');
-    const qr_code = await generateQR(`${protocol}://${host}/upload/${slug}`);
+    const uploadUrl = `${protocol}://${host}/upload/${slug}`;
+    const qr_code = await generateQR(uploadUrl);
+
+    // "Your event is live" welcome email — fires for every tier so Tala
+    // hosts (who previously got nothing until the 48h demo-close nudge)
+    // hear from us at the actual moment of setup. Paid tiers also get
+    // it as the warmer companion to the payment-confirmation receipt.
+    const dashUrl = `${protocol}://${host}/dashboard?slug=${encodeURIComponent(event.slug)}`;
+    const firstName = (request.user.full_name || '').split(' ')[0];
+    sendEventCreatedEmail({
+      toEmail:    request.user.email,
+      firstName,
+      eventLabel: event.couple_names,
+      eventDate:  event.event_date,
+      planId:     planForEvent.id,
+      demoDays:   planForEvent.demoDays,
+      dashUrl,
+      uploadUrl,
+    }, request.log).catch(() => {});
 
     // Schedule the demo-window-close nudge email for Tala events.
     // Fires exactly when demoDays expires (48h after created_at) via
