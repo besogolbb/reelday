@@ -7,10 +7,25 @@ pick up cold without re-deriving the audit.
 
 Last updated: 2026-05-20
 
-**Status: LAUNCHED (2026-05-20)** to the coordinator/photographer/venue
-audience. Public landing-page Hiraya CTA still off (Dalisay is the right
-answer for individual couples). Phase 3 deferred — revisit after 30-60
-days of real coordinator feedback to learn what perk actually matters.
+**Status: PRIVATE LAUNCH (2026-05-20).** Backend fully live; public buy
+CTAs hidden behind `HIRAYA_PUBLIC` flag in
+[frontend/js/plans.js](../frontend/js/plans.js). Phase 3 deferred —
+revisit after 30-60 days of real coordinator feedback (Option 4 from the
+2026-05-20 plan discussion: don't build blind, comp coordinators and
+listen first).
+
+**Relaunching publicly when ready:** flip `HIRAYA_PUBLIC=true` in
+[frontend/js/plans.js](../frontend/js/plans.js) AND uncomment the
+`<!-- HIRAYA HIDDEN -->` block in
+[frontend/index.html](../frontend/index.html) (grep for that marker).
+Re-enables: landing pricing card, /start plan picker, dashboard upgrade
+modal card. Comp/renew/badge/lapsed paths are untouched and work while
+hidden.
+
+**Comping a coordinator while hidden:** admin → "comp-Hiraya for N
+months" action (shipped 2026-05-20). They land in their dashboard with
+the badge, gold tier theming, "✓ Included" affordance on /start, and the
+full lapsed/renewal UX exactly as if they'd paid.
 
 ---
 
