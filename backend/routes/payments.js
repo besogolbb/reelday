@@ -184,7 +184,7 @@ function verifyPaymongoSignature(rawBody, header, secret) {
  * Sinag / Dalisay are per-event one-time payments; Hiraya is a yearly
  * subscription — applyTierUpgrade adds +1 year to subscription_expires_at. */
 const PAID_TIERS = {
-  sinag:   { label: 'Sinag',   amount: 5000 },    // ₱50 — TEST PRICE, restore to 149000
+  sinag:   { label: 'Sinag',   amount: 149000 },  // ₱1,490 / event
   dalisay: { label: 'Dalisay', amount: 299000 },  // ₱2,990 / event
   hiraya:  { label: 'Hiraya',  amount: 999000 },  // ₱9,990 / year
 };
