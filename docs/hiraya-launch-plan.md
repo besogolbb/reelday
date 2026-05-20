@@ -5,7 +5,12 @@ photographers, and venues. Currently functionally usable but not
 launch-ready. This doc tracks what's left so a future session can
 pick up cold without re-deriving the audit.
 
-Last updated: 2026-05-21
+Last updated: 2026-05-20
+
+**Status: LAUNCHED (2026-05-20)** to the coordinator/photographer/venue
+audience. Public landing-page Hiraya CTA still off (Dalisay is the right
+answer for individual couples). Phase 3 deferred — revisit after 30-60
+days of real coordinator feedback to learn what perk actually matters.
 
 ---
 
@@ -25,10 +30,10 @@ Last updated: 2026-05-21
 | Renewal reminder emails (T-30 / T-7 / T-0) | ✅ shipped 2026-05-21 |
 | Lapsed-sub UX (specific 402 code + dashboard banner) | ✅ shipped 2026-05-21 |
 | One-click renewal endpoint | ✅ shipped 2026-05-21 |
-| At least one Hiraya-exclusive perk wired in code | ⛔ pending — Phase 3 (deferred to post-comp) |
-| Admin: PayMongo healthcheck endpoint + UI | ✅ shipped 2026-05-21 |
-| Admin: comp-Hiraya for N months action | ✅ shipped 2026-05-21 |
-| Production PayMongo end-to-end purchase verified | ⛔ pending — Phase 4 (env var check) |
+| At least one Hiraya-exclusive perk wired in code | ⏸ deferred to post-launch (Dalisay already has website; volume + retention is the actual Hiraya pitch — see "Why we skipped Phase 3" below) |
+| Admin: PayMongo healthcheck endpoint + UI | ✅ shipped 2026-05-20 (fixed probe endpoint same day — was /v1/links, now /v1/payments) |
+| Admin: comp-Hiraya for N months action | ✅ shipped 2026-05-20 |
+| Production PayMongo end-to-end purchase verified | ✅ verified 2026-05-20 — prod healthcheck green: sk_live_…Gyqh, NODE_ENV=production, PayMongo reachable ~500ms |
 
 ---
 
@@ -135,6 +140,34 @@ Reuse [backend/routes/payments.js](../backend/routes/payments.js)
 `tier: 'hiraya'` and a `success_path` that drops back on `/my-events?renewed=1`.
 
 ---
+
+## Why we skipped Phase 3 at launch (2026-05-20)
+
+The original premise — "Hiraya needs a marquee perk to feel distinct
+from Dalisay" — assumed Dalisay didn't have the event website. It does
+([backend/lib/plans.js:104](../backend/lib/plans.js#L104)). So custom
+domain was always going to be "domain on top of the website you already
+get", not "you get a website". That's a much weaker differentiator.
+
+Re-reading what Hiraya actually offers over Dalisay in code:
+
+| Dimension | Dalisay | Hiraya |
+|---|---|---|
+| Events | 1 per ₱2,990 purchase | 10 per ₱9,990 yr (~₱999 each) |
+| Gallery retention | 90 days | 365 days |
+| Upload window | 7 days centered | 31 days centered |
+| Feature flags | identical to Hiraya except customDomain | + customDomain (unbuilt) |
+
+That's a **volume + retention** pitch. It's a real, defensible pitch
+for coordinators/photographers/venues doing 4+ events/year. It's NOT a
+pitch for individual couples — they'll correctly choose Dalisay.
+
+**Launch strategy that follows from this:**
+- Hiraya CTA stays OFF the public landing page (couples see Dalisay).
+- Direct outreach to known coordinators; comp 3-5 friendly ones first.
+- Phase 3 revisits after 30-60 days based on what those coordinators
+  actually ask for — could be custom domain, multi-event dashboard,
+  branded RSVP emails, etc. Building blind before that is wasted.
 
 ## Phase 3 — Ship one marquee perk so Hiraya feels distinct (1 week)
 
