@@ -77,6 +77,23 @@ async function countUserActiveEvents(db, userId) {
   return rows[0].count;
 }
 
+// Hiraya is a yearly subscription with a soft cap of 10 events/year.
+// We count active plan='hiraya' events created in the last 365 days —
+// a rolling window matches the marketing copy ("up to 10 events / year")
+// and avoids edge cases with mid-cycle renewals (where pinning to
+// subscription_expires_at - 1y would drop pre-renewal events from the count).
+async function countRecentHirayaEvents(db, userId) {
+  const { rows } = await db.query(
+    `SELECT COUNT(*)::int AS count FROM events
+       WHERE user_id = $1
+         AND is_active = true
+         AND plan = 'hiraya'
+         AND created_at > NOW() - INTERVAL '1 year'`,
+    [userId],
+  );
+  return rows[0].count;
+}
+
 export default async function eventRoutes(fastify) {
   // POST /api/events — create a new event (auth required)
   fastify.post('/events', { preHandler: fastify.authenticate }, async (request, reply) => {
@@ -124,6 +141,23 @@ export default async function eventRoutes(fastify) {
           error: true,
           code:         'plan_limit_events',
           message:      `Your Tala plan allows ${planForEvent.eventLimit} active event. Upgrade to add more.`,
+          plan:         planForEvent.id,
+          event_limit:  planForEvent.eventLimit,
+          active_events: existing,
+        });
+      }
+    }
+
+    // Hiraya yearly cap: 10 active hiraya events per rolling 12 months.
+    // Without this gate the subscription_expires_at check alone would let a
+    // single ₱9,990 purchase mint unlimited events for the next year.
+    if (planForEvent.id === 'hiraya') {
+      const existing = await countRecentHirayaEvents(fastify.db, userId);
+      if (existing >= planForEvent.eventLimit) {
+        return reply.status(403).send({
+          error: true,
+          code:         'plan_limit_events',
+          message:      `Your Hiraya plan allows ${planForEvent.eventLimit} events per year. Renew next year or contact us to extend.`,
           plan:         planForEvent.id,
           event_limit:  planForEvent.eventLimit,
           active_events: existing,
