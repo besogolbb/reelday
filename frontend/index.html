@@ -811,7 +811,7 @@
     /* surface the live wall demo below the hero copy. Negative side
        margins break out of .hero's 20px padding so the card runs edge
        to edge — same fit-width treatment used by the Step 4 demo. */
-    .hero-mobile-demo { display: block; margin: 28px -20px 0; }
+    .hero-mobile-demo { display: block; margin: 12px -20px 24px; }
     .hero-mobile-demo .wall-mini-mockup { border-radius: 0; aspect-ratio: 16/11; }
 
     /* Step 4 (live wall preview) gets the whole row so the demo card
@@ -907,6 +907,21 @@
         <em>Every guest.</em><br/>
         <span class="underline">One QR.</span>
       </h1>
+
+      <!-- Mobile-only live wall demo. Drives off the same .wall-mini-mockup
+           classes as the Step 4 card so the JS cycler updates both in sync. -->
+      <div class="hero-mobile-demo" aria-hidden="true">
+        <div class="wall-mini-mockup">
+          <div class="wm-bg" style="background-image:url(/cdn-cgi/image/width=900,quality=82,format=auto/images/First%20dance%20after%2038%20years.png);background-size:cover;background-position:center"></div>
+          <div class="wm-vignette"></div>
+          <div class="wm-ticker"><span class="wm-dot"></span>Live · Reelday Demo</div>
+          <div class="wm-caption">
+            <div class="wm-who">— Tita Marivic</div>
+            <div class="wm-quote">"First dance, 38 years later."</div>
+          </div>
+        </div>
+      </div>
+
       <p data-i18n="hero-desc">Guests scan one code and upload photos straight to your live cinematic wall — no app, no sign-up, no missed moments.</p>
       <div class="hero-cta" id="hero-cta">
         <a class="btn btn-accent" href="/start" data-i18n="hero-cta1">Start free →</a>
@@ -922,20 +937,6 @@
         <div>
           <div class="stars">★★★★★</div>
           <div data-i18n="hero-trust">Trusted by 2,140+ celebrations across PH</div>
-        </div>
-      </div>
-
-      <!-- Mobile-only live wall demo. Drives off the same .wall-mini-mockup
-           classes as the Step 4 card so the JS cycler updates both in sync. -->
-      <div class="hero-mobile-demo" aria-hidden="true">
-        <div class="wall-mini-mockup">
-          <div class="wm-bg" style="background-image:url(/cdn-cgi/image/width=900,quality=82,format=auto/images/First%20dance%20after%2038%20years.png);background-size:cover;background-position:center"></div>
-          <div class="wm-vignette"></div>
-          <div class="wm-ticker"><span class="wm-dot"></span>Live · Reelday Demo</div>
-          <div class="wm-caption">
-            <div class="wm-who">— Tita Marivic</div>
-            <div class="wm-quote">"First dance, 38 years later."</div>
-          </div>
         </div>
       </div>
     </div>
