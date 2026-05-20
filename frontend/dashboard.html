@@ -1808,6 +1808,41 @@
        override (2026-05-20). */
     .up-card[hidden] { display: none !important; }
 
+    /* Bulk-download button — lives in the info-hero card. Compact pill,
+       accent-bordered, with an inline spinner that flips on while we
+       fetch the token + start streaming so the host knows their click
+       registered (the actual ZIP download is a top-level navigation,
+       so the page doesn't reload). */
+    .info-download-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 14px;
+      background: rgba(196,90,58,.08);
+      border: 1px solid rgba(196,90,58,.32);
+      border-radius: 999px;
+      color: var(--accent-deep);
+      font-family: var(--mono); font-size: 11px; font-weight: 700;
+      letter-spacing: .12em; text-transform: uppercase;
+      cursor: pointer;
+      transition: background .15s, border-color .15s;
+    }
+    .info-download-btn:hover {
+      background: rgba(196,90,58,.16);
+      border-color: rgba(196,90,58,.5);
+    }
+    .info-download-btn:disabled { opacity: .55; cursor: not-allowed; }
+    .info-download-btn .dl-icon { font-size: 13px; line-height: 1; }
+    .info-download-btn .dl-spinner {
+      display: none;
+      width: 12px; height: 12px;
+      border: 2px solid rgba(196,90,58,.3);
+      border-top-color: var(--accent-deep);
+      border-radius: 50%;
+      animation: dl-spin .9s linear infinite;
+    }
+    .info-download-btn.is-loading .dl-spinner { display: inline-block; }
+    .info-download-btn.is-loading .dl-icon { display: none; }
+    @keyframes dl-spin { to { transform: rotate(360deg); } }
+
     .up-card {
       background: #fff; border: 1px solid var(--line);
       border-radius: 18px; padding: 26px 22px;
@@ -2019,6 +2054,20 @@
       </span>
     </div>
     <div class="row row-highlight"><span>Wall expires</span><span id="info-expires">—</span></div>
+
+    <!-- Bulk download — hidden until we know there's at least one upload
+         (renderQuota / renderSidebarState flip its visibility based on
+         the current upload count and the gallery_locked flag). -->
+    <div class="row row-highlight" id="info-download-row" style="display:none">
+      <span>Backup</span>
+      <span>
+        <button type="button" class="info-download-btn" id="btn-download-all" aria-label="Download all uploads as a ZIP">
+          <span class="dl-icon" aria-hidden="true">⬇</span>
+          <span class="dl-label">Download all (.zip)</span>
+          <span class="dl-spinner" aria-hidden="true"></span>
+        </button>
+      </span>
+    </div>
 
     <!-- upload quota meter (hidden on plans without a cap) -->
     <div class="quota" id="quota-block" style="display:none;">
@@ -3212,6 +3261,17 @@
     const block      = $('quota-block');
     const banner     = $('lock-banner');
     if (!block || !banner) return;
+
+    // Show the bulk-download row whenever the host has at least one
+    // upload AND the gallery hasn't been archived. Hidden in all other
+    // states (empty event, locked event, gallery expired) so we never
+    // present a button that would 400/403 on click.
+    const dlRow = $('info-download-row');
+    if (dlRow) {
+      const galleryArchived = event.gallery_expires_at
+        && new Date(event.gallery_expires_at) < new Date();
+      dlRow.style.display = (uploadCount > 0 && !galleryArchived) ? '' : 'none';
+    }
 
     // Reset banner variant + icon at the top of every render so any
     // branch below (limit-reached straight-warning, Tala-demo info
@@ -5295,6 +5355,55 @@
     _renderGallery(uploads);
     applyWallErrorBadges();
   };
+
+  // ── Bulk download (.zip) ──────────────────────────────
+  // Two-step: POST for a short-lived signed token, then trigger a
+  // top-level navigation to the streaming-ZIP endpoint with the token
+  // as a query string. Top-level nav is the only way to let the browser
+  // surface the OS-native "Save As" prompt and stream multi-GB ZIPs
+  // without buffering the whole thing in JS memory.
+  const dlBtn = $('btn-download-all');
+  if (dlBtn) {
+    dlBtn.addEventListener('click', async () => {
+      if (!slug || dlBtn.classList.contains('is-loading')) return;
+      dlBtn.classList.add('is-loading');
+      dlBtn.disabled = true;
+      try {
+        const res = await fetch(`/api/uploads/${encodeURIComponent(slug)}/download-token`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeader() },
+        });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          showToast(body.message || 'Could not start the download. Please try again.');
+          return;
+        }
+        // Hidden anchor with `download` hint — most reliable cross-browser
+        // way to kick off a Content-Disposition: attachment response
+        // without leaving the page (window.location can sometimes show
+        // a transient blank tab in mobile Safari).
+        const url = `/api/uploads/${encodeURIComponent(slug)}/download.zip?t=${encodeURIComponent(body.token)}`;
+        const a = document.createElement('a');
+        a.href = url;
+        a.rel = 'noopener';
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        showToast(`Preparing ${body.upload_count} file${body.upload_count === 1 ? '' : 's'}…`);
+      } catch (err) {
+        showToast('Network error — could not start the download.');
+      } finally {
+        // Re-enable shortly after — the actual stream is server-side
+        // and the page doesn't reload, so a stuck "loading" pill would
+        // be misleading.
+        setTimeout(() => {
+          dlBtn.classList.remove('is-loading');
+          dlBtn.disabled = false;
+        }, 1500);
+      }
+    });
+  }
 
   // ── Init ──────────────────────────────────────────────
   loadAll();

@@ -1,13 +1,71 @@
 import { extname, posix as pathPosix } from 'path';
-import { randomUUID } from 'crypto';
+import { randomUUID, createHmac, timingSafeEqual } from 'crypto';
 import { gzipSync } from 'zlib';
-import { PutObjectCommand, DeleteObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
+import archiver from 'archiver';
+import { PutObjectCommand, DeleteObjectCommand, HeadObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { resolvePlan, isDemoWindowOpen } from '../lib/plans.js';
 import { extractStorageKey } from '../lib/storageKeys.js';
 import { triggerVideoTranscode } from '../lib/awsLambdaService.js';
 import { verifyToken } from '../plugins/auth.js';
 import { getCount as getPresenceCount } from './presence.js';
+
+// Signed download tokens for the bulk-ZIP endpoint. Browsers can't add
+// Authorization headers to a top-level navigation, so we issue a short-
+// lived HMAC token via a JSON POST that the frontend then appends to a
+// regular GET URL. 5-minute TTL is plenty for "click button → server
+// starts streaming". Reuses JWT_SECRET so we don't need another env var.
+const DOWNLOAD_TOKEN_TTL_SEC = 300;
+function b64url(buf) {
+  return Buffer.from(buf).toString('base64')
+    .replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
+}
+function b64urlDecode(str) {
+  const pad = str.length % 4 === 0 ? '' : '='.repeat(4 - (str.length % 4));
+  return Buffer.from(str.replace(/-/g, '+').replace(/_/g, '/') + pad, 'base64');
+}
+function signDownloadToken(slug, userId) {
+  const payload = JSON.stringify({
+    s: slug, u: userId, e: Math.floor(Date.now() / 1000) + DOWNLOAD_TOKEN_TTL_SEC,
+  });
+  const body = b64url(payload);
+  const sig  = b64url(createHmac('sha256', process.env.JWT_SECRET).update(body).digest());
+  return `${body}.${sig}`;
+}
+function verifyDownloadToken(token, expectedSlug) {
+  if (typeof token !== 'string' || !token.includes('.')) return null;
+  const [body, sig] = token.split('.');
+  if (!body || !sig) return null;
+  const want = b64url(createHmac('sha256', process.env.JWT_SECRET).update(body).digest());
+  const wantBuf = Buffer.from(want);
+  const gotBuf  = Buffer.from(sig);
+  if (wantBuf.length !== gotBuf.length || !timingSafeEqual(wantBuf, gotBuf)) return null;
+  let payload;
+  try { payload = JSON.parse(b64urlDecode(body).toString('utf8')); }
+  catch { return null; }
+  if (!payload || payload.s !== expectedSlug) return null;
+  if (typeof payload.e !== 'number' || payload.e < Math.floor(Date.now() / 1000)) return null;
+  return { userId: payload.u };
+}
+
+// Build the per-upload filename inside the ZIP. We want files that read
+// cleanly in a Mac/Windows file picker: a zero-padded sequence so the
+// natural sort matches upload order, a slug of the uploader's name,
+// and the original extension preserved from the R2 key.
+function zipEntryName(upload, index) {
+  const seq = String(index + 1).padStart(3, '0');
+  const safeName = String(upload.uploader_name || 'guest')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 30) || 'guest';
+  const key = upload.original_key || extractStorageKey(upload.file_url) || '';
+  const ext = (extname(key) || extname(upload.file_url || '') || '.bin').toLowerCase();
+  let folder = 'photos';
+  if (upload.file_type === 'video' || upload.is_video_message) folder = 'videos';
+  else if (upload.file_type === 'audio_note' || upload.file_type === 'audio') folder = 'audio-notes';
+  return `${folder}/${seq}_${safeName}${ext}`;
+}
 
 // Short TTL cache for GET /uploads/:slug (the wall's hot-read path).
 // 600 walls polling every 2s would otherwise fire 600 DB queries per cycle.
@@ -808,21 +866,22 @@ export default async function uploadRoutes(fastify) {
     return { uploads: hydratedUploads, event, locks, guest_count: getPresenceCount(slug) };
   });
 
-  // GET /api/uploads/:slug/download — list all file URLs for bulk download
-  fastify.get('/uploads/:slug/download', async (request, reply) => {
+  // POST /api/uploads/:slug/download-token — owner-only. Issues a short-
+  // lived HMAC token the dashboard uses to navigate to the streaming-ZIP
+  // endpoint below. We need this two-step dance because browser top-level
+  // navigations can't carry an Authorization header.
+  fastify.post('/uploads/:slug/download-token', { preHandler: fastify.authenticate }, async (request, reply) => {
     const { slug } = request.params;
-
-    const { rows: eventRows } = await fastify.db.query(
-      'SELECT id, gallery_expires_at FROM events WHERE slug = $1 AND is_active = true',
+    const { rows } = await fastify.db.query(
+      `SELECT id, user_id, gallery_expires_at, couple_names
+         FROM events WHERE slug = $1 AND is_active = true`,
       [slug],
     );
-
-    if (!eventRows.length) {
-      return reply.status(404).send({ error: true, message: 'Event not found' });
+    if (!rows.length) return reply.status(404).send({ error: true, message: 'Event not found' });
+    const event = rows[0];
+    if (event.user_id !== request.user.id) {
+      return reply.status(403).send({ error: true, message: 'Not your event' });
     }
-
-    const event = eventRows[0];
-
     if (event.gallery_expires_at && new Date(event.gallery_expires_at) < new Date()) {
       return reply.status(403).send({
         error: true,
@@ -831,22 +890,128 @@ export default async function uploadRoutes(fastify) {
         gallery_expires_at: event.gallery_expires_at,
       });
     }
-
-    const { rows: uploads } = await fastify.db.query(
-      `SELECT file_url, uploader_name, file_type
-       FROM uploads
-       WHERE event_id = $1 AND is_approved = true
-       ORDER BY created_at DESC`,
+    const { rows: countRows } = await fastify.db.query(
+      `SELECT COUNT(*)::int AS n FROM uploads WHERE event_id = $1 AND is_approved = true`,
       [event.id],
     );
-
+    if (!countRows[0].n) {
+      return reply.status(400).send({ error: true, code: 'empty_gallery', message: 'No uploads to download yet.' });
+    }
     return {
-      files: uploads.map(u => ({
-        url:  u.file_url,
-        name: u.uploader_name,
-        type: u.file_type,
-      })),
+      token:        signDownloadToken(slug, request.user.id),
+      expires_in:   DOWNLOAD_TOKEN_TTL_SEC,
+      upload_count: countRows[0].n,
     };
+  });
+
+  // GET /api/uploads/:slug/download.zip?t=<token> — streams a ZIP of every
+  // approved upload to the browser. No Authorization header needed (the
+  // token IS the auth). Streams to reply.raw so we never buffer the full
+  // archive in memory — works for 2+ GB wedding galleries on cheap nodes.
+  //
+  // ZIP structure:
+  //   photos/      001_<uploader>.jpg
+  //   videos/      001_<uploader>.mp4
+  //   audio-notes/ 001_<uploader>.m4a
+  // Files in chronological order so wedding timelines read naturally.
+  // No re-compression (zlib level 0) — JPEG/MP4/AAC are already compressed,
+  // running deflate over them wastes CPU for ~0% size gain.
+  fastify.get('/uploads/:slug/download.zip', async (request, reply) => {
+    const { slug } = request.params;
+    const token = request.query?.t;
+    const verified = verifyDownloadToken(token, slug);
+    if (!verified) {
+      return reply.status(401).send({ error: true, message: 'Invalid or expired download token' });
+    }
+
+    const { rows: eventRows } = await fastify.db.query(
+      `SELECT id, user_id, gallery_expires_at, couple_names
+         FROM events WHERE slug = $1 AND is_active = true`,
+      [slug],
+    );
+    if (!eventRows.length) return reply.status(404).send({ error: true, message: 'Event not found' });
+    const event = eventRows[0];
+    if (event.user_id !== verified.userId) {
+      return reply.status(403).send({ error: true, message: 'Not your event' });
+    }
+    if (event.gallery_expires_at && new Date(event.gallery_expires_at) < new Date()) {
+      return reply.status(403).send({
+        error: true,
+        code: 'gallery_locked',
+        message: 'This event gallery has been archived.',
+      });
+    }
+
+    const { rows: uploads } = await fastify.db.query(
+      `SELECT id, file_url, original_key, file_type, uploader_name,
+              is_video_message, created_at
+         FROM uploads
+        WHERE event_id = $1 AND is_approved = true
+        ORDER BY created_at ASC`,
+      [event.id],
+    );
+    if (!uploads.length) {
+      return reply.status(400).send({ error: true, code: 'empty_gallery', message: 'No uploads to download.' });
+    }
+
+    if (!process.env.R2_BUCKET_NAME) {
+      return reply.status(503).send({ error: true, message: 'Storage backend not configured' });
+    }
+
+    // Filename guests will see in their Downloads folder. Falls back to
+    // the slug if couple_names is missing (legacy rows).
+    const baseName = String(event.couple_names || slug)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 60) || slug;
+    const today = new Date().toISOString().slice(0, 10);
+    const zipName = `${baseName}-reelday-${today}.zip`;
+
+    reply.header('Content-Type', 'application/zip');
+    reply.header('Content-Disposition', `attachment; filename="${zipName}"`);
+    // No Content-Length — archive size is unknown until finalize.
+
+    const archive = archiver('zip', { zlib: { level: 0 } });
+    archive.on('warning', err => {
+      if (err.code !== 'ENOENT') request.log.warn({ err: err.message, slug }, 'archive warning');
+    });
+    archive.on('error', err => {
+      request.log.error({ err: err.message, slug }, 'archive error');
+      // Stream has already started — best we can do is destroy reply.raw.
+      try { reply.raw.destroy(err); } catch { /* */ }
+    });
+
+    // Hijack so Fastify doesn't also try to send a response.
+    reply.hijack();
+    archive.pipe(reply.raw);
+
+    // Sequentially fetch + append each upload. Parallel would be faster
+    // but blows up memory on a 500-photo gallery; sequential keeps the
+    // working set to one file at a time. Each Body is a Readable stream
+    // piped straight into the archive — no intermediate buffer.
+    for (let i = 0; i < uploads.length; i++) {
+      const u = uploads[i];
+      const key = u.original_key || extractStorageKey(u.file_url);
+      if (!key) {
+        request.log.warn({ upload_id: u.id }, 'skipped: no R2 key');
+        continue;
+      }
+      try {
+        const obj = await fastify.storage.send(new GetObjectCommand({
+          Bucket: process.env.R2_BUCKET_NAME,
+          Key:    key,
+        }));
+        archive.append(obj.Body, { name: zipEntryName(u, i) });
+      } catch (err) {
+        request.log.warn({ err: err.message, upload_id: u.id, key }, 'r2 fetch failed; skipping');
+        // Don't fail the whole ZIP for one missing object — host gets the
+        // rest. The DB still references it but the file isn't recoverable
+        // (likely deleted out-of-band). Future cleanup work can prune.
+      }
+    }
+
+    await archive.finalize();
   });
 
   // Confirms `request.user` (a JWT-authenticated host) owns the event that
