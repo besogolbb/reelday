@@ -298,7 +298,7 @@
     .pill-active    { background: rgba(45,106,74,.12);   color: #2d6a4a; }
     .pill-inactive  { background: rgba(120,90,80,.15);   color: var(--ink-soft); }
 
-    .btn-verify, .btn-reject, .btn-deactivate, .btn-activate, .btn-ghost-sm, .btn-edit-sm, .btn-delete-user {
+    .btn-verify, .btn-reject, .btn-deactivate, .btn-activate, .btn-ghost-sm, .btn-edit-sm, .btn-delete-user, .btn-comp-hiraya {
       padding: .35rem .8rem; border: none; border-radius: var(--r-sm);
       font-family: inherit; font-size: .8rem; font-weight: 600;
       cursor: pointer; transition: opacity .15s, background .15s; white-space: nowrap;
@@ -310,9 +310,13 @@
     .btn-ghost-sm   { background: transparent;          color: var(--ink-soft);   border: 1px solid var(--line-2); }
     .btn-edit-sm    { background: var(--paper-2);       color: var(--ink);        border: 1px solid var(--line-2); }
     .btn-delete-user { background: rgba(153,27,27,.10); color: #991b1b; border: 1px solid rgba(153,27,27,.25); }
+    /* Hiraya comp — uses the Hiraya purple from the tier palette so the
+       button reads as "the gold/premium grant", visually distinct from
+       the verify/active/destructive trio. */
+    .btn-comp-hiraya { background: rgba(78,52,128,.12); color: #4e3480; border: 1px solid rgba(78,52,128,.25); }
     .btn-verify:hover, .btn-reject:hover, .btn-deactivate:hover,
     .btn-activate:hover, .btn-ghost-sm:hover, .btn-edit-sm:hover,
-    .btn-delete-user:hover { opacity: .8; }
+    .btn-delete-user:hover, .btn-comp-hiraya:hover { opacity: .8; }
 
     .tier-select { padding: .3rem .55rem; border-radius: 999px; border: 1px solid var(--line-2);
                    background: #fff; font-family: var(--mono); font-size: .72rem; font-weight: 600;
@@ -595,12 +599,19 @@
 
     <!-- Payments view -->
     <section class="view" id="view-payments" style="display:none">
-      <div class="filter-row">
-        <button class="pay-filter active" data-status="">All</button>
-        <button class="pay-filter" data-status="manual_pending">Pending GCash</button>
-        <button class="pay-filter" data-status="succeeded">Succeeded</button>
-        <button class="pay-filter" data-status="rejected">Rejected</button>
-        <button class="pay-filter" data-status="refunded">Refunded</button>
+      <div class="filter-row" style="justify-content:space-between">
+        <div style="display:flex;gap:.55rem;flex-wrap:wrap">
+          <button class="pay-filter active" data-status="">All</button>
+          <button class="pay-filter" data-status="manual_pending">Pending GCash</button>
+          <button class="pay-filter" data-status="succeeded">Succeeded</button>
+          <button class="pay-filter" data-status="rejected">Rejected</button>
+          <button class="pay-filter" data-status="refunded">Refunded</button>
+        </div>
+        <!-- PayMongo wiring probe — calls /admin/payments/healthcheck and
+             surfaces key environment (live/test), latency, and any
+             warnings (e.g. test key in production) without spending
+             ₱9,990 on a real charge. -->
+        <button class="btn-ghost-sm" id="btn-paymongo-health" onclick="checkPaymongoHealth()" title="Probe PayMongo connectivity and key environment">⚕ PayMongo health</button>
       </div>
       <div class="filters" style="margin-bottom:.65rem">
         <input type="search" id="pf-user"  placeholder="Search user…" />
@@ -1341,6 +1352,16 @@
     const activeBtn = u.is_active === false
       ? `<button class="btn-activate"   onclick="setActive('${esc(u.id)}', true)">↺ Reactivate</button>`
       : `<button class="btn-deactivate" onclick="setActive('${esc(u.id)}', false)">🔒 Deactivate</button>`;
+    // Comp button: hint via the title whether an active Hiraya sub
+    // already exists so the operator knows the comp will extend rather
+    // than reset (matches the GREATEST(...) behaviour of the endpoint).
+    const hirayaActive = u.subscription_tier === 'hiraya'
+      && u.subscription_expires_at
+      && new Date(u.subscription_expires_at) > new Date();
+    const compTitle = hirayaActive
+      ? `Already Hiraya until ${fmtDate(u.subscription_expires_at)} — comp will extend from there`
+      : 'Gift a Hiraya subscription (no PayMongo charge)';
+    const compBtn = `<button class="btn-comp-hiraya" onclick="compHiraya('${esc(u.id)}', '${esc(u.email)}')" title="${esc(compTitle)}">🎁 Comp Hiraya</button>`;
     return `
       <tr id="urow-${esc(u.id)}">
         <td>
@@ -1360,7 +1381,7 @@
         <td>${verifiedPill}</td>
         <td>${statusPill}</td>
         <td style="font-size:.8rem;color:var(--ink-faint)">${fmtDate(u.created_at)}</td>
-        <td><div class="action-btns">${verifyBtn}${activeBtn}<button class="btn-delete-user" onclick="deleteUser('${esc(u.id)}', '${esc(u.email)}')" title="Permanently delete user">🗑 Delete</button></div></td>
+        <td><div class="action-btns">${compBtn}${verifyBtn}${activeBtn}<button class="btn-delete-user" onclick="deleteUser('${esc(u.id)}', '${esc(u.email)}')" title="Permanently delete user">🗑 Delete</button></div></td>
       </tr>`;
   }
 
@@ -1419,6 +1440,74 @@
       renderUsers(allUsers);
       toast('User deleted.', 'success');
     } catch { toast('Failed to delete user.', 'error'); }
+  }
+
+  // Comp Hiraya — gifts a subscription outside PayMongo. Uses prompt()
+  // for the months input because a full modal is overkill for ops-only
+  // tooling; the endpoint's validation (1-60 months, integer) is the
+  // real guardrail. Default 12 months matches a normal Hiraya year.
+  async function compHiraya(id, email) {
+    const raw = prompt(`Comp Hiraya for ${email} — how many months?`, '12');
+    if (raw === null) return; // operator cancelled
+    const months = Number.parseInt(raw, 10);
+    if (!Number.isInteger(months) || months < 1 || months > 60) {
+      toast('Months must be an integer between 1 and 60.', 'error');
+      return;
+    }
+    if (!confirm(`Gift ${months}-month Hiraya subscription to ${email}?\n\nThis extends from the later of NOW and the current expiry, adds Hiraya credits, and clears any pending renewal reminders. No PayMongo charge.`)) return;
+    try {
+      const r = await adminFetch(`/api/admin/users/${id}/comp-hiraya`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ months }),
+      });
+      const data = await r.json();
+      if (!r.ok) {
+        toast(data.message || 'Failed to comp Hiraya.', 'error');
+        return;
+      }
+      // Patch the local cache so the row updates without a full reload.
+      const u = allUsers.find(u => u.id === id);
+      if (u) {
+        u.subscription_tier        = data.user.subscription_tier;
+        u.subscription_expires_at  = data.user.subscription_expires_at;
+        u.hiraya_credits           = data.user.hiraya_credits;
+        renderUsers(allUsers);
+      }
+      toast(`Comped ${months}mo Hiraya (+${data.credits_added} credits) → ${email}`, 'success');
+    } catch { toast('Failed to comp Hiraya.', 'error'); }
+  }
+
+  // PayMongo healthcheck — surfaces in a confirm-style readout. Reads
+  // /admin/payments/healthcheck which probes a cheap GET against PayMongo
+  // and reports whether the configured key is live/test and accepted.
+  // The "PayMongo health" link in the payments view calls this.
+  async function checkPaymongoHealth() {
+    try {
+      const r = await adminFetch('/api/admin/payments/healthcheck');
+      const d = await r.json();
+      if (!r.ok) {
+        toast(d.message || 'Healthcheck failed.', 'error');
+        return;
+      }
+      const lines = [];
+      lines.push(`PayMongo: ${d.paymongo_ok ? '✓ reachable' : '✗ NOT reachable'}`);
+      lines.push(`Latency:  ${d.latency_ms ?? '—'}ms${d.http_status ? ` (HTTP ${d.http_status})` : ''}`);
+      lines.push(`Key:      ${d.key_preview || '(none)'} [${d.key_env || 'unknown'}]`);
+      lines.push(`NODE_ENV: ${d.node_env}`);
+      if (d.warnings?.length) {
+        lines.push('');
+        lines.push('Warnings:');
+        for (const w of d.warnings) lines.push(`  • ${w}`);
+      }
+      if (d.error_detail) {
+        lines.push('');
+        lines.push(`Error: ${d.error_detail}`);
+      }
+      alert(lines.join('\n'));
+    } catch (err) {
+      toast('Healthcheck request failed.', 'error');
+    }
   }
 
   // ────────────────────────────────────────────────────────────────

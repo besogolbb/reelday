@@ -25,8 +25,10 @@ Last updated: 2026-05-21
 | Renewal reminder emails (T-30 / T-7 / T-0) | ✅ shipped 2026-05-21 |
 | Lapsed-sub UX (specific 402 code + dashboard banner) | ✅ shipped 2026-05-21 |
 | One-click renewal endpoint | ✅ shipped 2026-05-21 |
-| At least one Hiraya-exclusive perk wired in code | ⛔ pending — Phase 3 |
-| Production PayMongo end-to-end purchase verified | ⛔ pending — Phase 4 |
+| At least one Hiraya-exclusive perk wired in code | ⛔ pending — Phase 3 (deferred to post-comp) |
+| Admin: PayMongo healthcheck endpoint + UI | ✅ shipped 2026-05-21 |
+| Admin: comp-Hiraya for N months action | ✅ shipped 2026-05-21 |
+| Production PayMongo end-to-end purchase verified | ⛔ pending — Phase 4 (env var check) |
 
 ---
 

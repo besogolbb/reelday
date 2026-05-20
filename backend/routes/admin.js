@@ -965,4 +965,128 @@ export default async function adminRoutes(fastify) {
     if (!rowCount) return reply.status(404).send({ error: true, message: 'User not found' });
     return { success: true, is_active: active };
   });
+
+  // POST /api/admin/users/:id/comp-hiraya — gift a Hiraya subscription
+  // outside of PayMongo (soft-launch comps, refunds, support remediation).
+  // Mirrors applyTierUpgrade's Hiraya branch exactly: extends expires_at
+  // from the LATER of NOW and the current expiry (so a still-active sub
+  // gets months ADDED rather than reset back to today), adds hiraya credits,
+  // and clears renewal_reminders_sent so the next-cycle reminders fire.
+  fastify.post('/admin/users/:id/comp-hiraya', async (request, reply) => {
+    const { id } = request.params;
+    const months = Number.parseInt(request.body?.months, 10);
+    if (!Number.isInteger(months) || months < 1 || months > 60) {
+      return reply.status(400).send({
+        error: true,
+        message: 'months must be an integer between 1 and 60',
+      });
+    }
+    // Credits default to the Hiraya eventLimit (10 / yearly purchase)
+    // pro-rated by months, with a 1-credit floor so a short comp still
+    // produces something usable. Overridable for edge cases.
+    const hirayaPlan = resolvePlan('hiraya');
+    const requestedCredits = request.body?.credits;
+    const credits = Number.isInteger(requestedCredits) && requestedCredits >= 0
+      ? requestedCredits
+      : Math.max(1, Math.round(hirayaPlan.eventLimit * (months / 12)));
+
+    const { rows } = await fastify.db.query(
+      `UPDATE users
+          SET subscription_tier        = 'hiraya',
+              hiraya_credits           = hiraya_credits + $2,
+              subscription_expires_at  = GREATEST(
+                COALESCE(subscription_expires_at, NOW()),
+                NOW()
+              ) + ($3::int * INTERVAL '1 month'),
+              renewal_reminders_sent   = '{}'::jsonb
+        WHERE id = $1
+        RETURNING id, email, subscription_tier, subscription_expires_at,
+                  hiraya_credits`,
+      [id, credits, months],
+    );
+    if (!rows.length) {
+      return reply.status(404).send({ error: true, message: 'User not found' });
+    }
+    return {
+      success: true,
+      months,
+      credits_added: credits,
+      user: rows[0],
+    };
+  });
+
+  // GET /api/admin/payments/healthcheck — PayMongo connectivity + key
+  // environment probe. Answers the question "is production actually
+  // configured with a live key?" without anyone having to spend ₱9,990.
+  // Hits a cheap GET /v1/links?limit=1 — 401 means bad/missing key,
+  // 200 means the key talks to PayMongo. Surfaces the key prefix
+  // (sk_live_ vs sk_test_) so you can spot a test key in prod.
+  fastify.get('/admin/payments/healthcheck', async () => {
+    const key = process.env.PAYMONGO_SECRET_KEY || '';
+    const result = {
+      configured:    Boolean(key),
+      key_env:       null,
+      key_preview:   null,
+      node_env:      process.env.NODE_ENV || 'unknown',
+      paymongo_ok:   false,
+      latency_ms:    null,
+      http_status:   null,
+      warnings:      [],
+      error_detail:  null,
+    };
+
+    if (!key) {
+      result.warnings.push('PAYMONGO_SECRET_KEY env var is not set');
+      return result;
+    }
+
+    // sk_live_xxxxx  → live mode (real charges)
+    // sk_test_xxxxx  → test mode (no real charges)
+    if (key.startsWith('sk_live_'))      result.key_env = 'live';
+    else if (key.startsWith('sk_test_')) result.key_env = 'test';
+    else                                  result.key_env = 'unknown';
+
+    // Preview without leaking the secret: prefix + last 4 chars only.
+    // 'sk_live_…abcd' tells you it's a live key without exposing the
+    // material. The full key would be a credentials leak through the
+    // admin endpoint.
+    result.key_preview = key.length > 12
+      ? `${key.slice(0, 8)}…${key.slice(-4)}`
+      : '(too short)';
+
+    if (result.node_env === 'production' && result.key_env === 'test') {
+      result.warnings.push(
+        'NODE_ENV=production but PAYMONGO_SECRET_KEY is a test key — real purchases will NOT succeed',
+      );
+    }
+    if (result.node_env !== 'production' && result.key_env === 'live') {
+      result.warnings.push(
+        'PAYMONGO_SECRET_KEY is a LIVE key outside production — be careful, real charges will be created',
+      );
+    }
+
+    const t0 = Date.now();
+    try {
+      const res = await fetch('https://api.paymongo.com/v1/links?limit=1', {
+        method: 'GET',
+        signal: AbortSignal.timeout(10_000),
+        headers: {
+          'Authorization': `Basic ${Buffer.from(`${key}:`).toString('base64')}`,
+        },
+      });
+      result.latency_ms  = Date.now() - t0;
+      result.http_status = res.status;
+      if (res.ok) {
+        result.paymongo_ok = true;
+      } else {
+        const body = await res.json().catch(() => ({}));
+        result.error_detail = body?.errors?.[0]?.detail || body?.message || `HTTP ${res.status}`;
+      }
+    } catch (err) {
+      result.latency_ms  = Date.now() - t0;
+      result.error_detail = err.message;
+    }
+
+    return result;
+  });
 }
