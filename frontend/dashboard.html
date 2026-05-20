@@ -1776,8 +1776,16 @@
       text-align: center; margin-bottom: 28px;
     }
     .upgrade-grid {
-      display: grid; grid-template-columns: repeat(4, 1fr);
+      display: grid;
+      /* 3-col while Hiraya is hidden (HIRAYA_PUBLIC=false in /js/plans.js).
+         The original 4-col layout left an empty cell once the Hiraya card
+         was DOM-removed by openUpgradeModal. When relaunching Hiraya,
+         revert to repeat(4, 1fr) and the repeat(2, 1fr) 960px breakpoint
+         below to restore the original featured-tier emphasis. */
+      grid-template-columns: repeat(3, 1fr);
       gap: 14px;
+      max-width: 880px;
+      margin: 0 auto;
     }
     /* Hard override for [hidden] — without this the `display: flex`
        below wins via specificity and the Hiraya-hide JS gate does
@@ -1865,7 +1873,9 @@
     }
 
     @media (max-width: 960px) {
-      .upgrade-grid { grid-template-columns: repeat(2, 1fr); }
+      /* Tablet: collapse straight to single column. The previous 2-col
+         orphaned the 3rd card on row 2 once Hiraya was hidden. */
+      .upgrade-grid { grid-template-columns: 1fr; max-width: 420px; }
       .up-card.featured { transform: none; }
       .up-card.featured:hover { transform: translateY(-2px); }
     }

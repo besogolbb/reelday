@@ -148,7 +148,14 @@ export function planAllowsMoreEvents(planId, currentEventCount) {
 
 export function nextTier(planId) {
   const idx = PLAN_ORDER.indexOf(resolvePlan(planId).id);
-  return idx >= 0 && idx < PLAN_ORDER.length - 1 ? PLANS[PLAN_ORDER[idx + 1]] : null;
+  if (idx < 0 || idx >= PLAN_ORDER.length - 1) return null;
+  const next = PLANS[PLAN_ORDER[idx + 1]];
+  // While Hiraya is in private launch (HIRAYA_PUBLIC=false), treat
+  // Dalisay as the top tier. Without this the dashboard info card
+  // shows a stale "Upgrade" link next to "Dalisay" that pointed at
+  // /#pricing — where Hiraya is no longer rendered.
+  if (next.id === 'hiraya' && !HIRAYA_PUBLIC) return null;
+  return next;
 }
 
 /* Upload window is centered on the event date — see backend/lib/plans.js
