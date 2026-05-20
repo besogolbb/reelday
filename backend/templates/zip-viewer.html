@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>__EVENT_TITLE__ — Reelday memories</title>
+<style>
+  :root {
+    --paper:        #fbf5ec;
+    --paper-2:      #f4ead9;
+    --paper-3:      #ebdec6;
+    --ink:          #2a1a14;
+    --ink-soft:     #5a443a;
+    --ink-faint:    #8a7468;
+    --line:         rgba(63,35,24,.12);
+    --accent:       #c45a3a;
+    --accent-deep:  #7a3b2e;
+    --accent-soft:  #f0a37a;
+    --display:      Georgia, 'Times New Roman', serif;
+    --sans:         -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    --mono:         'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: var(--sans);
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  header {
+    padding: 40px 32px 24px;
+    text-align: center;
+    border-bottom: 1px solid var(--line);
+  }
+  header .eyebrow {
+    font-family: var(--mono); font-size: 11px; font-weight: 700;
+    letter-spacing: .18em; text-transform: uppercase;
+    color: var(--accent-deep);
+  }
+  header h1 {
+    font-family: var(--display); font-style: italic;
+    font-size: 38px; font-weight: 400;
+    color: var(--ink); margin: 8px 0 4px;
+  }
+  header .sub {
+    font-size: 14px; color: var(--ink-soft);
+  }
+
+  .tabs {
+    display: flex; justify-content: center; gap: 8px;
+    padding: 18px 16px; flex-wrap: wrap;
+    border-bottom: 1px solid var(--line);
+  }
+  .tab {
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--ink-soft);
+    font-family: var(--mono); font-size: 10px; font-weight: 700;
+    letter-spacing: .16em; text-transform: uppercase;
+    padding: 7px 14px; border-radius: 999px;
+    cursor: pointer;
+    transition: background .15s, border-color .15s, color .15s;
+  }
+  .tab.is-active {
+    background: var(--ink); color: var(--paper); border-color: var(--ink);
+  }
+  .tab .n {
+    font-family: var(--sans); font-weight: 600;
+    color: inherit; opacity: .7; margin-left: 6px;
+  }
+
+  main {
+    max-width: 1200px; margin: 0 auto;
+    padding: 28px 24px 64px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+  }
+  .empty {
+    grid-column: 1 / -1;
+    text-align: center; padding: 60px 20px;
+    color: var(--ink-faint);
+    font-style: italic;
+  }
+
+  .card {
+    position: relative;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    overflow: hidden;
+    aspect-ratio: 1 / 1;
+    cursor: pointer;
+    transition: transform .2s, box-shadow .2s;
+  }
+  .card:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(63,35,24,.12); }
+  .card img, .card video {
+    width: 100%; height: 100%;
+    object-fit: cover; display: block;
+  }
+  .card .audio-icon {
+    position: absolute; bottom: 10px; right: 10px;
+    width: 32px; height: 32px;
+    background: rgba(0,0,0,.55);
+    color: #fff; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+  .card .video-icon {
+    position: absolute; top: 10px; left: 10px;
+    background: rgba(0,0,0,.55); color: #fff;
+    font-family: var(--mono); font-size: 9px; font-weight: 700;
+    letter-spacing: .14em; text-transform: uppercase;
+    padding: 4px 8px; border-radius: 999px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+  .card .label {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    padding: 14px 12px 10px;
+    background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,.65) 100%);
+    color: #fff;
+    font-size: 12px; font-weight: 600;
+    letter-spacing: .01em;
+    text-shadow: 0 1px 4px rgba(0,0,0,.5);
+  }
+
+  /* Audio-only "card" uses a coloured tile instead of an image. */
+  .card.is-audio {
+    background: linear-gradient(135deg, var(--accent-soft), var(--accent));
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+  }
+  .card.is-audio .audio-glyph {
+    font-size: 60px; opacity: .85;
+  }
+
+  /* Lightbox */
+  .lightbox {
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(20,12,8,.92);
+    display: none; align-items: center; justify-content: center;
+    padding: 32px;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+  .lightbox.is-open { display: flex; }
+  .lightbox-inner {
+    position: relative;
+    max-width: 100%; max-height: 100%;
+    display: flex; flex-direction: column;
+    align-items: center; gap: 20px;
+  }
+  .lightbox-media {
+    max-width: 100%; max-height: 70vh;
+    border-radius: 12px; box-shadow: 0 30px 60px rgba(0,0,0,.5);
+  }
+  .lightbox-media img, .lightbox-media video {
+    max-width: 100%; max-height: 70vh;
+    border-radius: 12px; display: block;
+  }
+  .lightbox-audio {
+    background: rgba(255,255,255,.1);
+    border: 1px solid rgba(255,255,255,.18);
+    border-radius: 999px;
+    padding: 8px 14px;
+    display: flex; align-items: center; gap: 12px;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  .lightbox-audio audio { vertical-align: middle; }
+  .lightbox-meta {
+    color: rgba(251,245,236,.85);
+    font-family: var(--display); font-style: italic;
+    font-size: 22px; text-align: center;
+  }
+  .lightbox-meta .meta-sub {
+    font-family: var(--sans); font-style: normal;
+    font-size: 12px; color: rgba(251,245,236,.55);
+    letter-spacing: .12em; text-transform: uppercase;
+    margin-top: 4px;
+  }
+  .lightbox-close, .lightbox-nav {
+    position: absolute; z-index: 1;
+    background: rgba(255,255,255,.1);
+    color: #fff; border: 1px solid rgba(255,255,255,.2);
+    width: 44px; height: 44px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 22px;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    transition: background .15s;
+  }
+  .lightbox-close:hover, .lightbox-nav:hover { background: rgba(255,255,255,.22); }
+  .lightbox-close { top: 24px; right: 24px; }
+  .lightbox-nav.prev { top: 50%; left: 24px; transform: translateY(-50%); }
+  .lightbox-nav.next { top: 50%; right: 24px; transform: translateY(-50%); }
+
+  footer {
+    text-align: center; padding: 40px 24px;
+    border-top: 1px solid var(--line);
+    color: var(--ink-faint);
+    font-size: 12px;
+  }
+  footer .brand {
+    font-family: var(--display); font-style: italic;
+    color: var(--accent-deep);
+  }
+
+  @media (max-width: 600px) {
+    header { padding: 28px 18px 18px; }
+    header h1 { font-size: 28px; }
+    .grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+    main { padding: 18px 14px 40px; }
+    .lightbox { padding: 12px; }
+    .lightbox-nav { width: 36px; height: 36px; }
+    .lightbox-nav.prev { left: 8px; }
+    .lightbox-nav.next { right: 8px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">Reelday Memories</div>
+  <h1>__EVENT_NAMES__</h1>
+  <div class="sub">__EVENT_SUB__</div>
+</header>
+
+<div class="tabs" id="tabs"></div>
+
+<main>
+  <div class="grid" id="grid"></div>
+</main>
+
+<footer>
+  <span class="brand">★ reelday.ph</span>
+  &nbsp;·&nbsp; Browse this album offline in any browser
+</footer>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="lightbox-inner">
+    <button class="lightbox-close" id="lb-close" aria-label="Close">×</button>
+    <button class="lightbox-nav prev" id="lb-prev" aria-label="Previous">‹</button>
+    <button class="lightbox-nav next" id="lb-next" aria-label="Next">›</button>
+    <div class="lightbox-media" id="lb-media"></div>
+    <div class="lightbox-audio" id="lb-audio-wrap" style="display:none">
+      <audio id="lb-audio" controls preload="auto"></audio>
+    </div>
+    <div class="lightbox-meta" id="lb-meta"></div>
+  </div>
+</div>
+
+<script>
+// Manifest injected by backend. See backend/routes/uploads.js — the
+// streaming-ZIP endpoint substitutes __MANIFEST_JSON__ with a JSON
+// object listing every item in the archive. Inlined here (not fetched)
+// so the viewer works when the host opens this file via file:// after
+// extracting the ZIP — Chrome and Firefox block fetch() on file://.
+const MANIFEST = __MANIFEST_JSON__;
+
+(function () {
+  const items = MANIFEST.items || [];
+  const grid  = document.getElementById('grid');
+  const tabsEl = document.getElementById('tabs');
+
+  // Filter buckets — counted once up front so the tabs can show totals.
+  const buckets = {
+    all:     items,
+    paired:  items.filter(i => i.type === 'paired-photo' || i.type === 'paired-video'),
+    photos:  items.filter(i => i.type === 'photo' || i.type === 'paired-photo'),
+    videos:  items.filter(i => i.type === 'video' || i.type === 'paired-video'),
+    audio:   items.filter(i => i.type === 'audio'),
+  };
+
+  const tabs = [
+    { id: 'all',     label: 'All'           },
+    { id: 'paired',  label: 'With audio'    },
+    { id: 'photos',  label: 'Photos'        },
+    { id: 'videos',  label: 'Videos'        },
+    { id: 'audio',   label: 'Voice notes'   },
+  ].filter(t => buckets[t.id].length > 0);
+
+  let activeTab = tabs[0]?.id || 'all';
+  let currentList = buckets[activeTab];
+
+  function escapeHtml(s) {
+    return String(s ?? '').replace(/[&<>"]/g, c => (
+      { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]
+    ));
+  }
+
+  function renderTabs() {
+    tabsEl.innerHTML = tabs.map(t => (
+      `<button class="tab${t.id === activeTab ? ' is-active' : ''}" data-tab="${t.id}">` +
+        `${t.label}<span class="n">${buckets[t.id].length}</span>` +
+      `</button>`
+    )).join('');
+    tabsEl.querySelectorAll('.tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        activeTab = btn.dataset.tab;
+        currentList = buckets[activeTab];
+        renderTabs();
+        renderGrid();
+      });
+    });
+  }
+
+  function renderGrid() {
+    if (!currentList.length) {
+      grid.innerHTML = '<div class="empty">No items in this category.</div>';
+      return;
+    }
+    grid.innerHTML = currentList.map((item, i) => {
+      const name = escapeHtml(item.name || 'guest');
+      if (item.type === 'audio') {
+        return (
+          `<div class="card is-audio" data-idx="${i}">` +
+            `<div class="audio-glyph">🎙️</div>` +
+            `<div class="label">${name}</div>` +
+          `</div>`
+        );
+      }
+      const isVideo = item.type === 'video' || item.type === 'paired-video';
+      const mediaSrc = isVideo ? item.video : item.photo;
+      const mediaTag = isVideo
+        ? `<video src="${escapeHtml(mediaSrc)}" muted playsinline preload="metadata"></video>`
+        : `<img src="${escapeHtml(mediaSrc)}" alt="${name}" loading="lazy" />`;
+      const videoBadge = isVideo ? `<span class="video-icon">Video</span>` : '';
+      const audioBadge = item.audio ? `<span class="audio-icon" title="Voice note attached">🎙️</span>` : '';
+      return (
+        `<div class="card" data-idx="${i}">` +
+          mediaTag +
+          videoBadge +
+          audioBadge +
+          `<div class="label">${name}</div>` +
+        `</div>`
+      );
+    }).join('');
+    grid.querySelectorAll('.card').forEach(card => {
+      card.addEventListener('click', () => openLightbox(Number(card.dataset.idx)));
+    });
+  }
+
+  // ── Lightbox ─────────────────────────────────────────────
+  const lightbox    = document.getElementById('lightbox');
+  const lbMedia     = document.getElementById('lb-media');
+  const lbAudio     = document.getElementById('lb-audio');
+  const lbAudioWrap = document.getElementById('lb-audio-wrap');
+  const lbMeta      = document.getElementById('lb-meta');
+  let   lbIndex     = 0;
+
+  function openLightbox(idx) {
+    lbIndex = idx;
+    paintLightbox();
+    lightbox.classList.add('is-open');
+    lightbox.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeLightbox() {
+    lightbox.classList.remove('is-open');
+    lightbox.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+    // Stop any playing media when closing
+    lbMedia.innerHTML = '';
+    try { lbAudio.pause(); lbAudio.removeAttribute('src'); lbAudio.load(); } catch {}
+  }
+  function paintLightbox() {
+    const item = currentList[lbIndex];
+    if (!item) return;
+    const safeName = escapeHtml(item.name || 'guest');
+    const safeDate = item.created
+      ? new Date(item.created).toLocaleString('en-PH', { dateStyle: 'long', timeStyle: 'short' })
+      : '';
+
+    // Media area
+    if (item.type === 'video' || item.type === 'paired-video') {
+      lbMedia.innerHTML =
+        `<video src="${escapeHtml(item.video)}" controls autoplay playsinline></video>`;
+    } else if (item.type === 'audio') {
+      lbMedia.innerHTML =
+        `<div style="width:60vw;max-width:480px;aspect-ratio:1/1;` +
+        `background:linear-gradient(135deg,#f0a37a,#c45a3a);border-radius:12px;` +
+        `display:flex;align-items:center;justify-content:center;font-size:120px;color:#fff">🎙️</div>`;
+    } else {
+      lbMedia.innerHTML = `<img src="${escapeHtml(item.photo)}" alt="${safeName}" />`;
+    }
+
+    // Audio overlay — paired-photo / paired-video have a separate audio
+    // file; pure-audio items load the audio inline as the "media"
+    // because there's no other content to display.
+    if (item.audio || item.type === 'audio') {
+      const audioSrc = item.audio || item.audioFile || (item.type === 'audio' ? item.file : null);
+      lbAudio.src = escapeHtml(audioSrc || item.audio || '');
+      lbAudio.play().catch(() => {/* autoplay blocked is OK */});
+      lbAudioWrap.style.display = '';
+    } else {
+      lbAudioWrap.style.display = 'none';
+      try { lbAudio.pause(); lbAudio.removeAttribute('src'); } catch {}
+    }
+
+    lbMeta.innerHTML =
+      `${safeName}` +
+      (safeDate ? `<div class="meta-sub">${safeDate}</div>` : '');
+  }
+  function nav(dir) {
+    if (!currentList.length) return;
+    lbIndex = (lbIndex + dir + currentList.length) % currentList.length;
+    paintLightbox();
+  }
+
+  document.getElementById('lb-close').addEventListener('click', closeLightbox);
+  document.getElementById('lb-prev').addEventListener('click', () => nav(-1));
+  document.getElementById('lb-next').addEventListener('click', () => nav(+1));
+  lightbox.addEventListener('click', e => { if (e.target === lightbox) closeLightbox(); });
+  document.addEventListener('keydown', e => {
+    if (!lightbox.classList.contains('is-open')) return;
+    if (e.key === 'Escape')     closeLightbox();
+    else if (e.key === 'ArrowLeft')  nav(-1);
+    else if (e.key === 'ArrowRight') nav(+1);
+  });
+
+  // ── Init ──────────────────────────────────────────────────
+  renderTabs();
+  renderGrid();
+})();
+</script>
+</body>
+</html>

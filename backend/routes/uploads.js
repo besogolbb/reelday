@@ -1,4 +1,6 @@
-import { extname, posix as pathPosix } from 'path';
+import { extname, posix as pathPosix, dirname, join as pathJoin } from 'path';
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
 import { randomUUID, createHmac, timingSafeEqual } from 'crypto';
 import { gzipSync } from 'zlib';
 import archiver from 'archiver';
@@ -9,6 +11,17 @@ import { extractStorageKey } from '../lib/storageKeys.js';
 import { triggerVideoTranscode } from '../lib/awsLambdaService.js';
 import { verifyToken } from '../plugins/auth.js';
 import { getCount as getPresenceCount } from './presence.js';
+
+// Load the offline-album HTML viewer template once at boot. Injected
+// into every ZIP at the root as `viewer.html` so the host can open
+// the archive in any browser and get a dashboard-style gallery that
+// plays paired photos with their audio notes — the same combined
+// experience as the live wall. See backend/templates/zip-viewer.html.
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const ZIP_VIEWER_TEMPLATE = readFileSync(
+  pathJoin(__dirname, '..', 'templates', 'zip-viewer.html'),
+  'utf8',
+);
 
 // Signed download tokens for the bulk-ZIP endpoint. Browsers can't add
 // Authorization headers to a top-level navigation, so we issue a short-
@@ -943,7 +956,7 @@ export default async function uploadRoutes(fastify) {
     }
 
     const { rows: uploads } = await fastify.db.query(
-      `SELECT id, file_url, original_key, file_type, uploader_name,
+      `SELECT id, file_url, audio_url, original_key, file_type, uploader_name,
               is_video_message, created_at
          FROM uploads
         WHERE event_id = $1 AND is_approved = true
@@ -952,6 +965,28 @@ export default async function uploadRoutes(fastify) {
     );
     if (!uploads.length) {
       return reply.status(400).send({ error: true, code: 'empty_gallery', message: 'No uploads to download.' });
+    }
+
+    // ── Pairing pass ──────────────────────────────────────────
+    // Audio notes are stored as a SEPARATE uploads row from the photo
+    // they're attached to. The photo row carries audio_url pointing
+    // back to the audio row's file_url. To deliver the dashboard's
+    // "combined" playback offline we:
+    //   1. Build a lookup of audio rows by their file_url so we can
+    //      grab the audio's original_key when emitting a paired photo.
+    //   2. Track which audio file_urls have been claimed by a photo,
+    //      so we don't write the audio twice (once as the photo's
+    //      paired companion, once as a standalone orphan).
+    const audioByUrl       = new Map();   // file_url -> audio upload row
+    const claimedAudioUrls = new Set();   // audio file_urls referenced by a photo/video
+
+    for (const u of uploads) {
+      if (u.file_type === 'audio' || u.file_type === 'audio_note') {
+        if (u.file_url) audioByUrl.set(u.file_url, u);
+      }
+      if (u.audio_url && (u.file_type === 'photo' || u.file_type === 'video')) {
+        claimedAudioUrls.add(u.audio_url);
+      }
     }
 
     if (!process.env.R2_BUCKET_NAME) {
@@ -990,26 +1025,145 @@ export default async function uploadRoutes(fastify) {
     // but blows up memory on a 500-photo gallery; sequential keeps the
     // working set to one file at a time. Each Body is a Readable stream
     // piped straight into the archive — no intermediate buffer.
-    for (let i = 0; i < uploads.length; i++) {
-      const u = uploads[i];
-      const key = u.original_key || extractStorageKey(u.file_url);
-      if (!key) {
-        request.log.warn({ upload_id: u.id }, 'skipped: no R2 key');
-        continue;
-      }
+    //
+    // For paired photo/video + audio we emit BOTH files into a single
+    // paired/ folder with matching base names, so the host sees them
+    // side-by-side in any file picker. The manifest then tells the
+    // bundled HTML viewer which files belong together.
+    const manifestItems = [];
+    let pairedSeq   = 0;
+    let photoSeq    = 0;
+    let videoSeq    = 0;
+    let orphanSeq   = 0;
+
+    async function fetchAndAppend(key, entryName) {
       try {
         const obj = await fastify.storage.send(new GetObjectCommand({
           Bucket: process.env.R2_BUCKET_NAME,
           Key:    key,
         }));
-        archive.append(obj.Body, { name: zipEntryName(u, i) });
+        archive.append(obj.Body, { name: entryName });
+        return true;
       } catch (err) {
-        request.log.warn({ err: err.message, upload_id: u.id, key }, 'r2 fetch failed; skipping');
-        // Don't fail the whole ZIP for one missing object — host gets the
-        // rest. The DB still references it but the file isn't recoverable
-        // (likely deleted out-of-band). Future cleanup work can prune.
+        request.log.warn({ err: err.message, key, entryName }, 'r2 fetch failed; skipping');
+        return false;
       }
     }
+    function safeName(s, fallback) {
+      const out = String(s || '').toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 30);
+      return out || fallback;
+    }
+    function extOf(u) {
+      const k = u.original_key || extractStorageKey(u.file_url) || u.file_url || '';
+      const e = (extname(k) || '.bin').toLowerCase();
+      return e || '.bin';
+    }
+
+    for (const u of uploads) {
+      const isPhoto = u.file_type === 'photo' && !u.is_video_message;
+      const isVideo = u.file_type === 'video' || u.is_video_message;
+      const isAudio = u.file_type === 'audio' || u.file_type === 'audio_note';
+      const guestName = safeName(u.uploader_name, 'guest');
+
+      if ((isPhoto || isVideo) && u.audio_url && audioByUrl.has(u.audio_url)) {
+        // ── Paired photo/video + audio ──
+        pairedSeq += 1;
+        const audioRow = audioByUrl.get(u.audio_url);
+        const baseSeq  = String(pairedSeq).padStart(3, '0');
+        const baseStem = `${baseSeq}_${guestName}`;
+        const mediaExt = extOf(u);
+        const audioExt = extOf(audioRow);
+        const mediaName = `paired/${baseStem}${mediaExt}`;
+        const audioName = `paired/${baseStem}${audioExt}`;
+
+        const mediaKey = u.original_key || extractStorageKey(u.file_url);
+        const audioKey = audioRow.original_key || extractStorageKey(audioRow.file_url);
+        const mediaOk  = mediaKey && await fetchAndAppend(mediaKey, mediaName);
+        const audioOk  = audioKey && await fetchAndAppend(audioKey, audioName);
+
+        manifestItems.push({
+          type:    isVideo ? 'paired-video' : 'paired-photo',
+          name:    u.uploader_name || 'guest',
+          created: u.created_at,
+          [isVideo ? 'video' : 'photo']: mediaOk ? mediaName : null,
+          audio:   audioOk ? audioName : null,
+        });
+        continue;
+      }
+
+      if (isPhoto) {
+        photoSeq += 1;
+        const entry = `photos/${String(photoSeq).padStart(3, '0')}_${guestName}${extOf(u)}`;
+        const key   = u.original_key || extractStorageKey(u.file_url);
+        const ok    = key && await fetchAndAppend(key, entry);
+        if (ok) {
+          manifestItems.push({
+            type: 'photo', name: u.uploader_name || 'guest',
+            created: u.created_at, photo: entry,
+          });
+        }
+        continue;
+      }
+
+      if (isVideo) {
+        videoSeq += 1;
+        const entry = `videos/${String(videoSeq).padStart(3, '0')}_${guestName}${extOf(u)}`;
+        const key   = u.original_key || extractStorageKey(u.file_url);
+        const ok    = key && await fetchAndAppend(key, entry);
+        if (ok) {
+          manifestItems.push({
+            type: 'video', name: u.uploader_name || 'guest',
+            created: u.created_at, video: entry,
+          });
+        }
+        continue;
+      }
+
+      if (isAudio) {
+        // Skip if this audio was already written as part of a paired
+        // emission above. claimedAudioUrls was built in the first pass
+        // so paired audios are always known when we hit this branch.
+        if (claimedAudioUrls.has(u.file_url)) continue;
+
+        orphanSeq += 1;
+        const entry = `audio-notes/${String(orphanSeq).padStart(3, '0')}_${guestName}${extOf(u)}`;
+        const key   = u.original_key || extractStorageKey(u.file_url);
+        const ok    = key && await fetchAndAppend(key, entry);
+        if (ok) {
+          manifestItems.push({
+            type: 'audio', name: u.uploader_name || 'guest',
+            created: u.created_at, audio: entry,
+          });
+        }
+        continue;
+      }
+    }
+
+    // ── Viewer HTML — dashboard-style offline album ──
+    // Inject the manifest as a JS literal because file:// loads in
+    // Chrome/Firefox block fetch() on local files, so the viewer has
+    // to ship its data inline. Escape only </script to prevent the
+    // closing-tag-in-string trap; JSON doesn't otherwise need HTML
+    // escaping inside a <script type="application/json">-shaped slot.
+    const eventDateStr = event.couple_names ? null : null; // placeholder, not displayed
+    const manifestJson = JSON.stringify({
+      event: {
+        names: event.couple_names || slug,
+        sub:   `${manifestItems.length} memor${manifestItems.length === 1 ? 'y' : 'ies'} from your guests`,
+      },
+      items: manifestItems,
+    }).replace(/<\/script/gi, '<\\/script');
+
+    const viewerHtml = ZIP_VIEWER_TEMPLATE
+      .replace(/__EVENT_TITLE__/g, (event.couple_names || slug).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])))
+      .replace(/__EVENT_NAMES__/g, (event.couple_names || slug).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])))
+      .replace(/__EVENT_SUB__/g,   `${manifestItems.length} memor${manifestItems.length === 1 ? 'y' : 'ies'} · open in any browser`)
+      .replace('__MANIFEST_JSON__', manifestJson);
+
+    archive.append(viewerHtml, { name: 'viewer.html' });
 
     await archive.finalize();
   });
