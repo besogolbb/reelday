@@ -1291,33 +1291,75 @@
     /* Tier-themed Plan row — set by JS via data-tier on the row.
        Sinag = copper, Dalisay = silver, Hiraya = gold. Tala uses the
        default warm-accent row above. Selectors win over the generic
-       .row-highlight span rules above via the extra [data-tier] hop. */
+       .row-highlight span rules above via the extra [data-tier] hop.
+
+       Typography is treated as if the text were *engraved into* the
+       metal: bumped sizes for nameplate presence, then a two-layer
+       text-shadow per tier — dark from above + light from below —
+       which is the classic CSS recipe for debossed/inset text on a
+       reflective surface. The label uses the same engrave so the row
+       reads as one stamped piece rather than text-over-color. */
+    .info-card .row.row-highlight[data-tier] span:first-child {
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .22em;
+      text-transform: uppercase;
+    }
+    .info-card .row.row-highlight[data-tier] span:last-child {
+      font-family: var(--display);
+      font-style: italic;
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: .01em;
+    }
+    /* Re-target the inline value span (rendered by JS) so the engraved
+       sizing applies to the actual <span> child, not just the row's
+       direct :last-child wrapper. */
+    .info-card .row.row-highlight[data-tier] #info-plan > span {
+      font-family: var(--display);
+      font-style: italic;
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: .01em;
+    }
+
     .info-card .row.row-highlight[data-tier="sinag"] {
       background: linear-gradient(135deg, #f7e3cf 0%, #d9925c 55%, #9c5a2e 100%);
       border-color: #9c5a2e;
-      box-shadow: 0 6px 18px rgba(156,90,46,.22);
+      box-shadow: 0 6px 18px rgba(156,90,46,.22),
+                  inset 0 1px 0 rgba(255,255,255,.35),
+                  inset 0 -1px 0 rgba(0,0,0,.12);
     }
     .info-card .row.row-highlight[data-tier="sinag"] span:first-child,
-    .info-card .row.row-highlight[data-tier="sinag"] span:last-child {
-      color: #4a2510;
-      text-shadow: 0 1px 0 rgba(255,255,255,.35);
+    .info-card .row.row-highlight[data-tier="sinag"] #info-plan > span {
+      color: #5a2c14;
+      text-shadow:
+        0 -1px 0 rgba(60,20,5,.45),
+        0  1px 1px rgba(255,225,195,.6);
     }
 
     .info-card .row.row-highlight[data-tier="dalisay"] {
       background: linear-gradient(135deg, #f6f7f9 0%, #d8dde4 55%, #9aa2ad 100%);
       border-color: #9aa2ad;
-      box-shadow: 0 6px 18px rgba(120,128,140,.25);
+      box-shadow: 0 6px 18px rgba(120,128,140,.25),
+                  inset 0 1px 0 rgba(255,255,255,.55),
+                  inset 0 -1px 0 rgba(0,0,0,.10);
     }
     .info-card .row.row-highlight[data-tier="dalisay"] span:first-child,
-    .info-card .row.row-highlight[data-tier="dalisay"] span:last-child {
+    .info-card .row.row-highlight[data-tier="dalisay"] #info-plan > span {
       color: #2a3340;
-      text-shadow: 0 1px 0 rgba(255,255,255,.5);
+      text-shadow:
+        0 -1px 0 rgba(20,28,40,.40),
+        0  1px 1px rgba(255,255,255,.75);
     }
 
     .info-card .row.row-highlight[data-tier="hiraya"] {
       background: linear-gradient(135deg, #fdf2c4 0%, #f4d06f 50%, #c9a227 100%);
       border-color: #c9a227;
-      box-shadow: 0 8px 22px rgba(201,162,39,.32), inset 0 1px 0 rgba(255,255,255,.45);
+      box-shadow: 0 8px 22px rgba(201,162,39,.32),
+                  inset 0 1px 0 rgba(255,255,255,.55),
+                  inset 0 -1px 0 rgba(80,55,5,.15);
       position: relative;
       overflow: hidden;
     }
@@ -1333,9 +1375,11 @@
     }
     .info-card .row.row-highlight[data-tier="hiraya"] > * { position: relative; z-index: 1; }
     .info-card .row.row-highlight[data-tier="hiraya"] span:first-child,
-    .info-card .row.row-highlight[data-tier="hiraya"] span:last-child {
+    .info-card .row.row-highlight[data-tier="hiraya"] #info-plan > span {
       color: #5a4406;
-      text-shadow: 0 1px 0 rgba(255,255,255,.55);
+      text-shadow:
+        0 -1px 0 rgba(80,55,5,.45),
+        0  1px 1px rgba(255,245,205,.75);
     }
 
     /* Always-visible upload-window status pill.
