@@ -923,6 +923,14 @@ export default async function adminRoutes(fastify) {
   // tier. Useful for refunds, comped events, or fixing payments that came
   // in outside the normal PayMongo flow. Does NOT touch any payments row;
   // pair with a manual payment entry if you want the audit trail.
+  //
+  // When downgrading away from Hiraya, ALSO clear subscription_expires_at.
+  // Otherwise the frontend's hasHirayaSub check (which keys off expires_at,
+  // not tier) keeps treating the user as a Hiraya holder — the /start
+  // wizard would still show the Hiraya card with "✓ Included", and the
+  // dashboard would still show gold tier theming. Caught 2026-05-20 when
+  // a test account stayed in "Hiraya sub" state across UI surfaces after
+  // its tier was set to tala via this endpoint.
   fastify.post('/admin/users/:id/plan', async (request, reply) => {
     const { id } = request.params;
     const tier = String(request.body?.tier || '').toLowerCase();
@@ -930,11 +938,17 @@ export default async function adminRoutes(fastify) {
       return reply.status(400).send({ error: true, message: `Invalid tier. Allowed: ${[...VALID_TIERS].join(', ')}` });
     }
     const { rowCount } = await fastify.db.query(
-      'UPDATE users SET subscription_tier = $2 WHERE id = $1',
+      tier === 'hiraya'
+        ? 'UPDATE users SET subscription_tier = $2 WHERE id = $1'
+        : `UPDATE users
+              SET subscription_tier        = $2,
+                  subscription_expires_at  = NULL,
+                  renewal_reminders_sent   = '{}'::jsonb
+            WHERE id = $1`,
       [id, tier],
     );
     if (!rowCount) return reply.status(404).send({ error: true, message: 'User not found' });
-    return { success: true, tier };
+    return { success: true, tier, cleared_subscription: tier !== 'hiraya' };
   });
 
   // POST /api/admin/users/:id/verify — toggle the verified flag without
