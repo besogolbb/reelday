@@ -1818,6 +1818,17 @@
        override (2026-05-20). */
     .up-card[hidden] { display: none !important; }
 
+    /* No-upgrade-path scrub. Set by JS on <body> whenever the host's
+       current tier has no public next tier (Dalisay during Hiraya
+       private launch; Hiraya at any time). Anchor-based fallback for
+       the inline-style hide in JS so any layer of cache that drops
+       the JS gate still hides these dead-end CTAs. */
+    body.no-upgrade-path .lock-banner .lb-cta,
+    body.no-upgrade-path #info-plan a,
+    body.no-upgrade-path .polls-locked,
+    body.no-upgrade-path #esite-locked,
+    body.no-upgrade-path #sde-locked { display: none !important; }
+
     /* Bulk-download button — lives in the info-hero card. Compact pill,
        accent-bordered, with an inline spinner that flips on while we
        fetch the token + start streaming so the host knows their click
@@ -2860,6 +2871,14 @@
       infoPlan.innerHTML = `<span>${glyph}${plan.name}</span>${upgrade}`;
       const planRow = infoPlan.closest('.row');
       if (planRow) planRow.setAttribute('data-tier', plan.id);
+
+      // Body-level scrub for every Upgrade CTA on the dashboard. When
+      // there's no public next tier (Dalisay during Hiraya private
+      // launch, Hiraya at any time), CSS rules in the head hide all
+      // dead-end Upgrade links/buttons. Belt-and-braces with the per-
+      // element JS hides in maybeShowWindowLock so even a cached page
+      // missing the JS gate still scrubs visually.
+      document.body.classList.toggle('no-upgrade-path', !next);
     }
     // Wall/gallery expiry — prefer the new gallery_expires_at, fall back to legacy wall_expires_at
     const expiryDate = event.gallery_expires_at || event.wall_expires_at;
