@@ -1157,11 +1157,20 @@ export default async function uploadRoutes(fastify) {
       items: manifestItems,
     }).replace(/<\/script/gi, '<\\/script');
 
+    // All four placeholders use the /g flag because each appears more
+    // than once in the template (e.g. __MANIFEST_JSON__ shows up in
+    // both a comment AND the const assignment). Without /g the
+    // String.replace only swaps the first occurrence — the comment —
+    // and the real assignment ships with the literal placeholder,
+    // crashing the viewer at boot with "__MANIFEST_JSON__ is not
+    // defined". Caught 2026-05-20 from a host's browser console.
     const viewerHtml = ZIP_VIEWER_TEMPLATE
-      .replace(/__EVENT_TITLE__/g, (event.couple_names || slug).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])))
-      .replace(/__EVENT_NAMES__/g, (event.couple_names || slug).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])))
-      .replace(/__EVENT_SUB__/g,   `${manifestItems.length} memor${manifestItems.length === 1 ? 'y' : 'ies'} · open in any browser`)
-      .replace('__MANIFEST_JSON__', manifestJson);
+      .replace(/__EVENT_TITLE__/g,   (event.couple_names || slug).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])))
+      .replace(/__EVENT_NAMES__/g,   (event.couple_names || slug).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])))
+      .replace(/__EVENT_SUB__/g,     `${manifestItems.length} memor${manifestItems.length === 1 ? 'y' : 'ies'} · open in any browser`)
+      .replace(/__MANIFEST_JSON__/g, () => manifestJson);
+      //                              ^ function form so $ in the JSON
+      //                                isn't interpreted as a back-ref
 
     archive.append(viewerHtml, { name: 'viewer.html' });
 
