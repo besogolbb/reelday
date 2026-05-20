@@ -52,13 +52,32 @@
 
     .ec-badge {
       font-family: var(--mono);
-      font-size: .65rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
-      padding: .25rem .65rem; border-radius: 999px; white-space: nowrap;
+      font-size: .65rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+      padding: .3rem .7rem; border-radius: 999px; white-space: nowrap;
+      display: inline-flex; align-items: center; gap: .35rem;
     }
+    /* Per-tier palette — keyed off the 2026 tier ids (tala/sinag/dalisay/hiraya).
+       Tala (free)        : neutral paper chip
+       Sinag (₱1,490)     : warm amber
+       Dalisay (★ featured): brand accent
+       Hiraya (₱9,990/yr) : deep ink with paper text — the premium signal */
+    .badge-tala     { background: var(--paper-2);          color: var(--ink-soft); }
+    .badge-sinag    { background: rgba(216,160,90,.18);    color: #7a5a20; }
+    .badge-dalisay  { background: rgba(196,90,58,.14);     color: var(--accent-deep); border: 1px solid rgba(196,90,58,.25); }
+    .badge-hiraya   { background: var(--ink);              color: var(--paper); }
+    /* Pending (unpaid paid-tier) overlays the tier chip with a dot. */
+    .badge-pending  { background: rgba(216,160,90,.15);    color: #7a5a20; }
+    .badge-dot {
+      width: 6px; height: 6px; border-radius: 999px; background: currentColor;
+      opacity: .65; flex-shrink: 0;
+    }
+
+    /* Legacy aliases — older event rows may still carry libre /
+       selebrasyon / pro plan values. Keep the visual mapping so the
+       chip never silently disappears. */
     .badge-libre       { background: var(--paper-2);             color: var(--ink-soft); }
-    .badge-pending     { background: rgba(216,160,90,.15);        color: #7a5a20; }
-    .badge-selebrasyon { background: rgba(196,90,58,.12);         color: var(--accent-deep); }
-    .badge-pro         { background: rgba(216,160,90,.18);        color: #6a4a10; }
+    .badge-selebrasyon { background: rgba(216,160,90,.18);       color: #7a5a20; }
+    .badge-pro         { background: var(--ink);                 color: var(--paper); }
 
     .ec-meta { font-size: .8rem; color: var(--ink-faint); display: flex; gap: 1rem; flex-wrap: wrap; }
     .ec-type { text-transform: capitalize; }
@@ -127,10 +146,18 @@
   document.getElementById('nav-user').textContent = user?.full_name ?? '';
   document.getElementById('btn-logout').onclick = logout;
 
+  // 2026 tier ids first, legacy aliases below for any rows still
+  // carrying the pre-rename plan column values. Display strings keep
+  // the Filipino tier names (per project-plan-tiers-event-scoped).
   const PLAN_LABELS = {
-    libre:        ['badge-libre',       'LIBRE'],
-    selebrasyon:  ['badge-selebrasyon', 'SELEBRASYON ✓'],
-    pro:          ['badge-pro',         'PRO ✓'],
+    tala:        ['badge-tala',        'Tala'],
+    sinag:       ['badge-sinag',       'Sinag'],
+    dalisay:     ['badge-dalisay',     '★ Dalisay'],
+    hiraya:      ['badge-hiraya',      'Hiraya'],
+    // Legacy plan ids — keep working for old event rows.
+    libre:       ['badge-libre',       'Tala'],
+    selebrasyon: ['badge-sinag',       'Sinag'],
+    pro:         ['badge-hiraya',      'Hiraya'],
   };
 
   const TYPE_MAP = {
@@ -174,17 +201,22 @@
       }
 
       container.innerHTML = `<div class="events-grid">${events.map(ev => {
-        // Pending (unpaid, non-free) shows no badge — payment state is
-        // surfaced inside the dashboard, not as a card-corner label.
-        const isPending = !ev.is_paid && ev.plan !== 'libre';
-        const [badgeClass, badgeText] = PLAN_LABELS[ev.plan] || PLAN_LABELS.libre;
+        // Free tiers don't have a payment to be "pending" on — only
+        // paid tiers (sinag/dalisay/hiraya, plus legacy aliases) can
+        // sit in the pending state if checkout never completed.
+        const PAID_PLANS = new Set(['sinag','dalisay','hiraya','selebrasyon','pro']);
+        const isPending = PAID_PLANS.has(ev.plan) && !ev.is_paid;
+        const [badgeClass, badgeText] = PLAN_LABELS[ev.plan] || PLAN_LABELS.tala;
         const typeLabel = TYPE_MAP[ev.event_type] || ev.event_type;
         const dateStr   = fmtDate(ev.event_date);
+        const badgeHtml = isPending
+          ? `<span class="ec-badge badge-pending" title="Awaiting payment"><span class="badge-dot"></span>${badgeText} · Pending</span>`
+          : `<span class="ec-badge ${badgeClass}">${badgeText}</span>`;
         return `
           <div class="event-card">
             <div class="ec-top">
               <div class="ec-names">${esc(ev.couple_names)}</div>
-              ${isPending ? '' : `<span class="ec-badge ${badgeClass}">${badgeText}</span>`}
+              ${badgeHtml}
             </div>
             <div class="ec-meta">
               <span class="ec-type">${typeLabel}</span>
