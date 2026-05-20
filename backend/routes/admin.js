@@ -1018,9 +1018,12 @@ export default async function adminRoutes(fastify) {
   // GET /api/admin/payments/healthcheck — PayMongo connectivity + key
   // environment probe. Answers the question "is production actually
   // configured with a live key?" without anyone having to spend ₱9,990.
-  // Hits a cheap GET /v1/links?limit=1 — 401 means bad/missing key,
+  // Hits a cheap GET /v1/payments?limit=1 — 401 means bad/missing key,
   // 200 means the key talks to PayMongo. Surfaces the key prefix
   // (sk_live_ vs sk_test_) so you can spot a test key in prod.
+  // (Earlier version probed /v1/links, which 404s on accounts that
+  // don't have the Payment Links API enabled — we use checkout_sessions
+  // for purchases, so /v1/payments is the closest universal probe.)
   fastify.get('/admin/payments/healthcheck', async () => {
     const key = process.env.PAYMONGO_SECRET_KEY || '';
     const result = {
@@ -1067,7 +1070,7 @@ export default async function adminRoutes(fastify) {
 
     const t0 = Date.now();
     try {
-      const res = await fetch('https://api.paymongo.com/v1/links?limit=1', {
+      const res = await fetch('https://api.paymongo.com/v1/payments?limit=1', {
         method: 'GET',
         signal: AbortSignal.timeout(10_000),
         headers: {
