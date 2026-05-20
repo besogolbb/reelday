@@ -856,7 +856,7 @@
 
 <script type="module">
   import { getToken, getUser, saveAuth } from '/js/auth.js';
-  import { PLANS, PLAN_ORDER }            from '/js/plans.js';
+  import { PLANS, PLAN_ORDER, HIRAYA_PUBLIC } from '/js/plans.js';
 
   // ── State ──────────────────────────────────────
   const params = new URLSearchParams(location.search);
@@ -1113,6 +1113,15 @@
       } else if (existingNote) {
         existingNote.remove();
       }
+
+      // Hide the Hiraya card entirely while Hiraya is in private launch
+      // (HIRAYA_PUBLIC=false in /js/plans.js). Three escape hatches keep
+      // it visible for legitimate use even while hidden:
+      //   - HIRAYA_PUBLIC=true: full public relaunch
+      //   - hasHirayaSub:      active sub, show "Included" for new events
+      //   - ?plan=hiraya:      direct link (e.g. DM'd to a comped coordinator)
+      const shouldShowHiraya = HIRAYA_PUBLIC || hasHirayaSub || requestedPlan === 'hiraya';
+      hirayaCard.hidden = !shouldShowHiraya;
     }
   }
 

@@ -17,6 +17,16 @@
  * client-side UX gating only.
  */
 
+// Public-visibility flag for Hiraya. While false (post-launch 2026-05-20),
+// Hiraya is hidden from public buy CTAs — landing pricing card, /start
+// plan picker (unless user already has an active sub), dashboard upgrade
+// modal. Backend, admin comp action, renewal/lapsed flow, badge styling,
+// and direct /start?plan=hiraya link all stay intact so comped
+// coordinators get the full experience. Flip to true to re-enable the
+// public CTAs in one place. Also requires restoring the commented-out
+// pricing-card + FAQ block in frontend/index.html (search "HIRAYA HIDDEN").
+export const HIRAYA_PUBLIC = false;
+
 export const PLANS = {
   tala: {
     id: 'tala',

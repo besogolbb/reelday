@@ -2491,7 +2491,7 @@
     }
   });
 
-  import { resolvePlan, nextTier } from '/js/plans.js';
+  import { resolvePlan, nextTier, HIRAYA_PUBLIC } from '/js/plans.js';
 
   // ── Auth guard ────────────────────────────────────────
   // The dashboard is the host control surface — it must never render
@@ -4146,6 +4146,14 @@
     if (!upgradeModal) return;
     // Mark the host's current tier so the modal reads as "you are here".
     const currentTier = (currentDashEvent && currentDashEvent.plan) || 'tala';
+    // Hide the Hiraya upgrade card while Hiraya is in private launch
+    // (HIRAYA_PUBLIC=false in /js/plans.js). Stays visible if the host
+    // is already on Hiraya (so the "Current plan" badge can render) or
+    // when public relaunch flips the flag back on.
+    const hirayaCard = upgradeModal.querySelector('.up-card[data-plan="hiraya"]');
+    if (hirayaCard) {
+      hirayaCard.hidden = !(HIRAYA_PUBLIC || currentTier === 'hiraya');
+    }
     upgradeModal.querySelectorAll('.up-card').forEach(card => {
       const isCurrent = card.dataset.plan === currentTier;
       card.classList.toggle('current', isCurrent);
