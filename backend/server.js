@@ -152,6 +152,26 @@ fastify.addContentTypeParser(
 await fastify.register(staticFiles, {
   root: join(__dirname, '..', 'frontend'),
   prefix: '/',
+  // Per-asset cache policy. Without these every visitor re-downloads
+  // every CSS/JS/image/font on every visit, which dominates time-to-
+  // interactive on slow PH mobile connections. We *don't* hash filenames
+  // (no Vite/webpack pipeline), so the strategy is:
+  //   - HTML: short cache + must-revalidate so deploys propagate fast
+  //   - Images / fonts / icons: 30 days (they almost never change)
+  //   - CSS / JS: 1 day (we ship edits often; balance freshness vs RTT)
+  // To bust an image/font, change its filename (e.g. ?v=2 in the markup).
+  setHeaders: (res, filePath) => {
+    const lower = filePath.toLowerCase();
+    if (lower.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'public, max-age=60, must-revalidate');
+    } else if (/\.(png|jpe?g|webp|gif|svg|ico|woff2?|ttf|otf|eot)$/.test(lower)) {
+      res.setHeader('Cache-Control', 'public, max-age=2592000, immutable'); // 30 days
+    } else if (/\.(css|js|mjs|json)$/.test(lower)) {
+      res.setHeader('Cache-Control', 'public, max-age=86400');               // 1 day
+    } else {
+      res.setHeader('Cache-Control', 'public, max-age=3600');                // 1 hour
+    }
+  },
 });
 
 await fastify.register(dbPlugin);
