@@ -148,6 +148,88 @@
 
     .loading { display: flex; justify-content: center; padding: 3rem; }
 
+    /* ── Per-event list ─────────────────────────────────────── */
+    .events-list { display: grid; gap: .75rem; }
+    .event-item {
+      border: 1px solid var(--line);
+      border-radius: var(--r);
+      padding: 1rem 1.15rem;
+      background: linear-gradient(180deg, #fffdfa 0%, #fdf6ec 100%);
+      display: grid;
+      gap: .55rem;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .event-item:hover {
+      border-color: rgba(196,90,58,.3);
+      box-shadow: 0 6px 18px rgba(63,35,24,.07);
+    }
+    .event-head {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: .75rem;
+    }
+    .event-name {
+      font-family: var(--display);
+      font-size: 1.15rem;
+      color: var(--ink);
+      line-height: 1.15;
+      display: flex; align-items: center; gap: .5rem;
+      min-width: 0;
+    }
+    .event-name .etype-emoji { font-size: 1.05rem; flex-shrink: 0; }
+    .event-name .ename-text {
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    /* Plan badge — small tinted pill. Tier tints kept subtle so the
+       list reads calm; the dashboard's metallic treatment is the
+       place for the loud version. */
+    .event-plan {
+      font-family: var(--mono); font-size: .62rem; font-weight: 700;
+      letter-spacing: .12em; text-transform: uppercase;
+      padding: .3rem .6rem; border-radius: 999px; white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .event-plan.tala    { background: #efe6d6; color: #6a5640; }
+    .event-plan.sinag   { background: #f0ddc8; color: #8a4f1e; }
+    .event-plan.dalisay { background: #f6e9b8; color: #6b5208; }
+    .event-plan.hiraya  { background: #2a1a14; color: #f4d06f; }
+
+    .event-meta {
+      font-size: .82rem; color: var(--ink-faint);
+    }
+    .event-stats {
+      display: flex; flex-wrap: wrap; gap: .4rem .9rem;
+      font-size: .8rem; color: var(--ink-soft);
+      align-items: center;
+    }
+    .event-stats .dot { color: var(--ink-faint); }
+    /* Gallery status chip — colour-coded by lifecycle stage. */
+    .gstat { font-weight: 600; }
+    .gstat.active   { color: #2d6a4a; }
+    .gstat.soon     { color: #b07a1e; }
+    .gstat.grace    { color: #c44a3a; }
+    .gstat.archived { color: var(--ink-faint); }
+
+    .event-foot {
+      display: flex; justify-content: flex-end;
+    }
+    .event-manage {
+      font-family: var(--mono); font-size: .68rem; font-weight: 700;
+      letter-spacing: .1em; text-transform: uppercase;
+      color: var(--accent-deep);
+      text-decoration: none;
+      padding: .4rem .85rem;
+      border: 1px solid rgba(196,90,58,.3);
+      border-radius: 999px;
+      transition: background .15s, color .15s;
+    }
+    .event-manage:hover { background: var(--accent); color: #fff; }
+
+    .events-empty {
+      text-align: center; padding: 1.5rem 1rem;
+      color: var(--ink-faint); font-size: .9rem;
+    }
+    .events-empty a { color: var(--accent-deep); font-weight: 600; }
+
     @media (max-width: 700px) {
       .main { padding: 1.25rem 1rem 3rem; }
       .card { padding: 1.25rem; }
@@ -215,6 +297,91 @@
     return `<div class="feat ${on ? 'on' : 'off'}">${on ? checkOn : checkOff}<span>${label}</span></div>`;
   }
 
+  // Event-type → emoji + label. Mirrors the dashboard THEME_MAP so the
+  // /account list reads consistently with the event dashboard.
+  const EVENT_TYPE = {
+    wedding:          { emoji: '💍',  label: 'Wedding' },
+    debut:            { emoji: '👑',  label: 'Debut' },
+    birthday:         { emoji: '🎂',  label: 'Birthday' },
+    seventh_birthday: { emoji: '🌟',  label: '7th Birthday' },
+    baptism:          { emoji: '🕊️', label: 'Baptism' },
+    reunion:          { emoji: '🎉',  label: 'General Event' },
+    corporate:        { emoji: '🏢',  label: 'Corporate Event' },
+    memorial:         { emoji: '🕯️', label: 'Memorial' },
+  };
+
+  function fmtDate(d) {
+    if (!d) return null;
+    return new Date(d).toLocaleDateString('en-PH', {
+      year: 'numeric', month: 'short', day: 'numeric',
+    });
+  }
+
+  // Gallery lifecycle status for one event. Maps the raw timestamps to
+  // a { cls, text } the card renders as a colour-coded chip:
+  //   active  — gallery live, plenty of runway
+  //   soon    — expires within 7 days
+  //   grace   — expired but inside the 7-day download grace window
+  //   archived— files purged, archived_at set
+  function galleryStatus(ev) {
+    if (ev.archived_at) {
+      return { cls: 'archived', text: 'Archived — files removed' };
+    }
+    if (!ev.gallery_expires_at) {
+      return { cls: 'active', text: 'Gallery active' };
+    }
+    const ms   = new Date(ev.gallery_expires_at).getTime() - Date.now();
+    const days = Math.ceil(ms / 86_400_000);
+    if (ms <= 0) {
+      // Expired — inside the 7-day grace before the cleanup cron purges.
+      const graceLeft = 7 + days; // days is negative here
+      return {
+        cls: 'grace',
+        text: graceLeft > 0
+          ? `Expired — ${graceLeft} day${graceLeft === 1 ? '' : 's'} to download`
+          : 'Expired — pending cleanup',
+      };
+    }
+    if (days <= 7) {
+      return { cls: 'soon', text: `Gallery expires in ${days} day${days === 1 ? '' : 's'}` };
+    }
+    return { cls: 'active', text: `Gallery active · until ${fmtDate(ev.gallery_expires_at)}` };
+  }
+
+  function renderEventItem(ev) {
+    const type   = EVENT_TYPE[ev.event_type] || EVENT_TYPE.reunion;
+    const planId = (ev.plan || 'tala').toLowerCase();
+    const planName = (resolvePlan(planId).name) || 'Tala';
+    const dateStr  = fmtDate(ev.event_date);
+    const gs       = galleryStatus(ev);
+    const uploads  = Number(ev.upload_count || 0);
+    const pendingPay = ev.is_paid === false && planId !== 'tala';
+
+    return `
+      <div class="event-item">
+        <div class="event-head">
+          <div class="event-name">
+            <span class="etype-emoji">${type.emoji}</span>
+            <span class="ename-text">${escapeHtml(ev.couple_names || 'Untitled event')}</span>
+          </div>
+          <span class="event-plan ${escapeHtml(planId)}">${escapeHtml(planName)}</span>
+        </div>
+        <div class="event-meta">
+          ${escapeHtml(type.label)}${dateStr ? ` · ${escapeHtml(dateStr)}` : ''}
+          ${pendingPay ? ' · <b style="color:#c44a3a">Payment pending</b>' : ''}
+        </div>
+        <div class="event-stats">
+          <span>${uploads} upload${uploads === 1 ? '' : 's'}</span>
+          <span class="dot">·</span>
+          <span class="gstat ${gs.cls}">${escapeHtml(gs.text)}</span>
+        </div>
+        <div class="event-foot">
+          <a class="event-manage" href="/dashboard?slug=${encodeURIComponent(ev.slug)}">Manage →</a>
+        </div>
+      </div>
+    `;
+  }
+
   function render({ user, events }) {
     const tier = user.subscription_tier || 'tala';
     const plan = resolvePlan(tier);
@@ -224,7 +391,8 @@
     // plan.eventLimit, because in the per-event model the limit is
     // "per purchase" rather than a cap and a gauge would always read
     // "at the limit" right after creating an event.
-    const ownedEvents = (events || []).filter(e => e.is_active !== false).length;
+    const activeEvents = (events || []).filter(e => e.is_active !== false);
+    const ownedEvents = activeEvents.length;
 
     const upTier = nextTier(tier);
     const upPlan = upTier ? PLANS[upTier] : null;
@@ -244,6 +412,14 @@
           <div class="k">Verified</div><div class="v">${user.is_verified ? 'Yes' : 'Not yet'}</div>
           <div class="k">Member since</div><div class="v">${new Date(user.created_at).toLocaleDateString()}</div>
         </div>
+      </section>
+
+      <!-- Your events -->
+      <section class="card">
+        <h2 class="card-title">Your events${ownedEvents ? ` <span style="font-family:var(--mono);font-size:.7rem;color:var(--ink-faint);letter-spacing:.1em">(${ownedEvents})</span>` : ''}</h2>
+        ${ownedEvents
+          ? `<div class="events-list">${activeEvents.map(renderEventItem).join('')}</div>`
+          : `<div class="events-empty">You haven't created an event yet. <a href="/start">Create your first one →</a></div>`}
       </section>
 
       <!-- Plan summary -->

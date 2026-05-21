@@ -315,7 +315,13 @@ export default async function authRoutes(fastify) {
                 'plan',        e.plan,
                 'is_paid',     e.is_paid,
                 'is_active',   e.is_active,
-                'created_at',  e.created_at
+                'created_at',  e.created_at,
+                'gallery_expires_at', e.gallery_expires_at,
+                'archived_at',        e.archived_at,
+                'upload_count', (
+                  SELECT COUNT(*) FROM uploads up
+                   WHERE up.event_id = e.id AND up.is_approved = true
+                )
               ) ORDER BY e.created_at DESC)
               FILTER (WHERE e.id IS NOT NULL) AS events
        FROM users u
