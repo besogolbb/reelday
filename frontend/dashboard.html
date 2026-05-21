@@ -1322,13 +1322,30 @@
       font-family: var(--display);
       font-style: italic;
       font-weight: 600;
-      font-size: 20px;
       letter-spacing: 0;
       color: var(--ink);
     }
     .info-card .row[data-cell="plan"] {
       border-left-width: 3px;
       border-left-color: var(--accent, #c45a3a);
+    }
+    /* Nameplate layout — the tier name is the hero of this cell, so it
+       fills the space instead of sitting cramped top-left with an empty
+       metal void to the right. Centred, large engraved type; the
+       eyebrow label + Upgrade pill bracket it. */
+    .info-card .row[data-cell="plan"][data-tier] {
+      align-items: center;
+      text-align: center;
+      gap: 6px;
+      padding: 14px 16px;
+    }
+    .info-card .row[data-cell="plan"][data-tier] #info-plan {
+      width: 100%;
+    }
+    .info-card .row[data-cell="plan"][data-tier] #info-plan > span {
+      font-size: clamp(24px, 4.4vw, 34px);
+      line-height: 1.05;
+      white-space: nowrap;
     }
     /* The inline #info-plan span renders ★/♛ + name + an Upgrade
        link from JS. Make the link a discreet ghost button anchored
