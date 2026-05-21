@@ -89,6 +89,15 @@ const UPLOADS_CACHE_TTL = 1500;
 const uploadsCache  = new Map(); // slug → { payload, gzipped, expiresAt }
 const uploadsInflight = new Map(); // slug → Promise<payload>  (single-flight dedup)
 
+// Drop the cached wall payload for a slug so the very next poll re-reads
+// the DB. Called whenever an upload is created — without it a just-
+// finished upload can sit invisible behind the 1.5s cache even though
+// the wall polled. The single-flight dedup still collapses a burst of
+// post-bust polls into one DB query, so this is cheap.
+function bustUploadsCache(slug) {
+  if (slug) uploadsCache.delete(slug);
+}
+
 // Cache for upload validation (event + owner plan). During a burst 600 guests
 // all hit presigned at the same instant — without this each fires 2 sequential
 // DB queries (events + users). A 10s TTL covers the entire burst window while
@@ -461,6 +470,9 @@ export default async function uploadRoutes(fastify) {
       }
     }
 
+    // New upload landed — drop the wall cache so it shows on the next poll.
+    bustUploadsCache(slug);
+
     return reply.status(201).send({
       upload:  rows[0],
       message: 'Salamat! Na-share mo na ang iyong momento.',
@@ -699,6 +711,9 @@ export default async function uploadRoutes(fastify) {
         fastify.log.warn({ err: err.message, batchId }, 'photo-side audio_url link failed');
       }
     }
+
+    // New upload landed — drop the wall cache so it shows on the next poll.
+    bustUploadsCache(slug);
 
     return reply.status(201).send({ upload: rows[0] });
   });
