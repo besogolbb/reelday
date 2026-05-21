@@ -2171,10 +2171,12 @@
       </div>
       <div class="row row-highlight"><span>Wall expires</span><span id="info-expires">—</span></div>
 
-      <!-- Bulk download — hidden until we know there's at least one upload
-           (renderQuota / renderSidebarState flip its visibility based on
-           the current upload count and the gallery_locked flag). -->
-      <div class="row row-highlight" id="info-download-row" style="display:none">
+      <!-- Bulk download — always present so the info card has a stable
+           5-cell layout. renderQuota toggles the BUTTON's disabled
+           state (not the cell's visibility) based on upload count +
+           archived_at, so an empty event shows a greyed-out button
+           with a "no uploads yet" hint instead of the cell vanishing. -->
+      <div class="row row-highlight" id="info-download-row">
         <span>Backup</span>
         <span>
           <button type="button" class="info-download-btn" id="btn-download-all" aria-label="Download all uploads as a ZIP">
@@ -3388,17 +3390,29 @@
     const banner     = $('lock-banner');
     if (!block || !banner) return;
 
-    // Show the bulk-download row whenever the host has at least one
-    // upload AND the underlying files still exist in storage. The hard
-    // signal is event.archived_at — set by the gallery-cleanup cron
-    // only AFTER the 7-day grace window past gallery_expires_at. Until
-    // then the soft-lock just blocks new uploads; the host can still
-    // pull a ZIP, which is the whole point of the warning email's
-    // "Download all now →" CTA.
-    const dlRow = $('info-download-row');
-    if (dlRow) {
-      const filesGone = !!event.archived_at;
-      dlRow.style.display = (uploadCount > 0 && !filesGone) ? '' : 'none';
+    // The Backup cell is always shown (stable 5-cell card layout).
+    // We toggle the BUTTON instead: disabled with a contextual hint
+    // when there's nothing to download (empty event) or nothing left
+    // (archived_at set after the 7-day grace purge). Enabled whenever
+    // the host has uploads and the files still exist — including
+    // during the grace window, which is the whole point of the
+    // cleanup warning email's "Download all now →" CTA.
+    const dlBtn   = $('btn-download-all');
+    const dlLabel = dlBtn && dlBtn.querySelector('.dl-label');
+    if (dlBtn) {
+      const filesGone        = !!event.archived_at;
+      const nothingToGrab    = uploadCount === 0;
+      dlBtn.disabled = filesGone || nothingToGrab;
+      if (filesGone) {
+        if (dlLabel) dlLabel.textContent = 'Files archived';
+        dlBtn.title = 'The original files have been permanently removed from our system.';
+      } else if (nothingToGrab) {
+        if (dlLabel) dlLabel.textContent = 'Download all (.zip)';
+        dlBtn.title = 'No uploads yet — this unlocks once your guests start sharing.';
+      } else {
+        if (dlLabel) dlLabel.textContent = 'Download all (.zip)';
+        dlBtn.title = 'Download every photo, video, and audio note as a ZIP.';
+      }
     }
 
     // Reset banner variant + icon at the top of every render so any
@@ -5526,7 +5540,7 @@
   const dlBtn = $('btn-download-all');
   if (dlBtn) {
     dlBtn.addEventListener('click', async () => {
-      if (!slug || dlBtn.classList.contains('is-loading')) return;
+      if (!slug || dlBtn.disabled || dlBtn.classList.contains('is-loading')) return;
       dlBtn.classList.add('is-loading');
       dlBtn.disabled = true;
       try {
