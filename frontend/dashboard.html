@@ -142,6 +142,73 @@
       white-space: nowrap;
     }
     .header-new-btn:hover { background: var(--accent-deep); }
+
+    /* ── Account dropdown (header) ───────────────────────────
+       The user's name is a trigger button; clicking opens a light
+       panel with account settings / my events / logout. Replaces
+       the old three-loose-items layout (name + Logout + My events).*/
+    .acct-menu { position: relative; }
+    .acct-trigger {
+      display: flex; align-items: center; gap: 7px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.14);
+      color: rgba(251,245,236,.9);
+      font-family: var(--sans); font-size: 13px;
+      padding: 6px 12px; border-radius: 999px;
+      cursor: pointer;
+      transition: background .15s, border-color .15s;
+    }
+    .acct-trigger:hover {
+      background: rgba(255,255,255,.12);
+      border-color: rgba(255,255,255,.25);
+    }
+    .acct-trigger .acct-name {
+      max-width: 150px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .acct-trigger .acct-chev {
+      font-size: 8px; opacity: .65;
+      transition: transform .18s;
+    }
+    .acct-menu.open .acct-chev { transform: rotate(180deg); }
+
+    .acct-dropdown {
+      position: absolute; top: calc(100% + 8px); right: 0;
+      min-width: 210px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: 0 16px 44px rgba(42,26,20,.28);
+      padding: 6px;
+      display: none;
+      z-index: 200;
+    }
+    .acct-menu.open .acct-dropdown { display: block; }
+    .acct-dropdown .acct-email {
+      padding: 9px 12px 7px;
+      font-family: var(--mono); font-size: 10px;
+      letter-spacing: .04em;
+      color: var(--ink-faint);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .acct-dropdown .acct-divider {
+      height: 1px; background: var(--line); margin: 5px 8px;
+    }
+    .acct-dropdown a, .acct-dropdown button {
+      display: flex; align-items: center; gap: 9px;
+      width: 100%; box-sizing: border-box;
+      padding: 10px 12px;
+      font-family: var(--sans); font-size: 13px; font-weight: 500;
+      color: var(--ink);
+      text-decoration: none;
+      background: none; border: none;
+      border-radius: 9px;
+      cursor: pointer; text-align: left;
+      transition: background .12s;
+    }
+    .acct-dropdown a:hover, .acct-dropdown button:hover { background: var(--paper-2); }
+    .acct-dropdown .acct-ico { font-size: 14px; width: 18px; text-align: center; flex-shrink: 0; }
+    .acct-dropdown .acct-logout { color: var(--accent-deep); }
     .hero-grid {
       display: grid;
       grid-template-columns: minmax(0, 1.45fr) minmax(280px, .85fr);
@@ -1680,6 +1747,8 @@
       .header-user-name { font-size: 12px; max-width: 80px; }
       .header-logout-btn { font-size: 11px; padding: 5px 9px; }
       .header-new-btn { font-size: 11px; padding: 6px 11px; }
+      .acct-trigger { font-size: 12px; padding: 5px 10px; }
+      .acct-trigger .acct-name { max-width: 92px; }
 
       /* Stats — all 3 in a single row, compact */
       .stats {
@@ -2714,13 +2783,52 @@
     const navLinks = document.getElementById('dash-nav-links');
     if (navLinks) {
       if (user) {
-        const name = (user.full_name || user.email || '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+        const esc = s => String(s ?? '').replace(/[<>&"]/g, c => (
+          { '<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;' }[c]
+        ));
+        const name  = esc(user.full_name || user.email || 'Account');
+        const email = esc(user.email || '');
+        // Name is now a dropdown trigger. Account settings + My events +
+        // Logout all live in the panel — replaces the old three loose
+        // header items.
         navLinks.innerHTML = `
-          <span class="header-user-name" title="${name}">${name}</span>
-          <button type="button" class="header-logout-btn" id="header-logout">Logout</button>
-          <a href="/my-events" class="header-new-btn">My events</a>
+          <div class="acct-menu" id="acct-menu">
+            <button type="button" class="acct-trigger" id="acct-trigger"
+                    aria-haspopup="true" aria-expanded="false" title="${name}">
+              <span class="acct-name">${name}</span>
+              <span class="acct-chev" aria-hidden="true">▼</span>
+            </button>
+            <div class="acct-dropdown" id="acct-dropdown" role="menu">
+              ${email ? `<div class="acct-email">${email}</div><div class="acct-divider"></div>` : ''}
+              <a href="/account" role="menuitem"><span class="acct-ico">⚙</span>Account settings</a>
+              <a href="/my-events" role="menuitem"><span class="acct-ico">🗂</span>My events</a>
+              <div class="acct-divider"></div>
+              <button type="button" class="acct-logout" id="acct-logout" role="menuitem">
+                <span class="acct-ico">↪</span>Log out
+              </button>
+            </div>
+          </div>
         `;
-        document.getElementById('header-logout')?.addEventListener('click', () => {
+
+        const acctMenu    = document.getElementById('acct-menu');
+        const acctTrigger = document.getElementById('acct-trigger');
+        const closeMenu = () => {
+          acctMenu.classList.remove('open');
+          acctTrigger.setAttribute('aria-expanded', 'false');
+        };
+        acctTrigger?.addEventListener('click', e => {
+          e.stopPropagation();
+          const open = acctMenu.classList.toggle('open');
+          acctTrigger.setAttribute('aria-expanded', String(open));
+        });
+        // Click anywhere outside the menu, or Escape, closes it.
+        document.addEventListener('click', e => {
+          if (acctMenu.classList.contains('open') && !acctMenu.contains(e.target)) closeMenu();
+        });
+        document.addEventListener('keydown', e => {
+          if (e.key === 'Escape') closeMenu();
+        });
+        document.getElementById('acct-logout')?.addEventListener('click', () => {
           localStorage.removeItem('reelday_token');
           localStorage.removeItem('reelday_user');
           location.href = '/';
