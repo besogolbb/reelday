@@ -943,7 +943,8 @@ export default async function uploadRoutes(fastify) {
     }
 
     const { rows: eventRows } = await fastify.db.query(
-      `SELECT id, user_id, gallery_expires_at, archived_at, couple_names
+      `SELECT id, user_id, gallery_expires_at, archived_at, couple_names,
+              plan, music_playlist_id, music_enabled
          FROM events WHERE slug = $1 AND is_active = true`,
       [slug],
     );
@@ -1157,6 +1158,51 @@ export default async function uploadRoutes(fastify) {
       }
     }
 
+    // ── Event music — bundled so the offline album can play it ──
+    // The viewer's "Play slideshow" mode plays these underneath the
+    // photos so opening the ZIP feels like the live wall. Resolution
+    // mirrors GET /api/events/:slug/music: custom uploads win, else the
+    // picked curated playlist; Tala wall is silent so Tala ships no
+    // music; music_enabled=false also opts out.
+    const musicTracks = [];
+    const eventPlan = resolvePlan(event.plan || 'tala');
+    if (eventPlan.id !== 'tala' && event.music_enabled !== false) {
+      let trackRows = [];
+      ({ rows: trackRows } = await fastify.db.query(
+        `SELECT id, title, artist, r2_key, file_url, duration_s
+           FROM music_tracks
+          WHERE event_id = $1
+          ORDER BY position ASC, created_at ASC`,
+        [event.id],
+      ));
+      if (!trackRows.length && event.music_playlist_id) {
+        ({ rows: trackRows } = await fastify.db.query(
+          `SELECT id, title, artist, r2_key, file_url, duration_s
+             FROM music_tracks
+            WHERE playlist_id = $1 AND event_id IS NULL
+            ORDER BY position ASC, created_at ASC`,
+          [event.music_playlist_id],
+        ));
+      }
+      let musicSeq = 0;
+      for (const t of trackRows) {
+        const key = t.r2_key || extractStorageKey(t.file_url);
+        if (!key) continue;
+        musicSeq += 1;
+        const ext   = (extname(key) || '.mp3').toLowerCase() || '.mp3';
+        const entry = `music/${String(musicSeq).padStart(2, '0')}_${safeName(t.title, 'track')}${ext}`;
+        const ok    = await fetchAndAppend(key, entry);
+        if (ok) {
+          musicTracks.push({
+            title:    t.title || 'Untitled',
+            artist:   t.artist || null,
+            file:     entry,
+            duration: t.duration_s || null,
+          });
+        }
+      }
+    }
+
     // ── Viewer HTML — dashboard-style offline album ──
     // Inject the manifest as a JS literal because file:// loads in
     // Chrome/Firefox block fetch() on local files, so the viewer has
@@ -1170,6 +1216,7 @@ export default async function uploadRoutes(fastify) {
         sub:   `${manifestItems.length} memor${manifestItems.length === 1 ? 'y' : 'ies'} from your guests`,
       },
       items: manifestItems,
+      music: musicTracks,
     }).replace(/<\/script/gi, '<\\/script');
 
     // All four placeholders use the /g flag because each appears more

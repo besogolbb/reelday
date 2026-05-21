@@ -232,6 +232,93 @@
     color: var(--accent-deep);
   }
 
+  /* "Play slideshow" button — reminisce mode entry point */
+  .play-all {
+    margin: 18px auto 2px;
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--accent); color: #fff; border: none;
+    font-family: var(--mono); font-size: 11px; font-weight: 700;
+    letter-spacing: .14em; text-transform: uppercase;
+    padding: 12px 24px; border-radius: 999px; cursor: pointer;
+    box-shadow: 0 6px 18px rgba(196,90,58,.32);
+    transition: background .15s, transform .15s;
+  }
+  .play-all:hover { background: var(--accent-deep); transform: translateY(-1px); }
+
+  /* ── Slideshow overlay ── */
+  .slideshow {
+    position: fixed; inset: 0; z-index: 200;
+    background: #0a0705;
+    display: none;
+  }
+  .slideshow.is-open { display: block; }
+  .ss-stage { position: absolute; inset: 0; overflow: hidden; }
+  .ss-slide {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; transition: opacity 1.1s ease;
+  }
+  .ss-slide.is-shown { opacity: 1; }
+  .ss-slide img, .ss-slide video {
+    max-width: 100%; max-height: 100%; object-fit: contain;
+  }
+  /* Photos get a slow Ken Burns drift so stills feel alive. */
+  .ss-slide.kb img {
+    width: 100%; height: 100%; object-fit: cover;
+    animation: kenburns 7s ease-out forwards;
+  }
+  @keyframes kenburns {
+    from { transform: scale(1)    translate(0, 0); }
+    to   { transform: scale(1.14) translate(-1.6%, -1.6%); }
+  }
+  .ss-caption {
+    position: absolute; left: 0; right: 0; bottom: 92px;
+    text-align: center; padding: 0 40px;
+    color: #fff; pointer-events: none;
+    text-shadow: 0 2px 14px rgba(0,0,0,.85);
+  }
+  .ss-caption .ss-msg {
+    font-family: var(--display); font-style: italic;
+    font-size: 22px; line-height: 1.5;
+    max-width: 680px; margin: 0 auto 8px;
+  }
+  .ss-caption .ss-name {
+    font-family: var(--mono); font-size: 11px; font-weight: 700;
+    letter-spacing: .18em; text-transform: uppercase;
+    color: var(--accent-soft);
+  }
+  .ss-controls {
+    position: absolute; left: 50%; bottom: 28px;
+    transform: translateX(-50%);
+    display: flex; align-items: center; gap: 14px;
+  }
+  .ss-controls button, .ss-close {
+    background: rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.22);
+    color: #fff; border-radius: 50%;
+    width: 48px; height: 48px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 20px;
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    transition: background .15s;
+  }
+  .ss-controls button:hover, .ss-close:hover { background: rgba(255,255,255,.26); }
+  .ss-close { position: absolute; top: 24px; right: 24px; }
+  .ss-music {
+    position: absolute; top: 28px; left: 28px;
+    color: rgba(255,255,255,.82);
+    font-family: var(--mono); font-size: 11px; font-weight: 700;
+    letter-spacing: .1em;
+  }
+  .ss-progress {
+    position: absolute; left: 0; right: 0; top: 0; height: 3px;
+    background: rgba(255,255,255,.12); overflow: hidden;
+  }
+  .ss-progress > span {
+    display: block; height: 100%; width: 0;
+    background: var(--accent-soft);
+  }
+
   @media (max-width: 600px) {
     header { padding: 28px 18px 18px; }
     header h1 { font-size: 28px; }
@@ -241,6 +328,8 @@
     .lightbox-nav { width: 36px; height: 36px; }
     .lightbox-nav.prev { left: 8px; }
     .lightbox-nav.next { right: 8px; }
+    .ss-caption { bottom: 84px; }
+    .ss-caption .ss-msg { font-size: 17px; }
   }
 </style>
 </head>
@@ -250,6 +339,7 @@
   <div class="eyebrow">Reelday Memories</div>
   <h1>__EVENT_NAMES__</h1>
   <div class="sub">__EVENT_SUB__</div>
+  <button class="play-all" id="play-all" style="display:none">▶&nbsp; Play slideshow</button>
 </header>
 
 <div class="tabs" id="tabs"></div>
@@ -276,6 +366,21 @@
     <div class="lightbox-message" id="lb-message" style="display:none"></div>
     <div class="lightbox-meta" id="lb-meta"></div>
   </div>
+</div>
+
+<!-- Slideshow — auto-advancing "reminisce" playback with event music -->
+<div class="slideshow" id="slideshow" aria-hidden="true">
+  <div class="ss-progress"><span id="ss-bar"></span></div>
+  <div class="ss-stage" id="ss-stage"></div>
+  <div class="ss-music" id="ss-music" style="display:none">♪ <span id="ss-music-title"></span></div>
+  <button class="ss-close" id="ss-close" aria-label="Close slideshow">×</button>
+  <div class="ss-caption" id="ss-caption"></div>
+  <div class="ss-controls">
+    <button id="ss-prev" aria-label="Previous">‹</button>
+    <button id="ss-toggle" aria-label="Pause">❚❚</button>
+    <button id="ss-next" aria-label="Next">›</button>
+  </div>
+  <audio id="ss-audio" preload="auto"></audio>
 </div>
 
 <script>
@@ -461,6 +566,181 @@ const MANIFEST = __MANIFEST_JSON__;
     if (e.key === 'Escape')     closeLightbox();
     else if (e.key === 'ArrowLeft')  nav(-1);
     else if (e.key === 'ArrowRight') nav(+1);
+  });
+
+  // ── Slideshow — "reminisce" mode ──────────────────────────
+  // Auto-advancing fullscreen playback of every photo/video with the
+  // event's music underneath. Always started from a user click (the
+  // Play button) so browsers permit audio + video autoplay through
+  // the gesture chain. Music files + track list ship in MANIFEST.music
+  // (bundled into the ZIP by backend/routes/uploads.js).
+  const PHOTO_MS     = 6500;    // a photo holds this long on screen
+  const VIDEO_CAP_MS = 20000;   // hard cap so one long clip can't stall the show
+  const slideItems = items.filter(i =>
+    i.type === 'photo' || i.type === 'video' ||
+    i.type === 'paired-photo' || i.type === 'paired-video');
+  const musicList = MANIFEST.music || [];
+
+  const ssEl         = document.getElementById('slideshow');
+  const ssStage      = document.getElementById('ss-stage');
+  const ssCaption    = document.getElementById('ss-caption');
+  const ssBar        = document.getElementById('ss-bar');
+  const ssAudio      = document.getElementById('ss-audio');
+  const ssMusic      = document.getElementById('ss-music');
+  const ssMusicTitle = document.getElementById('ss-music-title');
+  const ssToggle     = document.getElementById('ss-toggle');
+  const playAllBtn   = document.getElementById('play-all');
+
+  let ssIndex     = 0;
+  let ssGen       = 0;       // generation guard — stale video 'ended' events ignored
+  let ssPaused    = false;
+  let musicIndex  = 0;
+  let advanceTimer = null;
+  let barStart    = 0;       // performance.now() when current slide's timer began
+  let barLeft     = 0;       // ms remaining on the current slide
+  let curVideo    = null;    // <video> of the current slide, if any
+
+  if (slideItems.length) playAllBtn.style.display = '';
+
+  function clearAdvance() {
+    if (advanceTimer) { clearTimeout(advanceTimer); advanceTimer = null; }
+  }
+
+  // Drive both the auto-advance timeout and the top progress bar for `ms`.
+  function startTimer(ms) {
+    clearAdvance();
+    barStart = performance.now();
+    barLeft  = ms;
+    advanceTimer = setTimeout(nextSlide, ms);
+    ssBar.style.transition = 'none';
+    ssBar.style.width = '0%';
+    void ssBar.offsetWidth;               // reflow so the next line animates
+    ssBar.style.transition = 'width ' + ms + 'ms linear';
+    ssBar.style.width = '100%';
+  }
+
+  function paintSlide() {
+    clearAdvance();
+    const gen  = ++ssGen;
+    const item = slideItems[ssIndex];
+    if (!item) return;
+    const isVideo = item.type === 'video' || item.type === 'paired-video';
+
+    // New slide layered over the old one; old slides trimmed once the
+    // 1.1s cross-fade has finished.
+    const slide = document.createElement('div');
+    slide.className = 'ss-slide' + (isVideo ? '' : ' kb');
+    if (isVideo) {
+      const v = document.createElement('video');
+      v.src = item.video; v.muted = true; v.playsInline = true;
+      v.setAttribute('playsinline', '');
+      v.addEventListener('ended', () => { if (gen === ssGen) nextSlide(); });
+      slide.appendChild(v);
+      curVideo = v;
+    } else {
+      const img = document.createElement('img');
+      img.src = item.photo; img.alt = '';
+      slide.appendChild(img);
+      curVideo = null;
+    }
+    ssStage.appendChild(slide);
+    requestAnimationFrame(() => slide.classList.add('is-shown'));
+    setTimeout(() => {
+      while (ssStage.children.length > 1) ssStage.removeChild(ssStage.firstChild);
+    }, 1200);
+
+    // Caption — guest name + their typed message, the keepsake voice.
+    const name = escapeHtml(item.name || 'guest');
+    const msg  = item.message ? `<div class="ss-msg">${escapeHtml(item.message)}</div>` : '';
+    ssCaption.innerHTML = msg + `<div class="ss-name">${name}</div>`;
+
+    if (isVideo) {
+      curVideo.play().catch(() => {/* will resume on toggle */});
+      startTimer(VIDEO_CAP_MS);           // 'ended' usually fires first
+    } else {
+      startTimer(PHOTO_MS);
+    }
+  }
+
+  function nextSlide() {
+    if (!slideItems.length) return;
+    ssIndex = (ssIndex + 1) % slideItems.length;
+    paintSlide();
+  }
+  function prevSlide() {
+    if (!slideItems.length) return;
+    ssIndex = (ssIndex - 1 + slideItems.length) % slideItems.length;
+    paintSlide();
+  }
+
+  function ssSetPaused(p) {
+    ssPaused = p;
+    ssToggle.textContent = p ? '▶' : '❚❚';
+    ssToggle.setAttribute('aria-label', p ? 'Play' : 'Pause');
+    if (p) {
+      barLeft = Math.max(0, barLeft - (performance.now() - barStart));
+      clearAdvance();
+      ssBar.style.transition = 'none';
+      ssBar.style.width = getComputedStyle(ssBar).width;   // freeze where it is
+      if (curVideo) { try { curVideo.pause(); } catch {} }
+      try { ssAudio.pause(); } catch {}
+    } else {
+      startTimer(barLeft);
+      if (curVideo) curVideo.play().catch(() => {});
+      try { ssAudio.play().catch(() => {}); } catch {}
+    }
+  }
+
+  // Music — play tracks in order, loop the set under the whole show.
+  function playTrack(i) {
+    const t = musicList[i];
+    if (!t) return;
+    musicIndex = i;
+    ssAudio.src = t.file;
+    ssAudio.volume = 0.85;
+    ssAudio.play().catch(() => {/* autoplay blocked — controls still work */});
+    ssMusicTitle.textContent = t.title + (t.artist ? ' — ' + t.artist : '');
+  }
+  ssAudio.addEventListener('ended', () => {
+    if (!musicList.length) return;
+    playTrack((musicIndex + 1) % musicList.length);
+  });
+
+  function openSlideshow() {
+    if (!slideItems.length) return;
+    ssIndex = 0;
+    ssPaused = false;
+    ssToggle.textContent = '❚❚';
+    ssToggle.setAttribute('aria-label', 'Pause');
+    ssEl.classList.add('is-open');
+    ssEl.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    if (musicList.length) { ssMusic.style.display = ''; playTrack(0); }
+    paintSlide();
+  }
+  function closeSlideshow() {
+    clearAdvance();
+    ssGen++;                              // invalidate any pending video 'ended'
+    ssEl.classList.remove('is-open');
+    ssEl.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+    ssStage.innerHTML = '';
+    ssCaption.innerHTML = '';
+    curVideo = null;
+    try { ssAudio.pause(); ssAudio.removeAttribute('src'); ssAudio.load(); } catch {}
+  }
+
+  playAllBtn.addEventListener('click', openSlideshow);
+  document.getElementById('ss-close').addEventListener('click', closeSlideshow);
+  document.getElementById('ss-prev').addEventListener('click', prevSlide);
+  document.getElementById('ss-next').addEventListener('click', nextSlide);
+  ssToggle.addEventListener('click', () => ssSetPaused(!ssPaused));
+  document.addEventListener('keydown', e => {
+    if (!ssEl.classList.contains('is-open')) return;
+    if (e.key === 'Escape')          closeSlideshow();
+    else if (e.key === 'ArrowLeft')  prevSlide();
+    else if (e.key === 'ArrowRight') nextSlide();
+    else if (e.key === ' ')          { e.preventDefault(); ssSetPaused(!ssPaused); }
   });
 
   // ── Init ──────────────────────────────────────────────────
