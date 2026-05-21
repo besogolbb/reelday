@@ -1150,12 +1150,15 @@
       margin: -8px 0 14px;
     }
     .details-form { display: grid; gap: 10px; min-width: 0; }
+    /* min-width:0 on the field AND each child so nothing forces the
+       shared form column wider than the card. The key offender is the
+       Wall-music <select>, whose intrinsic min-width is its widest
+       option text ("Cocktail Hour — Light Jazz (7 tracks · ~39 min)")
+       — without this it dragged every field and the card wider than
+       the viewport, clipping labels under .mini-card's overflow:hidden. */
+    .details-field, .details-field > * { min-width: 0; }
     .details-field {
       display: grid; gap: 8px;
-      /* min-width:0 so a long, unbreakable value (e.g. a custom-music
-         filename) can't blow the grid item — and the whole card —
-         wider than its column. Grid items default to min-width:auto. */
-      min-width: 0;
       padding: 12px 14px;
       border-radius: 14px;
       background: rgba(251,245,236,.5);
