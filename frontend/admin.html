@@ -339,16 +339,53 @@
     .empty-state { padding: 3rem 1rem; text-align: center; color: var(--ink-faint); font-size: .9rem; background: #fff; }
 
     /* Dashboard (analytics) */
-    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-                gap: .9rem; margin-bottom: 1.4rem; }
-    .kpi-card { background: #fff; border: 1px solid var(--line); border-radius: var(--r-sm);
-                padding: 1rem 1.15rem; }
-    .kpi-card .kpi-val { font-family: var(--display); font-size: 1.85rem; line-height: 1.1;
+    .dash-controls { display: flex; gap: .9rem; flex-wrap: wrap; align-items: center;
+                     justify-content: space-between; margin-bottom: 1.15rem; }
+    .seg { display: inline-flex; background: var(--paper-2); border: 1px solid var(--line-2);
+           border-radius: 999px; padding: 3px; }
+    .seg-btn { border: none; background: transparent; cursor: pointer; font-family: inherit;
+               font-size: .82rem; font-weight: 600; color: var(--ink-soft);
+               padding: .42rem 1.1rem; border-radius: 999px;
+               transition: color .15s, background .15s; }
+    .seg-btn.active { background: #fff; color: var(--accent-deep);
+                      box-shadow: 0 1px 4px rgba(63,35,24,.13); }
+    .dash-ranges { display: inline-flex; gap: .4rem; flex-wrap: wrap; }
+    .range-chip { border: 1px solid var(--line-2); background: #fff; cursor: pointer;
+                  font-family: inherit; font-size: .8rem; font-weight: 600; color: var(--ink-soft);
+                  padding: .42rem .9rem; border-radius: 999px;
+                  transition: color .15s, background .15s, border-color .15s; }
+    .range-chip:hover { border-color: rgba(196,90,58,.4); color: var(--ink); }
+    .range-chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .dash-custom { display: flex; gap: .9rem; flex-wrap: wrap; margin: 0 0 1.15rem; }
+    .dash-custom[hidden] { display: none; }
+    .dash-custom label { display: flex; flex-direction: column; gap: .28rem;
+                         font-family: var(--mono); font-size: .65rem; font-weight: 600;
+                         text-transform: uppercase; letter-spacing: .06em; color: var(--ink-faint); }
+    .dash-custom input { padding: .5rem .65rem; border: 1px solid var(--line-2);
+                         border-radius: var(--r-sm); font-family: inherit; font-size: .85rem;
                          color: var(--ink); }
+    .dash-section-label { font-family: var(--mono); font-size: .7rem; font-weight: 600;
+                          text-transform: uppercase; letter-spacing: .08em;
+                          color: var(--ink-faint); margin: .3rem 0 .7rem; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
+                gap: .9rem; margin-bottom: 1.5rem; }
+    .kpi-card { background: #fff; border: 1px solid var(--line); border-radius: var(--r-sm);
+                padding: 1.05rem 1.2rem; }
+    .kpi-top { display: flex; align-items: center; justify-content: space-between;
+               min-height: 1.4rem; }
+    .kpi-ico { font-size: 1.05rem; opacity: .6; }
+    .kpi-delta { font-family: var(--mono); font-size: .66rem; font-weight: 700;
+                 padding: .14rem .45rem; border-radius: 999px; white-space: nowrap; }
+    .kpi-delta.up   { background: rgba(45,106,74,.12); color: #2d6a4a; }
+    .kpi-delta.down { background: rgba(196,90,58,.12); color: var(--accent-deep); }
+    .kpi-delta.flat { background: var(--paper-2);      color: var(--ink-faint); }
+    .kpi-card .kpi-val { font-family: var(--display); font-size: 1.95rem; line-height: 1.15;
+                         color: var(--ink); margin-top: .5rem; }
     .kpi-card .kpi-label { font-family: var(--mono); font-size: .67rem; font-weight: 600;
                            text-transform: uppercase; letter-spacing: .07em;
-                           color: var(--ink-faint); margin-top: .4rem; }
-    .kpi-card.kpi-accent { border-color: rgba(196,90,58,.3); }
+                           color: var(--ink-faint); margin-top: .3rem; }
+    .kpi-card.kpi-accent { border-color: rgba(196,90,58,.3);
+                           background: linear-gradient(180deg, #fff, #fdf6ef); }
     .kpi-card.kpi-accent .kpi-val { color: var(--accent-deep); }
     .dash-bar-track { height: 9px; width: 100%; min-width: 70px; border-radius: 999px;
                       background: var(--paper-2); overflow: hidden; }
@@ -483,19 +520,27 @@
 
     <!-- Dashboard view -->
     <section class="view" id="view-dashboard">
-      <div class="filter-row" style="justify-content:space-between;align-items:center">
-        <div style="display:flex;gap:.55rem;flex-wrap:wrap">
-          <button class="pay-filter dash-gran" data-gran="week">Weekly</button>
-          <button class="pay-filter dash-gran active" data-gran="month">Monthly</button>
-          <button class="pay-filter dash-gran" data-gran="year">Yearly</button>
+      <div class="dash-controls">
+        <div class="seg" id="dash-gran-seg">
+          <button class="seg-btn" data-gran="week">Week</button>
+          <button class="seg-btn active" data-gran="month">Month</button>
+          <button class="seg-btn" data-gran="year">Year</button>
         </div>
-        <div class="filters" style="margin:0">
-          <input type="date" id="dash-from" title="From date" style="flex:0 0 auto;min-width:140px" />
-          <input type="date" id="dash-to"   title="To date"   style="flex:0 0 auto;min-width:140px" />
-          <button class="btn-ghost-sm" id="dash-clear">Clear</button>
+        <div class="dash-ranges" id="dash-ranges">
+          <button class="range-chip" data-range="30d">30 days</button>
+          <button class="range-chip" data-range="90d">90 days</button>
+          <button class="range-chip active" data-range="12m">12 months</button>
+          <button class="range-chip" data-range="ytd">This year</button>
+          <button class="range-chip" data-range="all">All time</button>
+          <button class="range-chip" data-range="custom">Custom</button>
         </div>
       </div>
+      <div class="dash-custom" id="dash-custom" hidden>
+        <label>From <input type="date" id="dash-from" /></label>
+        <label>To <input type="date" id="dash-to" /></label>
+      </div>
       <div class="kpi-grid" id="dash-kpis"></div>
+      <div class="dash-section-label">Breakdown by <span id="dash-gran-word">month</span></div>
       <div class="tbl-wrap">
         <table>
           <thead>
@@ -1675,6 +1720,62 @@
   // by created_at into week / month / year periods, all client-side.
   // ────────────────────────────────────────────────────────────────
   let dashGranularity = 'month';
+  let dashRange       = '12m';
+
+  const dashISO = (d) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+  // Resolve a preset (or the custom inputs) to a { from, to } window.
+  // Empty strings mean "unbounded" — used by the All-time preset.
+  function dashRangeWindow(range) {
+    const today = new Date();
+    if (range === 'all')    return { from: '', to: '' };
+    if (range === 'custom') return {
+      from: document.getElementById('dash-from')?.value || '',
+      to:   document.getElementById('dash-to')?.value   || '',
+    };
+    if (range === 'ytd')    return { from: `${today.getFullYear()}-01-01`, to: dashISO(today) };
+    const back = new Date(today);
+    if      (range === '30d') back.setDate(today.getDate() - 29);
+    else if (range === '90d') back.setDate(today.getDate() - 89);
+    else                      back.setMonth(today.getMonth() - 12);   // 12m
+    return { from: dashISO(back), to: dashISO(today) };
+  }
+
+  // The equal-length window immediately before [from, to] — drives the
+  // period-over-period delta badges. Null when the range is unbounded.
+  function dashPrevWindow(from, to) {
+    if (!from || !to) return null;
+    const f = new Date(from), t = new Date(to);
+    const lenDays = Math.round((t - f) / 86400000) + 1;
+    const prevTo   = new Date(f);      prevTo.setDate(f.getDate() - 1);
+    const prevFrom = new Date(prevTo); prevFrom.setDate(prevTo.getDate() - lenDays + 1);
+    return { from: dashISO(prevFrom), to: dashISO(prevTo) };
+  }
+
+  function dashInRange(dateStr, from, to) {
+    if (!dateStr) return false;
+    const d = String(dateStr).slice(0, 10);
+    if (from && d < from) return false;
+    if (to   && d > to)   return false;
+    return true;
+  }
+
+  // Plain totals (no bucketing) for one window — used for KPIs + deltas.
+  function dashAggregate(from, to) {
+    let events = 0, users = 0, payments = 0, revenue = 0;
+    for (const e of allEvents) if (dashInRange(e.created_at, from, to)) events++;
+    for (const u of allUsers)  if (dashInRange(u.created_at, from, to)) users++;
+    // Revenue = realized money only: 'succeeded' covers card webhooks and
+    // admin-recorded manual payments. Pending / rejected / refunded excluded.
+    for (const p of allPayments) {
+      if (p.status === 'succeeded' && dashInRange(p.created_at, from, to)) {
+        payments++;
+        revenue += (p.amount || 0) / 100;
+      }
+    }
+    return { events, users, payments, revenue };
+  }
 
   // Period key for a date. Week keys are the Monday-of-week date so they
   // sort lexically alongside month ('YYYY-MM') and year ('YYYY') keys.
@@ -1686,7 +1787,7 @@
     if (gran === 'month') return `${y}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     const offset = (d.getDay() + 6) % 7;   // days since Monday
     const mon = new Date(d.getFullYear(), d.getMonth(), d.getDate() - offset);
-    return `${mon.getFullYear()}-${String(mon.getMonth() + 1).padStart(2, '0')}-${String(mon.getDate()).padStart(2, '0')}`;
+    return dashISO(mon);
   }
 
   function dashBucketLabel(key, gran) {
@@ -1701,60 +1802,67 @@
     return `${start.toLocaleDateString('en-PH', opt)} – ${end.toLocaleDateString('en-PH', opt)}, ${end.getFullYear()}`;
   }
 
+  const dashPeso = (n) => '₱' + Math.round(n).toLocaleString('en-PH');
+
+  // Period-over-period badge: ↑/↓ percent vs the previous equal window.
+  function dashDelta(cur, prev) {
+    if (prev == null)  return '';
+    if (prev === 0)    return cur > 0 ? `<span class="kpi-delta up">New</span>` : '';
+    const pct = Math.round(((cur - prev) / prev) * 100);
+    if (pct === 0)     return `<span class="kpi-delta flat">0%</span>`;
+    const up = pct > 0;
+    return `<span class="kpi-delta ${up ? 'up' : 'down'}">${up ? '↑' : '↓'} ${Math.abs(pct)}%</span>`;
+  }
+
   function renderDashboard() {
     const gran = dashGranularity;
-    const from = document.getElementById('dash-from')?.value || '';
-    const to   = document.getElementById('dash-to')?.value   || '';
-    const inRange = (dateStr) => {
-      if (!dateStr) return false;
-      const d = String(dateStr).slice(0, 10);
-      if (from && d < from) return false;
-      if (to   && d > to)   return false;
-      return true;
+    const { from, to } = dashRangeWindow(dashRange);
+
+    const cur     = dashAggregate(from, to);
+    const prevWin = dashRange === 'all' ? null : dashPrevWindow(from, to);
+    const prev    = prevWin ? dashAggregate(prevWin.from, prevWin.to) : null;
+
+    const kpi = (ico, val, label, c, p, accent) => `
+      <div class="kpi-card${accent ? ' kpi-accent' : ''}">
+        <div class="kpi-top"><span class="kpi-ico">${ico}</span>${dashDelta(c, p)}</div>
+        <div class="kpi-val">${val}</div>
+        <div class="kpi-label">${label}</div>
+      </div>`;
+    document.getElementById('dash-kpis').innerHTML =
+      kpi('🎉', cur.events,            'Events created', cur.events,   prev?.events,   false) +
+      kpi('👤', cur.users,             'New users',      cur.users,    prev?.users,    false) +
+      kpi('💳', cur.payments,          'Payments',       cur.payments, prev?.payments, false) +
+      kpi('💰', dashPeso(cur.revenue), 'Revenue',        cur.revenue,  prev?.revenue,  true);
+
+    document.getElementById('dash-gran-word').textContent =
+      gran === 'week' ? 'week' : gran === 'year' ? 'year' : 'month';
+
+    // Bucket the in-range rows for the breakdown table.
+    const buckets = new Map();
+    const touch = (k) => {
+      if (!buckets.has(k)) buckets.set(k, { events: 0, users: 0, payments: 0, revenue: 0 });
+      return buckets.get(k);
     };
-
-    const buckets = new Map();   // key -> { events, users, payments, revenue }
-    const touch = (key) => {
-      if (!buckets.has(key)) buckets.set(key, { events: 0, users: 0, payments: 0, revenue: 0 });
-      return buckets.get(key);
-    };
-
-    let totEvents = 0, totUsers = 0, totPayments = 0, totRevenue = 0;
-
     for (const e of allEvents) {
-      if (!inRange(e.created_at)) continue;
-      const k = dashBucketKey(e.created_at, gran); if (!k) continue;
-      touch(k).events++; totEvents++;
+      if (!dashInRange(e.created_at, from, to)) continue;
+      const k = dashBucketKey(e.created_at, gran); if (k) touch(k).events++;
     }
     for (const u of allUsers) {
-      if (!inRange(u.created_at)) continue;
-      const k = dashBucketKey(u.created_at, gran); if (!k) continue;
-      touch(k).users++; totUsers++;
+      if (!dashInRange(u.created_at, from, to)) continue;
+      const k = dashBucketKey(u.created_at, gran); if (k) touch(k).users++;
     }
-    // Revenue = realized money only: status 'succeeded' (covers card
-    // webhooks and admin-recorded manual payments). Pending / rejected /
-    // refunded are excluded.
     for (const p of allPayments) {
-      if (p.status !== 'succeeded') continue;
-      if (!inRange(p.created_at)) continue;
+      if (p.status !== 'succeeded' || !dashInRange(p.created_at, from, to)) continue;
       const k = dashBucketKey(p.created_at, gran); if (!k) continue;
       const b = touch(k);
-      b.payments++; totPayments++;
-      const peso = (p.amount || 0) / 100;
-      b.revenue += peso; totRevenue += peso;
+      b.payments++;
+      b.revenue += (p.amount || 0) / 100;
     }
 
-    const fmtPeso = (n) => '₱' + Math.round(n).toLocaleString('en-PH');
-    document.getElementById('dash-kpis').innerHTML = `
-      <div class="kpi-card"><div class="kpi-val">${totEvents}</div><div class="kpi-label">Events created</div></div>
-      <div class="kpi-card"><div class="kpi-val">${totUsers}</div><div class="kpi-label">New users</div></div>
-      <div class="kpi-card"><div class="kpi-val">${totPayments}</div><div class="kpi-label">Payments</div></div>
-      <div class="kpi-card kpi-accent"><div class="kpi-val">${fmtPeso(totRevenue)}</div><div class="kpi-label">Revenue (succeeded)</div></div>`;
-
-    const keys = [...buckets.keys()].sort().reverse();   // most recent first
+    const keys  = [...buckets.keys()].sort().reverse();   // most recent first
     const tbody = document.getElementById('dash-tbody');
     if (!keys.length) {
-      tbody.innerHTML = `<tr><td colspan="6" class="empty-state">No data for this range.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" class="empty-state">No activity in this range.</td></tr>`;
       return;
     }
     const maxRev = Math.max(1, ...keys.map(k => buckets.get(k).revenue));
@@ -1766,27 +1874,33 @@
         <td>${b.events}</td>
         <td>${b.users}</td>
         <td>${b.payments}</td>
-        <td><strong>${fmtPeso(b.revenue)}</strong></td>
+        <td><strong>${dashPeso(b.revenue)}</strong></td>
         <td><div class="dash-bar-track"><div class="dash-bar" style="width:${pct}%"></div></div></td>
       </tr>`;
     }).join('');
   }
 
-  document.querySelectorAll('.dash-gran').forEach(btn => {
+  document.querySelectorAll('#dash-gran-seg .seg-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      document.querySelectorAll('.dash-gran').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('#dash-gran-seg .seg-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       dashGranularity = btn.dataset.gran;
       renderDashboard();
     });
   });
-  ['dash-from', 'dash-to'].forEach(id => {
-    document.getElementById(id)?.addEventListener('change', renderDashboard);
+  document.querySelectorAll('#dash-ranges .range-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#dash-ranges .range-chip').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      dashRange = btn.dataset.range;
+      document.getElementById('dash-custom').hidden = dashRange !== 'custom';
+      renderDashboard();
+    });
   });
-  document.getElementById('dash-clear')?.addEventListener('click', () => {
-    document.getElementById('dash-from').value = '';
-    document.getElementById('dash-to').value   = '';
-    renderDashboard();
+  ['dash-from', 'dash-to'].forEach(id => {
+    document.getElementById(id)?.addEventListener('change', () => {
+      if (dashRange === 'custom') renderDashboard();
+    });
   });
 
   function openManualPayment() {
