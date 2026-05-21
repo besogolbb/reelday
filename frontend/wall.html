@@ -2793,15 +2793,53 @@
      probe from a previous slide can't clobber a newer slide's class. */
   let orientationToken = 0;
   let photoLoadToken   = 0;
+
+  /* Orientation cache — upload id → true(landscape)/false(portrait).
+     Lets applyOrientationClass tag <body> synchronously at slide-swap
+     time. Without it the class only updated after an async image probe,
+     so a landscape photo following a portrait slide briefly rendered
+     inside the portrait 9:16 card before snapping wide. */
+  const orientationCache = new Map();
+  function cacheOrientation(id, w, h) {
+    if (id != null && w && h) orientationCache.set(id, w > h);
+  }
+  // Preload a photo to learn + cache its orientation. Always resolves
+  // (errors and a 1 s cap included) so a batch await can't hang.
+  function probeOrientation(item) {
+    return new Promise(resolve => {
+      if (!item || item.id == null || orientationCache.has(item.id)) return resolve();
+      if (isVideoItem(item) || isAudioItem(item)) return resolve();
+      const url = immediateVisualUrl(item, 1280) || wallMediaUrl(item);
+      if (!url) return resolve();
+      const img = new Image();
+      let done = false;
+      const finish = () => { if (!done) { done = true; resolve(); } };
+      img.onload  = () => { cacheOrientation(item.id, img.naturalWidth, img.naturalHeight); finish(); };
+      img.onerror = finish;
+      img.src = url;
+      setTimeout(finish, 1000);
+    });
+  }
+
   function applyOrientationClass(item, activeVidEl) {
     const token = ++orientationToken;
     const setClass = (w, h) => {
       if (token !== orientationToken) return;
       if (!w || !h) return;
+      cacheOrientation(item?.id, w, h);
       const isLandscape = w > h;
       document.body.classList.toggle('is-landscape', isLandscape);
       document.body.classList.toggle('is-portrait',  !isLandscape);
     };
+
+    // Synchronous fast-path: orientation already known (prewarmed or
+    // shown before) → tag <body> NOW, before the crossfade reveals the
+    // incoming layer, so it never renders the wrong slide shape.
+    if (item && orientationCache.has(item.id)) {
+      const landscape = orientationCache.get(item.id);
+      document.body.classList.toggle('is-landscape', landscape);
+      document.body.classList.toggle('is-portrait',  !landscape);
+    }
 
     // Always seed from the poster/immediate image first so we set *some*
     // orientation immediately. The video metadata check below upgrades
@@ -3324,7 +3362,13 @@
         }
       } catch { /* ignore */ }
     } else {
-      try { prewarmImg.src = url; } catch { /* ignore */ }
+      try {
+        // Cache the next slide's orientation off the prewarm load so the
+        // upcoming applyOrientationClass can tag <body> synchronously.
+        prewarmImg.onload = () =>
+          cacheOrientation(next.id, prewarmImg.naturalWidth, prewarmImg.naturalHeight);
+        prewarmImg.src = url;
+      } catch { /* ignore */ }
     }
   }
 
@@ -4466,6 +4510,10 @@
       }
 
       if (newOnes.length > 0) {
+        // Warm the orientation of the upload we're about to jump to —
+        // goTo() lands on newOnes[0] without a prewarm pass, so without
+        // this a freshly-shared landscape photo flashes portrait first.
+        await probeOrientation(newOnes[0]);
         // Splice new approvals in right after the current slide and jump
         // to the first one so the host sees their approval reach the
         // wall immediately. Older items keep their relative order.
