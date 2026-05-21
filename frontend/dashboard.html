@@ -1149,9 +1149,13 @@
       font-size: 12px; color: var(--dash-muted); line-height: 1.5;
       margin: -8px 0 14px;
     }
-    .details-form { display: grid; gap: 10px; }
+    .details-form { display: grid; gap: 10px; min-width: 0; }
     .details-field {
       display: grid; gap: 8px;
+      /* min-width:0 so a long, unbreakable value (e.g. a custom-music
+         filename) can't blow the grid item — and the whole card —
+         wider than its column. Grid items default to min-width:auto. */
+      min-width: 0;
       padding: 12px 14px;
       border-radius: 14px;
       background: rgba(251,245,236,.5);
@@ -3240,7 +3244,7 @@
         const row = document.createElement('div');
         row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;background:#f5f5f5;border-radius:6px;font-size:13px';
         row.innerHTML = `
-          <div style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+          <div style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
             🎵 ${escapeHtml(t.title)}
             ${t.duration_s ? `<span style="color:#888;margin-left:6px">${fmtDuration(t.duration_s)}</span>` : ''}
           </div>
