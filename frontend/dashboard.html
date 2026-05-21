@@ -1351,16 +1351,93 @@
     }
     .info-card #info-plan > span { display: block; }
 
-    /* Per-tier accent — single colour swap on the left stripe + the
-       tier glyph (★/♛/etc) injected by JS via the inline span. No
-       gradients, no inset shadows, no engraved text shadows. Tala
-       keeps the default warm accent. */
-    .info-card .row[data-cell="plan"][data-tier="sinag"]   { border-left-color: #b87333; }
-    .info-card .row[data-cell="plan"][data-tier="dalisay"] { border-left-color: #6b7280; }
-    .info-card .row[data-cell="plan"][data-tier="hiraya"]  { border-left-color: #c9a227; }
-    .info-card .row[data-cell="plan"][data-tier="sinag"]   #info-plan > span { color: #8a4416; }
-    .info-card .row[data-cell="plan"][data-tier="dalisay"] #info-plan > span { color: #2a3340; }
-    .info-card .row[data-cell="plan"][data-tier="hiraya"]  #info-plan > span { color: #6b4f08; }
+    /* ── Metallic Plan cell (re-added 2026-05-21) ──────────────
+       The Plan cell gets a full metallic background per tier so it
+       reads as a stamped nameplate, deliberately standing apart from
+       its warm-cream sibling cells. Tier→metal mapping shifted one
+       step down now that Hiraya is in private launch:
+         Tala    → copper   (entry warmth)
+         Sinag   → silver
+         Dalisay → gold     (top public tier — the premium signal)
+         Hiraya  → gold + diagonal foil sheen (kept distinct above
+                   Dalisay for the rare comped-coordinator view)
+       Text is treated as engraved into the metal: a two-layer
+       text-shadow (dark from above, light from below) on both the
+       eyebrow label and the plan name so the cell reads as one
+       stamped piece. */
+    .info-card .row[data-cell="plan"][data-tier] {
+      position: relative;
+      overflow: hidden;
+      border-left-width: 1px; /* drop the stripe — the metal IS the signal */
+    }
+    /* Engrave the eyebrow label + the inline plan name together. */
+    .info-card .row[data-cell="plan"][data-tier] span:first-child,
+    .info-card .row[data-cell="plan"][data-tier] #info-plan > span {
+      position: relative; z-index: 1;
+    }
+
+    /* Tala — copper */
+    .info-card .row[data-cell="plan"][data-tier="tala"] {
+      background: linear-gradient(135deg, #f7e3cf 0%, #d9925c 55%, #9c5a2e 100%);
+      border-color: #9c5a2e;
+      box-shadow: 0 6px 18px rgba(156,90,46,.22),
+                  inset 0 1px 0 rgba(255,255,255,.35),
+                  inset 0 -1px 0 rgba(0,0,0,.12);
+    }
+    .info-card .row[data-cell="plan"][data-tier="tala"] span:first-child,
+    .info-card .row[data-cell="plan"][data-tier="tala"] #info-plan > span {
+      color: #5a2c14;
+      text-shadow: 0 -1px 0 rgba(60,20,5,.45), 0 1px 1px rgba(255,225,195,.6);
+    }
+
+    /* Sinag — silver */
+    .info-card .row[data-cell="plan"][data-tier="sinag"] {
+      background: linear-gradient(135deg, #f6f7f9 0%, #d8dde4 55%, #9aa2ad 100%);
+      border-color: #9aa2ad;
+      box-shadow: 0 6px 18px rgba(120,128,140,.25),
+                  inset 0 1px 0 rgba(255,255,255,.55),
+                  inset 0 -1px 0 rgba(0,0,0,.10);
+    }
+    .info-card .row[data-cell="plan"][data-tier="sinag"] span:first-child,
+    .info-card .row[data-cell="plan"][data-tier="sinag"] #info-plan > span {
+      color: #2a3340;
+      text-shadow: 0 -1px 0 rgba(20,28,40,.40), 0 1px 1px rgba(255,255,255,.75);
+    }
+
+    /* Dalisay — gold (top public tier) */
+    .info-card .row[data-cell="plan"][data-tier="dalisay"] {
+      background: linear-gradient(135deg, #fdf2c4 0%, #f4d06f 50%, #c9a227 100%);
+      border-color: #c9a227;
+      box-shadow: 0 8px 22px rgba(201,162,39,.32),
+                  inset 0 1px 0 rgba(255,255,255,.55),
+                  inset 0 -1px 0 rgba(80,55,5,.15);
+    }
+    .info-card .row[data-cell="plan"][data-tier="dalisay"] span:first-child,
+    .info-card .row[data-cell="plan"][data-tier="dalisay"] #info-plan > span {
+      color: #5a4406;
+      text-shadow: 0 -1px 0 rgba(80,55,5,.45), 0 1px 1px rgba(255,245,205,.75);
+    }
+
+    /* Hiraya — gold + diagonal foil sheen (private launch; rare). */
+    .info-card .row[data-cell="plan"][data-tier="hiraya"] {
+      background: linear-gradient(135deg, #fdf2c4 0%, #f4d06f 50%, #c9a227 100%);
+      border-color: #c9a227;
+      box-shadow: 0 8px 22px rgba(201,162,39,.34),
+                  inset 0 1px 0 rgba(255,255,255,.6),
+                  inset 0 -1px 0 rgba(80,55,5,.16);
+    }
+    .info-card .row[data-cell="plan"][data-tier="hiraya"]::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(115deg,
+        transparent 30%, rgba(255,255,255,.55) 48%, rgba(255,255,255,0) 62%);
+      pointer-events: none;
+    }
+    .info-card .row[data-cell="plan"][data-tier="hiraya"] span:first-child,
+    .info-card .row[data-cell="plan"][data-tier="hiraya"] #info-plan > span {
+      color: #5a4406;
+      text-shadow: 0 -1px 0 rgba(80,55,5,.45), 0 1px 1px rgba(255,245,205,.75);
+    }
 
     /* Backwards-compat alias — old code paths still set the
        row-highlight class on the JSX side. New design treats every
