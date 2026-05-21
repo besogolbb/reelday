@@ -113,6 +113,16 @@
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
   }
+  .card .msg-icon {
+    position: absolute; top: 10px; right: 10px;
+    width: 32px; height: 32px;
+    background: rgba(0,0,0,.55);
+    color: #fff; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
   .card .video-icon {
     position: absolute; top: 10px; left: 10px;
     background: rgba(0,0,0,.55); color: #fff;
@@ -176,6 +186,14 @@
     -webkit-backdrop-filter: blur(10px);
   }
   .lightbox-audio audio { vertical-align: middle; }
+  .lightbox-message {
+    max-width: 540px;
+    color: rgba(251,245,236,.92);
+    font-family: var(--display); font-style: italic;
+    font-size: 18px; line-height: 1.55; text-align: center;
+  }
+  .lightbox-message::before { content: '\201C'; }
+  .lightbox-message::after  { content: '\201D'; }
   .lightbox-meta {
     color: rgba(251,245,236,.85);
     font-family: var(--display); font-style: italic;
@@ -255,6 +273,7 @@
     <div class="lightbox-audio" id="lb-audio-wrap" style="display:none">
       <audio id="lb-audio" controls preload="auto"></audio>
     </div>
+    <div class="lightbox-message" id="lb-message" style="display:none"></div>
     <div class="lightbox-meta" id="lb-meta"></div>
   </div>
 </div>
@@ -274,19 +293,21 @@ const MANIFEST = __MANIFEST_JSON__;
 
   // Filter buckets — counted once up front so the tabs can show totals.
   const buckets = {
-    all:     items,
-    paired:  items.filter(i => i.type === 'paired-photo' || i.type === 'paired-video'),
-    photos:  items.filter(i => i.type === 'photo' || i.type === 'paired-photo'),
-    videos:  items.filter(i => i.type === 'video' || i.type === 'paired-video'),
-    audio:   items.filter(i => i.type === 'audio'),
+    all:      items,
+    paired:   items.filter(i => i.type === 'paired-photo' || i.type === 'paired-video'),
+    messages: items.filter(i => i.message),
+    photos:   items.filter(i => i.type === 'photo' || i.type === 'paired-photo'),
+    videos:   items.filter(i => i.type === 'video' || i.type === 'paired-video'),
+    audio:    items.filter(i => i.type === 'audio'),
   };
 
   const tabs = [
-    { id: 'all',     label: 'All'           },
-    { id: 'paired',  label: 'With audio'    },
-    { id: 'photos',  label: 'Photos'        },
-    { id: 'videos',  label: 'Videos'        },
-    { id: 'audio',   label: 'Voice notes'   },
+    { id: 'all',      label: 'All'           },
+    { id: 'paired',   label: 'With audio'    },
+    { id: 'messages', label: 'With messages' },
+    { id: 'photos',   label: 'Photos'        },
+    { id: 'videos',   label: 'Videos'        },
+    { id: 'audio',    label: 'Voice notes'   },
   ].filter(t => buckets[t.id].length > 0);
 
   let activeTab = tabs[0]?.id || 'all';
@@ -321,10 +342,12 @@ const MANIFEST = __MANIFEST_JSON__;
     }
     grid.innerHTML = currentList.map((item, i) => {
       const name = escapeHtml(item.name || 'guest');
+      const msgBadge = item.message ? `<span class="msg-icon" title="Message attached">💬</span>` : '';
       if (item.type === 'audio') {
         return (
           `<div class="card is-audio" data-idx="${i}">` +
             `<div class="audio-glyph">🎙️</div>` +
+            msgBadge +
             `<div class="label">${name}</div>` +
           `</div>`
         );
@@ -341,6 +364,7 @@ const MANIFEST = __MANIFEST_JSON__;
           mediaTag +
           videoBadge +
           audioBadge +
+          msgBadge +
           `<div class="label">${name}</div>` +
         `</div>`
       );
@@ -355,6 +379,7 @@ const MANIFEST = __MANIFEST_JSON__;
   const lbMedia     = document.getElementById('lb-media');
   const lbAudio     = document.getElementById('lb-audio');
   const lbAudioWrap = document.getElementById('lb-audio-wrap');
+  const lbMessage   = document.getElementById('lb-message');
   const lbMeta      = document.getElementById('lb-meta');
   let   lbIndex     = 0;
 
@@ -405,6 +430,16 @@ const MANIFEST = __MANIFEST_JSON__;
     } else {
       lbAudioWrap.style.display = 'none';
       try { lbAudio.pause(); lbAudio.removeAttribute('src'); } catch {}
+    }
+
+    // Guest's typed message — companion text, shown above the byline.
+    // textContent (not innerHTML) so the message can't inject markup.
+    if (item.message) {
+      lbMessage.textContent = item.message;
+      lbMessage.style.display = '';
+    } else {
+      lbMessage.textContent = '';
+      lbMessage.style.display = 'none';
     }
 
     lbMeta.innerHTML =

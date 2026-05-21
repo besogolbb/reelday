@@ -967,7 +967,7 @@ export default async function uploadRoutes(fastify) {
 
     const { rows: uploads } = await fastify.db.query(
       `SELECT id, file_url, audio_url, original_key, file_type, uploader_name,
-              is_video_message, created_at
+              is_video_message, message, created_at
          FROM uploads
         WHERE event_id = $1 AND is_approved = true
         ORDER BY created_at ASC`,
@@ -1077,6 +1077,10 @@ export default async function uploadRoutes(fastify) {
       const isVideo = u.file_type === 'video' || u.is_video_message;
       const isAudio = u.file_type === 'audio' || u.file_type === 'audio_note';
       const guestName = safeName(u.uploader_name, 'guest');
+      // Guest's typed message/caption for this upload — companion text,
+      // paired into the viewer the same way audio notes are. Capped so a
+      // pathological paste can't bloat the inlined manifest.
+      const guestMessage = (u.message || '').trim().slice(0, 600) || null;
 
       if ((isPhoto || isVideo) && u.audio_url && audioByUrl.has(u.audio_url)) {
         // ── Paired photo/video + audio ──
@@ -1100,6 +1104,7 @@ export default async function uploadRoutes(fastify) {
           created: u.created_at,
           [isVideo ? 'video' : 'photo']: mediaOk ? mediaName : null,
           audio:   audioOk ? audioName : null,
+          message: guestMessage,
         });
         continue;
       }
@@ -1112,7 +1117,7 @@ export default async function uploadRoutes(fastify) {
         if (ok) {
           manifestItems.push({
             type: 'photo', name: u.uploader_name || 'guest',
-            created: u.created_at, photo: entry,
+            created: u.created_at, photo: entry, message: guestMessage,
           });
         }
         continue;
@@ -1126,7 +1131,7 @@ export default async function uploadRoutes(fastify) {
         if (ok) {
           manifestItems.push({
             type: 'video', name: u.uploader_name || 'guest',
-            created: u.created_at, video: entry,
+            created: u.created_at, video: entry, message: guestMessage,
           });
         }
         continue;
@@ -1145,7 +1150,7 @@ export default async function uploadRoutes(fastify) {
         if (ok) {
           manifestItems.push({
             type: 'audio', name: u.uploader_name || 'guest',
-            created: u.created_at, audio: entry,
+            created: u.created_at, audio: entry, message: guestMessage,
           });
         }
         continue;
