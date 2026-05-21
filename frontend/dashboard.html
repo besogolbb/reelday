@@ -105,6 +105,10 @@
     }
     .event-header .nav a.active { color: var(--paper); background: rgba(255,255,255,.14); }
     .event-header .nav a:hover { color: var(--paper); }
+    /* Two-label nav items: full label on desktop, short on mobile so
+       all five tabs fit the narrow header without horizontal scroll
+       clipping "Settings". Swapped in the 760px breakpoint below. */
+    .event-header .nav .nav-short { display: none; }
     .event-header-top-right { display: flex; align-items: center; gap: 14px; }
     .header-user-name {
       color: rgba(251,245,236,.85);
@@ -1738,10 +1742,18 @@
         width: 100%;
         overflow-x: auto;
         scrollbar-width: none;
-        justify-content: flex-start;
+        justify-content: space-between;  /* spread tabs edge-to-edge */
+        gap: 2px;
+        padding: 5px;
       }
       .event-header .nav::-webkit-scrollbar { display: none; }
-      .event-header .nav a { font-size: 12px; padding: 6px 11px; white-space: nowrap; }
+      .event-header .nav a {
+        font-size: 11px; padding: 6px 9px; white-space: nowrap;
+        flex-shrink: 0;
+      }
+      /* Mobile: hide the long label, show the short one. */
+      .event-header .nav .nav-full  { display: none; }
+      .event-header .nav .nav-short { display: inline; }
 
       /* Header right buttons — compact */
       .header-user-name { font-size: 12px; max-width: 80px; }
@@ -2188,8 +2200,8 @@
       <div class="nav" id="site-nav">
         <a class="active" href="#">Dashboard</a>
         <a id="wall-nav-link" href="#" target="_blank" rel="noopener">Wall</a>
-        <a id="upload-nav-link" href="#" target="_blank" rel="noopener">Upload page</a>
-        <a href="#qr-wrap" id="qr-nav-link">QR Code</a>
+        <a id="upload-nav-link" href="#" target="_blank" rel="noopener"><span class="nav-full">Upload page</span><span class="nav-short">Upload</span></a>
+        <a href="#qr-wrap" id="qr-nav-link"><span class="nav-full">QR Code</span><span class="nav-short">QR</span></a>
         <a href="#" id="settings-nav-link">Settings</a>
       </div>
       <div class="event-header-top-right">
