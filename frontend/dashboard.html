@@ -1408,15 +1408,25 @@
       align-items: center;
       text-align: center;
       gap: 6px;
-      padding: 14px 16px;
+      padding: 14px 10px;
     }
     .info-card .row[data-cell="plan"][data-tier] #info-plan {
       width: 100%;
+      min-width: 0;
     }
+    /* Size ceiling lowered to 26px: the worst-case label "★ DALISAY"
+       at 34px overflowed the cell and got clipped by the row's
+       overflow:hidden (which is there for the Hiraya foil sheen).
+       26px keeps "★ DALISAY" / "♛ HIRAYA" inside even the narrowest
+       170px grid cell. */
     .info-card .row[data-cell="plan"][data-tier] #info-plan > span {
-      font-size: clamp(24px, 4.4vw, 34px);
+      font-size: clamp(17px, 2.6vw, 26px);
       line-height: 1.05;
       white-space: nowrap;
+      display: block;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     /* The inline #info-plan span renders ★/♛ + name + an Upgrade
        link from JS. Make the link a discreet ghost button anchored
