@@ -42,6 +42,10 @@ Corporate), pricing, FAQ. The login state changes the header: logged-out
 visitors see "Log in / Start free"; logged-in users see their name with
 a dropdown to Account / Log out.
 
+The public pricing currently shows Tala / Sinag / Dalisay only — the
+Hiraya tier is in private launch and its buy CTAs are hidden behind the
+`HIRAYA_PUBLIC` flag (see §5).
+
 ### 3.2 The host product (logged-in)
 
 - **My Events** (`/my-events`) — list of all events the host owns,
@@ -118,8 +122,11 @@ Lets internal staff:
 
 A per-event guest microsite — the "4 months before" companion to the
 wall's "4 hours during". Gated to the **Dalisay/Hiraya** tiers via the
-`website` plan feature flag (owner's *effective* tier, not the cached
-`events.plan`). Unpublished or not-entitled → bare 404 (no leak).
+`website` plan feature flag. Entitlement is computed from the event's
+*effective tier* — `events.plan` is the source of truth, with the
+owner's `users.subscription_tier` as a legacy fallback for rows created
+before per-event plans existed (`event.plan || subscription_tier ||
+'tala'`). Unpublished or not-entitled → bare 404 (no leak).
 
 - **Served from `server.js`** at `/e/:slug` (sibling of `/wall/:slug`).
   It's not a plain `sendFile`: the handler injects Open Graph / theme /
@@ -152,6 +159,23 @@ wall's "4 hours during". Gated to the **Dalisay/Hiraya** tiers via the
 Parked for later: Memorial preset (sensitive tone), an AI concierge
 over a plain-text knowledge blob, RSVP analytics (V2); Hiraya custom
 domains (V3). See `docs/event-website-plan.md`.
+
+### 3.7 Same Day Edit (SDE) recap reel — Dalisay & Hiraya, in progress
+
+An auto-rendered cinematic recap mp4 stitched from the event's guest
+uploads — the headline feature for the Dalisay tier. The host curates
+by tapping the persistent ★ "Feature pin" on photo/video tiles in the
+dashboard; pinned uploads (`uploads.sde_pinned`) are guaranteed in the
+reel. A backend curator (`backend/lib/sdeSelect.js`) takes pinned-first,
+fills the rest by reaction-weighted score, tops up to a minimum clip
+count by recency, and sorts the final reel chronologically. Positioning
+is **AI-only by design** — no manual drag-drop reorder. Rendering is a
+stateless FFmpeg-on-Lambda worker (`lambda/sde.mjs`) that reuses the
+transcoder's harness.
+
+Not yet shipped end-to-end — the tier table below marks it _coming
+soon_. Spec + status: `docs/same-day-edit-plan.md` and
+`docs/SDE-HANDOVER.md`.
 
 ---
 
@@ -241,7 +265,7 @@ domains (V3). See `docs/event-website-plan.md`.
 2. **Card**: `/api/payments/create` makes a PayMongo checkout session,
    inserts `payments` row with `status='pending'`. PayMongo webhook
    on success flips to `succeeded` and upgrades the user's tier.
-3. **GCash manual**: guest sends GCash transfer to our number, types
+3. **GCash manual**: host sends a GCash transfer to our number, types
    their reference number on the site. `/api/payments/manual` saves
    it as `status='manual_pending'`. Admin verifies in `/admin`:
    - Accept → tier upgrade fires from the verify endpoint.
@@ -256,6 +280,25 @@ domains (V3). See `docs/event-website-plan.md`.
 
 Defined in `backend/lib/plans.js` and `frontend/js/plans.js` (kept in
 sync). Backend is the source of truth.
+
+**Purchase model (2026):** pricing is *event-scoped*, not account-scoped.
+Tala (free), Sinag, and Dalisay are each bought per event — one event,
+one purchase — and the tier travels with that event (`events.plan`).
+Hiraya is the sole exception: a **yearly user-level subscription**
+(₱9,990/yr, up to 10 events) aimed at coordinators, photographers, and
+venues running multiple events a month. Tala is one free event per
+account for life (enforced via `users.tala_used`). Feature gating reads
+the event's effective tier (`events.plan`, legacy fallback to
+`users.subscription_tier`); the user-level tier still governs the
+event-creation quota (`events_remaining`) and Hiraya account-wide
+perks.
+
+**Hiraya launch state:** Hiraya is in **private launch** (since
+2026-05-20). The backend, payments, and comp/renew paths are fully
+live, but the public buy CTAs (landing pricing card, `/start` picker,
+dashboard upgrade modal) are hidden behind the `HIRAYA_PUBLIC` flag in
+`frontend/js/plans.js`. Sales is direct outreach only. See
+`docs/hiraya-launch-plan.md`.
 
 Upload window is **centered on the event date** — `uploadWindowDays`
 splits to `before = floor((N-1)/2)`, day-of, `after = ceil((N-1)/2)`.
@@ -308,17 +351,20 @@ Open product decision; not committed yet.
 
 ### Key data model
 
-- `users` — auth, profile, `subscription_tier`, `is_verified`,
-  `is_active` (admin soft-deactivate).
+- `users` — auth, profile, `subscription_tier` (account-level tier —
+  meaningful for Hiraya subscribers, legacy fallback otherwise),
+  `events_remaining` (event-creation quota), `tala_used` (one-free-event
+  guard), `is_verified`, `is_active` (admin soft-deactivate).
 - `events` — `slug` (URL identity), `couple_names`, `event_date`,
-  `event_type`, `plan` (cached at event creation), `is_paid`,
-  `is_active`, `auto_approve` flags, `gallery_expires_at`,
-  `upload_window_ends_at`, plus `playback_burst_*` columns for
-  the host-triggered video-burst feature.
+  `event_type`, `plan` (the event's own tier — source of truth for
+  feature gating), `is_paid`, `is_active`, `auto_approve` flags,
+  `gallery_expires_at`, `upload_window_ends_at`, plus `playback_burst_*`
+  columns for the host-triggered video-burst feature.
 - `uploads` — `event_id`, `file_url` (R2 URL),
   `compressed_key`/`web_url` (transcoded video), `poster_url`,
   `pre_thumb_url`, `original_key`, `video_status`
-  ('processing'/'ready'), `is_approved`, `uploader_name`.
+  ('processing'/'ready'), `is_approved`, `uploader_name`,
+  `sde_pinned` (host's SDE "Feature pin" curation).
 - `reactions` — `event_id`, optional `upload_id`, `guest_id`,
   `guest_name`, `emoji`.
 - `polls` — `event_id`, `question`, `options` JSONB, `kind`
@@ -419,4 +465,7 @@ uploads, poll votes, wall-error beacons).
 | Event website (host editor) | isolated module at end of `frontend/dashboard.html` |
 | Event website plan/scope | `docs/event-website-plan.md` |
 | Lambda transcoder | `lambda/index.mjs` |
+| Same Day Edit (curator) | `backend/lib/sdeSelect.js` |
+| Same Day Edit (Lambda renderer) | `lambda/sde.mjs` |
+| Same Day Edit (spec / status) | `docs/same-day-edit-plan.md`, `docs/SDE-HANDOVER.md` |
 | DB schema + migrations | `backend/plugins/database.js` |
