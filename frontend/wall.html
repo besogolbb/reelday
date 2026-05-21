@@ -4478,7 +4478,22 @@
   /* ══════════════════════════════════════════════════════════
      POLL FOR NEW UPLOADS
   ══════════════════════════════════════════════════════════ */
+  // Re-entrancy guard. With the 1 s poll interval, a refresh that runs
+  // longer than a tick — a slow fetch, or the orientation probe on a
+  // new upload — would overlap the next tick. Both invocations would
+  // then see the same upload as "new" (it isn't in knownIds until the
+  // first one finishes) and each fire goTo(), which clears + reschedules
+  // the advance timer — pinning the slideshow on the new photo instead
+  // of letting it move on. The guard makes an overlapping tick a no-op.
+  let refreshInFlight = false;
   async function refreshUploads() {
+    if (refreshInFlight) return;
+    refreshInFlight = true;
+    try { await refreshUploadsImpl(); }
+    finally { refreshInFlight = false; }
+  }
+
+  async function refreshUploadsImpl() {
     let apiUploads = [];
     try {
       const res = await fetch(`/api/uploads/${slug}`);
