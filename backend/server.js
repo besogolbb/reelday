@@ -158,9 +158,14 @@ await fastify.register(staticFiles, {
   // interactive on slow PH mobile connections. We *don't* hash filenames
   // (no Vite/webpack pipeline), so the strategy is:
   //   - HTML: short cache + must-revalidate so deploys propagate fast
-  //   - Images / fonts / icons: 30 days (they almost never change)
-  //   - CSS / JS: 1 day (we ship edits often; balance freshness vs RTT)
-  // To bust an image/font, change its filename (e.g. ?v=2 in the markup).
+  //   - CSS / JS: also short — the dashboard's logic is split across
+  //     dashboard.html AND /js/plans.js, so a stale JS file silently
+  //     breaks features even when the HTML is fresh (2026-05-21: a
+  //     1-day-cached plans.js kept showing the Dalisay Upgrade CTA
+  //     after the nextTier fix had already shipped). Keep JS within
+  //     the same revalidation window as HTML during active iteration.
+  //   - Images / fonts / icons: 30 days (they almost never change;
+  //     bust by renaming, e.g. ?v=2 in the markup).
   setHeaders: (res, filePath) => {
     const lower = filePath.toLowerCase();
     if (lower.endsWith('.html')) {
@@ -168,7 +173,7 @@ await fastify.register(staticFiles, {
     } else if (/\.(png|jpe?g|webp|gif|svg|ico|woff2?|ttf|otf|eot)$/.test(lower)) {
       res.setHeader('Cache-Control', 'public, max-age=2592000, immutable'); // 30 days
     } else if (/\.(css|js|mjs|json)$/.test(lower)) {
-      res.setHeader('Cache-Control', 'public, max-age=86400');               // 1 day
+      res.setHeader('Cache-Control', 'public, max-age=60, must-revalidate'); // 1 min
     } else {
       res.setHeader('Cache-Control', 'public, max-age=3600');                // 1 hour
     }
