@@ -338,6 +338,22 @@
     .action-btns { display: flex; gap: .5rem; flex-wrap: wrap; }
     .empty-state { padding: 3rem 1rem; text-align: center; color: var(--ink-faint); font-size: .9rem; background: #fff; }
 
+    /* Dashboard (analytics) */
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+                gap: .9rem; margin-bottom: 1.4rem; }
+    .kpi-card { background: #fff; border: 1px solid var(--line); border-radius: var(--r-sm);
+                padding: 1rem 1.15rem; }
+    .kpi-card .kpi-val { font-family: var(--display); font-size: 1.85rem; line-height: 1.1;
+                         color: var(--ink); }
+    .kpi-card .kpi-label { font-family: var(--mono); font-size: .67rem; font-weight: 600;
+                           text-transform: uppercase; letter-spacing: .07em;
+                           color: var(--ink-faint); margin-top: .4rem; }
+    .kpi-card.kpi-accent { border-color: rgba(196,90,58,.3); }
+    .kpi-card.kpi-accent .kpi-val { color: var(--accent-deep); }
+    .dash-bar-track { height: 9px; width: 100%; min-width: 70px; border-radius: 999px;
+                      background: var(--paper-2); overflow: hidden; }
+    .dash-bar { height: 100%; border-radius: 999px; background: var(--accent); }
+
     .manual-form {
       background: var(--paper-2); border: 1px solid var(--line); border-radius: var(--r-lg);
       padding: 1.25rem; margin-bottom: 1rem;
@@ -441,7 +457,8 @@
       <span>Reelday Admin</span>
     </div>
     <nav>
-      <button class="nav-item active" data-view="calendar"><span class="nav-ico">📅</span><span>Calendar</span></button>
+      <button class="nav-item active" data-view="dashboard"><span class="nav-ico">📊</span><span>Dashboard</span></button>
+      <button class="nav-item" data-view="calendar"><span class="nav-ico">📅</span><span>Calendar</span></button>
       <button class="nav-item" data-view="events"><span class="nav-ico">📋</span><span>Events</span><span class="nav-badge" id="nav-events-count">—</span></button>
       <button class="nav-item" data-view="payments"><span class="nav-ico">💳</span><span>Payments</span><span class="nav-badge" id="nav-payments-count">—</span></button>
       <button class="nav-item" data-view="users"><span class="nav-ico">👥</span><span>Users</span><span class="nav-badge" id="nav-users-count">—</span></button>
@@ -458,14 +475,42 @@
   <main class="main">
     <header class="topbar">
       <div>
-        <h1 class="view-title" id="view-title">Calendar</h1>
-        <div class="view-sub" id="view-sub">At-a-glance view of every scheduled event.</div>
+        <h1 class="view-title" id="view-title">Dashboard</h1>
+        <div class="view-sub" id="view-sub">Events, new users, and revenue — filter by week, month, or year.</div>
       </div>
       <div class="view-actions" id="view-actions"></div>
     </header>
 
+    <!-- Dashboard view -->
+    <section class="view" id="view-dashboard">
+      <div class="filter-row" style="justify-content:space-between;align-items:center">
+        <div style="display:flex;gap:.55rem;flex-wrap:wrap">
+          <button class="pay-filter dash-gran" data-gran="week">Weekly</button>
+          <button class="pay-filter dash-gran active" data-gran="month">Monthly</button>
+          <button class="pay-filter dash-gran" data-gran="year">Yearly</button>
+        </div>
+        <div class="filters" style="margin:0">
+          <input type="date" id="dash-from" title="From date" style="flex:0 0 auto;min-width:140px" />
+          <input type="date" id="dash-to"   title="To date"   style="flex:0 0 auto;min-width:140px" />
+          <button class="btn-ghost-sm" id="dash-clear">Clear</button>
+        </div>
+      </div>
+      <div class="kpi-grid" id="dash-kpis"></div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Period</th><th>Events</th><th>New users</th><th>Payments</th>
+              <th>Revenue</th><th style="width:32%">Revenue trend</th>
+            </tr>
+          </thead>
+          <tbody id="dash-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
     <!-- Calendar view -->
-    <section class="view" id="view-calendar">
+    <section class="view" id="view-calendar" style="display:none">
       <div id="conflict-alert" class="conflict-alert hidden" role="alert">
         <span class="ico">⚠</span>
         <span id="conflict-alert-msg"></span>
@@ -794,6 +839,7 @@
   // View switching
   // ────────────────────────────────────────────────────────────────
   const VIEW_META = {
+    dashboard:{ title: 'Dashboard', sub: 'Events, new users, and revenue — filter by week, month, or year.' },
     calendar: { title: 'Calendar',  sub: 'At-a-glance view of every scheduled event — overlapping dates flagged.' },
     events:   { title: 'Events',    sub: 'Filter, edit, reassign, or comp any event in the system.' },
     payments: { title: 'Payments',  sub: 'Verify GCash transfers, refund, or record manual payments.' },
@@ -802,13 +848,14 @@
 
   function switchView(name) {
     document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.view === name));
-    ['calendar','events','payments','users'].forEach(v => {
+    ['dashboard','calendar','events','payments','users'].forEach(v => {
       document.getElementById(`view-${v}`).style.display = v === name ? '' : 'none';
     });
     const meta = VIEW_META[name] || {};
     document.getElementById('view-title').textContent = meta.title || '';
     document.getElementById('view-sub').textContent   = meta.sub   || '';
     renderViewActions(name);
+    if (name === 'dashboard') renderDashboard();
     if (name === 'calendar') renderCalendar();
     if (name === 'events')   renderEvents();
   }
@@ -840,8 +887,7 @@
 
   async function loadAll() {
     await Promise.all([loadStats(), loadEvents(), loadUsers(), loadPayments()]);
-    renderViewActions('calendar');
-    renderCalendar();
+    switchView('dashboard');
   }
 
   async function loadStats() {
@@ -1622,6 +1668,125 @@
 
   ['pf-user', 'pf-event', 'pf-plan', 'pf-from', 'pf-to'].forEach(id => {
     document.getElementById(id)?.addEventListener('input', applyPaymentFilters);
+  });
+
+  // ────────────────────────────────────────────────────────────────
+  // Dashboard (analytics) — buckets allEvents / allUsers / allPayments
+  // by created_at into week / month / year periods, all client-side.
+  // ────────────────────────────────────────────────────────────────
+  let dashGranularity = 'month';
+
+  // Period key for a date. Week keys are the Monday-of-week date so they
+  // sort lexically alongside month ('YYYY-MM') and year ('YYYY') keys.
+  function dashBucketKey(dateStr, gran) {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return null;
+    const y = d.getFullYear();
+    if (gran === 'year')  return String(y);
+    if (gran === 'month') return `${y}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const offset = (d.getDay() + 6) % 7;   // days since Monday
+    const mon = new Date(d.getFullYear(), d.getMonth(), d.getDate() - offset);
+    return `${mon.getFullYear()}-${String(mon.getMonth() + 1).padStart(2, '0')}-${String(mon.getDate()).padStart(2, '0')}`;
+  }
+
+  function dashBucketLabel(key, gran) {
+    if (gran === 'year') return key;
+    if (gran === 'month') {
+      const [y, m] = key.split('-').map(Number);
+      return new Date(y, m - 1, 1).toLocaleDateString('en-PH', { month: 'long', year: 'numeric' });
+    }
+    const start = new Date(key);
+    const end = new Date(start); end.setDate(start.getDate() + 6);
+    const opt = { month: 'short', day: 'numeric' };
+    return `${start.toLocaleDateString('en-PH', opt)} – ${end.toLocaleDateString('en-PH', opt)}, ${end.getFullYear()}`;
+  }
+
+  function renderDashboard() {
+    const gran = dashGranularity;
+    const from = document.getElementById('dash-from')?.value || '';
+    const to   = document.getElementById('dash-to')?.value   || '';
+    const inRange = (dateStr) => {
+      if (!dateStr) return false;
+      const d = String(dateStr).slice(0, 10);
+      if (from && d < from) return false;
+      if (to   && d > to)   return false;
+      return true;
+    };
+
+    const buckets = new Map();   // key -> { events, users, payments, revenue }
+    const touch = (key) => {
+      if (!buckets.has(key)) buckets.set(key, { events: 0, users: 0, payments: 0, revenue: 0 });
+      return buckets.get(key);
+    };
+
+    let totEvents = 0, totUsers = 0, totPayments = 0, totRevenue = 0;
+
+    for (const e of allEvents) {
+      if (!inRange(e.created_at)) continue;
+      const k = dashBucketKey(e.created_at, gran); if (!k) continue;
+      touch(k).events++; totEvents++;
+    }
+    for (const u of allUsers) {
+      if (!inRange(u.created_at)) continue;
+      const k = dashBucketKey(u.created_at, gran); if (!k) continue;
+      touch(k).users++; totUsers++;
+    }
+    // Revenue = realized money only: status 'succeeded' (covers card
+    // webhooks and admin-recorded manual payments). Pending / rejected /
+    // refunded are excluded.
+    for (const p of allPayments) {
+      if (p.status !== 'succeeded') continue;
+      if (!inRange(p.created_at)) continue;
+      const k = dashBucketKey(p.created_at, gran); if (!k) continue;
+      const b = touch(k);
+      b.payments++; totPayments++;
+      const peso = (p.amount || 0) / 100;
+      b.revenue += peso; totRevenue += peso;
+    }
+
+    const fmtPeso = (n) => '₱' + Math.round(n).toLocaleString('en-PH');
+    document.getElementById('dash-kpis').innerHTML = `
+      <div class="kpi-card"><div class="kpi-val">${totEvents}</div><div class="kpi-label">Events created</div></div>
+      <div class="kpi-card"><div class="kpi-val">${totUsers}</div><div class="kpi-label">New users</div></div>
+      <div class="kpi-card"><div class="kpi-val">${totPayments}</div><div class="kpi-label">Payments</div></div>
+      <div class="kpi-card kpi-accent"><div class="kpi-val">${fmtPeso(totRevenue)}</div><div class="kpi-label">Revenue (succeeded)</div></div>`;
+
+    const keys = [...buckets.keys()].sort().reverse();   // most recent first
+    const tbody = document.getElementById('dash-tbody');
+    if (!keys.length) {
+      tbody.innerHTML = `<tr><td colspan="6" class="empty-state">No data for this range.</td></tr>`;
+      return;
+    }
+    const maxRev = Math.max(1, ...keys.map(k => buckets.get(k).revenue));
+    tbody.innerHTML = keys.map(k => {
+      const b = buckets.get(k);
+      const pct = Math.round((b.revenue / maxRev) * 100);
+      return `<tr>
+        <td>${esc(dashBucketLabel(k, gran))}</td>
+        <td>${b.events}</td>
+        <td>${b.users}</td>
+        <td>${b.payments}</td>
+        <td><strong>${fmtPeso(b.revenue)}</strong></td>
+        <td><div class="dash-bar-track"><div class="dash-bar" style="width:${pct}%"></div></div></td>
+      </tr>`;
+    }).join('');
+  }
+
+  document.querySelectorAll('.dash-gran').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.dash-gran').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      dashGranularity = btn.dataset.gran;
+      renderDashboard();
+    });
+  });
+  ['dash-from', 'dash-to'].forEach(id => {
+    document.getElementById(id)?.addEventListener('change', renderDashboard);
+  });
+  document.getElementById('dash-clear')?.addEventListener('click', () => {
+    document.getElementById('dash-from').value = '';
+    document.getElementById('dash-to').value   = '';
+    renderDashboard();
   });
 
   function openManualPayment() {
