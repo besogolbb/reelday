@@ -1301,17 +1301,43 @@ export default async function uploadRoutes(fastify) {
     return { success: true };
   });
 
-  // PATCH /api/uploads/:id/approve — toggle approval (event owner only).
+  // PATCH /api/uploads/:id/approve — moderation toggle (event owner only).
+  // Handles three host actions through one endpoint:
+  //   { is_approved }      — approve / un-approve toggle (legacy shape)
+  //   { is_hidden: true }  — Hide: pull from the wall, lands in Hidden tab
+  //   { is_hidden: false } — Unhide: put it straight back on the wall
+  // "Hidden" always implies is_approved=false (the wall only renders
+  // approved rows); is_hidden is what separates Hidden from Pending.
   fastify.patch('/uploads/:id/approve', { preHandler: fastify.authenticate }, async (request, reply) => {
     const { id } = request.params;
-    const { is_approved } = request.body ?? {};
+    const { is_approved, is_hidden } = request.body ?? {};
     const row = await loadUploadForOwner(request, reply, id);
     if (!row) return;
 
-    const { rows } = await fastify.db.query(
-      'UPDATE uploads SET is_approved = $2 WHERE id = $1 RETURNING *',
-      [id, is_approved ?? true],
-    );
+    let rows;
+    if (is_hidden === true) {
+      ({ rows } = await fastify.db.query(
+        'UPDATE uploads SET is_approved = false, is_hidden = true WHERE id = $1 RETURNING *',
+        [id],
+      ));
+    } else if (is_hidden === false) {
+      ({ rows } = await fastify.db.query(
+        'UPDATE uploads SET is_approved = true, is_hidden = false WHERE id = $1 RETURNING *',
+        [id],
+      ));
+    } else {
+      // Approve/un-approve toggle. Approving also clears is_hidden so a
+      // previously-hidden row can't return half-hidden; un-approving
+      // leaves is_hidden untouched.
+      const approved = is_approved ?? true;
+      ({ rows } = await fastify.db.query(
+        `UPDATE uploads
+            SET is_approved = $2,
+                is_hidden   = (CASE WHEN $2 THEN false ELSE is_hidden END)
+          WHERE id = $1 RETURNING *`,
+        [id, approved],
+      ));
+    }
     return { upload: rows[0] };
   });
 

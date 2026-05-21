@@ -90,6 +90,15 @@ const MIGRATIONS = `
   -- that were uploaded before this rule was in place.
   UPDATE uploads SET is_approved = true WHERE file_type = 'audio' AND is_approved = false;
 
+  -- ── Host "Hide" moderation state ──
+  -- "Hidden" is a distinct dashboard state from "Pending": pending = a
+  -- new upload still awaiting the host's first decision; hidden = the
+  -- host explicitly pulled it from the wall. Both keep is_approved=false
+  -- (the wall only ever renders is_approved=true rows, so neither shows
+  -- there) — is_hidden is purely what splits the dashboard's Pending vs
+  -- Hidden tabs. Without it every hidden item fell back into Pending.
+  ALTER TABLE uploads ADD COLUMN IF NOT EXISTS is_hidden BOOLEAN NOT NULL DEFAULT false;
+
   -- Backfill legacy rows so already-compressed videos remain playable on
   -- the wall, while videos still lacking a compressed derivative stay in
   -- processing mode until a webhook marks them ready.

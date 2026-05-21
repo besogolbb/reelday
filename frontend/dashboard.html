@@ -2900,6 +2900,7 @@
   function normalizeUpload(u) {
     if (!u) return u;
     if (u.status) return u;            // already normalized (localStorage)
+    if (u.is_hidden === true) return { ...u, status: 'hidden' };
     if (u.is_approved === false) return { ...u, status: 'pending' };
     return { ...u, status: 'approved' };
   }
@@ -3919,26 +3920,23 @@
     }, { once: true });
   }
 
-  // ── Handle action button clicks (Feature/Hide/Approve) ─
+  // ── Tile action buttons — Approve (pending tiles) / Unhide (hidden) ─
+  // getActionButton() only ever emits these two actions. Both route
+  // through the moderation PATCH and land the tile in the approved state.
   async function handleAction(action, uploadId) {
+    const body = action === 'approve' ? { is_approved: true }
+               : action === 'unhide'  ? { is_hidden: false }
+               : null;
+    if (!body) return;
     try {
-      const res = await fetch(`/api/uploads/${slug}/${uploadId}/${action}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-      if (!res.ok) throw new Error('Action failed');
-
-      showToast(`Photo ${action}d successfully!`);
-
-      // Refresh uploads after action
-      const uploadsRes = await fetch(`/api/uploads/${slug}?include_pending=1`);
-      const { uploads } = await uploadsRes.json();
-      const normalized = normalizeUploads(uploads);
-      renderStats(normalized);
-      renderGallery(normalized);
+      await patchModeration(uploadId, body);
+      applyLocalUploadState(uploadId, STATE_APPROVED);
+      showToast(action === 'unhide'
+        ? 'Unhidden · back on the wall'
+        : 'Approved · now on the wall');
+      refreshUploads();
     } catch (err) {
-      showToast('Failed to perform action. Please try again.');
+      showToast(err.message || 'Failed to perform action. Please try again.');
     }
   }
 
@@ -5090,7 +5088,11 @@
     if (e.key === 'Escape' && previewModal.classList.contains('open')) closePreview();
   });
 
-  async function patchApproval(uploadId, isApproved) {
+  // Moderation PATCH. `body` carries one of:
+  //   { is_approved }      approve / un-approve toggle
+  //   { is_hidden: true }  hide from the wall  → Hidden tab
+  //   { is_hidden: false } unhide              → back on the wall
+  async function patchModeration(uploadId, body) {
     const token = localStorage.getItem('reelday_token');
     const res = await fetch(`/api/uploads/${uploadId}/approve`, {
       method:  'PATCH',
@@ -5098,7 +5100,7 @@
         'Content-Type': 'application/json',
         ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
       },
-      body: JSON.stringify({ is_approved: isApproved }),
+      body: JSON.stringify(body),
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
@@ -5122,28 +5124,30 @@
     } catch { /* corrupt localStorage — ignore */ }
   }
 
-  function applyLocalApproval(uploadId, isApproved) {
+  // Optimistically mutate the in-memory + localStorage row so the grid
+  // re-buckets instantly; the next refreshUploads() reconciles with the
+  // server. `patch` carries is_approved / is_hidden / status.
+  function applyLocalUploadState(uploadId, patch) {
     const updated = (allUploads || []).map(u =>
-      String(u.id) === String(uploadId)
-        ? { ...u, is_approved: isApproved, status: isApproved ? 'approved' : 'pending' }
-        : u,
+      String(u.id) === String(uploadId) ? { ...u, ...patch } : u,
     );
-    patchLocalStorageUpload(uploadId, {
-      is_approved: isApproved,
-      status:      isApproved ? 'approved' : 'pending',
-    });
+    patchLocalStorageUpload(uploadId, patch);
     renderStats(updated);
     renderGallery(updated);
   }
+
+  // Patch presets for the three moderation outcomes.
+  const STATE_APPROVED = { is_approved: true,  is_hidden: false, status: 'approved' };
+  const STATE_HIDDEN   = { is_approved: false, is_hidden: true,  status: 'hidden'   };
 
   previewApprove?.addEventListener('click', async () => {
     if (!previewingId) return;
     previewApprove.disabled = true;
     const movedId = previewingId;
     try {
-      await patchApproval(movedId, true);
-      applyLocalApproval(movedId, true);
-      showToast('Video approved · now playing on the wall');
+      await patchModeration(movedId, { is_approved: true });
+      applyLocalUploadState(movedId, STATE_APPROVED);
+      showToast('Approved · now on the wall');
       closePreview();
       refreshUploads();
     } catch (err) {
@@ -5156,12 +5160,14 @@
   previewHide?.addEventListener('click', async () => {
     if (!previewingId) return;
     previewHide.disabled = true;
-    const movedId = previewingId;
+    const movedId  = previewingId;
+    // Same button toggles: "Unhide" on an already-hidden item, "Hide"
+    // otherwise (openPreview sets the label).
+    const isUnhide = previewHide.textContent.trim() === 'Unhide';
     try {
-      // Use the existing approve endpoint with is_approved=false to "hide"
-      await patchApproval(movedId, false);
-      applyLocalApproval(movedId, false);
-      showToast('Video hidden from the wall');
+      await patchModeration(movedId, { is_hidden: !isUnhide });
+      applyLocalUploadState(movedId, isUnhide ? STATE_APPROVED : STATE_HIDDEN);
+      showToast(isUnhide ? 'Unhidden · back on the wall' : 'Hidden from the wall');
       closePreview();
       refreshUploads();
     } catch (err) {
