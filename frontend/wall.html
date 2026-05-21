@@ -602,7 +602,7 @@
        a cooler luminance wash. Both very low opacity so the effect
        is felt, not seen. VisionOS-style: the portrait sits *in* a
        lit space rather than on a flat wall. */
-    body.is-portrait .layer::after {
+    .layer.ori-portrait::after {
       content: '';
       position: absolute;
       left: 50%; top: 46%;
@@ -625,8 +625,8 @@
     /* Layer 3 — contained portrait media: 9:16 box, centered via
        margin auto + inset 0. Stacked shadows give depth; a faint
        top inset catches the warm halo above as edge light. */
-    body.is-portrait .layer .pic,
-    body.is-portrait .layer .vid {
+    .layer.ori-portrait .pic,
+    .layer.ori-portrait .vid {
       inset: 0;
       margin: auto;
       width: auto;
@@ -665,7 +665,7 @@
        whole layer. Numbers are intentionally small: 4px of drift,
        0.6% of scale, 7s cycle. Reads as alive, not animated.
        Ken Burns on .pic composes on top (inline style sets that). */
-    body.is-portrait .layer {
+    .layer.ori-portrait {
       animation: portraitBreathe 7s ease-in-out infinite;
       transform-origin: center center;
       will-change: transform;
@@ -676,7 +676,7 @@
     }
     /* In portrait mode: soft edge fade + subtle corner vignette.
        Outer ring darkens slightly, corners deepen a touch. */
-    body.is-portrait .layer .vignette {
+    .layer.ori-portrait .vignette {
       background:
         radial-gradient(ellipse at center, transparent 48%, rgba(0,0,0,.52) 100%),
         radial-gradient(ellipse 55% 55% at   0%   0%, rgba(0,0,0,.22) 0%, transparent 65%),
@@ -688,17 +688,17 @@
        letterbox gaps even when the source aspect doesn't match 9:16.
        Overrides the JS-driven fitPicByAspect / fitVideoByAspect that
        would otherwise switch to contain for tall/non-landscape media. */
-    body.is-portrait .layer .pic {
+    .layer.ori-portrait .pic {
       background-size: cover !important;
       background-position: center !important;
     }
-    body.is-portrait .layer .vid {
+    .layer.ori-portrait .vid {
       object-fit: cover !important;
     }
     /* Ken Burns on <video> is set inline by JS but only makes sense
        in the contained 9:16 portrait card. Landscape videos fill the
        wall edge-to-edge, so the scale would just crop visibly. */
-    body.is-landscape .layer .vid {
+    .layer.ori-landscape .vid {
       animation: none !important;
     }
 
@@ -1629,7 +1629,7 @@
 <body>
 
 <!-- ════ PHOTO LAYERS ══════════════════════════════════════ -->
-<div class="layer" id="layer-a">
+<div class="layer ori-landscape" id="layer-a">
   <div class="backdrop" id="backdrop-a"></div>
   <div class="backdrop-veil"></div>
   <div class="pic" id="pic-a"></div>
@@ -1670,7 +1670,7 @@
   </div>
   <audio id="aud-a" preload="none"></audio>
 </div>
-<div class="layer out" id="layer-b">
+<div class="layer out ori-landscape" id="layer-b">
   <div class="backdrop" id="backdrop-b"></div>
   <div class="backdrop-veil"></div>
   <div class="pic" id="pic-b"></div>
@@ -2821,24 +2821,34 @@
     });
   }
 
-  function applyOrientationClass(item, activeVidEl) {
+  function applyOrientationClass(item, activeVidEl, layerEl) {
     const token = ++orientationToken;
+    // Tag <body> (drives sidebar / caption layout) AND the specific
+    // incoming .layer (drives the 9:16 portrait card). The per-layer
+    // class is what kills the crossfade flash: a global body class
+    // reshaped BOTH layers at once, so an outgoing landscape photo got
+    // squeezed into the portrait card mid-fade. A per-layer class lets
+    // the outgoing layer hold its shape until it has finished fading.
+    const tag = (isLandscape) => {
+      document.body.classList.toggle('is-landscape', isLandscape);
+      document.body.classList.toggle('is-portrait',  !isLandscape);
+      if (layerEl) {
+        layerEl.classList.toggle('ori-landscape', isLandscape);
+        layerEl.classList.toggle('ori-portrait',  !isLandscape);
+      }
+    };
     const setClass = (w, h) => {
       if (token !== orientationToken) return;
       if (!w || !h) return;
       cacheOrientation(item?.id, w, h);
-      const isLandscape = w > h;
-      document.body.classList.toggle('is-landscape', isLandscape);
-      document.body.classList.toggle('is-portrait',  !isLandscape);
+      tag(w > h);
     };
 
     // Synchronous fast-path: orientation already known (prewarmed or
-    // shown before) → tag <body> NOW, before the crossfade reveals the
+    // shown before) → tag NOW, before the crossfade reveals the
     // incoming layer, so it never renders the wrong slide shape.
     if (item && orientationCache.has(item.id)) {
-      const landscape = orientationCache.get(item.id);
-      document.body.classList.toggle('is-landscape', landscape);
-      document.body.classList.toggle('is-portrait',  !landscape);
+      tag(orientationCache.get(item.id));
     }
 
     // Always seed from the poster/immediate image first so we set *some*
@@ -3184,8 +3194,8 @@
       }
     }
 
-    // Tag <body> with is-landscape / is-portrait for the current slide.
-    applyOrientationClass(item, itemIsVideo ? inVid : null);
+    // Tag <body> + the incoming layer with the slide's orientation.
+    applyOrientationClass(item, itemIsVideo ? inVid : null, inLayer);
 
     // Show the unmute toggle whenever there's audible content possible:
     // a video, paired audio, OR a background-music playlist loaded.
