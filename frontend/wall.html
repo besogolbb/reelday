@@ -1126,7 +1126,7 @@
       width: 100%;
     }
 
-    .poll-overlay .poll-fireworks-side {
+    .poll-overlay .poll-confetti-side {
       position: absolute;
       top: 0;
       bottom: 0;
@@ -1138,9 +1138,9 @@
       transition: opacity .35s ease;
       display: block;
     }
-    .poll-overlay .poll-fireworks-side.left { left: 0; }
-    .poll-overlay .poll-fireworks-side.right { right: 0; }
-    .poll-overlay.results-state .poll-fireworks-side { opacity: .98; }
+    .poll-overlay .poll-confetti-side.left { left: 0; }
+    .poll-overlay .poll-confetti-side.right { right: 0; }
+    .poll-overlay.results-state .poll-confetti-side { opacity: .98; }
 
     .poll-overlay .poll-tag {
       font-family: var(--mono); font-size: clamp(11px, 1vw, 14px);
@@ -1803,8 +1803,8 @@
 
 <!-- ════ LIVE POLL OVERLAY ═══════════════════════════════ -->
 <div class="poll-overlay" id="poll-overlay" aria-live="polite" aria-hidden="true">
-  <canvas class="poll-fireworks-side left" id="poll-fireworks-left" aria-hidden="true"></canvas>
-  <canvas class="poll-fireworks-side right" id="poll-fireworks-right" aria-hidden="true"></canvas>
+  <canvas class="poll-confetti-side left" id="poll-confetti-left" aria-hidden="true"></canvas>
+  <canvas class="poll-confetti-side right" id="poll-confetti-right" aria-hidden="true"></canvas>
   <div class="poll-overlay-content">
     <div class="poll-tag"><span class="ring"></span><span>Live poll</span></div>
     <h1 id="poll-question"></h1>
@@ -3844,8 +3844,8 @@
   // shows a full-screen takeover. Slideshow timers stay paused while
   // the overlay is active so we don't advance behind the scenes.
   const pollOverlay   = document.getElementById('poll-overlay');
-  const pollFireworksLeftCanvas  = document.getElementById('poll-fireworks-left');
-  const pollFireworksRightCanvas = document.getElementById('poll-fireworks-right');
+  const pollConfettiLeftCanvas  = document.getElementById('poll-confetti-left');
+  const pollConfettiRightCanvas = document.getElementById('poll-confetti-right');
   const pollQuestion  = document.getElementById('poll-question');
   const pollBars      = document.getElementById('poll-bars');
   const pollCountdown = document.getElementById('poll-countdown');
@@ -3952,7 +3952,7 @@
     if (pollEndAnimTimer)     { clearTimeout(pollEndAnimTimer);     pollEndAnimTimer = null; }
     if (pollResultsHideTimer) { clearTimeout(pollResultsHideTimer); pollResultsHideTimer = null; }
     pollSlideshowResumeAt = Number.MAX_SAFE_INTEGER;
-    stopPollResultFireworks();
+    stopPollResultConfetti();
 
     pollOverlay.classList.add('visible', 'live-state');
     pollOverlay.classList.remove('ending', 'results-state');
@@ -3982,7 +3982,7 @@
     if (pollCountdownTimer) clearInterval(pollCountdownTimer);
     pollOverlay.classList.remove('live-state');
     pollOverlay.classList.add('results-state');
-    startPollResultFireworks();
+    triggerPollResultConfetti();
     pollFootStat.textContent = 'FINAL RESULTS';
     renderPollBars(poll, { leaderHighlight: true, animate: true });
 
@@ -4023,7 +4023,7 @@
 
   function hidePollOverlay() {
     if (!pollOverlay.classList.contains('visible')) return;
-    stopPollResultFireworks();
+    stopPollResultConfetti();
     pollOverlay.classList.add('ending');
     if (pollEndAnimTimer) clearTimeout(pollEndAnimTimer);
     pollEndAnimTimer = setTimeout(() => {
@@ -4077,7 +4077,7 @@
       if (pollEndAnimTimer)     { clearTimeout(pollEndAnimTimer);     pollEndAnimTimer = null; }
       if (pollResultsHideTimer) { clearTimeout(pollResultsHideTimer); pollResultsHideTimer = null; }
       if (pollCountdownTimer)   { clearInterval(pollCountdownTimer);  pollCountdownTimer = null; }
-      stopPollResultFireworks();
+      stopPollResultConfetti();
       pollOverlay.classList.remove('visible', 'ending', 'live-state', 'results-state');
       pollOverlay.setAttribute('aria-hidden', 'true');
       pollBars.innerHTML = '';
@@ -4257,39 +4257,145 @@
     };
   }
   const fireworksFx = createFireworksFx(fireworksCanvas);
-  const pollFireworksLeftFx = createFireworksFx(pollFireworksLeftCanvas, {
-    launchMinMs: 420,
-    launchJitterMs: 220,
-    countMin: 42,
-    countVariance: 20,
-    speedMin: 2.2,
-    speedVariance: 3.1,
-    sizeMin: 2.2,
-    sizeVariance: 1.6,
-    launchXRange: [0.18, 0.82],
-    launchYRange: [0.14, 0.52],
-  });
-  const pollFireworksRightFx = createFireworksFx(pollFireworksRightCanvas, {
-    launchMinMs: 420,
-    launchJitterMs: 220,
-    countMin: 42,
-    countVariance: 20,
-    speedMin: 2.2,
-    speedVariance: 3.1,
-    sizeMin: 2.2,
-    sizeVariance: 1.6,
-    launchXRange: [0.18, 0.82],
-    launchYRange: [0.14, 0.52],
-  });
   function startFireworks() { fireworksFx.start(); }
   function stopFireworks()  { fireworksFx.stop(); }
-  function startPollResultFireworks() {
-    pollFireworksLeftFx.start();
-    pollFireworksRightFx.start();
+
+  function createConfettiFx(canvas, side, opts = {}) {
+    const ctx = canvas?.getContext?.('2d');
+    if (!canvas || !ctx) {
+      return { pop() {}, stop() {} };
+    }
+    let raf = null;
+    let cssW = 0, cssH = 0;
+    let particles = [];
+    let burstTimer = null;
+    let listening = false;
+    let runToken = 0;
+    const COLORS = opts.colors || ['#f5d089', '#ffb37a', '#ffd2cb', '#ffffff', '#c45a3a', '#a7d7c5'];
+    const inward = side === 'left' ? 1 : -1;
+
+    function resize() {
+      cssW = canvas.offsetWidth;
+      cssH = canvas.offsetHeight;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.max(1, cssW * dpr);
+      canvas.height = Math.max(1, cssH * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function ensureResizeListener() {
+      if (listening) return;
+      window.addEventListener('resize', resize);
+      listening = true;
+    }
+
+    function removeResizeListener() {
+      if (!listening) return;
+      window.removeEventListener('resize', resize);
+      listening = false;
+    }
+
+    function emitBurst(mult = 1) {
+      if (!cssW || !cssH) resize();
+      if (!cssW || !cssH) return;
+      const originX = inward > 0 ? cssW * 0.06 : cssW * 0.94;
+      const originY = cssH * (0.46 + Math.random() * 0.18);
+      const count = Math.round((34 + Math.random() * 20) * mult);
+      for (let i = 0; i < count; i++) {
+        particles.push({
+          x: originX + (Math.random() - 0.5) * 16,
+          y: originY + (Math.random() - 0.5) * 18,
+          vx: inward * (3.2 + Math.random() * 4.8),
+          vy: -(3.8 + Math.random() * 5.2),
+          gravity: 0.11 + Math.random() * 0.03,
+          drag: 0.988,
+          life: 52 + Math.random() * 26,
+          age: 0,
+          color: COLORS[Math.floor(Math.random() * COLORS.length)],
+          w: 6 + Math.random() * 8,
+          h: 8 + Math.random() * 12,
+          rot: Math.random() * Math.PI * 2,
+          spin: (Math.random() * 0.34 + 0.12) * (Math.random() < 0.5 ? -1 : 1),
+        });
+      }
+    }
+
+    function frame() {
+      raf = requestAnimationFrame(frame);
+      if (canvas.offsetWidth !== cssW || canvas.offsetHeight !== cssH) resize();
+      ctx.clearRect(0, 0, cssW, cssH);
+      const next = [];
+      for (const p of particles) {
+        p.age += 1;
+        if (p.age >= p.life) continue;
+        p.vx *= p.drag;
+        p.vy = p.vy * p.drag + p.gravity;
+        p.x += p.vx;
+        p.y += p.vy;
+        p.rot += p.spin;
+        const alpha = Math.max(0, 1 - p.age / p.life);
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+        ctx.restore();
+        if (p.y < cssH + 30 && p.x > -40 && p.x < cssW + 40) next.push(p);
+      }
+      particles = next;
+      if (!particles.length && !burstTimer) {
+        cancelAnimationFrame(raf);
+        raf = null;
+        ctx.clearRect(0, 0, cssW, cssH);
+        removeResizeListener();
+      }
+    }
+
+    return {
+      pop() {
+        this.stop();
+        runToken += 1;
+        const token = runToken;
+        ensureResizeListener();
+        requestAnimationFrame(() => {
+          if (token !== runToken) return;
+          resize();
+          emitBurst(1);
+          burstTimer = setTimeout(() => {
+            if (token !== runToken) return;
+            burstTimer = null;
+            emitBurst(0.8);
+            if (!raf) raf = requestAnimationFrame(frame);
+          }, 220);
+          raf = requestAnimationFrame(frame);
+        });
+      },
+      stop() {
+        runToken += 1;
+        if (burstTimer) {
+          clearTimeout(burstTimer);
+          burstTimer = null;
+        }
+        if (raf) {
+          cancelAnimationFrame(raf);
+          raf = null;
+        }
+        particles = [];
+        if (cssW && cssH) ctx.clearRect(0, 0, cssW, cssH);
+        removeResizeListener();
+      },
+    };
   }
-  function stopPollResultFireworks() {
-    pollFireworksLeftFx.stop();
-    pollFireworksRightFx.stop();
+  const pollConfettiLeftFx  = createConfettiFx(pollConfettiLeftCanvas, 'left');
+  const pollConfettiRightFx = createConfettiFx(pollConfettiRightCanvas, 'right');
+  function triggerPollResultConfetti() {
+    pollConfettiLeftFx.pop();
+    pollConfettiRightFx.pop();
+  }
+  function stopPollResultConfetti() {
+    pollConfettiLeftFx.stop();
+    pollConfettiRightFx.stop();
   }
 
   async function pollPolls() {
@@ -4319,7 +4425,7 @@
           pollFootStat.textContent = 'FINAL RESULTS';
           pollOverlay.classList.remove('live-state');
           pollOverlay.classList.add('results-state');
-          startPollResultFireworks();
+          triggerPollResultConfetti();
           if (pollCountdownTimer) clearInterval(pollCountdownTimer);
           // Hide after a short grace — tracked so a re-run can cancel it.
           if (pollHideTimer) clearTimeout(pollHideTimer);
