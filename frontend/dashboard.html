@@ -752,15 +752,22 @@
     .polls-locked a { color: var(--accent); font-weight: 600; text-decoration: none; }
 
     /* ── Poll/question card — modern, calm, question-led ──
-       The card is a single vertical stack: meta chips → big question →
-       options preview → tight action footer. The question is the
-       visual anchor; everything else is sized down to defer to it.
-       Heavy 3D stacked shadows replaced with one soft float. */
+       The card reads top-to-bottom in DISTINCT zones with real
+       breathing room between them:
+         [ meta chips      ]   <- supporting context, small
+         [ ────hairline──  ]
+         [ QUESTION TEXT   ]   <- the hero (big, generous)
+         [ options preview ]   <- the answers (quieter)
+         [ ────hairline──  ]   <- visible footer divider
+         [ action footer   ]   <- demoted controls
+       Each section is separated by either generous whitespace AND a
+       1px hairline so nothing crowds anything else. Card padding is
+       a bit more luxurious than before. */
     .poll-row {
       background: #fff;
       border: 1px solid rgba(83,48,33,.08);
       border-radius: 16px;
-      padding: 16px 18px 12px;
+      padding: 20px 22px 16px;
       display: flex; flex-direction: column;
       box-shadow: 0 1px 2px rgba(63,35,24,.04), 0 4px 14px rgba(63,35,24,.05);
       transition: border-color .18s ease, box-shadow .18s ease;
@@ -771,11 +778,14 @@
         box-shadow: 0 1px 3px rgba(63,35,24,.06), 0 8px 22px rgba(63,35,24,.08);
       }
     }
-    /* Meta row: status pill + kind + duration. Sized small and quiet
-       so it acts as supporting text, not a competing element. */
+    /* Meta row: status pill + kind + duration. Separated from the
+       question below with a hairline divider so the chips read as a
+       "header" rather than running into the question text. */
     .poll-row .poll-meta-row {
       display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
-      margin-bottom: 10px;
+      padding-bottom: 14px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid rgba(83,48,33,.08);
     }
     .poll-row .poll-status {
       display: inline-flex; align-items: center; gap: 4px;
@@ -808,15 +818,28 @@
     }
     @keyframes pollPulse { 50% { opacity: .35; } }
 
-    /* THE HERO — question text. Big, generous, the obvious focal point. */
+    /* THE HERO — question text. Big, generous, the obvious focal point.
+       Tight margin to the options below (they belong together as one
+       "question + its answers" block). */
     .poll-row .poll-q {
       font-family: var(--display); font-size: 19px; font-weight: 600;
-      color: var(--ink); line-height: 1.3;
-      margin: 0 0 6px;
+      color: var(--ink); line-height: 1.35;
+      margin: 0 0 10px;
     }
+    /* "Answers" preview — read as a labelled list, not body copy. The
+       small uppercase "Answers" label lifts the line out of the
+       question text and visually separates it. */
     .poll-row .poll-opts {
-      font-size: 13px; color: var(--dash-muted); line-height: 1.5;
-      margin-bottom: 12px;
+      font-size: 13.5px; color: var(--ink-soft); line-height: 1.55;
+      margin-bottom: 18px;
+    }
+    .poll-row .poll-opts::before {
+      content: 'Answers';
+      display: block;
+      font-family: var(--mono); font-size: 10px; font-weight: 700;
+      letter-spacing: .12em; text-transform: uppercase;
+      color: var(--dash-muted);
+      margin-bottom: 4px;
     }
     /* Correct-answer marker (trivia drafts/ended). Subtle but unmistakable. */
     .poll-row .poll-opts .opt-correct {
@@ -826,13 +849,15 @@
       content: '✓'; margin-right: 3px; font-weight: 700;
     }
 
-    /* Action footer — tight, demoted, doesn't compete with the question.
-       Aligned end-to-end so the primary action sits at the leading edge
-       and secondary actions trail. */
+    /* Action footer — own visual zone. Hairline divider above plus
+       generous top padding keeps it clearly separated from the
+       answers, so the eye reads "question → answers → controls" as
+       three distinct steps instead of one crowded block. */
     .poll-row .poll-actions {
-      display: flex; gap: 6px; align-items: center;
-      padding-top: 10px;
-      border-top: 1px solid rgba(83,48,33,.06);
+      display: flex; gap: 8px; align-items: center;
+      padding-top: 14px;
+      margin-top: auto;
+      border-top: 1px solid rgba(83,48,33,.10);
     }
     .poll-row .poll-actions button {
       padding: 7px 14px; border-radius: 999px;
@@ -873,12 +898,18 @@
        give the primary action its own row above the secondary ones
        (so an MC's thumb can't slip between buttons mid-live). */
     @media (max-width: 640px) {
-      .poll-row { padding: 14px 14px 10px; }
-      .poll-row .poll-q { font-size: 18px; }
+      .poll-row { padding: 18px 16px 14px; }
+      .poll-row .poll-meta-row {
+        padding-bottom: 12px;
+        margin-bottom: 14px;
+      }
+      .poll-row .poll-q { font-size: 18px; margin-bottom: 8px; }
+      .poll-row .poll-opts { margin-bottom: 16px; }
       .poll-row .poll-actions {
         display: grid;
         grid-template-columns: 1fr auto;
         gap: 6px 8px;
+        padding-top: 14px;
       }
       .poll-row .poll-actions .act-spacer { display: none; }
       .poll-row .poll-actions .btn-run,
