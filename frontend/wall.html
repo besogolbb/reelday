@@ -4775,17 +4775,21 @@
   }
 
   async function refreshUploadsImpl() {
-    let apiUploads = [];
+    let apiUploads = Array.isArray(allUploads) ? allUploads.slice() : [];
+    let gotFreshUploads = false;
     try {
       const res = await fetch(`/api/uploads/${slug}`);
       if (res.ok) {
         const data = await res.json();
         apiUploads = data.uploads || [];
+        gotFreshUploads = true;
         updateGuestBadge(data.guest_count ?? 0);
       }
-    } catch { /* fall through to local-only */ }
+    } catch { /* keep the last known uploads so the wall can degrade gracefully */ }
 
-    const merged = mergeUploads(apiUploads);
+    const merged = gotFreshUploads
+      ? mergeUploads(apiUploads)
+      : (apiUploads.length ? apiUploads : items.slice());
     const previousCurrent = items[currentIdx] || null;
     // Snapshot of statuses BEFORE the deck is reassigned, so we can spot
     // videos that transitioned processing -> ready between polls and
