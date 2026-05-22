@@ -671,6 +671,7 @@ export default async function eventRoutes(fastify) {
       auto_approve,
       video_auto_approve,
       video_message_auto_approve,
+      reactions_enabled,
       music_playlist_id, music_enabled,
     } = request.body ?? {};
 
@@ -700,9 +701,10 @@ export default async function eventRoutes(fastify) {
            auto_approve               = COALESCE($9,  auto_approve),
            video_auto_approve         = COALESCE($10, video_auto_approve),
            video_message_auto_approve = COALESCE($11, video_message_auto_approve),
-           music_playlist_id          = CASE WHEN $13::boolean THEN $14::uuid ELSE music_playlist_id END,
-           music_enabled              = COALESCE($15, music_enabled)
-       WHERE slug = $1 AND user_id = $12
+           reactions_enabled          = COALESCE($12, reactions_enabled),
+           music_playlist_id          = CASE WHEN $14::boolean THEN $15::uuid ELSE music_playlist_id END,
+           music_enabled              = COALESCE($16, music_enabled)
+       WHERE slug = $1 AND user_id = $13
        RETURNING *`,
       [
         slug,
@@ -716,9 +718,10 @@ export default async function eventRoutes(fastify) {
         typeof auto_approve               === 'boolean' ? auto_approve               : null,
         typeof video_auto_approve         === 'boolean' ? video_auto_approve         : null,
         typeof video_message_auto_approve === 'boolean' ? video_message_auto_approve : null,
+        typeof reactions_enabled === 'boolean' ? reactions_enabled : null,
         request.user.id,
-        musicPlaylistArg !== undefined,        // $13 — was a value (incl. null) provided?
-        musicPlaylistArg ?? null,              // $14 — the value to set (or NULL to clear)
+        musicPlaylistArg !== undefined,        // $14 — was a value (incl. null) provided?
+        musicPlaylistArg ?? null,              // $15 — the value to set (or NULL to clear)
         typeof music_enabled === 'boolean' ? music_enabled : null,
       ],
     );

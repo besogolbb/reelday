@@ -40,6 +40,7 @@ const MIGRATIONS = `
   ALTER TABLE events ADD COLUMN IF NOT EXISTS auto_approve               BOOLEAN DEFAULT true;
   ALTER TABLE events ADD COLUMN IF NOT EXISTS video_auto_approve         BOOLEAN DEFAULT false;
   ALTER TABLE events ADD COLUMN IF NOT EXISTS video_message_auto_approve BOOLEAN DEFAULT false;
+  ALTER TABLE events ADD COLUMN IF NOT EXISTS reactions_enabled          BOOLEAN DEFAULT true;
 
   -- "Play video messages now" burst: dashboard increments burst_id and
   -- stores an ordered list of upload IDs. The wall polls these fields,

@@ -72,7 +72,9 @@ export default async function reactionsRoutes(fastify) {
         reply.status(403).send({
           error: true,
           code: 'reactions_locked',
-          message: 'Reactions need a Sinag plan or higher.',
+          message: hit.event?.reactions_enabled === false
+            ? 'Wall reactions are turned off for this event.'
+            : 'Reactions need a Sinag plan or higher.',
         });
         return null;
       }
@@ -80,7 +82,7 @@ export default async function reactionsRoutes(fastify) {
     }
 
     const { rows } = await fastify.db.query(
-      `SELECT e.id, e.is_active, e.user_id, e.plan, u.subscription_tier
+      `SELECT e.id, e.is_active, e.user_id, e.plan, e.reactions_enabled, u.subscription_tier
          FROM events e
          LEFT JOIN users u ON u.id = e.user_id
         WHERE e.slug = $1`,
@@ -95,13 +97,15 @@ export default async function reactionsRoutes(fastify) {
     // Per-event tier: events.plan is the source of truth (locked at
     // create/upgrade). subscription_tier kept as legacy fallback.
     const plan  = resolvePlan(event.plan || event.subscription_tier || 'tala');
-    const allowed = !!plan.features?.reactions;
+    const allowed = !!plan.features?.reactions && event.reactions_enabled !== false;
     eventCache.set(slug, { expires: now + EVENT_CACHE_TTL_MS, event, allowed });
     if (!allowed) {
       reply.status(403).send({
         error: true,
         code: 'reactions_locked',
-        message: 'Reactions need a Sinag plan or higher.',
+        message: event.reactions_enabled === false
+          ? 'Wall reactions are turned off for this event.'
+          : 'Reactions need a Sinag plan or higher.',
       });
       return null;
     }
@@ -196,6 +200,9 @@ export default async function reactionsRoutes(fastify) {
         if (!cachedEv.event) {
           return reply.status(404).send({ error: true, message: 'Event not found' });
         }
+        if (!cachedEv.allowed) {
+          return reply.send({ reactions: [], server_time: new Date().toISOString(), sde_play: null });
+        }
         event = cachedEv.event;
       } else {
         // Load full event fields (not just id) so the cached row has
@@ -203,6 +210,7 @@ export default async function reactionsRoutes(fastify) {
         // check need. Cache miss penalty is one tiny JOIN.
         const { rows: evRows } = await fastify.db.query(
           `SELECT e.id, e.plan, e.user_id, e.is_active, e.upload_window_ends_at,
+                  e.reactions_enabled,
                   u.subscription_tier
              FROM events e
              LEFT JOIN users u ON u.id = e.user_id
@@ -218,8 +226,11 @@ export default async function reactionsRoutes(fastify) {
         eventCache.set(slug, {
           expires: Date.now() + EVENT_CACHE_TTL_MS,
           event,
-          allowed: !!plan.features?.reactions,
+          allowed: !!plan.features?.reactions && event.reactions_enabled !== false,
         });
+        if (!plan.features?.reactions || event.reactions_enabled === false) {
+          return reply.send({ reactions: [], server_time: new Date().toISOString(), sde_play: null });
+        }
       }
       const eventId = event.id;
 

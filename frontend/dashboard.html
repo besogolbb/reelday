@@ -3527,6 +3527,13 @@
           <span class="st-hint">3-step guest video greetings skip review when on.</span>
         </span>
       </label>
+      <label class="settings-toggle">
+        <input type="checkbox" id="set-wall-reactions" />
+        <span class="st-body">
+          <span class="st-title">Enable wall reactions</span>
+          <span class="st-hint">On: guests can send emoji that float live on the wall. Off: the reaction panel stays unavailable for this event.</span>
+        </span>
+      </label>
     </div>
 
     <div class="settings-actions">
@@ -5824,6 +5831,7 @@
     document.getElementById('set-auto-photo').checked = ev.auto_approve !== false;
     document.getElementById('set-auto-video').checked = ev.video_auto_approve !== false;
     document.getElementById('set-auto-vmsg').checked  = ev.video_message_auto_approve !== false;
+    document.getElementById('set-wall-reactions').checked = ev.reactions_enabled !== false;
 
     // Date-change request block — show the current date + where the
     // reply lands so the host knows what they're asking to move.
@@ -5877,6 +5885,7 @@
         auto_approve:               document.getElementById('set-auto-photo').checked,
         video_auto_approve:         document.getElementById('set-auto-video').checked,
         video_message_auto_approve: document.getElementById('set-auto-vmsg').checked,
+        reactions_enabled:          document.getElementById('set-wall-reactions').checked,
       };
 
       const res = await fetch(`/api/events/${slug}`, {

@@ -5122,6 +5122,9 @@
         if (ej.plan_info) {
           planTierId   = ej.plan_info.id || null;
           planFeatures = ej.plan_info.features || planFeatures;
+          if (apiEvent?.reactions_enabled === false) {
+            planFeatures = { ...planFeatures, reactions: false };
+          }
           if (planTierId) document.body.dataset.tier = planTierId;
         }
       }

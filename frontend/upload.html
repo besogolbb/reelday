@@ -1426,8 +1426,8 @@ body { background: var(--paper); min-height: 100dvh; }
       <div class="react-name-hint" id="reactNameHint">Type your name to start reacting</div>
 
       <div class="react-locked" id="reactLocked" style="display:none;">
-        <b>Reactions are a Sinag-tier feature</b>
-        Ask the host to upgrade and you'll be able to send wall reactions live.
+        <b>Wall reactions are unavailable right now.</b>
+        The host may have turned them off for this event, or this plan does not include live reactions.
       </div>
     </div>
   </div>
@@ -1575,7 +1575,7 @@ body { background: var(--paper); min-height: 100dvh; }
     // aren't included we mark the grid locked and refreshReactGate()
     // will swap the buttons for the upgrade hint.
     const grid = document.getElementById('reactGrid');
-    const reactionsAllowed = !!event.plan?.features?.reactions;
+    const reactionsAllowed = !!event.plan?.features?.reactions && event.reactions_enabled !== false;
     if (grid) grid.dataset.locked = reactionsAllowed ? 'false' : 'true';
 
     // Plan-gate the capture UI so guests never do the work then hit a
