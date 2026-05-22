@@ -314,74 +314,80 @@ export default async function pollRoutes(fastify) {
     // response_seconds = voted_at - run_started_at — this is why the
     // archive captures the *previous* started_at, not whatever's in
     // polls.started_at right now (which would be the *next* run's).
+    // The previous query only surfaced CORRECT answers, which meant a
+    // question where every guest got it wrong displayed "No correct
+    // answer yet" with no participants visible. From the host's view
+    // it looked like "the leaderboard isn't reflecting my poll" —
+    // because their wrong-answer guests vanished. We now also return
+    // an `attempts` array per question listing everyone who voted
+    // (right or wrong) so the recap reflects ALL participation.
     const { rows } = await fastify.db.query(
-      `WITH all_correct AS (
+      `WITH all_votes AS (
          -- Historical runs (archived on /start)
          SELECT h.poll_id,
                 h.guest_name,
+                h.option_key,
+                h.was_correct,
                 EXTRACT(EPOCH FROM (h.voted_at - h.run_started_at))::numeric AS resp_s
            FROM poll_vote_history h
           WHERE h.event_id   = $1
-            AND h.was_correct
             AND h.guest_name IS NOT NULL
             AND h.guest_name <> ''
          UNION ALL
          -- Current poll_votes (live + just-ended runs not yet archived)
          SELECT pv.poll_id,
                 pv.guest_name,
-                EXTRACT(EPOCH FROM (pv.created_at - p.started_at))::numeric AS resp_s
+                pv.option_key,
+                (p.correct_key IS NOT NULL AND pv.option_key = p.correct_key) AS was_correct,
+                EXTRACT(EPOCH FROM (pv.created_at - p.started_at))::numeric   AS resp_s
            FROM poll_votes pv
            JOIN polls      p ON p.id = pv.poll_id
           WHERE p.event_id   = $1
             AND p.kind       = 'question'
             AND p.correct_key IS NOT NULL
-            AND pv.option_key = p.correct_key
             AND pv.guest_name IS NOT NULL
             AND pv.guest_name <> ''
             AND p.started_at IS NOT NULL
        ),
-       ranked AS (
+       -- Best correct vote per (poll, guest) — feeds winner + runners_up
+       ranked_correct AS (
          SELECT poll_id, guest_name,
                 ROUND(MIN(resp_s)::numeric, 1) AS best_seconds,
                 ROW_NUMBER() OVER (
                   PARTITION BY poll_id
                   ORDER BY MIN(resp_s) ASC
                 ) AS rk
-           FROM all_correct
+           FROM all_votes
+          WHERE was_correct
           GROUP BY poll_id, guest_name
        ),
-       answered_counts AS (
-         -- How many guests answered this question at all (any run, any answer)
-         SELECT poll_id, COUNT(DISTINCT guest_name)::int AS answered_count
-           FROM (
-             SELECT h.poll_id, h.guest_name
-               FROM poll_vote_history h
-              WHERE h.event_id = $1 AND h.guest_name IS NOT NULL AND h.guest_name <> ''
-             UNION
-             SELECT pv.poll_id, pv.guest_name
-               FROM poll_votes pv
-               JOIN polls p ON p.id = pv.poll_id
-              WHERE p.event_id = $1 AND p.kind = 'question'
-                AND pv.guest_name IS NOT NULL AND pv.guest_name <> ''
-           ) u
-          GROUP BY poll_id
+       -- One row per (poll, guest), regardless of correctness. DISTINCT
+       -- ON keeps a single representative per guest — we prefer their
+       -- fastest correct attempt; failing that, their fastest incorrect
+       -- one. So a guest who eventually got it right shows as correct.
+       guest_attempts AS (
+         SELECT DISTINCT ON (poll_id, guest_name)
+                poll_id, guest_name, option_key, was_correct,
+                ROUND(resp_s::numeric, 1) AS resp_s
+           FROM all_votes
+          ORDER BY poll_id, guest_name, was_correct DESC, resp_s ASC
        )
        SELECT p.id            AS poll_id,
               p.question,
               p.options,
               p.correct_key,
               p.status,
-              COALESCE(ac.answered_count, 0) AS answered_count,
-              -- Winner: rk=1
+              (SELECT COUNT(*)::int FROM guest_attempts ga WHERE ga.poll_id = p.id) AS answered_count,
+              -- Winner: rk=1 in ranked_correct
               (
                 SELECT jsonb_build_object(
                          'guest_name',       r.guest_name,
                          'response_seconds', r.best_seconds
                        )
-                  FROM ranked r
+                  FROM ranked_correct r
                  WHERE r.poll_id = p.id AND r.rk = 1
               ) AS winner,
-              -- Up to 3 runners-up so the host can still see who else got it
+              -- Runners-up: rk 2-4
               COALESCE((
                 SELECT jsonb_agg(
                          jsonb_build_object(
@@ -390,11 +396,25 @@ export default async function pollRoutes(fastify) {
                            'rank',             r.rk
                          ) ORDER BY r.rk
                        )
-                  FROM ranked r
+                  FROM ranked_correct r
                  WHERE r.poll_id = p.id AND r.rk BETWEEN 2 AND 4
-              ), '[]'::jsonb) AS runners_up
+              ), '[]'::jsonb) AS runners_up,
+              -- Every guest who voted, correct or not. The frontend
+              -- renders these as a "Who answered" list with ✓/✗ marks
+              -- so an all-wrong poll still visibly reflects participation.
+              COALESCE((
+                SELECT jsonb_agg(
+                         jsonb_build_object(
+                           'guest_name',       ga.guest_name,
+                           'option_key',       ga.option_key,
+                           'response_seconds', ga.resp_s,
+                           'was_correct',      ga.was_correct
+                         ) ORDER BY ga.was_correct DESC, ga.resp_s ASC
+                       )
+                  FROM guest_attempts ga
+                 WHERE ga.poll_id = p.id
+              ), '[]'::jsonb) AS attempts
          FROM polls p
-    LEFT JOIN answered_counts ac ON ac.poll_id = p.id
         WHERE p.event_id    = $1
           AND p.kind        = 'question'
           AND p.correct_key IS NOT NULL

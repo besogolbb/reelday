@@ -760,27 +760,54 @@
       color: var(--dash-muted); margin-top: 2px;
     }
 
-    /* Runners-up list — tight, low-weight */
-    .lb-runners {
+    /* "Who answered" list — every guest who voted on this question,
+       correct or not. Surfaces participation the host previously
+       couldn't see when nobody picked the right answer. */
+    .lb-attempts { margin-top: 2px; }
+    .lb-attempts-label {
+      font-family: var(--mono); font-size: 10px; font-weight: 700;
+      letter-spacing: .12em; text-transform: uppercase;
+      color: var(--dash-muted);
+      margin-bottom: 6px;
+    }
+    .lb-attempts-list {
       list-style: none; margin: 0; padding: 0;
       display: flex; flex-direction: column; gap: 4px;
     }
-    .lb-runner {
-      display: grid; grid-template-columns: auto 1fr auto;
+    .lb-attempt {
+      display: grid; grid-template-columns: 22px 1fr auto;
       gap: 10px; align-items: center;
-      padding: 6px 12px; border-radius: 10px;
-      font-size: 13px; color: var(--ink-soft);
+      padding: 7px 12px; border-radius: 10px;
+      font-size: 13px; color: var(--ink);
+      transition: background .12s;
     }
-    .lb-runner:hover { background: var(--paper-2); }
-    .lb-runner-rank {
-      font-family: var(--mono); font-size: 10px; font-weight: 700;
-      letter-spacing: .1em; color: var(--dash-muted);
+    .lb-attempt:hover { background: var(--paper-2); }
+    .lb-attempt-mark {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 22px; height: 22px; border-radius: 50%;
+      font-size: 12px; font-weight: 700;
     }
-    .lb-runner-name { color: var(--ink); }
-    .lb-runner-time {
+    .lb-attempt-correct .lb-attempt-mark {
+      background: linear-gradient(135deg, rgba(56,142,60,.20), rgba(56,142,60,.10));
+      color: #2e7d32;
+      border: 1px solid rgba(56,142,60,.25);
+    }
+    .lb-attempt-wrong .lb-attempt-mark {
+      background: linear-gradient(135deg, rgba(176,48,34,.16), rgba(176,48,34,.08));
+      color: #b03022;
+      border: 1px solid rgba(176,48,34,.22);
+    }
+    .lb-attempt-name { color: var(--ink); }
+    .lb-attempt-wrong .lb-attempt-name { color: var(--ink-soft); }
+    .lb-attempt-time {
       font-family: var(--mono); font-size: 12px; font-weight: 700;
-      color: var(--dash-muted);
+      color: #1f5e3b;
     }
+    .lb-attempt-pick {
+      font-size: 12px; font-style: italic; color: var(--dash-muted);
+      max-width: 50%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .lb-attempt-pick::before { content: 'picked '; font-style: normal; opacity: .7; }
     .polls-locked { padding: 16px; border-radius: 10px; background: rgba(196,90,58,.08); color: var(--ink-soft); font-size: 13px; text-align: center; border: 1px dashed rgba(196,90,58,.3); }
     .polls-locked a { color: var(--accent); font-weight: 600; text-decoration: none; }
 
@@ -5008,10 +5035,13 @@
     const body = questions.map((q, i) => {
       const num = i + 1;
       const winner = q.winner;
-      const runners = Array.isArray(q.runners_up) ? q.runners_up : [];
-      // Find the correct option label for context (host-facing recap).
-      const correctOption = (q.options || []).find(o => o.key === q.correct_key);
-      const correctLabel = correctOption ? correctOption.label : '';
+      // Every guest who answered (correct or wrong) — surfaced so the
+      // leaderboard "reflects" any participation, not just the winners.
+      const attempts = Array.isArray(q.attempts) ? q.attempts : [];
+      // Map option keys → labels so we can show what each guest picked
+      // when they got it wrong (host-facing detail).
+      const optionByKey = Object.fromEntries((q.options || []).map(o => [o.key, o.label]));
+      const correctLabel = optionByKey[q.correct_key] || '';
 
       const winnerBlock = winner ? `
         <div class="lb-winner">
@@ -5030,16 +5060,29 @@
           </div>
         </div>
       `;
-      const runnersBlock = runners.length ? `
-        <ul class="lb-runners">
-          ${runners.map(r => `
-            <li class="lb-runner">
-              <span class="lb-runner-rank">#${r.rank}</span>
-              <span class="lb-runner-name">${escapeHtml(r.guest_name || 'Anonymous')}</span>
-              <span class="lb-runner-time">${r.response_seconds}s</span>
-            </li>
-          `).join('')}
-        </ul>` : '';
+
+      // "Who answered" list — one row per guest, ✓ for correct (with
+      // their time) and ✗ for incorrect (with what they picked). This
+      // is the bit that fixes "the leaderboard didn't reflect my poll"
+      // — every vote is now visibly accounted for, not just the
+      // correct ones.
+      const attemptsBlock = attempts.length ? `
+        <div class="lb-attempts">
+          <div class="lb-attempts-label">Who answered</div>
+          <ul class="lb-attempts-list">
+            ${attempts.map(a => {
+              const pickLabel = optionByKey[a.option_key] || a.option_key || '';
+              return `
+                <li class="lb-attempt ${a.was_correct ? 'lb-attempt-correct' : 'lb-attempt-wrong'}">
+                  <span class="lb-attempt-mark" aria-hidden="true">${a.was_correct ? '✓' : '✗'}</span>
+                  <span class="lb-attempt-name">${escapeHtml(a.guest_name || 'Anonymous')}</span>
+                  ${a.was_correct
+                    ? `<span class="lb-attempt-time">${a.response_seconds}s</span>`
+                    : `<span class="lb-attempt-pick">${escapeHtml(pickLabel)}</span>`}
+                </li>`;
+            }).join('')}
+          </ul>
+        </div>` : '';
 
       return `
         <div class="lb-q-card ${winner ? 'lb-q-won' : ''}">
@@ -5049,7 +5092,7 @@
           </div>
           ${correctLabel ? `<div class="lb-q-correct"><span aria-hidden="true">✓</span> ${escapeHtml(correctLabel)}</div>` : ''}
           ${winnerBlock}
-          ${runnersBlock}
+          ${attemptsBlock}
         </div>`;
     }).join('');
     pollsLeaderboard.innerHTML = head + body;
