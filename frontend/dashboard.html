@@ -1161,37 +1161,107 @@
     .poll-row .poll-q {
       font-family: var(--display); font-size: 19px; font-weight: 600;
       color: var(--ink); line-height: 1.35;
-      margin: 0 0 10px;
+      margin: 0;
     }
-    .poll-row .poll-helper {
-      display: inline-flex; align-items: center; gap: 6px;
-      margin: -2px 0 10px;
-      font-family: var(--mono); font-size: 10px; font-weight: 700;
-      letter-spacing: .08em; text-transform: uppercase;
+    .poll-row .poll-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+    .poll-row .poll-panel {
+      position: relative;
+      padding: 12px 13px;
+      border-radius: 14px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,250,243,.98));
+      border: 1px solid rgba(83,48,33,.08);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.86),
+        0 5px 14px rgba(63,35,24,.05);
+    }
+    .poll-row .poll-panel.question {
+      padding: 14px 14px 13px;
+      background:
+        radial-gradient(130% 130% at 0% 0%, rgba(245,200,97,.18), transparent 58%),
+        linear-gradient(180deg, rgba(255,255,255,.96), rgba(255,249,240,.98));
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.9),
+        0 8px 18px rgba(196,90,58,.08);
+      transform: translateZ(0);
+    }
+    .poll-row .poll-panel.note {
+      background:
+        linear-gradient(180deg, rgba(250,247,242,.98), rgba(244,238,231,.98));
+    }
+    .poll-row .poll-panel.choices {
+      padding-bottom: 10px;
+    }
+    .poll-row .poll-panel-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 8px;
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
       color: var(--dash-muted);
     }
-    .poll-row .poll-helper strong {
+    .poll-row .poll-panel.question .poll-panel-label {
       color: var(--accent-deep);
+    }
+    .poll-row .poll-helper {
+      display: block;
+      margin: 0;
+      font-size: 12.5px;
+      line-height: 1.5;
+      color: var(--ink-soft);
+    }
+    .poll-row .poll-helper strong {
+      display: inline-block;
+      margin-right: 6px;
+      font-family: var(--mono);
+      font-size: 10px;
       font-weight: 800;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--accent-deep);
     }
     /* "Answers" preview — read as a labelled list, not body copy. The
        small uppercase "Answers" label lifts the line out of the
        question text and visually separates it. */
     .poll-row .poll-opts {
-      font-size: 13.5px; color: var(--ink-soft); line-height: 1.55;
-      margin-bottom: 18px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 0;
     }
-    .poll-row .poll-opts::before {
-      content: 'Answers';
-      display: block;
-      font-family: var(--mono); font-size: 10px; font-weight: 700;
-      letter-spacing: .12em; text-transform: uppercase;
-      color: var(--dash-muted);
-      margin-bottom: 4px;
+    .poll-row .poll-choice {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.92);
+      border: 1px solid rgba(83,48,33,.10);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.86),
+        0 2px 7px rgba(63,35,24,.05);
+      font-size: 13px;
+      line-height: 1.3;
+      color: var(--ink-soft);
     }
     /* Correct-answer marker (trivia drafts/ended). Subtle but unmistakable. */
     .poll-row .poll-opts .opt-correct {
-      color: #1f5e3b; font-weight: 600;
+      color: #1f5e3b; font-weight: 700;
+      background:
+        linear-gradient(180deg, rgba(223,244,231,.96), rgba(241,251,245,.98));
+      border-color: rgba(45,122,74,.18);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.86),
+        0 4px 10px rgba(45,122,74,.10);
     }
     .poll-row .poll-opts .opt-correct::before {
       content: '✓'; margin-right: 3px; font-weight: 700;
@@ -1299,8 +1369,30 @@
         padding-bottom: 12px;
         margin-bottom: 14px;
       }
-      .poll-row .poll-q { font-size: 18px; margin-bottom: 8px; }
-      .poll-row .poll-opts { margin-bottom: 16px; }
+      .poll-row .poll-stack {
+        gap: 9px;
+        margin-bottom: 16px;
+      }
+      .poll-row .poll-panel {
+        padding: 11px 12px;
+        border-radius: 15px;
+      }
+      .poll-row .poll-panel.question {
+        padding: 13px 12px 12px;
+      }
+      .poll-row .poll-q {
+        font-size: 20px;
+        line-height: 1.28;
+      }
+      .poll-row .poll-helper {
+        font-size: 12px;
+        line-height: 1.45;
+      }
+      .poll-row .poll-choice {
+        min-height: 36px;
+        padding: 8px 12px;
+        font-size: 13px;
+      }
       .poll-row .poll-actions {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -1321,6 +1413,9 @@
         padding: 9px 12px;
       }
       .polls-tab { padding: 12px 14px; font-size: 11px; }
+      .poll-row .poll-panel-label {
+        margin-bottom: 7px;
+      }
       .lb-summary-row,
       .lb-run,
       .lb-summary-head,
@@ -5159,9 +5254,9 @@
       const optsLabel = (p.options || []).map(o => {
         const safe = escapeHtml(o.label);
         return (showCorrect && o.key === p.correct_key)
-          ? `<span class="opt-correct">${safe}</span>`
-          : safe;
-      }).join(' · ');
+          ? `<span class="poll-choice opt-correct">${safe}</span>`
+          : `<span class="poll-choice">${safe}</span>`;
+      }).join('');
 
       // Primary actions get a glyph prefix so the MC can scan at a glance —
       // ▶ = go on the wall, ■ = stop now. Stop is the high-stakes button so
@@ -5198,9 +5293,20 @@
             ${kindBadge}
             ${durationChip}
           </div>
-          <div class="poll-q">${escapeHtml(p.question)}</div>
-          <div class="poll-helper"><strong>${isLive ? 'Live' : isDraft ? 'Next' : 'Replay'}</strong> · ${escapeHtml(helperLine)}</div>
-          <div class="poll-opts">${optsLabel}</div>
+          <div class="poll-stack">
+            <div class="poll-panel question">
+              <div class="poll-panel-label">Question</div>
+              <div class="poll-q">${escapeHtml(p.question)}</div>
+            </div>
+            <div class="poll-panel note">
+              <div class="poll-panel-label">MC note</div>
+              <div class="poll-helper"><strong>${isLive ? 'Live' : isDraft ? 'Next' : 'Replay'}</strong> ${escapeHtml(helperLine)}</div>
+            </div>
+            <div class="poll-panel choices">
+              <div class="poll-panel-label">Choices</div>
+              <div class="poll-opts">${optsLabel}</div>
+            </div>
+          </div>
           <div class="poll-actions">${actions}</div>
         </div>`;
     }).join('');
