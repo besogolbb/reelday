@@ -1107,12 +1107,40 @@
       flex-direction: column; align-items: center; justify-content: center;
       padding: 6vh 6vw;
       color: #fff;
+      overflow: hidden;
+      isolation: isolate;
       animation: pollIn .55s cubic-bezier(.2,.8,.2,1);
     }
     .poll-overlay.visible { display: flex; }
     .poll-overlay.ending  { animation: pollOut .5s ease both; }
     @keyframes pollIn  { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: scale(1); } }
     @keyframes pollOut { to   { opacity: 0; transform: scale(1.04); } }
+
+    .poll-overlay .poll-overlay-content {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+    }
+
+    .poll-overlay .poll-fireworks-side {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: clamp(140px, 19vw, 340px);
+      height: 100%;
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity .35s ease;
+      display: block;
+    }
+    .poll-overlay .poll-fireworks-side.left { left: 0; }
+    .poll-overlay .poll-fireworks-side.right { right: 0; }
+    .poll-overlay.results-state .poll-fireworks-side { opacity: .98; }
 
     .poll-overlay .poll-tag {
       font-family: var(--mono); font-size: clamp(11px, 1vw, 14px);
@@ -1775,12 +1803,16 @@
 
 <!-- ════ LIVE POLL OVERLAY ═══════════════════════════════ -->
 <div class="poll-overlay" id="poll-overlay" aria-live="polite" aria-hidden="true">
-  <div class="poll-tag"><span class="ring"></span><span>Live poll</span></div>
-  <h1 id="poll-question"></h1>
-  <div class="poll-bars" id="poll-bars"></div>
-  <div class="poll-fastest" id="poll-fastest" style="display:none;"></div>
-  <div class="poll-foot">
-    <span id="poll-foot-status">VOTING ENDS IN <span class="poll-countdown" id="poll-countdown">30s</span></span>
+  <canvas class="poll-fireworks-side left" id="poll-fireworks-left" aria-hidden="true"></canvas>
+  <canvas class="poll-fireworks-side right" id="poll-fireworks-right" aria-hidden="true"></canvas>
+  <div class="poll-overlay-content">
+    <div class="poll-tag"><span class="ring"></span><span>Live poll</span></div>
+    <h1 id="poll-question"></h1>
+    <div class="poll-bars" id="poll-bars"></div>
+    <div class="poll-fastest" id="poll-fastest" style="display:none;"></div>
+    <div class="poll-foot">
+      <span id="poll-foot-status">VOTING ENDS IN <span class="poll-countdown" id="poll-countdown">30s</span></span>
+    </div>
   </div>
 </div>
 
@@ -3812,6 +3844,8 @@
   // shows a full-screen takeover. Slideshow timers stay paused while
   // the overlay is active so we don't advance behind the scenes.
   const pollOverlay   = document.getElementById('poll-overlay');
+  const pollFireworksLeftCanvas  = document.getElementById('poll-fireworks-left');
+  const pollFireworksRightCanvas = document.getElementById('poll-fireworks-right');
   const pollQuestion  = document.getElementById('poll-question');
   const pollBars      = document.getElementById('poll-bars');
   const pollCountdown = document.getElementById('poll-countdown');
@@ -3918,6 +3952,7 @@
     if (pollEndAnimTimer)     { clearTimeout(pollEndAnimTimer);     pollEndAnimTimer = null; }
     if (pollResultsHideTimer) { clearTimeout(pollResultsHideTimer); pollResultsHideTimer = null; }
     pollSlideshowResumeAt = Number.MAX_SAFE_INTEGER;
+    stopPollResultFireworks();
 
     pollOverlay.classList.add('visible', 'live-state');
     pollOverlay.classList.remove('ending', 'results-state');
@@ -3947,6 +3982,7 @@
     if (pollCountdownTimer) clearInterval(pollCountdownTimer);
     pollOverlay.classList.remove('live-state');
     pollOverlay.classList.add('results-state');
+    startPollResultFireworks();
     pollFootStat.textContent = 'FINAL RESULTS';
     renderPollBars(poll, { leaderHighlight: true, animate: true });
 
@@ -3987,6 +4023,7 @@
 
   function hidePollOverlay() {
     if (!pollOverlay.classList.contains('visible')) return;
+    stopPollResultFireworks();
     pollOverlay.classList.add('ending');
     if (pollEndAnimTimer) clearTimeout(pollEndAnimTimer);
     pollEndAnimTimer = setTimeout(() => {
@@ -4040,6 +4077,7 @@
       if (pollEndAnimTimer)     { clearTimeout(pollEndAnimTimer);     pollEndAnimTimer = null; }
       if (pollResultsHideTimer) { clearTimeout(pollResultsHideTimer); pollResultsHideTimer = null; }
       if (pollCountdownTimer)   { clearInterval(pollCountdownTimer);  pollCountdownTimer = null; }
+      stopPollResultFireworks();
       pollOverlay.classList.remove('visible', 'ending', 'live-state', 'results-state');
       pollOverlay.setAttribute('aria-hidden', 'true');
       pollBars.innerHTML = '';
@@ -4095,41 +4133,58 @@
   // Lightweight particle system — each launch is a rocket that bursts
   // into ~60 sparks with gravity + drag. Tuned to feel celebratory but
   // not seizure-inducing on a 1080p wall.
-  const fireworksFx = (() => {
-    const ctx = fireworksCanvas.getContext('2d');
+  function createFireworksFx(canvas, opts = {}) {
+    const ctx = canvas?.getContext?.('2d');
+    if (!canvas || !ctx) {
+      return { start() {}, stop() {} };
+    }
     let raf = null;
     let lastLaunch = 0;
     let particles = [];
     let cssW = 0, cssH = 0;     // last-known CSS dimensions, set by resize()
     const PALETTE = ['#f5d089', '#ffb37a', '#ffd2cb', '#fff', '#c45a3a', '#a7d7c5'];
+    const launchMinMs = opts.launchMinMs ?? 350;
+    const launchJitterMs = opts.launchJitterMs ?? 250;
+    const gravity = opts.gravity ?? 0.05;
+    const drag = opts.drag ?? 0.985;
+    const countMin = opts.countMin ?? 60;
+    const countVariance = opts.countVariance ?? 30;
+    const speedMin = opts.speedMin ?? 2.5;
+    const speedVariance = opts.speedVariance ?? 4;
+    const sizeMin = opts.sizeMin ?? 2.4;
+    const sizeVariance = opts.sizeVariance ?? 2.2;
+    const lifeMin = opts.lifeMin ?? 70;
+    const lifeVariance = opts.lifeVariance ?? 45;
+    const launchXRange = opts.launchXRange || [0.10, 0.90];
+    const launchYRange = opts.launchYRange || [0.10, 0.55];
 
     function resize() {
-      cssW = fireworksCanvas.offsetWidth;
-      cssH = fireworksCanvas.offsetHeight;
+      cssW = canvas.offsetWidth;
+      cssH = canvas.offsetHeight;
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      fireworksCanvas.width  = Math.max(1, cssW * dpr);
-      fireworksCanvas.height = Math.max(1, cssH * dpr);
+      canvas.width  = Math.max(1, cssW * dpr);
+      canvas.height = Math.max(1, cssH * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
 
     function launch() {
       // Bail if dimensions are still 0 (canvas not yet laid out).
       if (!cssW || !cssH) return;
-      const cx = cssW * (0.10 + Math.random() * 0.80);
-      const cy = cssH * (0.10 + Math.random() * 0.45);
+      const cx = cssW * (launchXRange[0] + Math.random() * Math.max(0.01, launchXRange[1] - launchXRange[0]));
+      const cy = cssH * (launchYRange[0] + Math.random() * Math.max(0.01, launchYRange[1] - launchYRange[0]));
       const color = PALETTE[Math.floor(Math.random() * PALETTE.length)];
-      const count = 60 + Math.floor(Math.random() * 30);
+      const count = countMin + Math.floor(Math.random() * countVariance);
       for (let i = 0; i < count; i++) {
         const angle = (Math.PI * 2 * i) / count + Math.random() * 0.2;
-        const speed = 2.5 + Math.random() * 4;
+        const speed = speedMin + Math.random() * speedVariance;
         particles.push({
           x: cx, y: cy,
           vx: Math.cos(angle) * speed,
           vy: Math.sin(angle) * speed,
-          life: 70 + Math.random() * 45,
+          life: lifeMin + Math.random() * lifeVariance,
           age: 0,
           color,
-          size: 2.4 + Math.random() * 2.2,
+          size: sizeMin + Math.random() * sizeVariance,
         });
       }
     }
@@ -4139,12 +4194,12 @@
       // Self-heal: if CSS size has changed (or was 0 at start because
       // the overlay wasn't laid out yet) re-sync the bitmap. Cheap,
       // only triggers a resize when dimensions actually drift.
-      if (fireworksCanvas.offsetWidth !== cssW || fireworksCanvas.offsetHeight !== cssH) {
+      if (canvas.offsetWidth !== cssW || canvas.offsetHeight !== cssH) {
         resize();
       }
       if (!lastLaunch) lastLaunch = ts;
       // ~2 launches per second, jittered.
-      if (ts - lastLaunch > 350 + Math.random() * 250) {
+      if (ts - lastLaunch > launchMinMs + Math.random() * launchJitterMs) {
         launch();
         lastLaunch = ts;
       }
@@ -4153,9 +4208,9 @@
       for (const p of particles) {
         p.age += 1;
         if (p.age >= p.life) continue;
-        p.vy += 0.05;          // gravity
-        p.vx *= 0.985;         // drag
-        p.vy *= 0.985;
+        p.vy += gravity;
+        p.vx *= drag;
+        p.vy *= drag;
         p.x  += p.vx;
         p.y  += p.vy;
         const alpha = 1 - p.age / p.life;
@@ -4198,9 +4253,42 @@
         if (cssW && cssH) ctx.clearRect(0, 0, cssW, cssH);
       },
     };
-  })();
+  }
+  const fireworksFx = createFireworksFx(fireworksCanvas);
+  const pollFireworksLeftFx = createFireworksFx(pollFireworksLeftCanvas, {
+    launchMinMs: 420,
+    launchJitterMs: 220,
+    countMin: 42,
+    countVariance: 20,
+    speedMin: 2.2,
+    speedVariance: 3.1,
+    sizeMin: 2.2,
+    sizeVariance: 1.6,
+    launchXRange: [0.18, 0.82],
+    launchYRange: [0.14, 0.52],
+  });
+  const pollFireworksRightFx = createFireworksFx(pollFireworksRightCanvas, {
+    launchMinMs: 420,
+    launchJitterMs: 220,
+    countMin: 42,
+    countVariance: 20,
+    speedMin: 2.2,
+    speedVariance: 3.1,
+    sizeMin: 2.2,
+    sizeVariance: 1.6,
+    launchXRange: [0.18, 0.82],
+    launchYRange: [0.14, 0.52],
+  });
   function startFireworks() { fireworksFx.start(); }
   function stopFireworks()  { fireworksFx.stop(); }
+  function startPollResultFireworks() {
+    pollFireworksLeftFx.start();
+    pollFireworksRightFx.start();
+  }
+  function stopPollResultFireworks() {
+    pollFireworksLeftFx.stop();
+    pollFireworksRightFx.stop();
+  }
 
   async function pollPolls() {
     // Tier gate: Live polls/games are a Dalisay+ feature.
@@ -4229,6 +4317,7 @@
           pollFootStat.textContent = 'FINAL RESULTS';
           pollOverlay.classList.remove('live-state');
           pollOverlay.classList.add('results-state');
+          startPollResultFireworks();
           if (pollCountdownTimer) clearInterval(pollCountdownTimer);
           // Hide after a short grace — tracked so a re-run can cancel it.
           if (pollHideTimer) clearTimeout(pollHideTimer);
