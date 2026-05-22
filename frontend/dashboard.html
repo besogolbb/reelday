@@ -648,237 +648,249 @@
     }
     .polls-tab.active .polls-tab-count { background: rgba(196,90,58,.14); color: var(--accent); }
 
-    /* ── Leaderboard view ─────────────────────────────────── */
-    .polls-leaderboard { display: flex; flex-direction: column; gap: 10px; }
+    /* ── Leaderboard — per-question winners ────────────────
+       One card per trivia question with a hero "winner" panel inside.
+       Question text leads (same visual treatment as the poll cards
+       above), then the winner with a trophy + their time, then a
+       quiet runners-up list. The whole tab reads like a recap show. */
+    .polls-leaderboard { display: flex; flex-direction: column; gap: 12px; }
     .lb-head {
       display: flex; justify-content: space-between; align-items: center;
-      gap: 12px; flex-wrap: wrap; margin-bottom: 6px;
+      gap: 12px; flex-wrap: wrap; margin-bottom: 4px;
     }
-    .lb-head-title { font-size: 13px; color: var(--dash-muted); line-height: 1.5; }
+    .lb-head-title { font-size: 13px; color: var(--dash-muted); line-height: 1.5; max-width: 520px; }
     .lb-clear-btn {
       appearance: none; background: transparent;
       border: 1px solid rgba(176,48,34,.35); color: #b03022;
-      border-radius: 999px; padding: 6px 14px;
+      border-radius: 999px; padding: 7px 16px;
       font-family: var(--mono); font-size: 11px; font-weight: 700;
       letter-spacing: .1em; text-transform: uppercase; cursor: pointer;
       transition: background .15s, color .15s;
+      min-height: 36px;
     }
     .lb-clear-btn:hover { background: rgba(176,48,34,.08); }
     .lb-clear-btn:disabled { opacity: .5; cursor: not-allowed; }
-    .lb-row {
-      display: grid; grid-template-columns: 36px 1fr auto; gap: 12px; align-items: start;
-      background: #fff; border: 1px solid rgba(83,48,33,.10); border-radius: 14px;
-      padding: 12px 16px;
-      box-shadow: 0 1px 3px rgba(63,35,24,.08), 0 4px 12px rgba(63,35,24,.05);
-      transition: border-color .15s, box-shadow .15s;
+
+    /* Question card */
+    .lb-q-card {
+      background: #fff; border: 1px solid rgba(83,48,33,.08);
+      border-radius: 16px; padding: 16px 18px;
+      box-shadow: 0 1px 2px rgba(63,35,24,.04), 0 4px 14px rgba(63,35,24,.05);
+      display: flex; flex-direction: column; gap: 10px;
     }
-    .lb-row.lb-expandable { cursor: pointer; }
-    .lb-row.lb-expandable:hover {
-      border-color: rgba(196,90,58,.30);
-      box-shadow: 0 1px 3px rgba(63,35,24,.10), 0 6px 18px rgba(63,35,24,.08);
+    .lb-q-card.lb-q-won {
+      border-color: rgba(196,90,58,.25);
+      box-shadow: 0 1px 2px rgba(63,35,24,.04), 0 6px 20px rgba(196,90,58,.08);
     }
-    .lb-rank {
-      font-family: var(--display); font-size: 20px; font-weight: 600;
-      color: var(--ink-soft); text-align: center; padding-top: 2px;
+    .lb-q-head {
+      display: flex; align-items: baseline; gap: 10px;
     }
-    .lb-row.lb-top .lb-rank { color: var(--accent); }
-    .lb-name-cell { min-width: 0; }
-    .lb-name {
-      font-weight: 600; color: var(--ink);
-      display: inline-flex; align-items: center; gap: 6px;
-    }
-    .lb-chevron {
-      font-size: 12px; color: var(--dash-muted);
-      transition: transform .2s ease;
-    }
-    .lb-row.lb-open .lb-chevron { transform: rotate(180deg); color: var(--accent); }
-    .lb-sub {
-      font-family: var(--mono); font-size: 10px; font-weight: 700;
-      letter-spacing: .12em; text-transform: uppercase; color: var(--dash-muted);
-      margin-top: 2px;
-    }
-    .lb-time {
-      font-family: var(--mono); font-size: 13px; font-weight: 700;
-      color: var(--ink); text-align: right;
-    }
-    .lb-time-label {
-      font-family: var(--mono); font-size: 10px; font-weight: 700;
-      letter-spacing: .12em; text-transform: uppercase; color: var(--dash-muted);
-    }
-    /* Per-question breakdown shown when a row is expanded. */
-    .lb-questions {
-      list-style: none; margin: 10px 0 2px; padding: 10px 0 0;
-      border-top: 1px dashed rgba(83,48,33,.14);
-      display: flex; flex-direction: column; gap: 6px;
-    }
-    .lb-question {
-      display: grid; grid-template-columns: 18px 1fr auto; gap: 8px; align-items: center;
-      font-size: 13px; color: var(--ink);
-    }
-    .lb-question-mark {
-      display: inline-flex; align-items: center; justify-content: center;
-      width: 18px; height: 18px; border-radius: 50%;
-      background: rgba(56,142,60,.14); color: #2e7d32;
-      font-size: 11px; font-weight: 700;
-    }
-    .lb-question-text { line-height: 1.4; }
-    .lb-question-time {
+    .lb-q-num {
       font-family: var(--mono); font-size: 11px; font-weight: 700;
-      color: var(--dash-muted); white-space: nowrap;
+      letter-spacing: .12em; text-transform: uppercase;
+      color: var(--accent); flex: 0 0 auto;
+      padding: 3px 8px; border-radius: 999px;
+      background: rgba(196,90,58,.10);
+    }
+    .lb-q-text {
+      font-family: var(--display); font-size: 17px; font-weight: 600;
+      color: var(--ink); line-height: 1.3; flex: 1; min-width: 0;
+    }
+    .lb-q-correct {
+      font-size: 13px; color: #1f5e3b; font-weight: 600;
+      display: inline-flex; align-items: center; gap: 4px;
+    }
+
+    /* Winner panel — the visual hero of each card */
+    .lb-winner {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 14px; border-radius: 12px;
+      background: linear-gradient(135deg, rgba(196,90,58,.10), rgba(196,90,58,.04));
+      border: 1px solid rgba(196,90,58,.18);
+    }
+    .lb-winner.lb-winner-empty {
+      background: var(--paper-2);
+      border-color: rgba(83,48,33,.08);
+    }
+    .lb-trophy { font-size: 24px; flex: 0 0 auto; }
+    .lb-winner-info { flex: 1; min-width: 0; }
+    .lb-winner-name {
+      font-family: var(--display); font-size: 16px; font-weight: 600;
+      color: var(--ink); line-height: 1.2;
+    }
+    .lb-winner.lb-winner-empty .lb-winner-name {
+      color: var(--ink-soft); font-style: italic; font-weight: 500;
+    }
+    .lb-winner-sub {
+      font-family: var(--mono); font-size: 10px; font-weight: 700;
+      letter-spacing: .12em; text-transform: uppercase;
+      color: var(--dash-muted); margin-top: 2px;
+    }
+
+    /* Runners-up list — tight, low-weight */
+    .lb-runners {
+      list-style: none; margin: 0; padding: 0;
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .lb-runner {
+      display: grid; grid-template-columns: auto 1fr auto;
+      gap: 10px; align-items: center;
+      padding: 6px 12px; border-radius: 10px;
+      font-size: 13px; color: var(--ink-soft);
+    }
+    .lb-runner:hover { background: var(--paper-2); }
+    .lb-runner-rank {
+      font-family: var(--mono); font-size: 10px; font-weight: 700;
+      letter-spacing: .1em; color: var(--dash-muted);
+    }
+    .lb-runner-name { color: var(--ink); }
+    .lb-runner-time {
+      font-family: var(--mono); font-size: 12px; font-weight: 700;
+      color: var(--dash-muted);
     }
     .polls-locked { padding: 16px; border-radius: 10px; background: rgba(196,90,58,.08); color: var(--ink-soft); font-size: 13px; text-align: center; border: 1px dashed rgba(196,90,58,.3); }
     .polls-locked a { color: var(--accent); font-weight: 600; text-decoration: none; }
 
+    /* ── Poll/question card — modern, calm, question-led ──
+       The card is a single vertical stack: meta chips → big question →
+       options preview → tight action footer. The question is the
+       visual anchor; everything else is sized down to defer to it.
+       Heavy 3D stacked shadows replaced with one soft float. */
     .poll-row {
       background: #fff;
-      border: 1px solid rgba(83,48,33,.10);
-      border-radius: 18px;
-      padding: 18px 20px;
-      display: grid; grid-template-columns: 1fr auto; gap: 10px 16px; align-items: center;
-      /* 3-layer 3D float: contact · spread · ambient + top highlight */
-      box-shadow:
-        0 2px 5px  rgba(63,35,24,.18),   /* contact — tight & dark */
-        0 8px 24px rgba(63,35,24,.12),   /* spread */
-        0 20px 48px rgba(63,35,24,.07),  /* ambient glow */
-        inset 0 1px 0 rgba(255,255,255,.95); /* top-edge highlight */
-      transform: translateY(-3px);
-      transition: box-shadow .22s ease, transform .22s ease;
+      border: 1px solid rgba(83,48,33,.08);
+      border-radius: 16px;
+      padding: 16px 18px 12px;
+      display: flex; flex-direction: column;
+      box-shadow: 0 1px 2px rgba(63,35,24,.04), 0 4px 14px rgba(63,35,24,.05);
+      transition: border-color .18s ease, box-shadow .18s ease;
     }
     @media (hover: hover) {
       .poll-row:hover {
-        box-shadow:
-          0 4px 10px  rgba(63,35,24,.22),
-          0 16px 40px rgba(63,35,24,.16),
-          0 32px 64px rgba(63,35,24,.09),
-          inset 0 1px 0 rgba(255,255,255,.95);
-        transform: translateY(-6px);
+        border-color: rgba(83,48,33,.18);
+        box-shadow: 0 1px 3px rgba(63,35,24,.06), 0 8px 22px rgba(63,35,24,.08);
       }
     }
+    /* Meta row: status pill + kind + duration. Sized small and quiet
+       so it acts as supporting text, not a competing element. */
+    .poll-row .poll-meta-row {
+      display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+      margin-bottom: 10px;
+    }
     .poll-row .poll-status {
-      display: inline-flex; align-items: center; gap: 6px;
+      display: inline-flex; align-items: center; gap: 4px;
       font-family: var(--mono); font-size: 10px; font-weight: 700;
-      letter-spacing: .14em; text-transform: uppercase;
-      padding: 4px 10px; border-radius: 999px;
+      letter-spacing: .12em; text-transform: uppercase;
+      padding: 3px 9px; border-radius: 999px;
     }
     .poll-row .poll-status.draft { background: var(--paper-3); color: var(--ink-soft); }
-    .poll-row .poll-status.live  { background: rgba(229,76,59,.14); color: #b03022; }
-    .poll-row .poll-status.live::before { content: '●'; margin-right: 4px; animation: pollPulse 1s infinite; }
-    /* Live row: red tint on the 3D shadow layers */
+    .poll-row .poll-status.live  { background: rgba(229,76,59,.12); color: #b03022; }
+    .poll-row .poll-status.live::before { content: '●'; margin-right: 3px; animation: pollPulse 1s infinite; }
+    .poll-row .poll-status.ended { background: rgba(45,122,74,.12); color: #1f5e3b; }
+    /* Live card: subtle red border + accent stripe, no overpowering glow. */
     .poll-row:has(.poll-status.live) {
       border-color: rgba(229,76,59,.30);
-      box-shadow:
-        0 2px 5px  rgba(176,48,34,.22),
-        0 8px 24px rgba(229,76,59,.18),
-        0 20px 48px rgba(229,76,59,.10),
-        inset 0 1px 0 rgba(255,255,255,.95);
+      box-shadow: 0 1px 3px rgba(176,48,34,.10), 0 6px 18px rgba(229,76,59,.12);
     }
-    .poll-row .poll-status.ended { background: rgba(45,122,74,.14); color: #1f5e3b; }
     .poll-row .poll-kind-badge {
-      display: inline-block; margin-left: 6px; padding: 3px 8px;
+      display: inline-block; padding: 3px 8px;
       border-radius: 999px; font-family: var(--mono); font-size: 9px;
       font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
-      background: rgba(45,122,74,.14); color: #1f5e3b;
+      background: rgba(45,122,74,.10); color: #1f5e3b;
     }
-    .poll-row .poll-kind-badge.poll-kind-poll { background: rgba(60,90,150,.12); color: #2a4480; }
+    .poll-row .poll-kind-badge.poll-kind-poll { background: rgba(60,90,150,.10); color: #2a4480; }
+    .poll-row .poll-meta {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 8px; border-radius: 999px;
+      font-family: var(--mono); font-size: 9px; font-weight: 700;
+      letter-spacing: .12em; text-transform: uppercase;
+      background: rgba(83,48,33,.05); color: var(--ink-soft);
+    }
     @keyframes pollPulse { 50% { opacity: .35; } }
 
+    /* THE HERO — question text. Big, generous, the obvious focal point. */
     .poll-row .poll-q {
-      font-family: var(--display); font-size: 16px; font-weight: 500; color: var(--ink);
-      margin-top: 6px; line-height: 1.3;
+      font-family: var(--display); font-size: 19px; font-weight: 600;
+      color: var(--ink); line-height: 1.3;
+      margin: 0 0 6px;
     }
     .poll-row .poll-opts {
-      font-size: 12px; color: var(--dash-muted); margin-top: 4px;
-      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      font-size: 13px; color: var(--dash-muted); line-height: 1.5;
+      margin-bottom: 12px;
     }
-    /* Highlight the correct answer in the options preview for trivia
-       drafts/ended — host-only knowledge, so the MC can rehearse the
-       reveal without having to open the editor. */
+    /* Correct-answer marker (trivia drafts/ended). Subtle but unmistakable. */
     .poll-row .poll-opts .opt-correct {
       color: #1f5e3b; font-weight: 600;
     }
     .poll-row .poll-opts .opt-correct::before {
       content: '✓'; margin-right: 3px; font-weight: 700;
     }
-    /* Duration hint next to the status badges — small chip the MC sees
-       BEFORE tapping Run, so they know how long the wall stays paused. */
-    .poll-row .poll-meta {
-      display: inline-flex; align-items: center; gap: 4px;
-      margin-left: 6px; padding: 4px 8px;
-      border-radius: 999px;
-      font-family: var(--mono); font-size: 9px; font-weight: 700;
-      letter-spacing: .12em; text-transform: uppercase;
-      background: rgba(83,48,33,.06); color: var(--ink-soft);
-    }
+
+    /* Action footer — tight, demoted, doesn't compete with the question.
+       Aligned end-to-end so the primary action sits at the leading edge
+       and secondary actions trail. */
     .poll-row .poll-actions {
       display: flex; gap: 6px; align-items: center;
-      grid-column: 2; grid-row: 1 / span 3;
+      padding-top: 10px;
+      border-top: 1px solid rgba(83,48,33,.06);
     }
     .poll-row .poll-actions button {
-      padding: 9px 16px; border-radius: 999px; font-size: 13px; font-weight: 600;
-      border: 1px solid rgba(83,48,33,.18); background: rgba(255,255,255,.8); color: var(--ink);
-      cursor: pointer; transition: background .12s, border-color .12s, transform .08s;
+      padding: 7px 14px; border-radius: 999px;
+      font-size: 12px; font-weight: 600;
+      border: 1px solid transparent; background: transparent; color: var(--ink-soft);
+      cursor: pointer; transition: background .12s, color .12s, transform .08s;
       font-family: var(--sans);
-      box-shadow: 0 1px 3px rgba(63,35,24,.08);
-      min-height: 40px;
+      min-height: 34px;
     }
     .poll-row .poll-actions button:active { transform: scale(.97); }
-    .poll-row .poll-actions button:hover { background: #fff; border-color: rgba(83,48,33,.30); }
+    .poll-row .poll-actions button:hover {
+      background: rgba(83,48,33,.06); color: var(--ink);
+    }
+    /* Primary action — accent pill. Calm, not loud. */
     .poll-row .poll-actions .btn-run {
       background: var(--accent); color: #fff; border-color: var(--accent);
-      box-shadow: 0 2px 8px rgba(196,90,58,.35);
-      font-weight: 700;
+      box-shadow: 0 1px 4px rgba(196,90,58,.30);
     }
-    .poll-row .poll-actions .btn-run:hover { background: var(--accent-deep); }
+    .poll-row .poll-actions .btn-run:hover {
+      background: var(--accent-deep); color: #fff;
+    }
+    /* Stop — calm red. Alone on the action row to prevent mis-taps. */
     .poll-row .poll-actions .btn-stop {
       background: #b03022; color: #fff; border-color: #b03022;
-      font-weight: 700;
-      box-shadow: 0 2px 10px rgba(176,48,34,.40);
+      box-shadow: 0 1px 4px rgba(176,48,34,.35);
     }
-    .poll-row .poll-actions .btn-stop:hover { background: #8a2418; }
-    .poll-row .poll-actions .btn-del { color: #b03022; border-color: rgba(176,48,34,.25); background: rgba(176,48,34,.06); }
-    .poll-row .poll-actions .btn-del:hover { background: rgba(176,48,34,.12); border-color: rgba(176,48,34,.40); }
+    .poll-row .poll-actions .btn-stop:hover { background: #8a2418; color: #fff; }
+    /* Delete — ghost red, intentionally low-weight so it doesn't pull
+       focus away from the primary "Run" affordance. */
+    .poll-row .poll-actions .btn-del { color: #b03022; }
+    .poll-row .poll-actions .btn-del:hover { background: rgba(176,48,34,.10); color: #b03022; }
+    /* Spacer between primary and secondary actions */
+    .poll-row .poll-actions .act-spacer { flex: 1; }
 
-    /* ── Mobile: stack the poll row so the action buttons don't get
-       clipped by the panel's overflow:hidden. The MC runs this page
-       live, often one-handed under stage lights — so the primary
-       action gets a full-width tap target with a 44px+ min-height,
-       and the secondary actions (Edit/Delete) live on a second row
-       where a mis-tap won't kill the live poll. */
+    /* ── Mobile: same vertical stack, just denser. The card already
+       reads top-to-bottom so we don't need a fundamentally different
+       layout — but we DO bump the action footer's tap targets and
+       give the primary action its own row above the secondary ones
+       (so an MC's thumb can't slip between buttons mid-live). */
     @media (max-width: 640px) {
-      .poll-row {
-        grid-template-columns: 1fr;
-        padding: 16px;
-        gap: 10px;
-      }
-      .poll-row .poll-q { font-size: 17px; }
-      .poll-row .poll-opts {
-        white-space: normal;
-        line-height: 1.5;
-      }
+      .poll-row { padding: 14px 14px 10px; }
+      .poll-row .poll-q { font-size: 18px; }
       .poll-row .poll-actions {
-        grid-column: 1; grid-row: auto;
         display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-        padding-top: 12px;
-        margin-top: 4px;
-        border-top: 1px dashed rgba(83,48,33,.14);
+        grid-template-columns: 1fr auto;
+        gap: 6px 8px;
       }
-      /* Primary action (Run / Stop / Run again) takes the full width —
-         this is the button the MC reaches for. Big, obvious, hard to miss. */
+      .poll-row .poll-actions .act-spacer { display: none; }
       .poll-row .poll-actions .btn-run,
       .poll-row .poll-actions .btn-stop {
         grid-column: 1 / -1;
-        padding: 14px 18px;
-        font-size: 15px;
-        min-height: 48px;
-      }
-      /* Edit/Delete on a second row. Min-height 44px keeps them tappable
-         without making them so big they invite an accidental tap. */
-      .poll-row .poll-actions button:not(.btn-run):not(.btn-stop) {
-        padding: 11px 14px;
+        padding: 11px 16px;
         font-size: 13px;
-        min-height: 44px;
+        min-height: 42px;
+      }
+      .poll-row .poll-actions button:not(.btn-run):not(.btn-stop) {
+        min-height: 38px;
+        padding: 8px 14px;
       }
       /* Tabs: pad for thumbs */
       .polls-tab { padding: 12px 14px; font-size: 11px; }
@@ -4668,16 +4680,20 @@
 
       // Primary actions get a glyph prefix so the MC can scan at a glance —
       // ▶ = go on the wall, ■ = stop now. Stop is the high-stakes button so
-      // it lives alone (no secondary buttons next to it) — there's nothing
-      // adjacent for a stray thumb to land on by accident.
+      // it sits alone with no neighbours — nothing adjacent for a stray
+      // thumb to land on mid-event. A flexible <span class="act-spacer">
+      // pushes secondary actions to the trailing edge so the eye still
+      // lands on the primary button first.
       const actions = isLive ? `
         <button type="button" class="btn-stop" data-act="stop" data-id="${p.id}" aria-label="Stop this poll on the wall">■ Stop</button>
       ` : isDraft ? `
         <button type="button" class="btn-run"  data-act="start" data-id="${p.id}" aria-label="Run this on the wall">▶ Run on wall</button>
+        <span class="act-spacer"></span>
         <button type="button" data-act="edit"   data-id="${p.id}">Edit</button>
         <button type="button" class="btn-del" data-act="delete" data-id="${p.id}" aria-label="Delete this draft">Delete</button>
       ` : `
         <button type="button" class="btn-run" data-act="start" data-id="${p.id}" aria-label="Run this again on the wall">▶ Run again</button>
+        <span class="act-spacer"></span>
         <button type="button" class="btn-del" data-act="delete" data-id="${p.id}" aria-label="Delete this poll">Delete</button>
       `;
 
@@ -4692,13 +4708,13 @@
         : '';
       return `
         <div class="poll-row">
-          <div>
+          <div class="poll-meta-row">
             <span class="poll-status ${p.status}">${p.status}${total ? ' · ' + total + ' vote' + (total === 1 ? '' : 's') : ''}</span>
             ${kindBadge}
             ${durationChip}
-            <div class="poll-q">${escapeHtml(p.question)}</div>
-            <div class="poll-opts">${optsLabel}</div>
           </div>
+          <div class="poll-q">${escapeHtml(p.question)}</div>
+          <div class="poll-opts">${optsLabel}</div>
           <div class="poll-actions">${actions}</div>
         </div>`;
     }).join('');
@@ -4794,11 +4810,12 @@
     applyPollsTab();
   });
 
-  // ── Leaderboard tab: who answered fastest ────────────
-  // The 3s parent refresh re-pulls this while the tab is open. To avoid
-  // a "Loading…" flash on every tick we only show that placeholder on
-  // the very first fetch (empty container); subsequent ticks silently
-  // swap the rendered HTML in place.
+  // ── Leaderboard tab: per-question winners ─────────────
+  // One card per trivia question. Each card shows the question text,
+  // the WINNER (fastest correct answerer across all runs of that
+  // question), and up to 3 runners-up. Data is preserved across
+  // "Run again" by the server-side archive into poll_vote_history.
+  // Only the explicit "Clear results" button wipes it.
   async function refreshLeaderboard() {
     if (!slug || !pollsLeaderboard) return;
     const isFirstLoad = !pollsLeaderboard.dataset.loaded;
@@ -4811,92 +4828,80 @@
         if (isFirstLoad) pollsLeaderboard.innerHTML = '<div class="polls-empty">Could not load the leaderboard.</div>';
         return;
       }
-      const { leaderboard = [], total_questions = 0 } = await res.json();
-      renderLeaderboard(leaderboard, total_questions);
+      const { questions = [] } = await res.json();
+      renderLeaderboard(questions);
       pollsLeaderboard.dataset.loaded = '1';
     } catch {
       if (isFirstLoad) pollsLeaderboard.innerHTML = '<div class="polls-empty">Could not load the leaderboard.</div>';
     }
   }
-  // Tracks which guests have their per-question breakdown expanded so a
-  // background refresh doesn't collapse what the host just opened.
-  const lbExpanded = new Set();
-  function renderLeaderboard(rows, totalQuestions) {
+  function renderLeaderboard(questions) {
     if (!pollsLeaderboard) return;
+    const withAnswers = questions.filter(q => q.winner);
+    const hasAny = questions.length > 0;
     const head = `
       <div class="lb-head">
         <div class="lb-head-title">
-          ${rows.length
-            ? `Ranked by correct answers, then average response time across ${totalQuestions} question${totalQuestions === 1 ? '' : 's'}.`
-            : 'Guests will appear here once they answer a trivia question.'}
+          ${hasAny
+            ? `Recap of every trivia question — fastest correct answer wins. ${withAnswers.length} of ${questions.length} answered.`
+            : 'Create a Question and run it to see winners here.'}
         </div>
-        <button type="button" class="lb-clear-btn" id="lb-clear-btn" ${rows.length ? '' : 'disabled'}>Clear results</button>
+        <button type="button" class="lb-clear-btn" id="lb-clear-btn" ${withAnswers.length ? '' : 'disabled'}>Clear results</button>
       </div>`;
-    if (!rows.length) {
-      pollsLeaderboard.innerHTML = head + '<div class="polls-empty">No answers logged yet.</div>';
+    if (!hasAny) {
+      pollsLeaderboard.innerHTML = head + '<div class="polls-empty">No trivia questions yet.</div>';
       bindLbClear();
-      bindLbExpanders();
       return;
     }
-    const body = rows.map((r, i) => {
-      const rank = i + 1;
-      const avg  = r.avg_correct_seconds != null ? `${r.avg_correct_seconds}s` : '—';
-      const isTop = rank <= 3;
-      const correct = Array.isArray(r.correct_questions) ? r.correct_questions : [];
-      const guestKey = r.guest_name || '';
-      const isOpen = lbExpanded.has(guestKey);
-      // Per-question detail list — only mounted when expanded so we keep
-      // the resting card small and don't pay innerHTML cost for guests
-      // the host isn't looking at.
-      const details = (isOpen && correct.length) ? `
-        <ul class="lb-questions">
-          ${correct.map(q => `
-            <li class="lb-question">
-              <span class="lb-question-mark" aria-hidden="true">✓</span>
-              <span class="lb-question-text">${escapeHtml(q.question || '')}</span>
-              <span class="lb-question-time">${q.response_seconds != null ? q.response_seconds + 's' : ''}</span>
+    const body = questions.map((q, i) => {
+      const num = i + 1;
+      const winner = q.winner;
+      const runners = Array.isArray(q.runners_up) ? q.runners_up : [];
+      // Find the correct option label for context (host-facing recap).
+      const correctOption = (q.options || []).find(o => o.key === q.correct_key);
+      const correctLabel = correctOption ? correctOption.label : '';
+
+      const winnerBlock = winner ? `
+        <div class="lb-winner">
+          <span class="lb-trophy" aria-hidden="true">🏆</span>
+          <div class="lb-winner-info">
+            <div class="lb-winner-name">${escapeHtml(winner.guest_name || 'Anonymous')}</div>
+            <div class="lb-winner-sub">won in ${winner.response_seconds}s</div>
+          </div>
+        </div>
+      ` : `
+        <div class="lb-winner lb-winner-empty">
+          <span class="lb-trophy" aria-hidden="true">⌛</span>
+          <div class="lb-winner-info">
+            <div class="lb-winner-name">No correct answer yet</div>
+            <div class="lb-winner-sub">${q.answered_count || 0} guest${q.answered_count === 1 ? '' : 's'} answered</div>
+          </div>
+        </div>
+      `;
+      const runnersBlock = runners.length ? `
+        <ul class="lb-runners">
+          ${runners.map(r => `
+            <li class="lb-runner">
+              <span class="lb-runner-rank">#${r.rank}</span>
+              <span class="lb-runner-name">${escapeHtml(r.guest_name || 'Anonymous')}</span>
+              <span class="lb-runner-time">${r.response_seconds}s</span>
             </li>
           `).join('')}
         </ul>` : '';
-      // The whole row is the expander when the guest has any correct
-      // answers — clearer affordance than a separate chevron button.
-      const expandable = correct.length > 0;
+
       return `
-        <div class="lb-row ${isTop ? 'lb-top' : ''} ${expandable ? 'lb-expandable' : ''} ${isOpen ? 'lb-open' : ''}"
-             ${expandable ? `data-lb-expand="${escapeHtml(guestKey)}"` : ''}>
-          <div class="lb-rank">${rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '#' + rank}</div>
-          <div class="lb-name-cell">
-            <div class="lb-name">
-              ${escapeHtml(r.guest_name || 'Anonymous')}
-              ${expandable ? `<span class="lb-chevron" aria-hidden="true">▾</span>` : ''}
-            </div>
-            <div class="lb-sub">${r.correct_count} correct · ${r.answered_count} answered</div>
-            ${details}
+        <div class="lb-q-card ${winner ? 'lb-q-won' : ''}">
+          <div class="lb-q-head">
+            <span class="lb-q-num">Q${num}</span>
+            <div class="lb-q-text">${escapeHtml(q.question || '')}</div>
           </div>
-          <div>
-            <div class="lb-time">${avg}</div>
-            <div class="lb-time-label">avg reply</div>
-          </div>
+          ${correctLabel ? `<div class="lb-q-correct"><span aria-hidden="true">✓</span> ${escapeHtml(correctLabel)}</div>` : ''}
+          ${winnerBlock}
+          ${runnersBlock}
         </div>`;
     }).join('');
     pollsLeaderboard.innerHTML = head + body;
     bindLbClear();
-    bindLbExpanders();
-  }
-  function bindLbExpanders() {
-    pollsLeaderboard.querySelectorAll('[data-lb-expand]').forEach(row => {
-      row.addEventListener('click', () => {
-        const key = row.getAttribute('data-lb-expand');
-        if (lbExpanded.has(key)) lbExpanded.delete(key);
-        else                     lbExpanded.add(key);
-        // Local re-render without a network round-trip — we still have
-        // the last response cached implicitly via current DOM, so the
-        // cheapest path is to just hit the endpoint again on the next
-        // 3s tick. For instant feedback we flip the class right now and
-        // let the next refresh fill in the details list.
-        refreshLeaderboard();
-      });
-    });
   }
   function bindLbClear() {
     const btn = document.getElementById('lb-clear-btn');

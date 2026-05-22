@@ -246,9 +246,29 @@ export default async function pollRoutes(fastify) {
       [ctx.event.id, request.params.id],
     );
 
-    // Wipe previous votes when re-running — guests get a clean slate and
-    // the wall starts the new run with a 0% tally. Cheap (poll_votes is
-    // small per poll) and avoids confusing carry-over from prior rounds.
+    // Archive the previous run's votes before we wipe poll_votes for a
+    // clean live tally. This is what keeps the Leaderboard tab from
+    // losing data on every "Run again" — historic response times and
+    // correct/incorrect flags are preserved per run. INSERT ... SELECT
+    // is a no-op when there are no rows (first start), so we don't
+    // need to guard it. Only the explicit "Clear results" button
+    // touches poll_vote_history; no other code path wipes it.
+    await fastify.db.query(
+      `INSERT INTO poll_vote_history
+         (poll_id, event_id, guest_id, guest_name, option_key,
+          was_correct, voted_at, run_started_at)
+       SELECT pv.poll_id, p.event_id, pv.guest_id, pv.guest_name, pv.option_key,
+              (p.correct_key IS NOT NULL AND pv.option_key = p.correct_key),
+              pv.created_at, p.started_at
+         FROM poll_votes pv
+         JOIN polls p ON p.id = pv.poll_id
+        WHERE pv.poll_id = $1
+          AND p.started_at IS NOT NULL`,
+      [request.params.id],
+    );
+
+    // Wipe live poll_votes for a fresh tally on the wall. The history
+    // archive above means the leaderboard keeps the previous data.
     await fastify.db.query(
       'DELETE FROM poll_votes WHERE poll_id = $1',
       [request.params.id],
@@ -279,46 +299,113 @@ export default async function pollRoutes(fastify) {
     const ctx = await loadEvent(request.params.slug, request, reply, { requireOwner: true });
     if (!ctx) return;
 
-    const { rows: questionsRows } = await fastify.db.query(
-      `SELECT COUNT(*)::int AS n
-         FROM polls
-        WHERE event_id = $1 AND kind = 'question' AND correct_key IS NOT NULL`,
-      [ctx.event.id],
-    );
-    const totalQuestions = questionsRows[0]?.n || 0;
-
-    // `correct_questions` is the per-guest breakdown the dashboard's
-    // Leaderboard tab expands under each name — the actual question text
-    // they got right and how fast they answered. The FILTER clause on the
-    // jsonb_agg drops votes that weren't correct so the array stays tight.
+    // The Leaderboard tab now thinks "per question, who won" — for each
+    // trivia question on this event, we surface the single fastest
+    // correct answerer (winner) and a couple of runners-up. The host
+    // wanted a recap that mirrors how questions ran on the wall, not a
+    // pure ranking of guests.
+    //
+    // Data sources:
+    //   poll_vote_history  — archived runs (every "Run again" snapshot)
+    //   poll_votes         — the current (live or just-ended) run
+    // We UNION them so single-run polls still appear AND multi-run polls
+    // accumulate.
+    //
+    // response_seconds = voted_at - run_started_at — this is why the
+    // archive captures the *previous* started_at, not whatever's in
+    // polls.started_at right now (which would be the *next* run's).
     const { rows } = await fastify.db.query(
-      `SELECT pv.guest_name,
-              COUNT(*) FILTER (WHERE pv.option_key = p.correct_key)::int AS correct_count,
-              COUNT(*)::int                                                AS answered_count,
-              ROUND(AVG(EXTRACT(EPOCH FROM (pv.created_at - p.started_at)))
-                FILTER (WHERE pv.option_key = p.correct_key)::numeric, 1) AS avg_correct_seconds,
-              COALESCE(
-                jsonb_agg(
-                  jsonb_build_object(
-                    'question',         p.question,
-                    'response_seconds', ROUND(EXTRACT(EPOCH FROM (pv.created_at - p.started_at))::numeric, 1)
-                  ) ORDER BY pv.created_at
-                ) FILTER (WHERE pv.option_key = p.correct_key),
-                '[]'::jsonb
-              ) AS correct_questions
-         FROM poll_votes pv
-         JOIN polls p ON p.id = pv.poll_id
-        WHERE p.event_id = $1
-          AND p.kind = 'question'
+      `WITH all_correct AS (
+         -- Historical runs (archived on /start)
+         SELECT h.poll_id,
+                h.guest_name,
+                EXTRACT(EPOCH FROM (h.voted_at - h.run_started_at))::numeric AS resp_s
+           FROM poll_vote_history h
+          WHERE h.event_id   = $1
+            AND h.was_correct
+            AND h.guest_name IS NOT NULL
+            AND h.guest_name <> ''
+         UNION ALL
+         -- Current poll_votes (live + just-ended runs not yet archived)
+         SELECT pv.poll_id,
+                pv.guest_name,
+                EXTRACT(EPOCH FROM (pv.created_at - p.started_at))::numeric AS resp_s
+           FROM poll_votes pv
+           JOIN polls      p ON p.id = pv.poll_id
+          WHERE p.event_id   = $1
+            AND p.kind       = 'question'
+            AND p.correct_key IS NOT NULL
+            AND pv.option_key = p.correct_key
+            AND pv.guest_name IS NOT NULL
+            AND pv.guest_name <> ''
+            AND p.started_at IS NOT NULL
+       ),
+       ranked AS (
+         SELECT poll_id, guest_name,
+                ROUND(MIN(resp_s)::numeric, 1) AS best_seconds,
+                ROW_NUMBER() OVER (
+                  PARTITION BY poll_id
+                  ORDER BY MIN(resp_s) ASC
+                ) AS rk
+           FROM all_correct
+          GROUP BY poll_id, guest_name
+       ),
+       answered_counts AS (
+         -- How many guests answered this question at all (any run, any answer)
+         SELECT poll_id, COUNT(DISTINCT guest_name)::int AS answered_count
+           FROM (
+             SELECT h.poll_id, h.guest_name
+               FROM poll_vote_history h
+              WHERE h.event_id = $1 AND h.guest_name IS NOT NULL AND h.guest_name <> ''
+             UNION
+             SELECT pv.poll_id, pv.guest_name
+               FROM poll_votes pv
+               JOIN polls p ON p.id = pv.poll_id
+              WHERE p.event_id = $1 AND p.kind = 'question'
+                AND pv.guest_name IS NOT NULL AND pv.guest_name <> ''
+           ) u
+          GROUP BY poll_id
+       )
+       SELECT p.id            AS poll_id,
+              p.question,
+              p.options,
+              p.correct_key,
+              p.status,
+              COALESCE(ac.answered_count, 0) AS answered_count,
+              -- Winner: rk=1
+              (
+                SELECT jsonb_build_object(
+                         'guest_name',       r.guest_name,
+                         'response_seconds', r.best_seconds
+                       )
+                  FROM ranked r
+                 WHERE r.poll_id = p.id AND r.rk = 1
+              ) AS winner,
+              -- Up to 3 runners-up so the host can still see who else got it
+              COALESCE((
+                SELECT jsonb_agg(
+                         jsonb_build_object(
+                           'guest_name',       r.guest_name,
+                           'response_seconds', r.best_seconds,
+                           'rank',             r.rk
+                         ) ORDER BY r.rk
+                       )
+                  FROM ranked r
+                 WHERE r.poll_id = p.id AND r.rk BETWEEN 2 AND 4
+              ), '[]'::jsonb) AS runners_up
+         FROM polls p
+    LEFT JOIN answered_counts ac ON ac.poll_id = p.id
+        WHERE p.event_id    = $1
+          AND p.kind        = 'question'
           AND p.correct_key IS NOT NULL
-          AND pv.guest_name IS NOT NULL
-          AND pv.guest_name <> ''
-        GROUP BY pv.guest_name
-        ORDER BY correct_count DESC, avg_correct_seconds ASC NULLS LAST, pv.guest_name ASC
-        LIMIT 50`,
+        ORDER BY p.created_at ASC`,
       [ctx.event.id],
     );
-    return { total_questions: totalQuestions, leaderboard: rows };
+
+    return {
+      total_questions: rows.length,
+      questions: rows,
+    };
   });
 
   // Trigger the final-leaderboard reveal on the wall. Dashboard calls
@@ -339,25 +426,43 @@ export default async function pollRoutes(fastify) {
     return { ok: true };
   });
 
-  // Wipe historical trivia votes for this event — powers the dashboard's
-  // "Clear results" button on the Leaderboard tab. Deliberately leaves
-  // votes on *live* polls alone (those tallies are on the wall right now)
-  // and only touches kind='question' polls — opinion polls have their own
-  // value the host may want to keep.
+  // Wipe historical trivia results for this event — the ONLY code path
+  // that touches poll_vote_history (the /start archive only writes).
+  // Powers the dashboard's "Clear results" button on the Leaderboard
+  // tab. Deliberately leaves votes on *live* polls alone (those tallies
+  // are on the wall right now) and only touches kind='question' polls
+  // — opinion polls have their own value the host may want to keep.
   fastify.delete('/events/:slug/polls/leaderboard', { preHandler: fastify.authenticate }, async (request, reply) => {
     const ctx = await loadEvent(request.params.slug, request, reply, { requireOwner: true });
     if (!ctx) return;
-    const { rowCount } = await fastify.db.query(
+
+    // 1) Wipe the archive of past runs (this is what the new leaderboard
+    //    reads first — without this the "Clear" button would visibly do
+    //    nothing for hosts who'd re-run the same questions multiple times).
+    const { rowCount: clearedHistory } = await fastify.db.query(
+      `DELETE FROM poll_vote_history
+        WHERE event_id = $1
+          AND poll_id IN (
+            SELECT id FROM polls
+             WHERE event_id = $1
+               AND kind     = 'question'
+          )`,
+      [ctx.event.id],
+    );
+
+    // 2) Wipe the current run's votes for any ended trivia poll — the
+    //    leaderboard UNIONs both stores, so this is the second half.
+    const { rowCount: clearedCurrent } = await fastify.db.query(
       `DELETE FROM poll_votes
         WHERE poll_id IN (
           SELECT id FROM polls
            WHERE event_id = $1
-             AND kind   = 'question'
-             AND status <> 'live'
+             AND kind     = 'question'
+             AND status  <> 'live'
         )`,
       [ctx.event.id],
     );
-    return { ok: true, cleared: rowCount };
+    return { ok: true, cleared: clearedHistory + clearedCurrent };
   });
 
   fastify.post('/events/:slug/polls/:id/stop', { preHandler: fastify.authenticate }, async (request, reply) => {

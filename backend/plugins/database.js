@@ -169,6 +169,29 @@ const MIGRATIONS = `
     PRIMARY KEY (poll_id, guest_id)
   );
 
+  -- Archive of every completed poll run. When the host taps "Run again"
+  -- on an ended poll, /start used to DELETE poll_votes for a clean live
+  -- tally — which silently wiped the leaderboard's historical record.
+  -- We now copy poll_votes into this table just before the wipe, with
+  -- the previous run's started_at preserved so per-question response
+  -- times stay accurate even after multiple re-runs. The Leaderboard
+  -- tab reads UNION (history + current poll_votes) so a single-run
+  -- poll's results still show up. Only the explicit "Clear results"
+  -- button wipes this — no other code path touches it.
+  CREATE TABLE IF NOT EXISTS poll_vote_history (
+    id              BIGSERIAL   PRIMARY KEY,
+    poll_id         UUID        NOT NULL REFERENCES polls(id) ON DELETE CASCADE,
+    event_id        UUID        NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+    guest_id        VARCHAR(64) NOT NULL,
+    guest_name      VARCHAR(120),
+    option_key      VARCHAR(40) NOT NULL,
+    was_correct     BOOLEAN     NOT NULL DEFAULT false,
+    voted_at        TIMESTAMPTZ NOT NULL,
+    run_started_at  TIMESTAMPTZ NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_pvh_event ON poll_vote_history(event_id);
+  CREATE INDEX IF NOT EXISTS idx_pvh_poll  ON poll_vote_history(poll_id);
+
   -- ── Event Website (Dalisay/Hiraya) ──
   -- Per-event guest microsite served at /e/<slug>. One row per event;
   -- all flexible host content (hero/story/schedule/logistics/faq/
