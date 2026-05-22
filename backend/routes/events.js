@@ -110,6 +110,20 @@ async function sendEventCreatedEmail(opts, log) {
             </div>
           </div>
 
+          <div style="background:#fff;border:1px solid #ebdec6;border-radius:14px;padding:18px 22px;margin-bottom:18px">
+            <div style="font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#5a443a;margin-bottom:10px">
+              Before your event
+            </div>
+            <ul style="padding-left:18px;margin:0;font-size:14px;line-height:1.65;color:#3f2318">
+              <li>Test the wall on the actual venue Wi-Fi before guests arrive.</li>
+              <li>Do one real test upload: one photo and one video from a guest phone.</li>
+              <li>Use Microsoft Edge on the wall device when possible.</li>
+              <li>Bring a backup mobile hotspot in case the venue internet is weak.</li>
+              <li>If internet gets slow during the event, ask guests to upload photos first before long videos.</li>
+              <li>Assign one person to operate the wall so someone can keep the show smooth.</li>
+            </ul>
+          </div>
+
           ${demoNote}
 
           <p style="margin:24px 0 0;font-size:12px;color:#8a7468;text-align:center">
