@@ -1279,7 +1279,7 @@ body { background: var(--paper); min-height: 100dvh; }
     <!-- Name — required, comes first -->
     <div class="name-field" id="nameField" style="margin-top:14px;">
       <label>Your name <span style="color:var(--accent)">*</span></label>
-      <input type="text" id="galleryName" placeholder="e.g. Tita Marivic, JM's cousin"
+      <input type="text" id="galleryName" placeholder="e.g. Tita Marivic, JM's cousin" autocomplete="name"
         oninput="onNameInput(this)" />
     </div>
 
@@ -1366,8 +1366,8 @@ body { background: var(--paper); min-height: 100dvh; }
     </div>
     <div class="name-field" id="nameFieldRecord" style="margin-top:14px;">
       <label>Your name <span style="color:var(--accent)">*</span></label>
-      <input type="text" id="recordName" placeholder="e.g. Tita Marivic, JM's cousin"
-        oninput="onNameInput(this)" />
+        <input type="text" id="recordName" placeholder="e.g. Tita Marivic, JM's cousin" autocomplete="name"
+          oninput="onNameInput(this)" />
     </div>
     <button class="btn btn-primary send-btn" id="recordSendBtn" onclick="handleSend('record', event)" style="display:none;">Send video →</button>
     <div class="success-banner" id="recordSuccess">
@@ -1384,7 +1384,7 @@ body { background: var(--paper); min-height: 100dvh; }
 
       <div class="name-field" id="nameFieldReact">
         <label>Your name <span style="color:var(--accent)">*</span></label>
-        <input type="text" id="reactName" placeholder="e.g. Tita Marivic, JM's cousin"
+        <input type="text" id="reactName" placeholder="e.g. Tita Marivic, JM's cousin" autocomplete="name"
           oninput="onReactNameInput(this)" />
       </div>
 
@@ -1420,7 +1420,7 @@ body { background: var(--paper); min-height: 100dvh; }
 
       <div class="name-field" id="nameFieldPoll">
         <label>Your name <span style="color:var(--accent)">*</span></label>
-        <input type="text" id="pollName" placeholder="e.g. Tita Marivic, JM's cousin"
+        <input type="text" id="pollName" placeholder="e.g. Tita Marivic, JM's cousin" autocomplete="name"
           oninput="onNameInput(this)" />
       </div>
 
@@ -3414,8 +3414,6 @@ body { background: var(--paper); min-height: 100dvh; }
 
     // ── Gallery panel reset ────────────────────────────
     document.getElementById('galleryQueue').innerHTML = '';
-    const galleryName = document.getElementById('galleryName');
-    if (galleryName) galleryName.value = '';
     if (document.getElementById('msgText')) document.getElementById('msgText').value = '';
     discardVoiceMessage();
     switchMsgMode('text');
@@ -3440,8 +3438,6 @@ body { background: var(--paper); min-height: 100dvh; }
     // pill, re-enable Send. Without this the second video-message attempt
     // sees a stale recordedBlob and the clipPreview from the previous send.
     if (typeof discardClip === 'function') discardClip();
-    const recordName = document.getElementById('recordName');
-    if (recordName) recordName.value = '';
     const rBtn = document.getElementById('recordSendBtn');
     if (rBtn) {
       rBtn.disabled = false;
