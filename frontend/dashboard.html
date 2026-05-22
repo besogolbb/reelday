@@ -4735,9 +4735,13 @@
     pollsRefreshTimer = setInterval(refreshPolls, 3000);
   }
 
-  // Snapshot of last-seen poll statuses keyed by id. Used purely to
-  // detect "a poll just ended" — that's the only event the leaderboard
-  // tab needs to pull fresh data for, so we skip the every-tick refetch.
+  // Snapshot of last-seen poll statuses keyed by id. The leaderboard
+  // tab triggers a refresh on two signals:
+  //   1. A poll just transitioned live → not-live (final votes locked in)
+  //   2. Any poll is currently live (votes are streaming into poll_votes
+  //      and the leaderboard query reads from there, so each 3s tick
+  //      surfaces who answered fastest mid-question).
+  // When nothing is live and nothing just ended, we skip the refetch.
   const lastPollStatuses = new Map();
   async function refreshPolls() {
     if (!slug) return;
@@ -4746,19 +4750,18 @@
       if (!res.ok) return;
       const { polls } = await res.json();
 
-      // Detect live → ended transitions before we overwrite the snapshot.
-      // Any such transition means new votes are now finalised for that
-      // question, so the leaderboard (if currently open) should refresh.
       let anyJustEnded = false;
+      let anyLive      = false;
       for (const p of (polls || [])) {
         const prev = lastPollStatuses.get(p.id);
         if (prev === 'live' && p.status !== 'live') anyJustEnded = true;
+        if (p.status === 'live') anyLive = true;
         lastPollStatuses.set(p.id, p.status);
       }
 
       renderPolls(polls || []);
 
-      if (anyJustEnded && pollsTab === 'leaderboard') {
+      if (pollsTab === 'leaderboard' && (anyJustEnded || anyLive)) {
         refreshLeaderboard();
       }
     } catch { /* silent */ }
