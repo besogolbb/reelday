@@ -617,30 +617,93 @@
       max-height: 0; opacity: 0; padding-top: 0; padding-bottom: 0;
       pointer-events: none;
     }
-    .polls-sub { font-size: 13px; color: var(--dash-muted); line-height: 1.5; max-width: 520px; margin-bottom: 14px; }
-    .polls-actions { margin-bottom: 14px; display: flex; gap: 8px; flex-wrap: wrap; }
+    .polls-sub { font-size: 13px; color: var(--dash-muted); line-height: 1.5; max-width: 560px; margin-bottom: 14px; }
+    .polls-quick {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .polls-quick-card {
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.88), rgba(255,250,243,.92));
+      border: 1px solid rgba(83,48,33,.08);
+      border-radius: 14px;
+      padding: 12px 12px 11px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.8);
+    }
+    .polls-quick-kicker {
+      font-family: var(--mono); font-size: 10px; font-weight: 700;
+      letter-spacing: .12em; text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 5px;
+    }
+    .polls-quick-copy {
+      font-size: 12.5px; line-height: 1.45; color: var(--ink-soft);
+    }
+    .polls-actions {
+      margin-bottom: 16px; display: grid; gap: 10px;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
     .polls-create-btn, .polls-runall-btn { flex-shrink: 0; }
+    .polls-create-btn, .polls-runall-btn {
+      min-height: 46px;
+      justify-content: center;
+      font-weight: 700;
+    }
     .polls-runall-btn.running { background: #b03022; color: #fff; border-color: #b03022; }
     .polls-runall-btn.running:hover { background: #8a2418; }
     .polls-runall-btn:disabled { opacity: .5; cursor: not-allowed; }
+    .polls-view-head {
+      display: flex; justify-content: space-between; align-items: end;
+      gap: 12px; flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+    .polls-view-title {
+      font-family: var(--display); font-size: 21px; font-weight: 600;
+      color: var(--ink); line-height: 1.1;
+    }
+    .polls-view-note {
+      font-size: 12.5px; line-height: 1.45;
+      color: var(--dash-muted);
+      max-width: 580px;
+    }
+    .polls-view-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 10px; border-radius: 999px;
+      font-family: var(--mono); font-size: 10px; font-weight: 700;
+      letter-spacing: .1em; text-transform: uppercase;
+      color: var(--accent-deep);
+      background: rgba(196,90,58,.10);
+      border: 1px solid rgba(196,90,58,.14);
+    }
 
     .polls-list { display: flex; flex-direction: column; gap: 14px; }
     .polls-empty { font-size: 13px; color: var(--dash-muted); padding: 18px 0; text-align: center; font-style: italic; }
 
     /* ── Sub-tabs: Questions · Polls · Leaderboard ────────── */
     .polls-tabs {
-      display: flex; gap: 4px; margin-bottom: 14px;
-      border-bottom: 1px solid var(--dash-border);
+      display: flex; gap: 8px; margin-bottom: 14px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+      scrollbar-width: none;
     }
+    .polls-tabs::-webkit-scrollbar { display: none; }
     .polls-tab {
-      appearance: none; background: transparent; border: 0; cursor: pointer;
+      appearance: none; background: rgba(255,255,255,.62); border: 1px solid rgba(83,48,33,.08); cursor: pointer;
       font-family: var(--mono); font-size: 11px; font-weight: 700;
       letter-spacing: .12em; text-transform: uppercase; color: var(--dash-muted);
-      padding: 10px 14px; border-bottom: 2px solid transparent;
-      margin-bottom: -1px; transition: color .15s, border-color .15s;
+      padding: 10px 14px; border-radius: 999px;
+      transition: color .15s, border-color .15s, background .15s, box-shadow .15s;
+      white-space: nowrap;
     }
-    .polls-tab:hover { color: var(--ink-soft); }
-    .polls-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .polls-tab:hover { color: var(--ink-soft); background: rgba(255,255,255,.9); }
+    .polls-tab.active {
+      color: var(--accent);
+      border-color: rgba(196,90,58,.18);
+      background: linear-gradient(180deg, rgba(255,255,255,.96), rgba(255,244,236,.98));
+      box-shadow: 0 4px 14px rgba(196,90,58,.10), inset 0 1px 0 rgba(255,255,255,.82);
+    }
     .polls-tab-count {
       display: inline-block; min-width: 18px; padding: 1px 6px; margin-left: 6px;
       border-radius: 999px; background: var(--paper-3); color: var(--ink-soft);
@@ -1100,6 +1163,17 @@
       color: var(--ink); line-height: 1.35;
       margin: 0 0 10px;
     }
+    .poll-row .poll-helper {
+      display: inline-flex; align-items: center; gap: 6px;
+      margin: -2px 0 10px;
+      font-family: var(--mono); font-size: 10px; font-weight: 700;
+      letter-spacing: .08em; text-transform: uppercase;
+      color: var(--dash-muted);
+    }
+    .poll-row .poll-helper strong {
+      color: var(--accent-deep);
+      font-weight: 800;
+    }
     /* "Answers" preview — read as a labelled list, not body copy. The
        small uppercase "Answers" label lifts the line out of the
        question text and visually separates it. */
@@ -1128,18 +1202,18 @@
        answers, so the eye reads "question → answers → controls" as
        three distinct steps instead of one crowded block. */
     .poll-row .poll-actions {
-      display: flex; gap: 8px; align-items: center;
+      display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
       padding-top: 14px;
       margin-top: auto;
       border-top: 1px solid rgba(83,48,33,.10);
     }
     .poll-row .poll-actions button {
-      padding: 7px 14px; border-radius: 999px;
-      font-size: 12px; font-weight: 600;
+      padding: 9px 14px; border-radius: 999px;
+      font-size: 12px; font-weight: 700;
       border: 1px solid transparent; background: transparent; color: var(--ink-soft);
       cursor: pointer; transition: background .12s, color .12s, transform .08s;
       font-family: var(--sans);
-      min-height: 34px;
+      min-height: 38px;
     }
     .poll-row .poll-actions button:active { transform: scale(.97); }
     .poll-row .poll-actions button:hover {
@@ -1188,6 +1262,15 @@
        focus away from the primary "Run" affordance. */
     .poll-row .poll-actions .btn-del { color: #b03022; }
     .poll-row .poll-actions .btn-del:hover { background: rgba(176,48,34,.10); color: #b03022; }
+    .poll-row .poll-actions .btn-edit {
+      border-color: rgba(83,48,33,.10);
+      background: rgba(255,255,255,.82);
+      color: var(--ink-soft);
+    }
+    .poll-row .poll-actions .btn-edit:hover {
+      background: rgba(255,255,255,.98);
+      border-color: rgba(83,48,33,.18);
+    }
     /* Spacer between primary and secondary actions */
     .poll-row .poll-actions .act-spacer { flex: 1; }
 
@@ -1197,6 +1280,20 @@
        give the primary action its own row above the secondary ones
        (so an MC's thumb can't slip between buttons mid-live). */
     @media (max-width: 640px) {
+      .polls-body { padding: 14px 14px 24px; }
+      .polls-quick {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+      .polls-actions {
+        grid-template-columns: 1fr;
+      }
+      .polls-view-head {
+        margin-bottom: 10px;
+      }
+      .polls-view-title {
+        font-size: 18px;
+      }
       .poll-row { padding: 18px 16px 14px; }
       .poll-row .poll-meta-row {
         padding-bottom: 12px;
@@ -1206,7 +1303,7 @@
       .poll-row .poll-opts { margin-bottom: 16px; }
       .poll-row .poll-actions {
         display: grid;
-        grid-template-columns: 1fr auto;
+        grid-template-columns: 1fr 1fr;
         gap: 6px 8px;
         padding-top: 14px;
       }
@@ -1216,14 +1313,32 @@
         grid-column: 1 / -1;
         padding: 11px 16px;
         font-size: 13px;
-        min-height: 42px;
+        min-height: 46px;
       }
-      .poll-row .poll-actions button:not(.btn-run):not(.btn-stop) {
-        min-height: 38px;
-        padding: 8px 14px;
+      .poll-row .poll-actions .btn-del,
+      .poll-row .poll-actions .btn-edit {
+        min-height: 40px;
+        padding: 9px 12px;
       }
-      /* Tabs: pad for thumbs */
       .polls-tab { padding: 12px 14px; font-size: 11px; }
+      .lb-summary-row,
+      .lb-run,
+      .lb-summary-head,
+      .polls-view-head {
+        grid-template-columns: 1fr;
+      }
+      .lb-summary-row,
+      .lb-run {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .lb-summary-score,
+      .lb-run-meta,
+      .lb-summary-foot {
+        white-space: normal;
+        text-align: left;
+      }
     }
 
     /* Result tally rendered in the row when status='ended' */
@@ -2864,6 +2979,20 @@
       </button>
       <div class="polls-body" id="polls-body">
         <div class="polls-sub">Polls collect opinions; questions reveal a correct answer on the wall. Pick the type when you create one — guests vote from their phones either way.</div>
+        <div class="polls-quick" id="polls-quick">
+          <div class="polls-quick-card">
+            <div class="polls-quick-kicker">Questions</div>
+            <div class="polls-quick-copy">Use for trivia. One answer is marked correct and the wall reveals the winner.</div>
+          </div>
+          <div class="polls-quick-card">
+            <div class="polls-quick-kicker">Polls</div>
+            <div class="polls-quick-copy">Use for fun crowd voting. No right answer, just live audience picks.</div>
+          </div>
+          <div class="polls-quick-card">
+            <div class="polls-quick-kicker">Run all</div>
+            <div class="polls-quick-copy">Best for the MC. Saved questions go live one after another on the wall.</div>
+          </div>
+        </div>
         <div class="polls-actions">
           <button type="button" class="btn btn-accent polls-create-btn" id="polls-create-btn">+ New</button>
           <button type="button" class="btn btn-ghost polls-runall-btn" id="polls-runall-btn">▶ Run all</button>
@@ -2889,6 +3018,13 @@
           </button>
         </div>
 
+        <div class="polls-view-head" id="polls-view-head">
+          <div>
+            <div class="polls-view-title" id="polls-view-title">Questions ready for the wall</div>
+            <div class="polls-view-note" id="polls-view-note">Run one question at a time, or use Run all when the MC is ready to go through the full quiz.</div>
+          </div>
+          <div class="polls-view-chip" id="polls-view-chip">MC friendly</div>
+        </div>
         <div class="polls-list" id="polls-list"></div>
         <div class="polls-leaderboard" id="polls-leaderboard" style="display:none;"></div>
       </div>
@@ -4836,8 +4972,13 @@
   const pollsList     = document.getElementById('polls-list');
   const pollsLocked   = document.getElementById('polls-locked');
   const pollsCreateBtn= document.getElementById('polls-create-btn');
+  const pollsQuick    = document.getElementById('polls-quick');
   const pollsTabs       = document.getElementById('polls-tabs');
   const pollsLeaderboard= document.getElementById('polls-leaderboard');
+  const pollsViewHead   = document.getElementById('polls-view-head');
+  const pollsViewTitle  = document.getElementById('polls-view-title');
+  const pollsViewNote   = document.getElementById('polls-view-note');
+  const pollsViewChip   = document.getElementById('polls-view-chip');
   const pollsTabCountQ  = document.getElementById('polls-tab-count-questions');
   const pollsTabCountP  = document.getElementById('polls-tab-count-polls');
   // Active sub-tab: 'questions' | 'polls' | 'leaderboard'. Persisted so the
@@ -4999,11 +5140,22 @@
       const total = p.total_votes || 0;
       const isLive  = p.status === 'live';
       const isDraft = p.status === 'draft';
+      const isQuestion = p.kind === 'question';
+      const statusLabel = isLive
+        ? `Live now${total ? ' · ' + total + ' vote' + (total === 1 ? '' : 's') : ''}`
+        : isDraft
+          ? 'Ready to run'
+          : `Ended${total ? ' · ' + total + ' vote' + (total === 1 ? '' : 's') : ''}`;
+      const helperLine = isLive
+        ? (isQuestion ? 'Guests are answering now. Tap stop when the MC is ready for the reveal.' : 'Guests are voting now. Tap stop when the MC wants to close the poll.')
+        : isDraft
+          ? (isQuestion ? 'Correct answer will be revealed on the wall after time ends.' : 'Guests will vote from their phones as soon as you start it.')
+          : (isQuestion ? 'This question already ran. Use Run again to put it back on the wall.' : 'This poll already ran. Use Run again to open it back up on the wall.');
 
       // Options preview, with the correct answer marked for trivia drafts/ended.
       // Host-only knowledge: helps the MC rehearse the reveal without re-opening
       // the editor. Live rows don't get the marker (the wall is showing it).
-      const showCorrect = p.kind === 'question' && p.correct_key && !isLive;
+      const showCorrect = isQuestion && p.correct_key && !isLive;
       const optsLabel = (p.options || []).map(o => {
         const safe = escapeHtml(o.label);
         return (showCorrect && o.key === p.correct_key)
@@ -5018,19 +5170,19 @@
       // pushes secondary actions to the trailing edge so the eye still
       // lands on the primary button first.
       const actions = isLive ? `
-        <button type="button" class="btn-stop" data-act="stop" data-id="${p.id}" aria-label="Stop this poll on the wall">■ Stop</button>
+        <button type="button" class="btn-stop" data-act="stop" data-id="${p.id}" aria-label="Stop this poll on the wall">■ Stop on wall</button>
       ` : isDraft ? `
-        <button type="button" class="btn-run"  data-act="start" data-id="${p.id}" aria-label="Run this on the wall">▶ Run on wall</button>
+        <button type="button" class="btn-run"  data-act="start" data-id="${p.id}" aria-label="Run this on the wall">▶ ${isQuestion ? 'Start question' : 'Start poll'}</button>
         <span class="act-spacer"></span>
-        <button type="button" data-act="edit"   data-id="${p.id}">Edit</button>
+        <button type="button" class="btn-edit" data-act="edit" data-id="${p.id}">Edit setup</button>
         <button type="button" class="btn-del" data-act="delete" data-id="${p.id}" aria-label="Delete this draft">Delete</button>
       ` : `
-        <button type="button" class="btn-run" data-act="start" data-id="${p.id}" aria-label="Run this again on the wall">▶ Run again</button>
+        <button type="button" class="btn-run" data-act="start" data-id="${p.id}" aria-label="Run this again on the wall">▶ ${isQuestion ? 'Run question again' : 'Run poll again'}</button>
         <span class="act-spacer"></span>
         <button type="button" class="btn-del" data-act="delete" data-id="${p.id}" aria-label="Delete this poll">Delete</button>
       `;
 
-      const kindBadge = p.kind === 'question'
+      const kindBadge = isQuestion
         ? '<span class="poll-kind-badge">Question</span>'
         : '<span class="poll-kind-badge poll-kind-poll">Poll</span>';
       // Duration hint — show on draft/ended so the MC knows how long the wall
@@ -5040,13 +5192,14 @@
         ? `<span class="poll-meta">${p.duration_s}s on wall</span>`
         : '';
       return `
-        <div class="poll-row">
+        <div class="poll-row" data-poll-id="${p.id}">
           <div class="poll-meta-row">
-            <span class="poll-status ${p.status}">${p.status}${total ? ' · ' + total + ' vote' + (total === 1 ? '' : 's') : ''}</span>
+            <span class="poll-status ${p.status}">${statusLabel}</span>
             ${kindBadge}
             ${durationChip}
           </div>
           <div class="poll-q">${escapeHtml(p.question)}</div>
+          <div class="poll-helper"><strong>${isLive ? 'Live' : isDraft ? 'Next' : 'Replay'}</strong> · ${escapeHtml(helperLine)}</div>
           <div class="poll-opts">${optsLabel}</div>
           <div class="poll-actions">${actions}</div>
         </div>`;
@@ -5060,7 +5213,6 @@
   async function onPollAction(action, id) {
     if (!slug || !id) return;
     if (action === 'edit') {
-      const row = pollsList.querySelector(`[data-id="${id}"]`).closest('.poll-row');
       const poll = pollsCache.get(id);
       if (poll) openPollModal(poll);
       return;
@@ -5117,10 +5269,26 @@
     const isLb = pollsTab === 'leaderboard';
     if (pollsList)        pollsList.style.display        = isLb ? 'none' : '';
     if (pollsLeaderboard) pollsLeaderboard.style.display = isLb ? '' : 'none';
+    if (pollsQuick)       pollsQuick.style.display       = isLb ? 'none' : '';
     // Run-all is only meaningful for trivia questions; hide on the other tabs.
     if (pollsRunAllBtn)   pollsRunAllBtn.style.display   = (pollsTab === 'questions') ? '' : 'none';
     // No "+ New" on the Leaderboard tab — there's nothing to create from there.
     if (pollsCreateBtn)   pollsCreateBtn.style.display   = isLb ? 'none' : '';
+    if (pollsViewTitle && pollsViewNote && pollsViewChip) {
+      if (pollsTab === 'leaderboard') {
+        pollsViewTitle.textContent = 'Winner recap and backtrack log';
+        pollsViewNote.textContent = 'See the overall winners first, then open each question below if the host or MC needs the exact history.';
+        pollsViewChip.textContent = 'Host recap';
+      } else if (pollsTab === 'polls') {
+        pollsViewTitle.textContent = 'Crowd polls ready to launch';
+        pollsViewNote.textContent = 'Use polls for audience choices with no correct answer. Start one when the MC wants the room to vote live.';
+        pollsViewChip.textContent = 'Crowd voting';
+      } else {
+        pollsViewTitle.textContent = 'Questions ready for the wall';
+        pollsViewNote.textContent = 'Run one question at a time, or use Run all when the MC is ready to move through the whole quiz.';
+        pollsViewChip.textContent = runAllState.active ? 'Run all live' : 'MC friendly';
+      }
+    }
 
     if (isLb) {
       refreshLeaderboard();
