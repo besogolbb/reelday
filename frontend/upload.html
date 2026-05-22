@@ -2267,7 +2267,7 @@ body { background: var(--paper); min-height: 100dvh; }
   }
 
   function captureVideoThumbnail(file, opts = {}) {
-    const { seekSeconds = 0.2, maxDim = 960, quality = 0.8 } = opts;
+    const { seekSeconds = 0.35, maxDim = 960, quality = 0.8 } = opts;
     return new Promise(resolve => {
       const v = document.createElement('video');
       v.preload = 'metadata';
@@ -2275,6 +2275,7 @@ body { background: var(--paper); min-height: 100dvh; }
       v.playsInline = true;
       const url = URL.createObjectURL(file);
       let settled = false;
+      let started = false;
 
       const cleanup = () => {
         try { URL.revokeObjectURL(url); } catch {}
@@ -2285,39 +2286,133 @@ body { background: var(--paper); min-height: 100dvh; }
         cleanup();
         resolve(value || null);
       };
+      const wait = ms => new Promise(r => setTimeout(r, ms));
+      const waitForFramePaint = () => new Promise(res => {
+        if (typeof v.requestVideoFrameCallback === 'function') {
+          let finished = false;
+          const finish = () => {
+            if (finished) return;
+            finished = true;
+            res();
+          };
+          const timer = setTimeout(finish, 250);
+          try {
+            v.requestVideoFrameCallback(() => {
+              clearTimeout(timer);
+              finish();
+            });
+            return;
+          } catch {}
+          clearTimeout(timer);
+        }
+        requestAnimationFrame(() => requestAnimationFrame(res));
+      });
+      const waitForLoadedData = () => new Promise(res => {
+        if (v.readyState >= 2) return res();
+        v.addEventListener('loadeddata', () => res(), { once: true });
+        setTimeout(res, 300);
+      });
+      const canvasLooksBlank = (ctx, width, height) => {
+        try {
+          const probeW = Math.max(1, Math.min(24, width));
+          const probeH = Math.max(1, Math.min(24, height));
+          const probe = document.createElement('canvas');
+          probe.width = probeW;
+          probe.height = probeH;
+          const probeCtx = probe.getContext('2d', { willReadFrequently: true });
+          if (!probeCtx) return false;
+          probeCtx.drawImage(ctx.canvas, 0, 0, probeW, probeH);
+          const pixels = probeCtx.getImageData(0, 0, probeW, probeH).data;
+          let totalLuma = 0;
+          let brightPixels = 0;
+          for (let i = 0; i < pixels.length; i += 4) {
+            const alpha = pixels[i + 3] / 255;
+            const luma = ((pixels[i] * 0.299) + (pixels[i + 1] * 0.587) + (pixels[i + 2] * 0.114)) * alpha;
+            totalLuma += luma;
+            if (luma > 18) brightPixels++;
+          }
+          const pixelCount = Math.max(1, pixels.length / 4);
+          return (totalLuma / pixelCount) < 10 && (brightPixels / pixelCount) < 0.02;
+        } catch {
+          return false;
+        }
+      };
       const drawFrame = () => {
         try {
           const width = v.videoWidth || 0;
           const height = v.videoHeight || 0;
-          if (!width || !height) return done(null);
+          if (!width || !height) return null;
           const ratio = Math.min(maxDim / width, maxDim / height, 1);
           const canvas = document.createElement('canvas');
           canvas.width = Math.max(1, Math.round(width * ratio));
           canvas.height = Math.max(1, Math.round(height * ratio));
-          const ctx = canvas.getContext('2d');
-          if (!ctx) return done(null);
+          const ctx = canvas.getContext('2d', { willReadFrequently: true });
+          if (!ctx) return null;
           ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
-          done(canvas.toDataURL('image/jpeg', quality));
+          if (canvasLooksBlank(ctx, canvas.width, canvas.height)) return null;
+          return canvas.toDataURL('image/jpeg', quality);
+        } catch {
+          return null;
+        }
+      };
+      const seekTo = target => new Promise(res => {
+        const finish = () => res();
+        if (!Number.isFinite(target) || target <= 0) return finish();
+        const timeout = setTimeout(finish, 600);
+        const onSeeked = () => {
+          clearTimeout(timeout);
+          finish();
+        };
+        v.addEventListener('seeked', onSeeked, { once: true });
+        try {
+          v.currentTime = target;
+        } catch {
+          clearTimeout(timeout);
+          v.removeEventListener('seeked', onSeeked);
+          finish();
+        }
+      });
+      const buildAttempts = duration => {
+        const clampTime = value => {
+          if (!Number.isFinite(value) || value < 0) return 0;
+          if (!(duration > 0)) return value;
+          return Math.min(value, Math.max(duration - 0.08, 0));
+        };
+        const attempts = [
+          clampTime(0),
+          clampTime(seekSeconds),
+          clampTime(0.75),
+          clampTime(duration * 0.12),
+          clampTime(duration * 0.25),
+          clampTime(duration * 0.45),
+        ];
+        return attempts.filter((time, index) => attempts.findIndex(other => Math.abs(other - time) < 0.08) === index);
+      };
+      const capture = async () => {
+        if (started || settled) return;
+        started = true;
+        try {
+          await waitForLoadedData();
+          const duration = Number.isFinite(v.duration) ? v.duration : 0;
+          const attempts = buildAttempts(duration);
+          for (const target of attempts) {
+            if (settled) return;
+            await seekTo(target);
+            await waitForLoadedData();
+            await waitForFramePaint();
+            const frame = drawFrame();
+            if (frame) return done(frame);
+            await wait(90);
+          }
+          done(null);
         } catch {
           done(null);
         }
       };
 
       v.onerror = () => done(null);
-      v.onloadedmetadata = () => {
-        const duration = Number.isFinite(v.duration) ? v.duration : 0;
-        const target = duration > 0 ? Math.min(Math.max(seekSeconds, 0), Math.max(duration - 0.05, 0)) : 0;
-        if (target <= 0) return;
-        const onSeeked = () => drawFrame();
-        v.addEventListener('seeked', onSeeked, { once: true });
-        try {
-          v.currentTime = target;
-        } catch {
-          v.removeEventListener('seeked', onSeeked);
-          drawFrame();
-        }
-      };
-      v.onloadeddata = () => drawFrame();
+      v.onloadedmetadata = () => { capture(); };
+      v.onloadeddata = () => { capture(); };
       v.src = url;
     });
   }
