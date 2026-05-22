@@ -4238,9 +4238,11 @@
         // its self-heal resize and the opening bursts land in the right
         // place.
         requestAnimationFrame(() => {
+          // If stop() fired before this deferred boot ran, bail cleanly.
+          if (raf !== -1) return;
           resize();
           launch(); launch();
-          if (!raf) raf = requestAnimationFrame(frame);
+          raf = requestAnimationFrame(frame);
         });
         // Set raf eagerly so a second start() call is a no-op.
         raf = -1;
