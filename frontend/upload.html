@@ -953,11 +953,23 @@ body { background: var(--paper); min-height: 100dvh; }
 /* ── Toast (friendly, non-blocking notices like rate-limit hints) ── */
 .toast { position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 12px); z-index: 1000; max-width: min(90vw, 420px); padding: 12px 18px; border-radius: 999px; background: rgba(20,20,20,.92); color: #fff; font-size: 14px; line-height: 1.35; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,.25); opacity: 0; pointer-events: none; transition: opacity .2s ease, transform .2s ease; }
 .toast.visible { opacity: 1; transform: translate(-50%, 0); }
+.net-note {
+  position: sticky; top: 10px; z-index: 30;
+  margin: 10px 14px 0; padding: 12px 14px;
+  border-radius: 14px; border: 1px solid rgba(176,48,34,.18);
+  background: rgba(255,248,245,.96); color: var(--ink);
+  box-shadow: 0 10px 24px rgba(63,35,24,.08);
+  font-size: 13px; line-height: 1.45;
+  display: none;
+}
+.net-note.visible { display: block; }
+.net-note b { color: #8f2a1f; }
 
 /* ── Queue ───────────────────────────────────────────── */
 .queue { margin-top: 14px; display: grid; gap: 8px; }
 .queue-item { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto auto; gap: 10px; align-items: center; background: #fff; border: 1px solid var(--line); border-radius: var(--r); padding: 8px 10px 8px 8px; }
 .queue-item.done { border-color: rgba(45,122,74,.3); }
+.queue-item.failed { border-color: rgba(176,48,34,.28); background: rgba(255,248,245,.96); }
 /* The middle column needs explicit min-width:0 so the q-name ellipsis
    actually engages — without it CSS grid lets the column stretch to
    fit the content and long filenames blow out the row width. */
@@ -968,7 +980,13 @@ body { background: var(--paper); min-height: 100dvh; }
 .q-prog span { display: block; height: 100%; background: var(--accent); border-radius: 2px; }
 .q-status { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-soft); white-space: nowrap; }
 .queue-item.done .q-status { color: #2d7a4a; }
+.queue-item.failed .q-status { color: #8f2a1f; }
+.q-actions { display: flex; align-items: center; gap: 6px; }
+.q-retry,
 .q-remove { width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--line-2); background: var(--paper-2); color: var(--ink-faint); font-size: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; transition: background .15s, color .15s, border-color .15s; }
+.q-retry { display: none; width: auto; min-width: 24px; padding: 0 8px; border-radius: 999px; font-family: var(--mono); font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent-deep); }
+.queue-item.failed .q-retry { display: inline-flex; }
+.q-retry:hover,
 .q-remove:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
 
 /* ── Send button ─────────────────────────────────────── */
@@ -1135,6 +1153,7 @@ body { background: var(--paper); min-height: 100dvh; }
 
 <!-- Friendly inline toast (non-blocking notices, e.g. rate-limit hints) -->
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="net-note" id="networkNotice" role="status" aria-live="polite"></div>
 
 <!-- Aggregate upload progress overlay (shown while files are uploading) -->
 <div class="upload-overlay" id="uploadOverlay" aria-live="polite" aria-hidden="true">
@@ -1265,6 +1284,7 @@ body { background: var(--paper); min-height: 100dvh; }
       </div>
     </div>
     <div class="queue" id="galleryQueue"></div>
+    <button type="button" class="btn btn-secondary" id="retryFailedBtn" onclick="retryFailedUploads()" style="display:none;margin-top:10px;width:100%;">Retry failed uploads</button>
 
     <!-- Happening Now strip -->
     <section class="happening-now" id="happeningNow" style="display:none;">
@@ -1905,6 +1925,135 @@ body { background: var(--paper); min-height: 100dvh; }
   }
   // The friendly Tagalog notice for HTTP 429 from our API.
   const RATE_LIMIT_MSG = 'Easy lang po! Masyado mabilis ang upload niyo. Wait ng konti.';
+  const NETWORK_RETRY_DELAYS_MS = [900, 1800];
+  const LARGE_VIDEO_WARN_BYTES = 25 * 1024 * 1024;
+  let uploadRunActive = false;
+  let lastFailedQueueIds = [];
+
+  function showNetworkNotice(text, strong = false) {
+    const el = document.getElementById('networkNotice');
+    if (!el) return;
+    el.innerHTML = strong ? `<b>${escapeHtml(text)}</b>` : escapeHtml(text);
+    el.classList.add('visible');
+  }
+  function hideNetworkNotice() {
+    const el = document.getElementById('networkNotice');
+    if (el) el.classList.remove('visible');
+  }
+  function updateNetworkNotice() {
+    if (!navigator.onLine) {
+      showNetworkNotice('You seem offline. Your uploads will keep trying when your connection comes back.', true);
+    } else if (!uploadRunActive) {
+      hideNetworkNotice();
+    }
+  }
+  window.addEventListener('online', updateNetworkNotice);
+  window.addEventListener('offline', updateNetworkNotice);
+
+  function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+  function isRetryableHttpStatus(status) {
+    return status === 408 || status === 425 || status === 429 || status >= 500;
+  }
+  function queueItemEl(queueId) { return document.getElementById(queueId); }
+  function queueStatusEl(queueId) { return document.getElementById('s' + queueId); }
+  function queueBarEl(queueId) { return document.getElementById('b' + queueId); }
+  function markQueueFailed(queueId, message = 'Failed') {
+    const item = queueItemEl(queueId);
+    const s = queueStatusEl(queueId);
+    if (item) item.classList.add('failed');
+    if (s) s.textContent = message;
+  }
+  function clearQueueFailed(queueId) {
+    const item = queueItemEl(queueId);
+    if (item) item.classList.remove('failed');
+  }
+  function updateRetryFailedBtn() {
+    const btn = document.getElementById('retryFailedBtn');
+    if (!btn) return;
+    btn.style.display = lastFailedQueueIds.length ? '' : 'none';
+    btn.textContent = lastFailedQueueIds.length === 1
+      ? 'Retry failed upload'
+      : `Retry ${lastFailedQueueIds.length} failed uploads`;
+  }
+  function createQueueMarkup(id, title, thumbId, removeTitle = 'Remove') {
+    return `
+      <div class="q-thumb placeholder placeholder--coral" id="${thumbId}"></div>
+      <div class="q-info"><div class="q-name" title="${escapeAttr(title)}">${escapeHtml(title)}</div><div class="q-prog"><span id="b${id}" style="width:0%"></span></div></div>
+      <div class="q-status" id="s${id}">Queued</div>
+      <div class="q-actions">
+        <button class="q-retry" id="r${id}" onclick="retryFailedItem('${id}')" title="Retry">Retry</button>
+        <button class="q-remove" onclick="removeItem('${id}')" title="${escapeAttr(removeTitle)}">✕</button>
+      </div>`;
+  }
+  async function fetchWithRetries(input, init, opts = {}) {
+    const {
+      retries = NETWORK_RETRY_DELAYS_MS.length,
+      label = 'request',
+      queueId = null,
+    } = opts;
+    let lastErr = null;
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const res = await fetch(input, init);
+        if (res.ok || !isRetryableHttpStatus(res.status) || attempt === retries) return res;
+        lastErr = new Error(`${label} failed with status ${res.status}`);
+      } catch (err) {
+        lastErr = err;
+        if (attempt === retries) throw err;
+      }
+      if (queueId) {
+        const s = queueStatusEl(queueId);
+        if (s) s.textContent = `Retry ${attempt + 1}/${retries}`;
+      }
+      showNetworkNotice(`Connection looks weak. Retrying ${label}…`, true);
+      await sleep(NETWORK_RETRY_DELAYS_MS[Math.min(attempt, NETWORK_RETRY_DELAYS_MS.length - 1)] || 1800);
+    }
+    throw lastErr || new Error(`${label} failed`);
+  }
+  async function xhrUploadWithRetries({ uploadUrl, file, contentType, queueId, fileSize, loadedBytes, refreshOverlay }) {
+    let lastErr = null;
+    for (let attempt = 0; attempt <= NETWORK_RETRY_DELAYS_MS.length; attempt++) {
+      try {
+        await new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open('PUT', uploadUrl);
+          xhr.setRequestHeader('Content-Type', contentType);
+          xhr.upload.onprogress = (e) => {
+            if (!e.lengthComputable) return;
+            const pct = Math.round((e.loaded / e.total) * 100);
+            const b = queueBarEl(queueId);
+            const s = queueStatusEl(queueId);
+            if (b) b.style.width = pct + '%';
+            if (s) s.textContent = pct < 100 ? pct + '%' : 'Finalizing…';
+            loadedBytes[queueId] = Math.min(fileSize, e.loaded);
+            refreshOverlay();
+          };
+          xhr.onload = () => {
+            if (xhr.status === 200 || xhr.status === 204) {
+              loadedBytes[queueId] = fileSize;
+              refreshOverlay();
+              resolve();
+            } else {
+              reject(new Error('Upload failed with status ' + xhr.status));
+            }
+          };
+          xhr.onerror = () => reject(new Error('Network error during upload'));
+          xhr.send(file);
+        });
+        return;
+      } catch (err) {
+        lastErr = err;
+        if (attempt >= NETWORK_RETRY_DELAYS_MS.length) break;
+        const s = queueStatusEl(queueId);
+        if (s) s.textContent = `Retry ${attempt + 1}/${NETWORK_RETRY_DELAYS_MS.length}`;
+        showNetworkNotice('Upload paused by weak connection. Trying again…', true);
+        await sleep(NETWORK_RETRY_DELAYS_MS[attempt]);
+      }
+    }
+    throw lastErr || new Error('Network error during upload');
+  }
 
   /* ── Wall reactions ───────────────────────────────────
      Tap an emoji on the React panel -> POST to /api/reactions/:slug ->
@@ -2477,6 +2626,11 @@ body { background: var(--paper); min-height: 100dvh; }
       alert(`Videos must be under ${mb} MB. ${rejectedBig} clip${rejectedBig > 1 ? 's were' : ' was'} skipped — try a shorter or lower-resolution clip.`);
     }
 
+    const largeVideoCount = files.filter(f => (f.type || '').startsWith('video/') && f.size >= LARGE_VIDEO_WARN_BYTES).length;
+    if (largeVideoCount > 0) {
+      showToast('Large videos can take longer on weak Wi-Fi. Photos usually upload faster first.', 5200);
+    }
+
     files.forEach((f, i) => {
       const id = 'qi' + Date.now() + Math.random().toString(36).slice(2,6);
       const item = document.createElement('div');
@@ -2545,6 +2699,7 @@ body { background: var(--paper); min-height: 100dvh; }
   function removeItem(id) {
     const item = document.getElementById(id);
     if (item) item.remove();
+    lastFailedQueueIds = lastFailedQueueIds.filter(qid => qid !== id);
     delete itemDataUrls[id];
     delete itemPosterDataUrls[id];
     delete itemPosterJobs[id];
@@ -2553,6 +2708,37 @@ body { background: var(--paper); min-height: 100dvh; }
     updateSendBtn();
     refreshCtaBar();
     refreshVoiceAvailability();
+    updateRetryFailedBtn();
+  }
+
+  function retryFailedItem(id) {
+    const btn = document.querySelector('#panel-gallery .send-btn');
+    if (!itemFiles[id]) {
+      showToast('That upload can no longer be retried. Please add the file again.');
+      return;
+    }
+    clearQueueFailed(id);
+    lastFailedQueueIds = lastFailedQueueIds.filter(qid => qid !== id);
+    const s = queueStatusEl(id);
+    const b = queueBarEl(id);
+    if (s) s.textContent = 'Ready to share';
+    if (b) b.style.width = '0%';
+    updateRetryFailedBtn();
+    if (btn) handleSend('gallery', { currentTarget: btn });
+  }
+  function retryFailedUploads() {
+    const btn = document.querySelector('#panel-gallery .send-btn');
+    if (!lastFailedQueueIds.length) return;
+    lastFailedQueueIds.forEach(id => clearQueueFailed(id));
+    lastFailedQueueIds.forEach(id => {
+      const s = queueStatusEl(id);
+      const b = queueBarEl(id);
+      if (s) s.textContent = 'Ready to share';
+      if (b) b.style.width = '0%';
+    });
+    lastFailedQueueIds = [];
+    updateRetryFailedBtn();
+    if (btn) handleSend('gallery', { currentTarget: btn });
   }
 
   // The wall preview was removed from the upload page; this is now a no-op
@@ -3118,6 +3304,10 @@ body { background: var(--paper); min-height: 100dvh; }
       overlay.classList.add('visible');
       overlay.setAttribute('aria-hidden', 'false');
     }
+    uploadRunActive = true;
+    if (!navigator.onLine) {
+      showNetworkNotice('You seem offline. Uploads will retry when the connection responds again.', true);
+    }
     // Pin the bfcache-recovery so an iOS app-switch mid-upload doesn't
     // wipe out the in-flight XHR. Released after Promise.allSettled below.
     __reelday_uploadInFlight = true;
@@ -3137,6 +3327,7 @@ body { background: var(--paper); min-height: 100dvh; }
           <span style="width:24px"></span>`;
         queue.appendChild(item);
       }
+      itemFiles.record = recordedBlob;
     }
 
     const processUpload = async (file, queueId, i, isVidMsg = false, forceFileType = null) => {
@@ -3156,7 +3347,7 @@ body { background: var(--paper); min-height: 100dvh; }
       loadedBytes[queueId] = 0;
 
       try {
-        const preRes = await fetch('/api/uploads/presigned', {
+        const preRes = await fetchWithRetries('/api/uploads/presigned', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -3164,7 +3355,7 @@ body { background: var(--paper); min-height: 100dvh; }
             ...(token ? { 'Authorization': `Bearer ${token}` } : {})
           },
           body: JSON.stringify({ slug: currentEvent.slug, filename: file.name || 'blob', contentType: file.type })
-        });
+        }, { label: 'upload ticket', queueId });
 
         if (!preRes.ok) {
           const errData = await preRes.json().catch(() => ({}));
@@ -3228,7 +3419,7 @@ body { background: var(--paper); min-height: 100dvh; }
           }
         }
 
-        const compRes = await fetch('/api/uploads/complete', {
+        const compRes = await fetchWithRetries('/api/uploads/complete', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -3246,7 +3437,7 @@ body { background: var(--paper); min-height: 100dvh; }
             thumb_data_url: thumbDataUrl || null,
             batch_id: batchId,
           })
-        });
+        }, { label: 'final save', queueId });
         if (!compRes.ok) {
           const errData = await compRes.json().catch(() => ({}));
           if (compRes.status === 429 || errData.code === 'rate_limited') {
@@ -3271,11 +3462,17 @@ body { background: var(--paper); min-height: 100dvh; }
         const itemEl = document.getElementById(queueId);
         if (s) s.textContent = '✓ Done';
         if (itemEl) itemEl.classList.add('done');
+        clearQueueFailed(queueId);
+        lastFailedQueueIds = lastFailedQueueIds.filter(id => id !== queueId);
+        delete itemFiles[queueId];
+        updateRetryFailedBtn();
         completedCount += 1;
         refreshOverlay();
       } catch (err) {
-        const s = document.getElementById('s' + queueId);
-        if (s && !/Failed/.test(s.textContent)) s.textContent = 'Failed';
+        markQueueFailed(queueId, 'Failed');
+        if (!lastFailedQueueIds.includes(queueId)) lastFailedQueueIds.push(queueId);
+        updateRetryFailedBtn();
+        showNetworkNotice('Some uploads need another try. Your completed ones are safe.', true);
         // Count it as "loaded" so the aggregate bar doesn't stay stuck.
         loadedBytes[queueId] = fileSize;
         completedCount += 1;
@@ -3310,6 +3507,7 @@ body { background: var(--paper); min-height: 100dvh; }
           <span style="width:24px"></span>`;
         queue.appendChild(vi);
       }
+      itemFiles.voice = voiceFile;
       jobs.push(processUpload(voiceFile, 'voice', jobs.length, false, 'audio'));
     }
 
@@ -3336,7 +3534,9 @@ body { background: var(--paper); min-height: 100dvh; }
     }
 
     __reelday_uploadInFlight = false;
+    uploadRunActive = false;
     const failed = results.filter(r => r.status === 'rejected');
+    const succeededCount = results.length - failed.length;
     if (failed.length && failed.length === results.length) {
       // Every upload failed — keep the user on the form so they can retry.
       btn.disabled = false;
@@ -3349,9 +3549,19 @@ body { background: var(--paper); min-height: 100dvh; }
       } else if (/presigned failed|complete failed/.test(reason)) {
         showToast('Hindi na-upload. Subukan ulit. (Upload failed — please try again.)');
       }
+      updateRetryFailedBtn();
+      return;
+    }
+    if (failed.length > 0) {
+      btn.disabled = false;
+      updateRetryFailedBtn();
+      showToast(`${succeededCount} uploaded, ${failed.length} need${failed.length === 1 ? 's' : ''} another try.`, 4200);
       return;
     }
 
+    lastFailedQueueIds = [];
+    updateRetryFailedBtn();
+    hideNetworkNotice();
     showThankYou(mode, name, msg, allUrls[0] || recordedPosterDataUrl || null);
   }
 
@@ -3431,6 +3641,9 @@ body { background: var(--paper); min-height: 100dvh; }
     Object.keys(itemPosterDataUrls).forEach(k => delete itemPosterDataUrls[k]);
     Object.keys(itemPosterJobs).forEach(k => delete itemPosterJobs[k]);
     Object.keys(itemFiles).forEach(k => delete itemFiles[k]);
+    lastFailedQueueIds = [];
+    updateRetryFailedBtn();
+    hideNetworkNotice();
     refreshCtaBar();
 
     // ── Record panel reset ─────────────────────────────
@@ -3454,6 +3667,7 @@ body { background: var(--paper); min-height: 100dvh; }
     updateSendBtn();
   }
 
+  updateNetworkNotice();
   loadEvent();
 </script>
 </body>

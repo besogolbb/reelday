@@ -1427,9 +1427,8 @@
     }
 
     /* ── Net-error badge (top-left) ─────────────────────────
-       Shown when consecutive API calls fail. The slideshow advance is
-       gated on netFrozen so the current slide stays put until things
-       recover. */
+       Shown when consecutive API calls fail. The wall now keeps rotating
+       cached slides and only marks that live updates are unavailable. */
     .net-err-badge {
       position: fixed; top: 14px; left: 14px; z-index: 60;
       display: flex; align-items: center; gap: 9px;
@@ -1448,7 +1447,7 @@
       animation: netPulse 1.2s ease-in-out infinite;
     }
     @keyframes netPulse { 50% { opacity: .35; transform: scale(.8); } }
-    body.net-frozen .frame { filter: grayscale(.35) brightness(.55); transition: filter .3s ease; }
+    body.net-frozen .frame { filter: grayscale(.18) brightness(.82); transition: filter .3s ease; }
 
     /* ── Burst (now playing video message) banner ──────────── */
     .burst-banner {
@@ -2263,14 +2262,6 @@
       if (!netFrozen) {
         netFrozen = true;
         document.body.classList.add('net-frozen');
-        try { clearTimeout(slideTimer); } catch {}
-        try { stopProgress?.(); } catch {}
-        try {
-          const v = (typeof activeLayer !== 'undefined' && activeLayer === 'A')
-            ? (typeof vidA !== 'undefined' ? vidA : null)
-            : (typeof vidB !== 'undefined' ? vidB : null);
-          if (v && items?.__currentIsVideo) v.pause();
-        } catch {}
       }
     }
     function clearError() {
@@ -2279,10 +2270,6 @@
       if (netFrozen) {
         netFrozen = false;
         document.body.classList.remove('net-frozen');
-        // Resume slideshow if it was running and the user hadn't paused.
-        try { if (typeof isRunning !== 'undefined' && isRunning && !isPaused) {
-          startProgress?.(); scheduleAdvance?.();
-        } } catch {}
       }
     }
     function isOurUrl(u) {
@@ -2304,14 +2291,14 @@
             clearError();
           } else if (res.status >= 500) {
             failCount++;
-            if (failCount >= FREEZE_AFTER) showError(`Server error · ${res.status}`);
+            if (failCount >= FREEZE_AFTER) showError(`Live updates paused · ${res.status}`);
           }
         }
         return res;
       } catch (err) {
         if (tracked) {
           failCount++;
-          if (failCount >= FREEZE_AFTER) showError('Network offline');
+          if (failCount >= FREEZE_AFTER) showError('Live updates offline');
         }
         throw err;
       }
@@ -3355,7 +3342,7 @@
   // advance most of the time — the timer is just a safety net.
   function scheduleAdvance() {
     clearTimeout(slideTimer);
-    if (isPaused || netFrozen || items.length < 2) return;
+    if (isPaused || items.length < 2) return;
 
     // Standalone audio slides and paired audio overlays.
     // Rule: show the slide for at least SLIDE_DURATION; if the audio is
@@ -3424,7 +3411,7 @@
   }
 
   function advance() {
-    if (isPaused || netFrozen || items.length === 0) return;
+    if (isPaused || items.length === 0) return;
 
     const nextIdx = items.length === 1 ? 0 : (currentIdx + 1) % items.length;
     currentIdx = nextIdx;
