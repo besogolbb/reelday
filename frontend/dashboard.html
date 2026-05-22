@@ -760,9 +760,19 @@
       color: var(--dash-muted); margin-top: 2px;
     }
 
-    /* "Who answered" list — every guest who voted on this question,
-       correct or not. Surfaces participation the host previously
-       couldn't see when nobody picked the right answer. */
+    /* Tally chip under the winner panel — "3 of 47 got it right". Keeps
+       participation visible in aggregate without listing every guest. */
+    .lb-tally {
+      font-family: var(--mono); font-size: 10px; font-weight: 700;
+      letter-spacing: .12em; text-transform: uppercase;
+      color: var(--dash-muted);
+      padding: 4px 0 0;
+    }
+    /* "Also got it right" list — runners-up by speed, capped backend-side
+       at 20 to stay readable at scale. Each row is a numbered rank pill
+       + name + their fastest response time. Wrong-answer guests are
+       deliberately not listed: at a 200-guest event that becomes a
+       wall of text the host can't use. */
     .lb-attempts { margin-top: 2px; }
     .lb-attempts-label {
       font-family: var(--mono); font-size: 10px; font-weight: 700;
@@ -775,7 +785,7 @@
       display: flex; flex-direction: column; gap: 4px;
     }
     .lb-attempt {
-      display: grid; grid-template-columns: 22px 1fr auto;
+      display: grid; grid-template-columns: 26px 1fr auto;
       gap: 10px; align-items: center;
       padding: 7px 12px; border-radius: 10px;
       font-size: 13px; color: var(--ink);
@@ -784,30 +794,17 @@
     .lb-attempt:hover { background: var(--paper-2); }
     .lb-attempt-mark {
       display: inline-flex; align-items: center; justify-content: center;
-      width: 22px; height: 22px; border-radius: 50%;
-      font-size: 12px; font-weight: 700;
-    }
-    .lb-attempt-correct .lb-attempt-mark {
-      background: linear-gradient(135deg, rgba(56,142,60,.20), rgba(56,142,60,.10));
+      width: 26px; height: 22px; border-radius: 999px;
+      font-family: var(--mono); font-size: 11px; font-weight: 700;
+      background: linear-gradient(135deg, rgba(56,142,60,.18), rgba(56,142,60,.08));
       color: #2e7d32;
-      border: 1px solid rgba(56,142,60,.25);
-    }
-    .lb-attempt-wrong .lb-attempt-mark {
-      background: linear-gradient(135deg, rgba(176,48,34,.16), rgba(176,48,34,.08));
-      color: #b03022;
-      border: 1px solid rgba(176,48,34,.22);
+      border: 1px solid rgba(56,142,60,.22);
     }
     .lb-attempt-name { color: var(--ink); }
-    .lb-attempt-wrong .lb-attempt-name { color: var(--ink-soft); }
     .lb-attempt-time {
       font-family: var(--mono); font-size: 12px; font-weight: 700;
       color: #1f5e3b;
     }
-    .lb-attempt-pick {
-      font-size: 12px; font-style: italic; color: var(--dash-muted);
-      max-width: 50%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    }
-    .lb-attempt-pick::before { content: 'picked '; font-style: normal; opacity: .7; }
     .polls-locked { padding: 16px; border-radius: 10px; background: rgba(196,90,58,.08); color: var(--ink-soft); font-size: 13px; text-align: center; border: 1px dashed rgba(196,90,58,.3); }
     .polls-locked a { color: var(--accent); font-weight: 600; text-decoration: none; }
 
@@ -5035,13 +5032,10 @@
     const body = questions.map((q, i) => {
       const num = i + 1;
       const winner = q.winner;
-      // Every guest who answered (correct or wrong) — surfaced so the
-      // leaderboard "reflects" any participation, not just the winners.
-      const attempts = Array.isArray(q.attempts) ? q.attempts : [];
-      // Map option keys → labels so we can show what each guest picked
-      // when they got it wrong (host-facing detail).
-      const optionByKey = Object.fromEntries((q.options || []).map(o => [o.key, o.label]));
-      const correctLabel = optionByKey[q.correct_key] || '';
+      const correctOthers = Array.isArray(q.correct_others) ? q.correct_others : [];
+      const answered = q.answered_count || 0;
+      const correctN = q.correct_count || (winner ? 1 + correctOthers.length : 0);
+      const correctLabel = ((q.options || []).find(o => o.key === q.correct_key) || {}).label || '';
 
       const winnerBlock = winner ? `
         <div class="lb-winner">
@@ -5055,34 +5049,39 @@
         <div class="lb-winner lb-winner-empty">
           <span class="lb-trophy" aria-hidden="true">⌛</span>
           <div class="lb-winner-info">
-            <div class="lb-winner-name">No correct answer yet</div>
-            <div class="lb-winner-sub">${q.answered_count || 0} guest${q.answered_count === 1 ? '' : 's'} answered</div>
+            <div class="lb-winner-name">${answered ? 'No one answered correctly' : 'No answers yet'}</div>
+            ${answered
+              ? `<div class="lb-winner-sub">${answered} guest${answered === 1 ? '' : 's'} tried</div>`
+              : ''}
           </div>
         </div>
       `;
 
-      // "Who answered" list — one row per guest, ✓ for correct (with
-      // their time) and ✗ for incorrect (with what they picked). This
-      // is the bit that fixes "the leaderboard didn't reflect my poll"
-      // — every vote is now visibly accounted for, not just the
-      // correct ones.
-      const attemptsBlock = attempts.length ? `
+      // Correct answerers list (#2 → top N, capped at 20 by the API).
+      // Wrong-answer guests are intentionally not listed by name — at
+      // a 200-guest event that'd be unreadable noise. We surface the
+      // total `answered` count above instead so participation is still
+      // visible in aggregate.
+      const correctList = correctOthers.length ? `
         <div class="lb-attempts">
-          <div class="lb-attempts-label">Who answered</div>
+          <div class="lb-attempts-label">Also got it right</div>
           <ul class="lb-attempts-list">
-            ${attempts.map(a => {
-              const pickLabel = optionByKey[a.option_key] || a.option_key || '';
-              return `
-                <li class="lb-attempt ${a.was_correct ? 'lb-attempt-correct' : 'lb-attempt-wrong'}">
-                  <span class="lb-attempt-mark" aria-hidden="true">${a.was_correct ? '✓' : '✗'}</span>
-                  <span class="lb-attempt-name">${escapeHtml(a.guest_name || 'Anonymous')}</span>
-                  ${a.was_correct
-                    ? `<span class="lb-attempt-time">${a.response_seconds}s</span>`
-                    : `<span class="lb-attempt-pick">${escapeHtml(pickLabel)}</span>`}
-                </li>`;
-            }).join('')}
+            ${correctOthers.map(r => `
+              <li class="lb-attempt lb-attempt-correct">
+                <span class="lb-attempt-mark" aria-hidden="true">${r.rank}</span>
+                <span class="lb-attempt-name">${escapeHtml(r.guest_name || 'Anonymous')}</span>
+                <span class="lb-attempt-time">${r.response_seconds}s</span>
+              </li>
+            `).join('')}
           </ul>
         </div>` : '';
+
+      // Tiny tally chip under the winner panel summarising correct vs
+      // total participation, so the host sees "3 of 47 got it right"
+      // without needing a wall of wrong-answer names.
+      const tally = (answered && winner) ? `
+        <div class="lb-tally">${correctN} of ${answered} got it right</div>
+      ` : '';
 
       return `
         <div class="lb-q-card ${winner ? 'lb-q-won' : ''}">
@@ -5092,7 +5091,8 @@
           </div>
           ${correctLabel ? `<div class="lb-q-correct"><span aria-hidden="true">✓</span> ${escapeHtml(correctLabel)}</div>` : ''}
           ${winnerBlock}
-          ${attemptsBlock}
+          ${tally}
+          ${correctList}
         </div>`;
     }).join('');
     pollsLeaderboard.innerHTML = head + body;

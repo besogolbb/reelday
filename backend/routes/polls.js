@@ -314,19 +314,22 @@ export default async function pollRoutes(fastify) {
     // response_seconds = voted_at - run_started_at — this is why the
     // archive captures the *previous* started_at, not whatever's in
     // polls.started_at right now (which would be the *next* run's).
-    // The previous query only surfaced CORRECT answers, which meant a
-    // question where every guest got it wrong displayed "No correct
-    // answer yet" with no participants visible. From the host's view
-    // it looked like "the leaderboard isn't reflecting my poll" —
-    // because their wrong-answer guests vanished. We now also return
-    // an `attempts` array per question listing everyone who voted
-    // (right or wrong) so the recap reflects ALL participation.
+    // Per-question recap. For each trivia question we surface:
+    //   - winner:          fastest correct answerer (rk=1)
+    //   - correct_others:  the rest who got it right, ranked by speed,
+    //                      capped at MAX_CORRECT so a 200-guest event
+    //                      doesn't dump a wall of text into the card
+    //   - answered_count:  total distinct guests who answered (any answer)
+    //   - correct_count:   distinct guests who got it right
+    // Incorrect attempts are NOT returned by name — at scale this is
+    // both noisy and indiscreet. When nobody got it right we just show
+    // "No one answered correctly" with the participation total.
+    const MAX_CORRECT = 20;
     const { rows } = await fastify.db.query(
       `WITH all_votes AS (
          -- Historical runs (archived on /start)
          SELECT h.poll_id,
                 h.guest_name,
-                h.option_key,
                 h.was_correct,
                 EXTRACT(EPOCH FROM (h.voted_at - h.run_started_at))::numeric AS resp_s
            FROM poll_vote_history h
@@ -337,7 +340,6 @@ export default async function pollRoutes(fastify) {
          -- Current poll_votes (live + just-ended runs not yet archived)
          SELECT pv.poll_id,
                 pv.guest_name,
-                pv.option_key,
                 (p.correct_key IS NOT NULL AND pv.option_key = p.correct_key) AS was_correct,
                 EXTRACT(EPOCH FROM (pv.created_at - p.started_at))::numeric   AS resp_s
            FROM poll_votes pv
@@ -349,7 +351,7 @@ export default async function pollRoutes(fastify) {
             AND pv.guest_name <> ''
             AND p.started_at IS NOT NULL
        ),
-       -- Best correct vote per (poll, guest) — feeds winner + runners_up
+       -- Best (fastest) correct attempt per guest per poll, ranked.
        ranked_correct AS (
          SELECT poll_id, guest_name,
                 ROUND(MIN(resp_s)::numeric, 1) AS best_seconds,
@@ -360,25 +362,19 @@ export default async function pollRoutes(fastify) {
            FROM all_votes
           WHERE was_correct
           GROUP BY poll_id, guest_name
-       ),
-       -- One row per (poll, guest), regardless of correctness. DISTINCT
-       -- ON keeps a single representative per guest — we prefer their
-       -- fastest correct attempt; failing that, their fastest incorrect
-       -- one. So a guest who eventually got it right shows as correct.
-       guest_attempts AS (
-         SELECT DISTINCT ON (poll_id, guest_name)
-                poll_id, guest_name, option_key, was_correct,
-                ROUND(resp_s::numeric, 1) AS resp_s
-           FROM all_votes
-          ORDER BY poll_id, guest_name, was_correct DESC, resp_s ASC
        )
        SELECT p.id            AS poll_id,
               p.question,
               p.options,
               p.correct_key,
               p.status,
-              (SELECT COUNT(*)::int FROM guest_attempts ga WHERE ga.poll_id = p.id) AS answered_count,
-              -- Winner: rk=1 in ranked_correct
+              -- Total distinct guests who answered (any answer)
+              (SELECT COUNT(DISTINCT guest_name)::int
+                 FROM all_votes WHERE poll_id = p.id) AS answered_count,
+              -- Distinct guests who got it right
+              (SELECT COUNT(*)::int
+                 FROM ranked_correct WHERE poll_id = p.id) AS correct_count,
+              -- Winner: rk=1
               (
                 SELECT jsonb_build_object(
                          'guest_name',       r.guest_name,
@@ -387,7 +383,7 @@ export default async function pollRoutes(fastify) {
                   FROM ranked_correct r
                  WHERE r.poll_id = p.id AND r.rk = 1
               ) AS winner,
-              -- Runners-up: rk 2-4
+              -- Everyone else who got it right, ranked 2..MAX_CORRECT.
               COALESCE((
                 SELECT jsonb_agg(
                          jsonb_build_object(
@@ -397,23 +393,8 @@ export default async function pollRoutes(fastify) {
                          ) ORDER BY r.rk
                        )
                   FROM ranked_correct r
-                 WHERE r.poll_id = p.id AND r.rk BETWEEN 2 AND 4
-              ), '[]'::jsonb) AS runners_up,
-              -- Every guest who voted, correct or not. The frontend
-              -- renders these as a "Who answered" list with ✓/✗ marks
-              -- so an all-wrong poll still visibly reflects participation.
-              COALESCE((
-                SELECT jsonb_agg(
-                         jsonb_build_object(
-                           'guest_name',       ga.guest_name,
-                           'option_key',       ga.option_key,
-                           'response_seconds', ga.resp_s,
-                           'was_correct',      ga.was_correct
-                         ) ORDER BY ga.was_correct DESC, ga.resp_s ASC
-                       )
-                  FROM guest_attempts ga
-                 WHERE ga.poll_id = p.id
-              ), '[]'::jsonb) AS attempts
+                 WHERE r.poll_id = p.id AND r.rk BETWEEN 2 AND ${MAX_CORRECT}
+              ), '[]'::jsonb) AS correct_others
          FROM polls p
         WHERE p.event_id    = $1
           AND p.kind        = 'question'
