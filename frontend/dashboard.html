@@ -5032,9 +5032,8 @@
     const body = questions.map((q, i) => {
       const num = i + 1;
       const winner = q.winner;
-      const correctOthers = Array.isArray(q.correct_others) ? q.correct_others : [];
       const answered = q.answered_count || 0;
-      const correctN = q.correct_count || (winner ? 1 + correctOthers.length : 0);
+      const correctN = q.correct_count || (winner ? 1 : 0);
       const correctLabel = ((q.options || []).find(o => o.key === q.correct_key) || {}).label || '';
 
       const winnerBlock = winner ? `
@@ -5057,28 +5056,10 @@
         </div>
       `;
 
-      // Correct answerers list (#2 → top N, capped at 20 by the API).
-      // Wrong-answer guests are intentionally not listed by name — at
-      // a 200-guest event that'd be unreadable noise. We surface the
-      // total `answered` count above instead so participation is still
-      // visible in aggregate.
-      const correctList = correctOthers.length ? `
-        <div class="lb-attempts">
-          <div class="lb-attempts-label">Also got it right</div>
-          <ul class="lb-attempts-list">
-            ${correctOthers.map(r => `
-              <li class="lb-attempt lb-attempt-correct">
-                <span class="lb-attempt-mark" aria-hidden="true">${r.rank}</span>
-                <span class="lb-attempt-name">${escapeHtml(r.guest_name || 'Anonymous')}</span>
-                <span class="lb-attempt-time">${r.response_seconds}s</span>
-              </li>
-            `).join('')}
-          </ul>
-        </div>` : '';
-
-      // Tiny tally chip under the winner panel summarising correct vs
-      // total participation, so the host sees "3 of 47 got it right"
-      // without needing a wall of wrong-answer names.
+      // Winner-only recap. Runners-up are deliberately not listed — at a
+      // 200-guest event this card would otherwise become a long roll of
+      // names. The single-winner panel + participation tally is enough
+      // for a host scanning a long question list.
       const tally = (answered && winner) ? `
         <div class="lb-tally">${correctN} of ${answered} got it right</div>
       ` : '';
@@ -5092,7 +5073,6 @@
           ${correctLabel ? `<div class="lb-q-correct"><span aria-hidden="true">✓</span> ${escapeHtml(correctLabel)}</div>` : ''}
           ${winnerBlock}
           ${tally}
-          ${correctList}
         </div>`;
     }).join('');
     pollsLeaderboard.innerHTML = head + body;
