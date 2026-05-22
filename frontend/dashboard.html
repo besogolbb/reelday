@@ -670,6 +670,93 @@
     }
     .lb-clear-btn:hover { background: rgba(176,48,34,.08); }
     .lb-clear-btn:disabled { opacity: .5; cursor: not-allowed; }
+    .lb-summary {
+      position: relative;
+      overflow: hidden;
+      background:
+        radial-gradient(120% 130% at 0% 0%, rgba(245,200,97,.22), transparent 60%),
+        linear-gradient(180deg, #fffaf1 0%, #fff 100%);
+      border: 1px solid rgba(196,90,58,.18);
+      border-radius: 18px;
+      padding: 18px 20px;
+      box-shadow:
+        0 1px 2px rgba(63,35,24,.04),
+        0 8px 20px rgba(196,90,58,.08),
+        inset 0 1px 0 rgba(255,255,255,.9);
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .lb-summary-head {
+      display: flex; justify-content: space-between; align-items: end;
+      gap: 12px; flex-wrap: wrap;
+    }
+    .lb-summary-kicker {
+      font-family: var(--mono); font-size: 10px; font-weight: 700;
+      letter-spacing: .14em; text-transform: uppercase;
+      color: #b8502f;
+    }
+    .lb-summary-title {
+      font-family: var(--display); font-size: 24px; font-style: italic;
+      font-weight: 600; color: var(--ink); line-height: 1.05;
+      margin-top: 4px;
+    }
+    .lb-summary-sub {
+      font-size: 13px; color: var(--dash-muted); line-height: 1.45;
+      max-width: 560px;
+    }
+    .lb-summary-foot {
+      font-family: var(--mono); font-size: 10px; font-weight: 700;
+      letter-spacing: .12em; text-transform: uppercase;
+      color: var(--dash-muted);
+      white-space: nowrap;
+    }
+    .lb-summary-rows {
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .lb-summary-row {
+      display: grid;
+      grid-template-columns: 42px minmax(0, 1fr) auto;
+      gap: 10px 14px; align-items: center;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(255,255,255,.72);
+      border: 1px solid rgba(83,48,33,.08);
+    }
+    .lb-summary-row.top1 {
+      background: linear-gradient(135deg, rgba(245,200,97,.24), rgba(255,255,255,.88));
+      border-color: rgba(216,160,90,.35);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.75);
+    }
+    .lb-summary-rank {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 42px; height: 28px; border-radius: 999px;
+      font-family: var(--mono); font-size: 11px; font-weight: 700;
+      letter-spacing: .06em;
+      color: var(--dash-muted);
+      background: rgba(83,48,33,.08);
+    }
+    .lb-summary-row.top1 .lb-summary-rank {
+      color: #8a5b12;
+      background: rgba(245,200,97,.36);
+    }
+    .lb-summary-name {
+      min-width: 0;
+      display: flex; flex-direction: column; gap: 2px;
+    }
+    .lb-summary-name b {
+      font-family: var(--display); font-size: 16px; font-weight: 600;
+      color: var(--ink); line-height: 1.2;
+    }
+    .lb-summary-meta {
+      font-family: var(--mono); font-size: 10px; font-weight: 700;
+      letter-spacing: .1em; text-transform: uppercase;
+      color: var(--dash-muted);
+    }
+    .lb-summary-score {
+      font-family: var(--mono); font-size: 12px; font-weight: 800;
+      letter-spacing: .08em; text-transform: uppercase;
+      color: #1f5e3b; text-align: right;
+      white-space: nowrap;
+    }
 
     /* Question card */
     .lb-q-card {
@@ -769,16 +856,43 @@
       padding: 4px 0 0;
     }
     .lb-runs {
-      display: flex; flex-direction: column; gap: 8px;
       padding-top: 4px;
+    }
+    .lb-runs-toggle {
+      list-style: none;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(255,255,255,.72);
+      border: 1px solid rgba(83,48,33,.08);
+      cursor: pointer;
+      user-select: none;
+    }
+    .lb-runs-toggle::-webkit-details-marker { display: none; }
+    .lb-runs-toggle-main {
+      min-width: 0;
+      display: flex; flex-direction: column; gap: 2px;
     }
     .lb-runs-head {
       font-family: var(--mono); font-size: 10px; font-weight: 700;
       letter-spacing: .12em; text-transform: uppercase;
       color: var(--dash-muted);
     }
+    .lb-runs-preview {
+      font-size: 13px; color: var(--ink); line-height: 1.35;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .lb-runs-chevron {
+      flex: 0 0 auto;
+      font-family: var(--mono); font-size: 16px; font-weight: 700;
+      color: var(--dash-muted);
+      transition: transform .16s ease;
+    }
+    .lb-runs[open] .lb-runs-chevron { transform: rotate(180deg); }
     .lb-run-list {
       display: flex; flex-direction: column; gap: 8px;
+      margin-top: 8px;
     }
     .lb-run {
       display: grid; grid-template-columns: minmax(0, 1fr) auto;
@@ -5059,6 +5173,7 @@
     const withAnswers = questions.filter(q => q.winner);
     const hasAny = questions.length > 0;
     const totalRuns = questions.reduce((sum, q) => sum + ((q.runs || []).length || 0), 0);
+    const winnerSummary = summarizeLeaderboardWinners(questions);
     const head = `
       <div class="lb-head">
         <div class="lb-head-title">
@@ -5073,6 +5188,30 @@
       bindLbClear();
       return;
     }
+    const summaryBlock = winnerSummary.rows.length ? `
+      <div class="lb-summary">
+        <div class="lb-summary-head">
+          <div>
+            <div class="lb-summary-kicker">Final tally recap</div>
+            <div class="lb-summary-title">Winner summary</div>
+            <div class="lb-summary-sub">Top question winners across every saved run. This mirrors the wall-style recap, while the question cards below keep the full backtrack log.</div>
+          </div>
+          <div class="lb-summary-foot">${winnerSummary.totalWinningRuns} winning run${winnerSummary.totalWinningRuns === 1 ? '' : 's'} logged</div>
+        </div>
+        <div class="lb-summary-rows">
+          ${winnerSummary.rows.map((row, idx) => `
+            <div class="lb-summary-row ${idx === 0 ? 'top1' : ''}">
+              <span class="lb-summary-rank">${idx === 0 ? '🏆' : '#' + (idx + 1)}</span>
+              <span class="lb-summary-name">
+                <b>${escapeHtml(row.guest_name)}</b>
+                <span class="lb-summary-meta">${row.avg_seconds}s avg winning time</span>
+              </span>
+              <span class="lb-summary-score">${row.wins} win${row.wins === 1 ? '' : 's'} · ${row.questions} question${row.questions === 1 ? '' : 's'}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    ` : '';
     const body = questions.map((q, i) => {
       const num = i + 1;
       const winner = q.winner;
@@ -5110,8 +5249,14 @@
       ` : '';
 
       const runsBlock = runs.length ? `
-        <div class="lb-runs">
-          <div class="lb-runs-head">Run history</div>
+        <details class="lb-runs">
+          <summary class="lb-runs-toggle">
+            <span class="lb-runs-toggle-main">
+              <span class="lb-runs-head">Run history</span>
+              <span class="lb-runs-preview">${escapeHtml(composeLeaderboardRunsPreview(runs))}</span>
+            </span>
+            <span class="lb-runs-chevron" aria-hidden="true">▾</span>
+          </summary>
           <div class="lb-run-list">
             ${runs.map((run, idx) => {
               const runWinner = run.winner;
@@ -5131,7 +5276,7 @@
                 </div>`;
             }).join('')}
           </div>
-        </div>
+        </details>
       ` : '';
 
       return `
@@ -5146,7 +5291,7 @@
           ${runsBlock}
         </div>`;
     }).join('');
-    pollsLeaderboard.innerHTML = head + body;
+    pollsLeaderboard.innerHTML = head + summaryBlock + body;
     bindLbClear();
   }
   function formatLeaderboardRunStamp(ts) {
@@ -5163,6 +5308,54 @@
     } catch {
       return 'Earlier run';
     }
+  }
+  function composeLeaderboardRunsPreview(runs) {
+    const count = Array.isArray(runs) ? runs.length : 0;
+    if (!count) return 'No saved runs yet';
+    const latest = runs[0] || null;
+    const label = count === 1 ? '1 run saved' : `${count} runs saved`;
+    if (!latest) return label;
+    if (latest.winner?.guest_name) {
+      return `${label} · latest: ${latest.winner.guest_name}`;
+    }
+    if ((Number(latest.answered_count) || 0) > 0) {
+      return `${label} · latest: no correct answer`;
+    }
+    return `${label} · latest: no answers`;
+  }
+  function summarizeLeaderboardWinners(questions) {
+    const stats = new Map();
+    let totalWinningRuns = 0;
+    for (const q of (questions || [])) {
+      const questionLabel = String(q.question || '').trim() || 'Untitled question';
+      for (const run of (q.runs || [])) {
+        if (!run?.winner?.guest_name) continue;
+        totalWinningRuns += 1;
+        const name = String(run.winner.guest_name).trim();
+        if (!name) continue;
+        let row = stats.get(name);
+        if (!row) {
+          row = { guest_name: name, wins: 0, total_seconds: 0, questions: new Set() };
+          stats.set(name, row);
+        }
+        row.wins += 1;
+        row.total_seconds += Number(run.winner.response_seconds) || 0;
+        row.questions.add(questionLabel);
+      }
+    }
+    const rows = [...stats.values()]
+      .map(row => ({
+        guest_name: row.guest_name,
+        wins: row.wins,
+        avg_seconds: row.wins ? (row.total_seconds / row.wins).toFixed(1) : '0.0',
+        questions: row.questions.size,
+      }))
+      .sort((a, b) =>
+        b.wins - a.wins ||
+        Number(a.avg_seconds) - Number(b.avg_seconds) ||
+        a.guest_name.localeCompare(b.guest_name))
+      .slice(0, 6);
+    return { totalWinningRuns, rows };
   }
   function bindLbClear() {
     const btn = document.getElementById('lb-clear-btn');
