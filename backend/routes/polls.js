@@ -299,113 +299,154 @@ export default async function pollRoutes(fastify) {
     const ctx = await loadEvent(request.params.slug, request, reply, { requireOwner: true });
     if (!ctx) return;
 
-    // The Leaderboard tab now thinks "per question, who won" — for each
-    // trivia question on this event, we surface the single fastest
-    // correct answerer (winner) and a couple of runners-up. The host
-    // wanted a recap that mirrors how questions ran on the wall, not a
-    // pure ranking of guests.
-    //
-    // Data sources:
-    //   poll_vote_history  — archived runs (every "Run again" snapshot)
-    //   poll_votes         — the current (live or just-ended) run
-    // We UNION them so single-run polls still appear AND multi-run polls
-    // accumulate.
-    //
-    // response_seconds = voted_at - run_started_at — this is why the
-    // archive captures the *previous* started_at, not whatever's in
-    // polls.started_at right now (which would be the *next* run's).
-    // Per-question recap. For each trivia question we surface:
-    //   - winner:          fastest correct answerer (rk=1)
-    //   - correct_others:  the rest who got it right, ranked by speed,
-    //                      capped at MAX_CORRECT so a 200-guest event
-    //                      doesn't dump a wall of text into the card
-    //   - answered_count:  total distinct guests who answered (any answer)
-    //   - correct_count:   distinct guests who got it right
-    // Incorrect attempts are NOT returned by name — at scale this is
-    // both noisy and indiscreet. When nobody got it right we just show
-    // "No one answered correctly" with the participation total.
+    // The dashboard leaderboard is now both:
+    //   1. a per-question recap across all runs, and
+    //   2. a historical run log for each "Run again".
+    // We still compute the aggregate winner/correct counts per question,
+    // but we also keep each run separate so the frontend can show a
+    // timeline instead of collapsing reruns into one blended card.
     const MAX_CORRECT = 20;
-    const { rows } = await fastify.db.query(
+    const { rows: pollRows } = await fastify.db.query(
+      `SELECT id AS poll_id, question, options, correct_key, status, started_at
+         FROM polls
+        WHERE event_id    = $1
+          AND kind        = 'question'
+          AND correct_key IS NOT NULL
+        ORDER BY created_at ASC`,
+      [ctx.event.id],
+    );
+    const { rows: voteRows } = await fastify.db.query(
       `WITH all_votes AS (
-         -- Historical runs (archived on /start)
          SELECT h.poll_id,
                 h.guest_name,
                 h.was_correct,
-                EXTRACT(EPOCH FROM (h.voted_at - h.run_started_at))::numeric AS resp_s
+                ROUND(EXTRACT(EPOCH FROM (h.voted_at - h.run_started_at))::numeric, 1) AS resp_s,
+                h.run_started_at
            FROM poll_vote_history h
-          WHERE h.event_id   = $1
-            AND h.guest_name IS NOT NULL
-            AND h.guest_name <> ''
+          WHERE h.event_id        = $1
+            AND h.guest_name      IS NOT NULL
+            AND h.guest_name      <> ''
+            AND h.run_started_at  IS NOT NULL
          UNION ALL
-         -- Current poll_votes (live + just-ended runs not yet archived)
          SELECT pv.poll_id,
                 pv.guest_name,
                 (p.correct_key IS NOT NULL AND pv.option_key = p.correct_key) AS was_correct,
-                EXTRACT(EPOCH FROM (pv.created_at - p.started_at))::numeric   AS resp_s
+                ROUND(EXTRACT(EPOCH FROM (pv.created_at - p.started_at))::numeric, 1) AS resp_s,
+                p.started_at AS run_started_at
            FROM poll_votes pv
-           JOIN polls      p ON p.id = pv.poll_id
-          WHERE p.event_id   = $1
-            AND p.kind       = 'question'
-            AND p.correct_key IS NOT NULL
-            AND pv.guest_name IS NOT NULL
-            AND pv.guest_name <> ''
-            AND p.started_at IS NOT NULL
-       ),
-       -- Best (fastest) correct attempt per guest per poll, ranked.
-       ranked_correct AS (
-         SELECT poll_id, guest_name,
-                ROUND(MIN(resp_s)::numeric, 1) AS best_seconds,
-                ROW_NUMBER() OVER (
-                  PARTITION BY poll_id
-                  ORDER BY MIN(resp_s) ASC
-                ) AS rk
-           FROM all_votes
-          WHERE was_correct
-          GROUP BY poll_id, guest_name
+           JOIN polls p ON p.id = pv.poll_id
+          WHERE p.event_id       = $1
+            AND p.kind           = 'question'
+            AND p.correct_key    IS NOT NULL
+            AND pv.guest_name    IS NOT NULL
+            AND pv.guest_name    <> ''
+            AND p.started_at     IS NOT NULL
        )
-       SELECT p.id            AS poll_id,
-              p.question,
-              p.options,
-              p.correct_key,
-              p.status,
-              -- Total distinct guests who answered (any answer)
-              (SELECT COUNT(DISTINCT guest_name)::int
-                 FROM all_votes WHERE poll_id = p.id) AS answered_count,
-              -- Distinct guests who got it right
-              (SELECT COUNT(*)::int
-                 FROM ranked_correct WHERE poll_id = p.id) AS correct_count,
-              -- Winner: rk=1
-              (
-                SELECT jsonb_build_object(
-                         'guest_name',       r.guest_name,
-                         'response_seconds', r.best_seconds
-                       )
-                  FROM ranked_correct r
-                 WHERE r.poll_id = p.id AND r.rk = 1
-              ) AS winner,
-              -- Everyone else who got it right, ranked 2..MAX_CORRECT.
-              COALESCE((
-                SELECT jsonb_agg(
-                         jsonb_build_object(
-                           'guest_name',       r.guest_name,
-                           'response_seconds', r.best_seconds,
-                           'rank',             r.rk
-                         ) ORDER BY r.rk
-                       )
-                  FROM ranked_correct r
-                 WHERE r.poll_id = p.id AND r.rk BETWEEN 2 AND ${MAX_CORRECT}
-              ), '[]'::jsonb) AS correct_others
-         FROM polls p
-        WHERE p.event_id    = $1
-          AND p.kind        = 'question'
-          AND p.correct_key IS NOT NULL
-        ORDER BY p.created_at ASC`,
+       SELECT poll_id, guest_name, was_correct, resp_s, run_started_at
+         FROM all_votes
+        ORDER BY poll_id, run_started_at, resp_s ASC NULLS LAST, guest_name ASC`,
       [ctx.event.id],
     );
 
+    const votesByPoll = new Map();
+    for (const row of voteRows) {
+      const list = votesByPoll.get(row.poll_id) || [];
+      list.push(row);
+      votesByPoll.set(row.poll_id, list);
+    }
+
+    const questions = pollRows.map(poll => {
+      const votes = votesByPoll.get(poll.poll_id) || [];
+      const answeredGuests = new Set();
+      const bestCorrectByGuest = new Map();
+      const runsMap = new Map();
+
+      for (const vote of votes) {
+        const guest = String(vote.guest_name || '').trim();
+        if (!guest) continue;
+        answeredGuests.add(guest);
+
+        const runKey = vote.run_started_at ? new Date(vote.run_started_at).toISOString() : null;
+        if (runKey) {
+          let run = runsMap.get(runKey);
+          if (!run) {
+            run = {
+              run_started_at: runKey,
+              answeredGuests: new Set(),
+              bestCorrectByGuest: new Map(),
+            };
+            runsMap.set(runKey, run);
+          }
+          run.answeredGuests.add(guest);
+          if (vote.was_correct) {
+            const secs = Number(vote.resp_s);
+            const prev = run.bestCorrectByGuest.get(guest);
+            if (prev == null || secs < prev) run.bestCorrectByGuest.set(guest, secs);
+          }
+        }
+
+        if (vote.was_correct) {
+          const secs = Number(vote.resp_s);
+          const prev = bestCorrectByGuest.get(guest);
+          if (prev == null || secs < prev) bestCorrectByGuest.set(guest, secs);
+        }
+      }
+
+      const rankedCorrect = [...bestCorrectByGuest.entries()]
+        .map(([guest_name, response_seconds]) => ({ guest_name, response_seconds }))
+        .sort((a, b) => a.response_seconds - b.response_seconds || a.guest_name.localeCompare(b.guest_name));
+
+      const winner = rankedCorrect[0]
+        ? {
+            guest_name: rankedCorrect[0].guest_name,
+            response_seconds: rankedCorrect[0].response_seconds,
+          }
+        : null;
+
+      const correct_others = rankedCorrect
+        .slice(1, MAX_CORRECT)
+        .map((r, idx) => ({
+          guest_name: r.guest_name,
+          response_seconds: r.response_seconds,
+          rank: idx + 2,
+        }));
+
+      const runs = [...runsMap.values()]
+        .map(run => {
+          const rankedRun = [...run.bestCorrectByGuest.entries()]
+            .map(([guest_name, response_seconds]) => ({ guest_name, response_seconds }))
+            .sort((a, b) => a.response_seconds - b.response_seconds || a.guest_name.localeCompare(b.guest_name));
+          return {
+            run_started_at: run.run_started_at,
+            answered_count: run.answeredGuests.size,
+            correct_count: rankedRun.length,
+            winner: rankedRun[0]
+              ? {
+                  guest_name: rankedRun[0].guest_name,
+                  response_seconds: rankedRun[0].response_seconds,
+                }
+              : null,
+          };
+        })
+        .sort((a, b) => new Date(b.run_started_at) - new Date(a.run_started_at));
+
+      return {
+        poll_id: poll.poll_id,
+        question: poll.question,
+        options: poll.options,
+        correct_key: poll.correct_key,
+        status: poll.status,
+        answered_count: answeredGuests.size,
+        correct_count: rankedCorrect.length,
+        winner,
+        correct_others,
+        runs,
+      };
+    });
+
     return {
-      total_questions: rows.length,
-      questions: rows,
+      total_questions: questions.length,
+      questions,
     };
   });
 

@@ -768,6 +768,49 @@
       color: var(--dash-muted);
       padding: 4px 0 0;
     }
+    .lb-runs {
+      display: flex; flex-direction: column; gap: 8px;
+      padding-top: 4px;
+    }
+    .lb-runs-head {
+      font-family: var(--mono); font-size: 10px; font-weight: 700;
+      letter-spacing: .12em; text-transform: uppercase;
+      color: var(--dash-muted);
+    }
+    .lb-run-list {
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .lb-run {
+      display: grid; grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px 14px; align-items: center;
+      padding: 10px 12px; border-radius: 12px;
+      background: rgba(255,255,255,.7);
+      border: 1px solid rgba(83,48,33,.08);
+    }
+    .lb-run-main {
+      min-width: 0;
+      display: flex; flex-direction: column; gap: 2px;
+    }
+    .lb-run-label {
+      font-family: var(--mono); font-size: 10px; font-weight: 700;
+      letter-spacing: .12em; text-transform: uppercase;
+      color: var(--dash-muted);
+    }
+    .lb-run-winner {
+      font-size: 13px; color: var(--ink); line-height: 1.35;
+    }
+    .lb-run-winner b {
+      font-family: var(--display); font-size: 14px; font-weight: 600;
+    }
+    .lb-run-winner.empty {
+      color: var(--ink-soft); font-style: italic;
+    }
+    .lb-run-meta {
+      font-family: var(--mono); font-size: 10px; font-weight: 700;
+      letter-spacing: .08em; text-transform: uppercase;
+      color: var(--dash-muted);
+      text-align: right; white-space: nowrap;
+    }
     /* "Also got it right" list — runners-up by speed, capped backend-side
        at 20 to stay readable at scale. Each row is a numbered rank pill
        + name + their fastest response time. Wrong-answer guests are
@@ -5015,11 +5058,12 @@
     if (!pollsLeaderboard) return;
     const withAnswers = questions.filter(q => q.winner);
     const hasAny = questions.length > 0;
+    const totalRuns = questions.reduce((sum, q) => sum + ((q.runs || []).length || 0), 0);
     const head = `
       <div class="lb-head">
         <div class="lb-head-title">
           ${hasAny
-            ? `Recap of every trivia question — fastest correct answer wins. ${withAnswers.length} of ${questions.length} answered.`
+            ? `Recap of every trivia question — fastest correct answer wins. ${withAnswers.length} of ${questions.length} answered, across ${totalRuns} run${totalRuns === 1 ? '' : 's'}.`
             : 'Create a Question and run it to see winners here.'}
         </div>
         <button type="button" class="lb-clear-btn" id="lb-clear-btn" ${withAnswers.length ? '' : 'disabled'}>Clear results</button>
@@ -5035,6 +5079,7 @@
       const answered = q.answered_count || 0;
       const correctN = q.correct_count || (winner ? 1 : 0);
       const correctLabel = ((q.options || []).find(o => o.key === q.correct_key) || {}).label || '';
+      const runs = Array.isArray(q.runs) ? q.runs : [];
 
       const winnerBlock = winner ? `
         <div class="lb-winner">
@@ -5064,6 +5109,31 @@
         <div class="lb-tally">${correctN} of ${answered} got it right</div>
       ` : '';
 
+      const runsBlock = runs.length ? `
+        <div class="lb-runs">
+          <div class="lb-runs-head">Run history</div>
+          <div class="lb-run-list">
+            ${runs.map((run, idx) => {
+              const runWinner = run.winner;
+              const runAnswered = Number(run.answered_count) || 0;
+              const runCorrect = Number(run.correct_count) || 0;
+              const runWhen = formatLeaderboardRunStamp(run.run_started_at);
+              const winnerLine = runWinner
+                ? `<span class="lb-run-winner"><b>${escapeHtml(runWinner.guest_name || 'Anonymous')}</b> won in ${runWinner.response_seconds}s</span>`
+                : `<span class="lb-run-winner empty">${runAnswered ? 'No one answered correctly' : 'No answers recorded'}</span>`;
+              return `
+                <div class="lb-run">
+                  <div class="lb-run-main">
+                    <div class="lb-run-label">Run ${runs.length - idx} · ${escapeHtml(runWhen)}</div>
+                    ${winnerLine}
+                  </div>
+                  <div class="lb-run-meta">${runCorrect} right · ${runAnswered} answered</div>
+                </div>`;
+            }).join('')}
+          </div>
+        </div>
+      ` : '';
+
       return `
         <div class="lb-q-card ${winner ? 'lb-q-won' : ''}">
           <div class="lb-q-head">
@@ -5073,10 +5143,26 @@
           ${correctLabel ? `<div class="lb-q-correct"><span aria-hidden="true">✓</span> ${escapeHtml(correctLabel)}</div>` : ''}
           ${winnerBlock}
           ${tally}
+          ${runsBlock}
         </div>`;
     }).join('');
     pollsLeaderboard.innerHTML = head + body;
     bindLbClear();
+  }
+  function formatLeaderboardRunStamp(ts) {
+    if (!ts) return 'Earlier run';
+    const d = new Date(ts);
+    if (Number.isNaN(d.getTime())) return 'Earlier run';
+    try {
+      return d.toLocaleString([], {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      });
+    } catch {
+      return 'Earlier run';
+    }
   }
   function bindLbClear() {
     const btn = document.getElementById('lb-clear-btn');
