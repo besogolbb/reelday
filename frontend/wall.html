@@ -1874,11 +1874,11 @@
 <!-- ════ EMPTY STATE ══════════════════════════════════════ -->
 <div class="empty-state" id="empty-state">
   <div class="empty-event-name" id="empty-event-name">Reelday</div>
-  <div class="empty-tagline">Scan para mag-share ng inyong photos!</div>
+  <div class="empty-tagline" id="empty-tagline">Scan para mag-share ng inyong photos!</div>
   <div class="empty-qr-wrap">
     <img id="empty-qr" alt="QR Code" />
   </div>
-  <div class="empty-scan-label">📸 I-scan ang QR code para magsimula</div>
+  <div class="empty-scan-label" id="empty-scan-label">📸 I-scan ang QR code para magsimula</div>
 </div>
 
 <script type="module">
@@ -1977,6 +1977,7 @@
   // CSS keys off <body data-tier>; runtime feature gates read planFeatures.
   let planTierId   = null;
   let planFeatures = { videoUpload: true, audioNotes: true, reactions: true, polls: true };
+  let wallArchived = false;
 
   /* Read uploads saved by upload.html into localStorage (same-origin) */
   function readLocalUploads() {
@@ -2004,6 +2005,27 @@
     // those are written by upload.html on the same browser and would
     // otherwise bypass the host's auto-approve setting.
     return apiUploads;
+  }
+
+  function enterArchivedWallState(event = eventData) {
+    wallArchived = true;
+    isRunning = false;
+    try { clearTimeout(slideTimer); slideTimer = null; } catch {}
+    try { clearInterval(pollCountdownTimer); pollCountdownTimer = null; } catch {}
+    try { vidA.pause(); } catch {}
+    try { vidB.pause(); } catch {}
+    try { bgMusic?.pause(); } catch {}
+    if (progressFill) {
+      progressFill.style.transition = 'none';
+      progressFill.style.width = '0%';
+    }
+    if (emojiBox) emojiBox.style.display = 'none';
+    if (qrBadge) qrBadge.style.opacity = '0';
+    if (emptyName) emptyName.textContent = event?.couple_names || 'Reelday';
+    if (emptyTagline) emptyTagline.textContent = 'This wall has already expired.';
+    if (emptyScanLabel) emptyScanLabel.textContent = 'The live wall is no longer available for this event.';
+    if (emptyQr) emptyQr.removeAttribute('src');
+    emptyState.classList.add('visible');
   }
 
   function uploadCreatedMs(upload) {
@@ -2815,7 +2837,9 @@
   const uploadToast = document.getElementById('upload-toast');
   const emptyState  = document.getElementById('empty-state');
   const emptyName   = document.getElementById('empty-event-name');
+  const emptyTagline = document.getElementById('empty-tagline');
   const emptyQr     = document.getElementById('empty-qr');
+  const emptyScanLabel = document.getElementById('empty-scan-label');
   const emojiBox    = document.getElementById('emoji-container');
 
   /* ══════════════════════════════════════════════════════════
@@ -4452,6 +4476,7 @@
   }
 
   async function pollPolls() {
+    if (wallArchived) return;
     // Tier gate: Live polls/games are a Dalisay+ feature.
     if (planFeatures && planFeatures.polls === false) return;
     try {
@@ -4546,6 +4571,7 @@
   let sdeWasMusicPlaying    = false; // whether bg music was playing pre-takeover (restore on exit)
   let sdeFirstPollDone      = false; // page-load swallow flag (see handleSdePlay)
   async function pollReactions() {
+    if (wallArchived) return;
     // Tier gate: Tala doesn't include live reactions, so don't even
     // hit the endpoint — keeps the wall quiet and the network log clean.
     if (planFeatures && planFeatures.reactions === false) return;
@@ -4727,6 +4753,7 @@
   }
 
   async function pollBurst() {
+    if (wallArchived) return;
     try {
       const res = await fetch(`/api/events/${slug}`);
       if (!res.ok) return;
@@ -4768,6 +4795,7 @@
   // of letting it move on. The guard makes an overlapping tick a no-op.
   let refreshInFlight = false;
   async function refreshUploads() {
+    if (wallArchived) return;
     if (refreshInFlight) return;
     refreshInFlight = true;
     try { await refreshUploadsImpl(); }
@@ -4775,12 +4803,17 @@
   }
 
   async function refreshUploadsImpl() {
+    if (wallArchived) return;
     let apiUploads = Array.isArray(allUploads) ? allUploads.slice() : [];
     let gotFreshUploads = false;
     try {
       const res = await fetch(`/api/uploads/${slug}`);
       if (res.ok) {
         const data = await res.json();
+        if (data?.locks?.gallery_locked) {
+          enterArchivedWallState(data.event || eventData);
+          return;
+        }
         apiUploads = data.uploads || [];
         gotFreshUploads = true;
         updateGuestBadge(data.guest_count ?? 0);
@@ -4956,6 +4989,8 @@
   ══════════════════════════════════════════════════════════ */
   async function showEmptyState(event) {
     emptyName.textContent = event.couple_names || 'Reelday';
+    if (emptyTagline) emptyTagline.textContent = 'Scan para mag-share ng inyong photos!';
+    if (emptyScanLabel) emptyScanLabel.textContent = '📸 I-scan ang QR code para magsimula';
     emptyState.classList.add('visible');
 
     try {
@@ -5141,19 +5176,9 @@
       venue:        qs.get('venue') || '',
     };
 
-    // Phase 4: archived badge if the gallery expiry has passed
     if (apiLocks?.gallery_locked) {
-      const badge = document.createElement('div');
-      badge.style.cssText =
-        'position:fixed;top:18px;right:18px;z-index:11;' +
-        'padding:6px 14px;border-radius:999px;' +
-        'background:rgba(0,0,0,.55);backdrop-filter:blur(8px);' +
-        '-webkit-backdrop-filter:blur(8px);' +
-        'font-family:var(--mono);font-size:11px;letter-spacing:.2em;' +
-        'text-transform:uppercase;color:rgba(255,255,255,.85);' +
-        'border:1px solid rgba(255,255,255,.18);';
-      badge.textContent = '◆ Archived';
-      document.body.appendChild(badge);
+      enterArchivedWallState(eventData);
+      return;
     }
 
     // Apply event theme

@@ -3850,10 +3850,23 @@
     // Nav links
     const wallLink   = $('wall-nav-link');
     const uploadLink = $('upload-nav-link');
-    if (wallLink)   wallLink.href   = `/wall/${slug}`;
+    const wallExpired = !!(event.gallery_expires_at && new Date(event.gallery_expires_at) < new Date());
+    if (wallLink) {
+      wallLink.href = wallExpired ? '#' : `/wall/${slug}`;
+      wallLink.title = wallExpired ? 'The live wall has expired for this event.' : '';
+      wallLink.setAttribute('aria-disabled', wallExpired ? 'true' : 'false');
+      wallLink.style.opacity = wallExpired ? '.55' : '';
+      wallLink.style.pointerEvents = wallExpired ? 'none' : '';
+    }
     if (uploadLink) uploadLink.href = buildUploadUrl();
     const wallBtn = $('btn-open-wall');
-    if (wallBtn) wallBtn.href = `/wall/${slug}`;
+    if (wallBtn) {
+      wallBtn.href = wallExpired ? '#' : `/wall/${slug}`;
+      wallBtn.title = wallExpired ? 'The live wall has expired for this event.' : '';
+      wallBtn.setAttribute('aria-disabled', wallExpired ? 'true' : 'false');
+      wallBtn.style.opacity = wallExpired ? '.55' : '';
+      wallBtn.style.pointerEvents = wallExpired ? 'none' : '';
+    }
 
     const qrNavLink = $('qr-nav-link');
     if (qrNavLink) {
@@ -4300,7 +4313,14 @@
     }
 
     const wallBtn = $('btn-open-wall');
-    if (wallBtn) wallBtn.href = slug ? `/wall/${slug}` : '#';
+    if (wallBtn) {
+      const galleryExpired = !!(event.gallery_expires_at && new Date(event.gallery_expires_at) < now);
+      wallBtn.href = (!galleryExpired && slug) ? `/wall/${slug}` : '#';
+      wallBtn.title = galleryExpired ? 'The live wall has expired for this event.' : '';
+      wallBtn.setAttribute('aria-disabled', galleryExpired ? 'true' : 'false');
+      wallBtn.style.opacity = galleryExpired ? '.55' : '';
+      wallBtn.style.pointerEvents = galleryExpired ? 'none' : '';
+    }
   }
 
   function renderQuota(event, uploadCount) {
