@@ -22,10 +22,6 @@ const ZIP_VIEWER_TEMPLATE = readFileSync(
   pathJoin(__dirname, '..', 'templates', 'zip-viewer.html'),
   'utf8',
 );
-const ZIP_MOBILE_VIEWER_TEMPLATE = readFileSync(
-  pathJoin(__dirname, '..', 'templates', 'zip-mobile-viewer.html'),
-  'utf8',
-);
 
 // Signed download tokens for the bulk-ZIP endpoint. Browsers can't add
 // Authorization headers to a top-level navigation, so we issue a short-
@@ -1254,12 +1250,6 @@ export default async function uploadRoutes(fastify) {
       //                                isn't interpreted as a back-ref
 
     archive.append(viewerHtml, { name: 'viewer.html' });
-    const mobileViewerHtml = ZIP_MOBILE_VIEWER_TEMPLATE
-      .replace(/__EVENT_TITLE__/g,   (event.couple_names || slug).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])))
-      .replace(/__EVENT_NAMES__/g,   (event.couple_names || slug).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])))
-      .replace(/__EVENT_SUB__/g,     `${manifestItems.length} memor${manifestItems.length === 1 ? 'y' : 'ies'} · mobile-friendly fallback`)
-      .replace(/__MANIFEST_JSON__/g, () => manifestJson);
-    archive.append(mobileViewerHtml, { name: 'mobile.html' });
 
     await archive.finalize();
   });
