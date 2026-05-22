@@ -4119,8 +4119,13 @@
     const total = uploads.length;
     $('stat-total').textContent = total;
 
-    // Unique uploaders card
-    const uniqueUploaders = new Set(uploads.map(u => u.uploader_name || 'Anonymous')).size;
+    // Unique uploaders card — count by guest_id (stable per-device ID)
+    // so the same guest uploading under different names counts once, and
+    // multiple anonymous guests don't collapse into a single "Anonymous".
+    // Uploads missing a guest_id (legacy rows) fall back to uploader_name.
+    const uniqueUploaders = new Set(
+      uploads.map(u => u.guest_id || `name:${u.uploader_name || 'Anonymous'}`)
+    ).size;
     $('stat-guests').textContent = uniqueUploaders;
 
     // Pending count
@@ -4759,13 +4764,13 @@
     pollsRefreshTimer = setInterval(refreshPolls, 3000);
   }
 
-  // Snapshot of last-seen poll statuses keyed by id. The leaderboard
-  // tab triggers a refresh on two signals:
-  //   1. A poll just transitioned live → not-live (final votes locked in)
-  //   2. Any poll is currently live (votes are streaming into poll_votes
-  //      and the leaderboard query reads from there, so each 3s tick
-  //      surfaces who answered fastest mid-question).
-  // When nothing is live and nothing just ended, we skip the refetch.
+  // While the host is on the Leaderboard tab we re-pull the leaderboard
+  // on every 3 s tick. The earlier "only on live / just-ended" gate
+  // missed legitimate updates — late tallies trickling in after the
+  // live→ended transition, archive writes from Run-again, and any path
+  // where the polls list itself doesn't change status. One small GET
+  // per 3 s while the tab is open is negligible. lastPollStatuses is
+  // kept in case future logic wants to react to transitions.
   const lastPollStatuses = new Map();
   async function refreshPolls() {
     if (!slug) return;
@@ -4774,18 +4779,13 @@
       if (!res.ok) return;
       const { polls } = await res.json();
 
-      let anyJustEnded = false;
-      let anyLive      = false;
       for (const p of (polls || [])) {
-        const prev = lastPollStatuses.get(p.id);
-        if (prev === 'live' && p.status !== 'live') anyJustEnded = true;
-        if (p.status === 'live') anyLive = true;
         lastPollStatuses.set(p.id, p.status);
       }
 
       renderPolls(polls || []);
 
-      if (pollsTab === 'leaderboard' && (anyJustEnded || anyLive)) {
+      if (pollsTab === 'leaderboard') {
         refreshLeaderboard();
       }
     } catch { /* silent */ }

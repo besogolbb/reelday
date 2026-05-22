@@ -3595,7 +3595,12 @@
 
     // Stats: moments + guests. Date intentionally hidden — the
     // numbers are the hero, the date lives elsewhere in the chrome.
-    const guestSet = new Set(uploads.map(u => u.uploader_name).filter(Boolean));
+    // Count by guest_id (stable per-device) so the same guest under
+    // different names counts once, and anonymous guests aren't merged.
+    const guestSet = new Set(
+      uploads.map(u => u.guest_id || (u.uploader_name ? `name:${u.uploader_name}` : null))
+              .filter(Boolean)
+    );
 
     // Inline SVGs so the icons inherit currentColor and need no
     // external font/asset load.
