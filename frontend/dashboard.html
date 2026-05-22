@@ -1244,23 +1244,6 @@
     .poll-row .poll-panel.question .poll-panel-label {
       color: var(--accent-deep);
     }
-    .poll-row .poll-helper {
-      display: block;
-      margin: 0;
-      font-size: 12.5px;
-      line-height: 1.5;
-      color: var(--ink-soft);
-    }
-    .poll-row .poll-helper strong {
-      display: inline-block;
-      margin-right: 6px;
-      font-family: var(--mono);
-      font-size: 10px;
-      font-weight: 800;
-      letter-spacing: .1em;
-      text-transform: uppercase;
-      color: var(--accent-deep);
-    }
     /* "Answers" preview — read as a labelled list, not body copy. The
        small uppercase "Answers" label lifts the line out of the
        question text and visually separates it. */
@@ -1415,10 +1398,6 @@
       .poll-row .poll-q {
         font-size: 20px;
         line-height: 1.28;
-      }
-      .poll-row .poll-helper {
-        font-size: 12px;
-        line-height: 1.45;
       }
       .poll-row .poll-choice {
         min-height: 36px;
@@ -5273,11 +5252,6 @@
         : isDraft
           ? 'Ready to run'
           : `Ended${total ? ' · ' + total + ' vote' + (total === 1 ? '' : 's') : ''}`;
-      const helperLine = isLive
-        ? (isQuestion ? 'Guests are answering now. Tap stop when the MC is ready for the reveal.' : 'Guests are voting now. Tap stop when the MC wants to close the poll.')
-        : isDraft
-          ? (isQuestion ? 'Correct answer will be revealed on the wall after time ends.' : 'Guests will vote from their phones as soon as you start it.')
-          : (isQuestion ? 'This question already ran. Use Run again to put it back on the wall.' : 'This poll already ran. Use Run again to open it back up on the wall.');
 
       // Options preview, with the correct answer marked for trivia drafts/ended.
       // Host-only knowledge: helps the MC rehearse the reveal without re-opening
@@ -5329,10 +5303,6 @@
             <div class="poll-panel question">
               <div class="poll-panel-label">Question</div>
               <div class="poll-q">${escapeHtml(p.question)}</div>
-            </div>
-            <div class="poll-panel note">
-              <div class="poll-panel-label">MC note</div>
-              <div class="poll-helper"><strong>${isLive ? 'Live' : isDraft ? 'Next' : 'Replay'}</strong> ${escapeHtml(helperLine)}</div>
             </div>
             <div class="poll-panel choices">
               <div class="poll-panel-label">Choices</div>
