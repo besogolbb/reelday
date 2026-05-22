@@ -326,6 +326,27 @@ export default async function pollRoutes(fastify) {
     return { ok: true };
   });
 
+  // Wipe historical trivia votes for this event — powers the dashboard's
+  // "Clear results" button on the Leaderboard tab. Deliberately leaves
+  // votes on *live* polls alone (those tallies are on the wall right now)
+  // and only touches kind='question' polls — opinion polls have their own
+  // value the host may want to keep.
+  fastify.delete('/events/:slug/polls/leaderboard', { preHandler: fastify.authenticate }, async (request, reply) => {
+    const ctx = await loadEvent(request.params.slug, request, reply, { requireOwner: true });
+    if (!ctx) return;
+    const { rowCount } = await fastify.db.query(
+      `DELETE FROM poll_votes
+        WHERE poll_id IN (
+          SELECT id FROM polls
+           WHERE event_id = $1
+             AND kind   = 'question'
+             AND status <> 'live'
+        )`,
+      [ctx.event.id],
+    );
+    return { ok: true, cleared: rowCount };
+  });
+
   fastify.post('/events/:slug/polls/:id/stop', { preHandler: fastify.authenticate }, async (request, reply) => {
     const ctx = await loadEvent(request.params.slug, request, reply, { requireOwner: true });
     if (!ctx) return;

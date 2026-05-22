@@ -626,6 +626,70 @@
 
     .polls-list { display: flex; flex-direction: column; gap: 14px; }
     .polls-empty { font-size: 13px; color: var(--dash-muted); padding: 18px 0; text-align: center; font-style: italic; }
+
+    /* ── Sub-tabs: Questions · Polls · Leaderboard ────────── */
+    .polls-tabs {
+      display: flex; gap: 4px; margin-bottom: 14px;
+      border-bottom: 1px solid var(--dash-border);
+    }
+    .polls-tab {
+      appearance: none; background: transparent; border: 0; cursor: pointer;
+      font-family: var(--mono); font-size: 11px; font-weight: 700;
+      letter-spacing: .12em; text-transform: uppercase; color: var(--dash-muted);
+      padding: 10px 14px; border-bottom: 2px solid transparent;
+      margin-bottom: -1px; transition: color .15s, border-color .15s;
+    }
+    .polls-tab:hover { color: var(--ink-soft); }
+    .polls-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .polls-tab-count {
+      display: inline-block; min-width: 18px; padding: 1px 6px; margin-left: 6px;
+      border-radius: 999px; background: var(--paper-3); color: var(--ink-soft);
+      font-family: var(--mono); font-size: 10px; font-weight: 700;
+    }
+    .polls-tab.active .polls-tab-count { background: rgba(196,90,58,.14); color: var(--accent); }
+
+    /* ── Leaderboard view ─────────────────────────────────── */
+    .polls-leaderboard { display: flex; flex-direction: column; gap: 10px; }
+    .lb-head {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 12px; flex-wrap: wrap; margin-bottom: 6px;
+    }
+    .lb-head-title { font-size: 13px; color: var(--dash-muted); line-height: 1.5; }
+    .lb-clear-btn {
+      appearance: none; background: transparent;
+      border: 1px solid rgba(176,48,34,.35); color: #b03022;
+      border-radius: 999px; padding: 6px 14px;
+      font-family: var(--mono); font-size: 11px; font-weight: 700;
+      letter-spacing: .1em; text-transform: uppercase; cursor: pointer;
+      transition: background .15s, color .15s;
+    }
+    .lb-clear-btn:hover { background: rgba(176,48,34,.08); }
+    .lb-clear-btn:disabled { opacity: .5; cursor: not-allowed; }
+    .lb-row {
+      display: grid; grid-template-columns: 36px 1fr auto; gap: 12px; align-items: center;
+      background: #fff; border: 1px solid rgba(83,48,33,.10); border-radius: 14px;
+      padding: 12px 16px;
+      box-shadow: 0 1px 3px rgba(63,35,24,.08), 0 4px 12px rgba(63,35,24,.05);
+    }
+    .lb-rank {
+      font-family: var(--display); font-size: 20px; font-weight: 600;
+      color: var(--ink-soft); text-align: center;
+    }
+    .lb-row.lb-top .lb-rank { color: var(--accent); }
+    .lb-name { font-weight: 600; color: var(--ink); }
+    .lb-sub {
+      font-family: var(--mono); font-size: 10px; font-weight: 700;
+      letter-spacing: .12em; text-transform: uppercase; color: var(--dash-muted);
+      margin-top: 2px;
+    }
+    .lb-time {
+      font-family: var(--mono); font-size: 13px; font-weight: 700;
+      color: var(--ink); text-align: right;
+    }
+    .lb-time-label {
+      font-family: var(--mono); font-size: 10px; font-weight: 700;
+      letter-spacing: .12em; text-transform: uppercase; color: var(--dash-muted);
+    }
     .polls-locked { padding: 16px; border-radius: 10px; background: rgba(196,90,58,.08); color: var(--ink-soft); font-size: 13px; text-align: center; border: 1px dashed rgba(196,90,58,.3); }
     .polls-locked a { color: var(--accent); font-weight: 600; text-decoration: none; }
 
@@ -2358,7 +2422,25 @@
         <div class="polls-locked" id="polls-locked" style="display:none;">
           Live Questions &amp; Poll are unlocked on the Dalisay plan. <a href="/#pricing">Upgrade →</a>
         </div>
+
+        <!-- ── Sub-tabs: Questions · Polls · Leaderboard ─────
+             Same data underneath, three filtered views. The Leaderboard
+             tab is the historical "who answered fastest" view, populated
+             from /api/events/:slug/polls/leaderboard. -->
+        <div class="polls-tabs" id="polls-tabs" role="tablist">
+          <button type="button" class="polls-tab active" role="tab" data-tab="questions">
+            Questions <span class="polls-tab-count" id="polls-tab-count-questions">0</span>
+          </button>
+          <button type="button" class="polls-tab" role="tab" data-tab="polls">
+            Polls <span class="polls-tab-count" id="polls-tab-count-polls">0</span>
+          </button>
+          <button type="button" class="polls-tab" role="tab" data-tab="leaderboard">
+            Leaderboard
+          </button>
+        </div>
+
         <div class="polls-list" id="polls-list"></div>
+        <div class="polls-leaderboard" id="polls-leaderboard" style="display:none;"></div>
       </div>
     </div>
 
@@ -4299,6 +4381,17 @@
   const pollsList     = document.getElementById('polls-list');
   const pollsLocked   = document.getElementById('polls-locked');
   const pollsCreateBtn= document.getElementById('polls-create-btn');
+  const pollsTabs       = document.getElementById('polls-tabs');
+  const pollsLeaderboard= document.getElementById('polls-leaderboard');
+  const pollsTabCountQ  = document.getElementById('polls-tab-count-questions');
+  const pollsTabCountP  = document.getElementById('polls-tab-count-polls');
+  // Active sub-tab: 'questions' | 'polls' | 'leaderboard'. Persisted so the
+  // host returns to the same view after a reload.
+  const POLLS_TAB_KEY = 'reelday_polls_tab';
+  let pollsTab = (() => {
+    try { return localStorage.getItem(POLLS_TAB_KEY) || 'questions'; }
+    catch { return 'questions'; }
+  })();
   const pollModal     = document.getElementById('poll-modal');
   const pollModalTitle= document.getElementById('poll-modal-title');
   const pollQInput    = document.getElementById('poll-question-input');
@@ -4380,6 +4473,10 @@
       if (!res.ok) return;
       const { polls } = await res.json();
       renderPolls(polls || []);
+      // Keep the leaderboard tab tracking incoming votes too. The cards
+      // path bails early when this tab is active so the body container
+      // would otherwise grow stale.
+      if (pollsTab === 'leaderboard') refreshLeaderboard();
     } catch { /* silent */ }
   }
 
@@ -4409,11 +4506,28 @@
       }
     }
 
-    if (!polls.length) {
-      pollsList.innerHTML = '<div class="polls-empty">Nothing yet. Tap "+ New" to create a poll or trivia question.</div>';
+    // Tab counts live on every render so they reflect the latest data even
+    // while the host is sitting on the Leaderboard tab.
+    const qCount = polls.filter(p => p.kind === 'question').length;
+    const pCount = polls.filter(p => p.kind !== 'question').length;
+    if (pollsTabCountQ) pollsTabCountQ.textContent = qCount;
+    if (pollsTabCountP) pollsTabCountP.textContent = pCount;
+
+    // Filter to whichever sub-tab is active. The Leaderboard tab handles
+    // its own rendering elsewhere — bail here so we don't overwrite it.
+    if (pollsTab === 'leaderboard') return;
+    const filtered = pollsTab === 'polls'
+      ? polls.filter(p => p.kind !== 'question')
+      : polls.filter(p => p.kind === 'question');
+
+    if (!filtered.length) {
+      const emptyMsg = pollsTab === 'polls'
+        ? 'No opinion polls yet. Tap "+ New" and pick "Poll".'
+        : 'No trivia questions yet. Tap "+ New" and pick "Question".';
+      pollsList.innerHTML = `<div class="polls-empty">${emptyMsg}</div>`;
       return;
     }
-    pollsList.innerHTML = polls.map(p => {
+    pollsList.innerHTML = filtered.map(p => {
       const total = p.total_votes || 0;
       const optsLabel = (p.options || []).map(o => o.label).join(' · ');
       const isLive  = p.status === 'live';
@@ -4496,6 +4610,124 @@
         : 'Add a Question first — Run all skips opinion polls';
     }
   };
+
+  // ── Sub-tab plumbing ─────────────────────────────────
+  // Show/hide the right body container, toggle the .active pill, and
+  // when switching INTO Leaderboard, fetch it. Run-all only makes sense
+  // on the Questions tab, so we tuck the button away on the others.
+  function applyPollsTab() {
+    if (pollsTabs) {
+      pollsTabs.querySelectorAll('.polls-tab').forEach(b => {
+        b.classList.toggle('active', b.dataset.tab === pollsTab);
+      });
+    }
+    const isLb = pollsTab === 'leaderboard';
+    if (pollsList)        pollsList.style.display        = isLb ? 'none' : '';
+    if (pollsLeaderboard) pollsLeaderboard.style.display = isLb ? '' : 'none';
+    // Run-all is only meaningful for trivia questions; hide on the other tabs.
+    if (pollsRunAllBtn)   pollsRunAllBtn.style.display   = (pollsTab === 'questions') ? '' : 'none';
+    // No "+ New" on the Leaderboard tab — there's nothing to create from there.
+    if (pollsCreateBtn)   pollsCreateBtn.style.display   = isLb ? 'none' : '';
+
+    if (isLb) {
+      refreshLeaderboard();
+    } else {
+      // Re-render cards through the filtered path with the latest cache.
+      _renderPolls(pollsList_);
+    }
+  }
+  pollsTabs?.addEventListener('click', (ev) => {
+    const btn = ev.target.closest('.polls-tab');
+    if (!btn) return;
+    const next = btn.dataset.tab;
+    if (!next || next === pollsTab) return;
+    pollsTab = next;
+    try { localStorage.setItem(POLLS_TAB_KEY, pollsTab); } catch {}
+    applyPollsTab();
+  });
+
+  // ── Leaderboard tab: who answered fastest ────────────
+  async function refreshLeaderboard() {
+    if (!slug || !pollsLeaderboard) return;
+    pollsLeaderboard.innerHTML = '<div class="polls-empty">Loading…</div>';
+    try {
+      const res = await fetch(`/api/events/${slug}/polls/leaderboard`, { headers: authHeader() });
+      if (!res.ok) {
+        pollsLeaderboard.innerHTML = '<div class="polls-empty">Could not load the leaderboard.</div>';
+        return;
+      }
+      const { leaderboard = [], total_questions = 0 } = await res.json();
+      renderLeaderboard(leaderboard, total_questions);
+    } catch {
+      pollsLeaderboard.innerHTML = '<div class="polls-empty">Could not load the leaderboard.</div>';
+    }
+  }
+  function renderLeaderboard(rows, totalQuestions) {
+    if (!pollsLeaderboard) return;
+    const head = `
+      <div class="lb-head">
+        <div class="lb-head-title">
+          ${rows.length
+            ? `Ranked by correct answers, then average response time across ${totalQuestions} question${totalQuestions === 1 ? '' : 's'}.`
+            : 'Guests will appear here once they answer a trivia question.'}
+        </div>
+        <button type="button" class="lb-clear-btn" id="lb-clear-btn" ${rows.length ? '' : 'disabled'}>Clear results</button>
+      </div>`;
+    if (!rows.length) {
+      pollsLeaderboard.innerHTML = head + '<div class="polls-empty">No answers logged yet.</div>';
+      bindLbClear();
+      return;
+    }
+    const body = rows.map((r, i) => {
+      const rank = i + 1;
+      const avg  = r.avg_correct_seconds != null ? `${r.avg_correct_seconds}s` : '—';
+      const isTop = rank <= 3;
+      return `
+        <div class="lb-row ${isTop ? 'lb-top' : ''}">
+          <div class="lb-rank">${rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '#' + rank}</div>
+          <div>
+            <div class="lb-name">${escapeHtml(r.guest_name || 'Anonymous')}</div>
+            <div class="lb-sub">${r.correct_count} correct · ${r.answered_count} answered</div>
+          </div>
+          <div>
+            <div class="lb-time">${avg}</div>
+            <div class="lb-time-label">avg reply</div>
+          </div>
+        </div>`;
+    }).join('');
+    pollsLeaderboard.innerHTML = head + body;
+    bindLbClear();
+  }
+  function bindLbClear() {
+    const btn = document.getElementById('lb-clear-btn');
+    if (!btn) return;
+    btn.addEventListener('click', async () => {
+      if (!confirm('Clear all historical trivia results for this event?\nLive polls are untouched.')) return;
+      btn.disabled = true;
+      try {
+        const res = await fetch(`/api/events/${slug}/polls/leaderboard`, {
+          method: 'DELETE',
+          headers: authHeader(),
+        });
+        if (!res.ok) {
+          showToast('Could not clear results');
+          btn.disabled = false;
+          return;
+        }
+        showToast('Results cleared');
+        refreshLeaderboard();
+        // Tallies on the question cards are derived from the same votes,
+        // so pull a fresh list too.
+        refreshPolls();
+      } catch {
+        showToast('Could not clear results');
+        btn.disabled = false;
+      }
+    });
+  }
+
+  // Apply the persisted tab once everything above is wired.
+  applyPollsTab();
 
   // ── Run-all orchestrator ─────────────────────────────
   function startRunAll() {
