@@ -1948,6 +1948,7 @@
   const KB_ANIMS         = ['kb1', 'kb2', 'kb3', 'kb4'];
   const POLL_INTERVAL    = 1000;  // ms between upload polls — paired with the server busting its
                                   // wall cache on /uploads/complete so a new upload shows in ~1s
+  const SIMULTANEOUS_UPLOAD_WINDOW_MS = 4000; // uploads created within ~4s ride the same "fresh" wall run
   const QR_HIDE_AFTER    = 10000; // ms badge stays visible before auto-hiding
   const QR_CYCLE         = 30000; // ms between successive show cycles
 
@@ -2004,6 +2005,69 @@
     // those are written by upload.html on the same browser and would
     // otherwise bypass the host's auto-approve setting.
     return apiUploads;
+  }
+
+  function uploadCreatedMs(upload) {
+    const ms = Date.parse(upload?.created_at || '');
+    return Number.isFinite(ms) ? ms : null;
+  }
+
+  function sortUploadsForFreshRun(arr) {
+    return (arr || []).slice().sort((a, b) => {
+      const aMs = uploadCreatedMs(a);
+      const bMs = uploadCreatedMs(b);
+      if (aMs != null && bMs != null && aMs !== bMs) return aMs - bMs;
+      return String(a?.id || '').localeCompare(String(b?.id || ''));
+    });
+  }
+
+  function clearLiveArrivalBatch() {
+    liveArrivalBatch = null;
+  }
+
+  function upsertLiveArrivalBatch(batchUploads) {
+    const ids = (batchUploads || []).map(u => String(u.id)).filter(Boolean);
+    const batchIds = (batchUploads || []).map(u => u.batch_id).filter(Boolean);
+    const times = (batchUploads || []).map(uploadCreatedMs).filter(ms => ms != null);
+    const firstTs = times.length ? Math.min(...times) : null;
+    const lastTs  = times.length ? Math.max(...times) : null;
+
+    if (!liveArrivalBatch) {
+      liveArrivalBatch = { ids, batchIds, firstTs, lastTs };
+      return;
+    }
+
+    liveArrivalBatch.ids = Array.from(new Set([...liveArrivalBatch.ids, ...ids]));
+    liveArrivalBatch.batchIds = Array.from(new Set([...(liveArrivalBatch.batchIds || []), ...batchIds]));
+    if (firstTs != null) liveArrivalBatch.firstTs = liveArrivalBatch.firstTs == null ? firstTs : Math.min(liveArrivalBatch.firstTs, firstTs);
+    if (lastTs  != null) liveArrivalBatch.lastTs  = liveArrivalBatch.lastTs  == null ? lastTs  : Math.max(liveArrivalBatch.lastTs,  lastTs);
+  }
+
+  function findLiveArrivalBatchTailIndex(deck) {
+    if (!liveArrivalBatch?.ids?.length) return -1;
+    const activeIds = new Set(liveArrivalBatch.ids.map(String));
+    let tail = -1;
+    (deck || []).forEach((u, idx) => {
+      if (activeIds.has(String(u.id))) tail = idx;
+    });
+    return tail;
+  }
+
+  function shouldCoalesceWithLiveArrivalBatch(newUploads, deck, anchorIdx) {
+    if (!liveArrivalBatch || !newUploads?.length) return false;
+    const batchTailIdx = findLiveArrivalBatchTailIndex(deck);
+    if (batchTailIdx < anchorIdx) return false; // the batch already played past the current slide
+
+    const activeBatchIds = new Set((liveArrivalBatch.batchIds || []).map(String));
+    if (activeBatchIds.size) {
+      for (const upload of newUploads) {
+        if (upload?.batch_id && activeBatchIds.has(String(upload.batch_id))) return true;
+      }
+    }
+
+    const newTimes = newUploads.map(uploadCreatedMs).filter(ms => ms != null);
+    if (!newTimes.length || liveArrivalBatch.lastTs == null) return false;
+    return Math.min(...newTimes) <= liveArrivalBatch.lastTs + SIMULTANEOUS_UPLOAD_WINDOW_MS;
   }
 
   // Wrap an R2 image URL with Cloudflare's free /cdn-cgi/image/ transform
@@ -2169,6 +2233,7 @@
   let items      = [];
   let allUploads = [];
   let knownIds   = new Set();
+  let liveArrivalBatch = null; // { ids:string[], batchIds:string[], firstTs:number|null, lastTs:number|null }
   let currentIdx = 0;
   let activeLayer = 'A';   // 'A' or 'B'
   let isPaused   = false;
@@ -4765,27 +4830,44 @@
       }
 
       if (newOnes.length > 0) {
+        const freshRun = sortUploadsForFreshRun(newOnes);
+        const safeIdx = Math.min(currentIdx, items.length - 1);
+        const coalesceWithBatch = shouldCoalesceWithLiveArrivalBatch(freshRun, items, safeIdx);
+
         // Warm the orientation of the upload we're about to jump to —
         // goTo() lands on newOnes[0] without a prewarm pass, so without
         // this a freshly-shared landscape photo flashes portrait first.
-        await probeOrientation(newOnes[0]);
-        // Splice new approvals in right after the current slide and jump
-        // to the first one so the host sees their approval reach the
-        // wall immediately. Older items keep their relative order.
-        newOnes.forEach(u => knownIds.add(u.id));
-        const safeIdx = Math.min(currentIdx, items.length - 1);
-        const head    = items.slice(0, safeIdx + 1);
-        const tail    = items.slice(safeIdx + 1).filter(u => !newOnes.some(n => n.id === u.id));
-        items = [...head, ...newOnes, ...tail];
-        const name = newOnes[0].uploader_name || 'Panauhin';
-        showToast(`✨ ${name} just shared a moment!`);
-        goTo(safeIdx + 1);
+        await probeOrientation(freshRun[0]);
+        freshRun.forEach(u => knownIds.add(u.id));
+
+        if (coalesceWithBatch) {
+          const batchTailIdx = findLiveArrivalBatchTailIndex(items);
+          const insertAfter = batchTailIdx >= safeIdx ? batchTailIdx : safeIdx;
+          const head = items.slice(0, insertAfter + 1);
+          const tail = items.slice(insertAfter + 1).filter(u => !freshRun.some(n => n.id === u.id));
+          items = [...head, ...freshRun, ...tail];
+          upsertLiveArrivalBatch(freshRun);
+          prewarmNext();
+        } else {
+          // Splice new approvals in right after the current slide and jump
+          // to the first one so the host sees their approval reach the
+          // wall immediately. Older items keep their relative order.
+          const head = items.slice(0, safeIdx + 1);
+          const tail = items.slice(safeIdx + 1).filter(u => !freshRun.some(n => n.id === u.id));
+          items = [...head, ...freshRun, ...tail];
+          upsertLiveArrivalBatch(freshRun);
+          const name = freshRun[0].uploader_name || 'Panauhin';
+          const more = freshRun.length > 1 ? ` (+${freshRun.length - 1} more)` : '';
+          showToast(`✨ ${name} just shared a moment!${more}`);
+          goTo(safeIdx + 1);
+        }
       }
     } else {
       // Cold start / empty deck / mid-burst — adopt the API order
       // wholesale. There's no custom deck order yet to protect.
       items = slideable;
       slideable.forEach(u => knownIds.add(u.id));
+      clearLiveArrivalBatch();
     }
 
     if (isRunning && previousCurrent?.id) {
