@@ -287,12 +287,25 @@ export default async function pollRoutes(fastify) {
     );
     const totalQuestions = questionsRows[0]?.n || 0;
 
+    // `correct_questions` is the per-guest breakdown the dashboard's
+    // Leaderboard tab expands under each name — the actual question text
+    // they got right and how fast they answered. The FILTER clause on the
+    // jsonb_agg drops votes that weren't correct so the array stays tight.
     const { rows } = await fastify.db.query(
       `SELECT pv.guest_name,
               COUNT(*) FILTER (WHERE pv.option_key = p.correct_key)::int AS correct_count,
               COUNT(*)::int                                                AS answered_count,
               ROUND(AVG(EXTRACT(EPOCH FROM (pv.created_at - p.started_at)))
-                FILTER (WHERE pv.option_key = p.correct_key)::numeric, 1) AS avg_correct_seconds
+                FILTER (WHERE pv.option_key = p.correct_key)::numeric, 1) AS avg_correct_seconds,
+              COALESCE(
+                jsonb_agg(
+                  jsonb_build_object(
+                    'question',         p.question,
+                    'response_seconds', ROUND(EXTRACT(EPOCH FROM (pv.created_at - p.started_at))::numeric, 1)
+                  ) ORDER BY pv.created_at
+                ) FILTER (WHERE pv.option_key = p.correct_key),
+                '[]'::jsonb
+              ) AS correct_questions
          FROM poll_votes pv
          JOIN polls p ON p.id = pv.poll_id
         WHERE p.event_id = $1
