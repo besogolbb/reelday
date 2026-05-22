@@ -790,27 +790,99 @@
       font-size: 12px; color: var(--dash-muted); margin-top: 4px;
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
+    /* Highlight the correct answer in the options preview for trivia
+       drafts/ended — host-only knowledge, so the MC can rehearse the
+       reveal without having to open the editor. */
+    .poll-row .poll-opts .opt-correct {
+      color: #1f5e3b; font-weight: 600;
+    }
+    .poll-row .poll-opts .opt-correct::before {
+      content: '✓'; margin-right: 3px; font-weight: 700;
+    }
+    /* Duration hint next to the status badges — small chip the MC sees
+       BEFORE tapping Run, so they know how long the wall stays paused. */
+    .poll-row .poll-meta {
+      display: inline-flex; align-items: center; gap: 4px;
+      margin-left: 6px; padding: 4px 8px;
+      border-radius: 999px;
+      font-family: var(--mono); font-size: 9px; font-weight: 700;
+      letter-spacing: .12em; text-transform: uppercase;
+      background: rgba(83,48,33,.06); color: var(--ink-soft);
+    }
     .poll-row .poll-actions {
       display: flex; gap: 6px; align-items: center;
       grid-column: 2; grid-row: 1 / span 3;
     }
     .poll-row .poll-actions button {
-      padding: 7px 14px; border-radius: 999px; font-size: 12px; font-weight: 600;
+      padding: 9px 16px; border-radius: 999px; font-size: 13px; font-weight: 600;
       border: 1px solid rgba(83,48,33,.18); background: rgba(255,255,255,.8); color: var(--ink);
-      cursor: pointer; transition: background .12s, border-color .12s;
+      cursor: pointer; transition: background .12s, border-color .12s, transform .08s;
       font-family: var(--sans);
       box-shadow: 0 1px 3px rgba(63,35,24,.08);
+      min-height: 40px;
     }
+    .poll-row .poll-actions button:active { transform: scale(.97); }
     .poll-row .poll-actions button:hover { background: #fff; border-color: rgba(83,48,33,.30); }
     .poll-row .poll-actions .btn-run {
       background: var(--accent); color: #fff; border-color: var(--accent);
       box-shadow: 0 2px 8px rgba(196,90,58,.35);
+      font-weight: 700;
     }
     .poll-row .poll-actions .btn-run:hover { background: var(--accent-deep); }
-    .poll-row .poll-actions .btn-stop { background: #b03022; color: #fff; border-color: #b03022; }
+    .poll-row .poll-actions .btn-stop {
+      background: #b03022; color: #fff; border-color: #b03022;
+      font-weight: 700;
+      box-shadow: 0 2px 10px rgba(176,48,34,.40);
+    }
     .poll-row .poll-actions .btn-stop:hover { background: #8a2418; }
     .poll-row .poll-actions .btn-del { color: #b03022; border-color: rgba(176,48,34,.25); background: rgba(176,48,34,.06); }
     .poll-row .poll-actions .btn-del:hover { background: rgba(176,48,34,.12); border-color: rgba(176,48,34,.40); }
+
+    /* ── Mobile: stack the poll row so the action buttons don't get
+       clipped by the panel's overflow:hidden. The MC runs this page
+       live, often one-handed under stage lights — so the primary
+       action gets a full-width tap target with a 44px+ min-height,
+       and the secondary actions (Edit/Delete) live on a second row
+       where a mis-tap won't kill the live poll. */
+    @media (max-width: 640px) {
+      .poll-row {
+        grid-template-columns: 1fr;
+        padding: 16px;
+        gap: 10px;
+      }
+      .poll-row .poll-q { font-size: 17px; }
+      .poll-row .poll-opts {
+        white-space: normal;
+        line-height: 1.5;
+      }
+      .poll-row .poll-actions {
+        grid-column: 1; grid-row: auto;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        padding-top: 12px;
+        margin-top: 4px;
+        border-top: 1px dashed rgba(83,48,33,.14);
+      }
+      /* Primary action (Run / Stop / Run again) takes the full width —
+         this is the button the MC reaches for. Big, obvious, hard to miss. */
+      .poll-row .poll-actions .btn-run,
+      .poll-row .poll-actions .btn-stop {
+        grid-column: 1 / -1;
+        padding: 14px 18px;
+        font-size: 15px;
+        min-height: 48px;
+      }
+      /* Edit/Delete on a second row. Min-height 44px keeps them tappable
+         without making them so big they invite an accidental tap. */
+      .poll-row .poll-actions button:not(.btn-run):not(.btn-stop) {
+        padding: 11px 14px;
+        font-size: 13px;
+        min-height: 44px;
+      }
+      /* Tabs: pad for thumbs */
+      .polls-tab { padding: 12px 14px; font-size: 11px; }
+    }
 
     /* Result tally rendered in the row when status='ended' */
     .poll-row .poll-tally {
@@ -4580,31 +4652,52 @@
     }
     pollsList.innerHTML = filtered.map(p => {
       const total = p.total_votes || 0;
-      const optsLabel = (p.options || []).map(o => o.label).join(' · ');
       const isLive  = p.status === 'live';
       const isDraft = p.status === 'draft';
 
+      // Options preview, with the correct answer marked for trivia drafts/ended.
+      // Host-only knowledge: helps the MC rehearse the reveal without re-opening
+      // the editor. Live rows don't get the marker (the wall is showing it).
+      const showCorrect = p.kind === 'question' && p.correct_key && !isLive;
+      const optsLabel = (p.options || []).map(o => {
+        const safe = escapeHtml(o.label);
+        return (showCorrect && o.key === p.correct_key)
+          ? `<span class="opt-correct">${safe}</span>`
+          : safe;
+      }).join(' · ');
+
+      // Primary actions get a glyph prefix so the MC can scan at a glance —
+      // ▶ = go on the wall, ■ = stop now. Stop is the high-stakes button so
+      // it lives alone (no secondary buttons next to it) — there's nothing
+      // adjacent for a stray thumb to land on by accident.
       const actions = isLive ? `
-        <button class="btn-stop" data-act="stop" data-id="${p.id}">Stop</button>
+        <button type="button" class="btn-stop" data-act="stop" data-id="${p.id}" aria-label="Stop this poll on the wall">■ Stop</button>
       ` : isDraft ? `
-        <button class="btn-run"  data-act="start" data-id="${p.id}">Run on wall</button>
-        <button data-act="edit"   data-id="${p.id}">Edit</button>
-        <button class="btn-del" data-act="delete" data-id="${p.id}">Delete</button>
+        <button type="button" class="btn-run"  data-act="start" data-id="${p.id}" aria-label="Run this on the wall">▶ Run on wall</button>
+        <button type="button" data-act="edit"   data-id="${p.id}">Edit</button>
+        <button type="button" class="btn-del" data-act="delete" data-id="${p.id}" aria-label="Delete this draft">Delete</button>
       ` : `
-        <button class="btn-run" data-act="start" data-id="${p.id}">Run again</button>
-        <button class="btn-del" data-act="delete" data-id="${p.id}">Delete</button>
+        <button type="button" class="btn-run" data-act="start" data-id="${p.id}" aria-label="Run this again on the wall">▶ Run again</button>
+        <button type="button" class="btn-del" data-act="delete" data-id="${p.id}" aria-label="Delete this poll">Delete</button>
       `;
 
       const kindBadge = p.kind === 'question'
         ? '<span class="poll-kind-badge">Question</span>'
         : '<span class="poll-kind-badge poll-kind-poll">Poll</span>';
+      // Duration hint — show on draft/ended so the MC knows how long the wall
+      // will be paused before they commit. Skip for live (the wall shows its
+      // own countdown there).
+      const durationChip = (!isLive && p.duration_s)
+        ? `<span class="poll-meta">${p.duration_s}s on wall</span>`
+        : '';
       return `
         <div class="poll-row">
           <div>
             <span class="poll-status ${p.status}">${p.status}${total ? ' · ' + total + ' vote' + (total === 1 ? '' : 's') : ''}</span>
             ${kindBadge}
+            ${durationChip}
             <div class="poll-q">${escapeHtml(p.question)}</div>
-            <div class="poll-opts">${escapeHtml(optsLabel)}</div>
+            <div class="poll-opts">${optsLabel}</div>
           </div>
           <div class="poll-actions">${actions}</div>
         </div>`;
