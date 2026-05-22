@@ -673,14 +673,35 @@
 
     /* Question card */
     .lb-q-card {
-      background: #fff; border: 1px solid rgba(83,48,33,.08);
-      border-radius: 16px; padding: 16px 18px;
-      box-shadow: 0 1px 2px rgba(63,35,24,.04), 0 4px 14px rgba(63,35,24,.05);
-      display: flex; flex-direction: column; gap: 10px;
+      position: relative;
+      background: linear-gradient(180deg, #ffffff 0%, #fffaf3 100%);
+      border: 1px solid rgba(83,48,33,.08);
+      border-radius: 18px; padding: 18px 20px 18px 24px;
+      box-shadow:
+        0 1px 2px rgba(63,35,24,.04),
+        0 6px 18px rgba(63,35,24,.06),
+        inset 0 1px 0 rgba(255,255,255,.9);
+      display: flex; flex-direction: column; gap: 12px;
+      overflow: hidden;
+    }
+    /* Status stripe: gold for cards with a winner, grey otherwise. */
+    .lb-q-card::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 4px;
+      background: linear-gradient(180deg, rgba(83,48,33,.20), rgba(83,48,33,.06));
     }
     .lb-q-card.lb-q-won {
-      border-color: rgba(196,90,58,.25);
-      box-shadow: 0 1px 2px rgba(63,35,24,.04), 0 6px 20px rgba(196,90,58,.08);
+      border-color: rgba(196,90,58,.22);
+      box-shadow:
+        0 1px 2px rgba(63,35,24,.04),
+        0 8px 22px rgba(196,90,58,.10),
+        inset 0 1px 0 rgba(255,255,255,.9);
+    }
+    .lb-q-card.lb-q-won::before {
+      background: linear-gradient(180deg, #f5c861 0%, #c89331 100%);
+      box-shadow: 0 0 12px rgba(245,200,97,.4);
     }
     .lb-q-head {
       display: flex; align-items: baseline; gap: 10px;
@@ -688,9 +709,10 @@
     .lb-q-num {
       font-family: var(--mono); font-size: 11px; font-weight: 700;
       letter-spacing: .12em; text-transform: uppercase;
-      color: var(--accent); flex: 0 0 auto;
-      padding: 3px 8px; border-radius: 999px;
-      background: rgba(196,90,58,.10);
+      color: #fff; flex: 0 0 auto;
+      padding: 4px 10px; border-radius: 999px;
+      background: linear-gradient(135deg, #d56a48, #b8502f);
+      box-shadow: 0 1px 3px rgba(196,90,58,.35), inset 0 1px 0 rgba(255,255,255,.20);
     }
     .lb-q-text {
       font-family: var(--display); font-size: 17px; font-weight: 600;
@@ -701,18 +723,29 @@
       display: inline-flex; align-items: center; gap: 4px;
     }
 
-    /* Winner panel — the visual hero of each card */
+    /* Winner panel — the visual hero of each card. Gold-tinted gradient
+       with a soft inner glow makes it feel like a trophy plaque. */
     .lb-winner {
-      display: flex; align-items: center; gap: 12px;
-      padding: 12px 14px; border-radius: 12px;
-      background: linear-gradient(135deg, rgba(196,90,58,.10), rgba(196,90,58,.04));
-      border: 1px solid rgba(196,90,58,.18);
+      position: relative;
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 16px; border-radius: 14px;
+      background:
+        radial-gradient(120% 100% at 0% 0%, rgba(245,200,97,.18), transparent 60%),
+        linear-gradient(135deg, rgba(196,90,58,.12), rgba(245,200,97,.08));
+      border: 1px solid rgba(196,90,58,.22);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.6),
+        0 2px 8px rgba(196,90,58,.08);
     }
     .lb-winner.lb-winner-empty {
-      background: var(--paper-2);
-      border-color: rgba(83,48,33,.08);
+      background: linear-gradient(135deg, var(--paper-2), var(--paper-3));
+      border-color: rgba(83,48,33,.10);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.5);
     }
-    .lb-trophy { font-size: 24px; flex: 0 0 auto; }
+    .lb-trophy {
+      font-size: 28px; flex: 0 0 auto;
+      filter: drop-shadow(0 2px 4px rgba(196,90,58,.30));
+    }
     .lb-winner-info { flex: 1; min-width: 0; }
     .lb-winner-name {
       font-family: var(--display); font-size: 16px; font-weight: 600;
@@ -764,18 +797,37 @@
        1px hairline so nothing crowds anything else. Card padding is
        a bit more luxurious than before. */
     .poll-row {
-      background: #fff;
+      position: relative;
+      background: linear-gradient(180deg, #ffffff 0%, #fffaf3 100%);
       border: 1px solid rgba(83,48,33,.08);
-      border-radius: 16px;
-      padding: 20px 22px 16px;
+      border-radius: 18px;
+      padding: 20px 22px 16px 26px;
       display: flex; flex-direction: column;
-      box-shadow: 0 1px 2px rgba(63,35,24,.04), 0 4px 14px rgba(63,35,24,.05);
-      transition: border-color .18s ease, box-shadow .18s ease;
+      box-shadow:
+        0 1px 2px rgba(63,35,24,.04),
+        0 6px 18px rgba(63,35,24,.06),
+        inset 0 1px 0 rgba(255,255,255,.9);
+      transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+      overflow: hidden;
+    }
+    /* Status-driven left stripe — instant visual sort. Neutral by
+       default; per-status gradients defined further down so the
+       cascade lands on the right colour. */
+    .poll-row::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 4px;
+      background: linear-gradient(180deg, rgba(83,48,33,.20), rgba(83,48,33,.06));
     }
     @media (hover: hover) {
       .poll-row:hover {
-        border-color: rgba(83,48,33,.18);
-        box-shadow: 0 1px 3px rgba(63,35,24,.06), 0 8px 22px rgba(63,35,24,.08);
+        border-color: rgba(83,48,33,.16);
+        box-shadow:
+          0 2px 4px rgba(63,35,24,.07),
+          0 12px 28px rgba(63,35,24,.09),
+          inset 0 1px 0 rgba(255,255,255,.9);
+        transform: translateY(-1px);
       }
     }
     /* Meta row: status pill + kind + duration. Separated from the
@@ -791,32 +843,73 @@
       display: inline-flex; align-items: center; gap: 4px;
       font-family: var(--mono); font-size: 10px; font-weight: 700;
       letter-spacing: .12em; text-transform: uppercase;
-      padding: 3px 9px; border-radius: 999px;
+      padding: 4px 10px; border-radius: 999px;
+      box-shadow: 0 1px 2px rgba(63,35,24,.06);
     }
-    .poll-row .poll-status.draft { background: var(--paper-3); color: var(--ink-soft); }
-    .poll-row .poll-status.live  { background: rgba(229,76,59,.12); color: #b03022; }
+    .poll-row .poll-status.draft {
+      background: linear-gradient(135deg, #f5ede1, #ece0cb);
+      color: #6b5333;
+    }
+    .poll-row .poll-status.live {
+      background: linear-gradient(135deg, #ff6b5b, #d83a2a);
+      color: #fff;
+      box-shadow: 0 1px 3px rgba(176,48,34,.45), 0 0 0 3px rgba(229,76,59,.12);
+    }
     .poll-row .poll-status.live::before { content: '●'; margin-right: 3px; animation: pollPulse 1s infinite; }
-    .poll-row .poll-status.ended { background: rgba(45,122,74,.12); color: #1f5e3b; }
-    /* Live card: subtle red border + accent stripe, no overpowering glow. */
+    .poll-row .poll-status.ended {
+      background: linear-gradient(135deg, #4a9d6a, #2e7a48);
+      color: #fff;
+      box-shadow: 0 1px 3px rgba(45,122,74,.30);
+    }
+
+    /* Status-driven left stripe (overrides the neutral default). */
+    .poll-row:has(.poll-status.live)::before {
+      background: linear-gradient(180deg, #ff6b5b, #b03022);
+      animation: pollStripePulse 1.5s ease-in-out infinite;
+      box-shadow: 0 0 12px rgba(229,76,59,.4);
+    }
+    .poll-row:has(.poll-status.ended)::before {
+      background: linear-gradient(180deg, #4a9d6a, #1f5e3b);
+    }
+    .poll-row:has(.poll-status.draft)::before {
+      background: linear-gradient(180deg, rgba(196,90,58,.6), rgba(196,90,58,.2));
+    }
+    /* Live card: red border + soft glow */
     .poll-row:has(.poll-status.live) {
       border-color: rgba(229,76,59,.30);
-      box-shadow: 0 1px 3px rgba(176,48,34,.10), 0 6px 18px rgba(229,76,59,.12);
+      box-shadow:
+        0 1px 3px rgba(176,48,34,.15),
+        0 8px 24px rgba(229,76,59,.14),
+        inset 0 1px 0 rgba(255,255,255,.9);
     }
+
     .poll-row .poll-kind-badge {
-      display: inline-block; padding: 3px 8px;
+      display: inline-block; padding: 4px 10px;
       border-radius: 999px; font-family: var(--mono); font-size: 9px;
       font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
-      background: rgba(45,122,74,.10); color: #1f5e3b;
+      background: linear-gradient(135deg, rgba(45,122,74,.16), rgba(45,122,74,.08));
+      color: #1f5e3b;
+      border: 1px solid rgba(45,122,74,.18);
     }
-    .poll-row .poll-kind-badge.poll-kind-poll { background: rgba(60,90,150,.10); color: #2a4480; }
+    .poll-row .poll-kind-badge.poll-kind-poll {
+      background: linear-gradient(135deg, rgba(74,111,168,.16), rgba(74,111,168,.08));
+      color: #2a4480;
+      border-color: rgba(74,111,168,.18);
+    }
     .poll-row .poll-meta {
       display: inline-flex; align-items: center; gap: 4px;
-      padding: 3px 8px; border-radius: 999px;
+      padding: 4px 10px; border-radius: 999px;
       font-family: var(--mono); font-size: 9px; font-weight: 700;
       letter-spacing: .12em; text-transform: uppercase;
-      background: rgba(83,48,33,.05); color: var(--ink-soft);
+      background: linear-gradient(135deg, rgba(83,48,33,.08), rgba(83,48,33,.03));
+      color: var(--ink-soft);
+      border: 1px solid rgba(83,48,33,.10);
     }
     @keyframes pollPulse { 50% { opacity: .35; } }
+    @keyframes pollStripePulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: .55; }
+    }
 
     /* THE HERO — question text. Big, generous, the obvious focal point.
        Tight margin to the options below (they belong together as one
@@ -871,20 +964,45 @@
     .poll-row .poll-actions button:hover {
       background: rgba(83,48,33,.06); color: var(--ink);
     }
-    /* Primary action — accent pill. Calm, not loud. */
+    /* Primary action — gradient pill with a soft accent glow. The
+       gradient catches the eye without screaming; the inset highlight
+       on top edge gives it a modern crystalline feel. */
     .poll-row .poll-actions .btn-run {
-      background: var(--accent); color: #fff; border-color: var(--accent);
-      box-shadow: 0 1px 4px rgba(196,90,58,.30);
+      background: linear-gradient(135deg, #d56a48 0%, #b8502f 100%);
+      color: #fff; border-color: transparent;
+      box-shadow:
+        0 2px 6px rgba(196,90,58,.35),
+        0 0 0 1px rgba(196,90,58,.20),
+        inset 0 1px 0 rgba(255,255,255,.25);
+      font-weight: 700;
+      letter-spacing: .01em;
     }
     .poll-row .poll-actions .btn-run:hover {
-      background: var(--accent-deep); color: #fff;
+      background: linear-gradient(135deg, #c45a3a 0%, #9a3f24 100%);
+      box-shadow:
+        0 4px 10px rgba(196,90,58,.42),
+        0 0 0 1px rgba(196,90,58,.25),
+        inset 0 1px 0 rgba(255,255,255,.25);
+      color: #fff;
     }
-    /* Stop — calm red. Alone on the action row to prevent mis-taps. */
+    /* Stop — gradient red, sits alone, intentionally bold so the MC
+       finds it instantly mid-event. */
     .poll-row .poll-actions .btn-stop {
-      background: #b03022; color: #fff; border-color: #b03022;
-      box-shadow: 0 1px 4px rgba(176,48,34,.35);
+      background: linear-gradient(135deg, #d63b2a 0%, #8e2419 100%);
+      color: #fff; border-color: transparent;
+      box-shadow:
+        0 2px 6px rgba(176,48,34,.45),
+        0 0 0 1px rgba(176,48,34,.25),
+        inset 0 1px 0 rgba(255,255,255,.20);
+      font-weight: 700;
     }
-    .poll-row .poll-actions .btn-stop:hover { background: #8a2418; color: #fff; }
+    .poll-row .poll-actions .btn-stop:hover {
+      background: linear-gradient(135deg, #b03022 0%, #6e1810 100%);
+      box-shadow:
+        0 4px 12px rgba(176,48,34,.55),
+        inset 0 1px 0 rgba(255,255,255,.20);
+      color: #fff;
+    }
     /* Delete — ghost red, intentionally low-weight so it doesn't pull
        focus away from the primary "Run" affordance. */
     .poll-row .poll-actions .btn-del { color: #b03022; }
