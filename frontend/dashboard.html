@@ -4502,17 +4502,32 @@
     pollsRefreshTimer = setInterval(refreshPolls, 3000);
   }
 
+  // Snapshot of last-seen poll statuses keyed by id. Used purely to
+  // detect "a poll just ended" — that's the only event the leaderboard
+  // tab needs to pull fresh data for, so we skip the every-tick refetch.
+  const lastPollStatuses = new Map();
   async function refreshPolls() {
     if (!slug) return;
     try {
       const res = await fetch(`/api/events/${slug}/polls`, { headers: authHeader() });
       if (!res.ok) return;
       const { polls } = await res.json();
+
+      // Detect live → ended transitions before we overwrite the snapshot.
+      // Any such transition means new votes are now finalised for that
+      // question, so the leaderboard (if currently open) should refresh.
+      let anyJustEnded = false;
+      for (const p of (polls || [])) {
+        const prev = lastPollStatuses.get(p.id);
+        if (prev === 'live' && p.status !== 'live') anyJustEnded = true;
+        lastPollStatuses.set(p.id, p.status);
+      }
+
       renderPolls(polls || []);
-      // Keep the leaderboard tab tracking incoming votes too. The cards
-      // path bails early when this tab is active so the body container
-      // would otherwise grow stale.
-      if (pollsTab === 'leaderboard') refreshLeaderboard();
+
+      if (anyJustEnded && pollsTab === 'leaderboard') {
+        refreshLeaderboard();
+      }
     } catch { /* silent */ }
   }
 
