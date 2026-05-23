@@ -33,4 +33,7 @@ RUN npm ci
 
 COPY . .
 
+# Pre-bundle the Remotion composition so render.mjs skips this at runtime (~1-2 min saved per render)
+RUN node prebundle.mjs
+
 CMD ["node", "render.mjs"]

@@ -254,11 +254,20 @@ async function main() {
     const totalReactions = clipsWithSrc.reduce((s, c) => s + (c.reactionCount ?? 0), 0);
 
     // ── 9. Bundle + render ───────────────────────────────────────────────────
-    console.log('[render] bundling Remotion composition');
-    const bundled = await bundle({
-      entryPoint: new URL('./src/index.ts', import.meta.url).pathname,
-      webpackOverride: (config) => config,
-    });
+    // Use pre-built bundle from Docker image if available (saves ~1-2 min)
+    const PREBUNDLE_PATH = new URL('./bundle', import.meta.url).pathname;
+    let bundled;
+    try {
+      await import('fs').then(fs => fs.promises.access(PREBUNDLE_PATH));
+      console.log('[render] using pre-built bundle');
+      bundled = PREBUNDLE_PATH;
+    } catch {
+      console.log('[render] bundling Remotion composition (no pre-built bundle found)');
+      bundled = await bundle({
+        entryPoint: new URL('./src/index.ts', import.meta.url).pathname,
+        webpackOverride: (config) => config,
+      });
+    }
 
     const inputProps = {
       chapters,
@@ -292,8 +301,8 @@ async function main() {
       codec: 'h264',
       outputLocation: outputPath,
       inputProps,
-      concurrency: 4,
-      crf: 22,
+      concurrency: 6,
+      crf: 26,
       timeoutInMilliseconds: 120000, // 2 min per frame — large videos can be slow to decode
       chromiumOptions: {
         disableWebSecurity: true, // allow cross-origin presigned URLs
