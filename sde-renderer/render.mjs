@@ -301,7 +301,7 @@ async function main() {
       codec: 'h264',
       outputLocation: outputPath,
       inputProps,
-      concurrency: 6,
+      concurrency: 8,
       crf: 26,
       timeoutInMilliseconds: 120000, // 2 min per frame — large videos can be slow to decode
       chromiumOptions: {
