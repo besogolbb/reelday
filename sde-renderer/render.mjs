@@ -294,6 +294,7 @@ async function main() {
       inputProps,
       concurrency: 8,
       crf: 22,
+      timeoutInMilliseconds: 120000, // 2 min per frame — large videos can be slow to decode
       chromiumOptions: {
         disableWebSecurity: true, // allow cross-origin presigned URLs
       },
