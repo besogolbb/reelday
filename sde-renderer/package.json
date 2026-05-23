@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "build": "remotion bundle src/index.ts --out bundle",
-    "studio": "remotion studio src/index.ts"
+    "build": "npx remotion bundle src/index.ts --out bundle",
+    "studio": "npx remotion studio src/index.ts"
   },
   "dependencies": {
     "@remotion/bundler": "^4.0.0",
