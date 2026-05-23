@@ -22,7 +22,7 @@ export const HeroMoment: React.FC<Props> = ({ src, type, isLandscape, durationIn
     frame < 85
       ? interpolate(frame, [0, 15], [0.4, 0.5], { extrapolateRight: "clamp" })
       : frame < 120
-      ? 0
+      ? 0.001
       : 0.5;
 
   const fadeIn = interpolate(frame, [0, 10], [0, 1], { extrapolateRight: "clamp" });
