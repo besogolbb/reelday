@@ -33,7 +33,4 @@ RUN npm ci
 
 COPY . .
 
-# Pre-build the Remotion bundle at image build time so render.mjs starts faster
-RUN ./node_modules/.bin/remotion bundle src/index.ts --out bundle
-
 CMD ["node", "render.mjs"]
