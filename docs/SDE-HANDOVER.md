@@ -3,10 +3,10 @@
 Cold-start pointer for the **Same Day Edit** build. Working tree clean,
 all on `main`. Spec: [same-day-edit-plan.md](same-day-edit-plan.md).
 Perf log: [perf-test-database.md](perf-test-database.md). Last updated
-**2026-05-18** (Slices 2B + 2C + 2D all shipped + a long wall-takeover
-hardening pass. First real reel rendered end-to-end and verified by
-host on phone + laptop. Wall reveal now plays via an **iframe-isolated
-player** (`/sde-play.html`), not an in-page `<video>` — see
+**2026-05-23** — Remotion on ECS Fargate renderer shipped (see section
+below). AWS infra setup IN PROGRESS — script ready, not yet run to
+completion. Wall reveal plays via **iframe-isolated player**
+(`/sde-play.html`), not an in-page `<video>` — see
 [Wall takeover architecture](#wall-takeover-architecture) before
 touching that path. Remaining polish waits on the 10 GB Lambda quota
 raise — see operating-state table below).
@@ -255,7 +255,23 @@ SDE_ECS_SECURITY_GROUP=sg-xxx
 OPENAI_API_KEY=sk-...            # for TTS voice over (optional — skipped if absent)
 ```
 
-### AWS setup (from scratch, ap-southeast-1)
+### AWS setup — CURRENT STATE (2026-05-23, IN PROGRESS)
+
+One-shot script at [sde-renderer/setup-ecs.sh](../sde-renderer/setup-ecs.sh).
+Run from the VPS host (not the Easypanel container):
+
+```bash
+# On the host (ssh root@srv1603244)
+cd /tmp/sde-setup                          # repo cloned here already
+eval $(docker inspect a37ab46a817b \       # app container ID — re-check with: docker ps | grep reelday
+  --format='{{range .Config.Env}}export {{println .}}{{end}}')
+bash sde-renderer/setup-ecs.sh
+```
+
+Script prints the 4 backend env vars at the end — paste into Easypanel,
+restart backend, trigger a test render. **Script has not been run yet.**
+
+### AWS setup checklist (from scratch, ap-southeast-1)
 
 1. Create ECR repo `reelday-sde-renderer`, push Docker image
 2. Create ECS cluster `reelday-cluster` (Fargate)
