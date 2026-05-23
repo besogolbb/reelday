@@ -292,7 +292,7 @@ async function main() {
     });
 
     const outputPath = join(tmpDir, 'sde.mp4');
-    console.log(`[render] starting renderMedia (concurrency=8, ${composition.durationInFrames} frames)`);
+    console.log(`[render] starting renderMedia (concurrency=16, ${composition.durationInFrames} frames)`);
     const startTime = Date.now();
 
     await renderMedia({
@@ -301,7 +301,7 @@ async function main() {
       codec: 'h264',
       outputLocation: outputPath,
       inputProps,
-      concurrency: 8,
+      concurrency: 16,
       crf: 26,
       timeoutInMilliseconds: 120000, // 2 min per frame — large videos can be slow to decode
       chromiumOptions: {

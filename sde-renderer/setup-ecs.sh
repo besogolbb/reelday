@@ -75,8 +75,8 @@ aws ecs register-task-definition --cli-input-json "{
   \"executionRoleArn\": \"$EXEC_ROLE_ARN\",
   \"networkMode\": \"awsvpc\",
   \"requiresCompatibilities\": [\"FARGATE\"],
-  \"cpu\": \"8192\",
-  \"memory\": \"16384\",
+  \"cpu\": \"16384\",
+  \"memory\": \"65536\",
   \"containerDefinitions\": [{
     \"name\": \"$CONTAINER_NAME\",
     \"image\": \"$ECR_URI:latest\",
