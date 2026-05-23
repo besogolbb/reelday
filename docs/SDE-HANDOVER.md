@@ -197,7 +197,79 @@ per process — bounded, terminal failures keep the slug muted,
 transient ones retry on next poll). `event_sde.auto_rendered = true`
 distinguishes auto from manual in analytics.
 
-## Active task — none queued (SDE 2-series feature-complete)
+## Renderer — Remotion on ECS Fargate (replaces FFmpeg Lambda)
+
+`lambda/sde.mjs` has been **deleted**. The renderer is now the `sde-renderer/`
+directory — a Remotion TypeScript project that runs as an ECS Fargate task.
+
+### Architecture change summary
+
+| Before | After |
+|---|---|
+| `lambda/sde.mjs` — FFmpeg filter graphs | `sde-renderer/` — Remotion React compositions |
+| AWS Lambda (3 GB, 15 min timeout) | ECS Fargate (8 vCPU / 16 GB, ~3 min render) |
+| `@aws-sdk/client-lambda` InvokeCommand | `@aws-sdk/client-ecs` RunTaskCommand |
+| Payload in Lambda JSON body | Payload staged to R2, key passed via env var |
+| Hard cuts only | Crossfade / dip-to-black / zoom-push transitions |
+| FFmpeg drawtext cards | React components (Cormorant Garamond serif) |
+| ~$0.10/render (3 GB Lambda) | ~$0.023/render (Fargate + TTS) |
+
+### Animations shipped
+
+- Ken Burns (CSS, smooth sub-pixel) + blur-fill parallax background
+- Horizontal pan for landscape/group photos
+- Micro-zoom on video clips; slow motion on pinned clips
+- Cycling transitions: crossfade → dip-to-black → zoom-push
+- Flash cut sequence at emotional peak (6–8 photos, 3 frames each)
+- Film grain (audio-reactive via feTurbulence)
+- Vignette (audio-reactive radial gradient)
+- Cinematic letterbox bars (animate in/out)
+- Photo flash on clip entry (white opacity spike)
+- Warm-film color grade (CSS filter)
+- Film leader opener (3→2→1 countdown)
+- Opening title card (bokeh bg, serif stagger, animated divider)
+- Chapter markers (Preparation / Ceremony / Cocktail Hour / Reception)
+- Hero moment (highest-reacted clip: 8s, freeze frame, warm glow border)
+- Collage at chapter transitions (2–4 photo grid → collapses to hero)
+- End card (animated counters, QR code, bokeh)
+- Reelday slate with iris close
+- AI voice over (OpenAI TTS, nova voice) — over title + first chapter
+- Guest ambient audio mix (top-3 reacted videos at -18dB)
+- Music ducking under voice over
+
+### Key files
+
+- [sde-renderer/render.mjs](../sde-renderer/render.mjs) — Fargate entry point
+- [sde-renderer/src/SdeComposition.tsx](../sde-renderer/src/SdeComposition.tsx) — main composition
+- [sde-renderer/src/types.ts](../sde-renderer/src/types.ts) — InputProps + constants
+- [sde-renderer/Dockerfile](../sde-renderer/Dockerfile) — Node 20 bookworm + Chrome + ffmpeg
+- [backend/lib/sdeRenderInvoke.js](../backend/lib/sdeRenderInvoke.js) — ECS RunTask invoker
+
+### New backend env vars required
+
+```
+SDE_ECS_CLUSTER=reelday-cluster
+SDE_TASK_DEF=reelday-sde-renderer
+SDE_ECS_SUBNETS=subnet-xxx,subnet-yyy
+SDE_ECS_SECURITY_GROUP=sg-xxx
+OPENAI_API_KEY=sk-...            # for TTS voice over (optional — skipped if absent)
+```
+
+### AWS setup (from scratch, ap-southeast-1)
+
+1. Create ECR repo `reelday-sde-renderer`, push Docker image
+2. Create ECS cluster `reelday-cluster` (Fargate)
+3. Create task definition `reelday-sde-renderer` (CPU 8192, Mem 16384, image from ECR)
+4. IAM task execution role: `AmazonECSTaskExecutionRolePolicy`
+5. Set env vars in task def: R2_*, WEBHOOK_URL, WEBHOOK_SECRET, OPENAI_API_KEY
+6. Set backend env vars above
+
+### Parked (not yet implemented)
+
+- Beat sync — parked until music source is decided
+- Reactions overlay — later slice
+
+## Active task — none queued (Remotion Fargate renderer shipped)
 
 The SDE feature is host-usable end-to-end on the current 3 GB Lambda:
 host curates via Feature pins, render fires on upload-window close,

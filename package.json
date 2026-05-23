@@ -18,6 +18,7 @@
     "perf:full-local": "BASE_URL=http://localhost:3000 node scripts/perf.mjs full"
   },
   "dependencies": {
+    "@aws-sdk/client-ecs": "^3.600.0",
     "@aws-sdk/client-lambda": "^3.1045.0",
     "@aws-sdk/client-s3": "^3.600.0",
     "@aws-sdk/client-sqs": "^3.1045.0",
