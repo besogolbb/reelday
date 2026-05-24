@@ -3215,7 +3215,7 @@ body { background: var(--paper); min-height: 100dvh; }
       ? fileEntries.map(([qId, file], i) => ({
           id:            now + i,
           uploader_name: name,
-          message:       i === 0 ? msg : '',   // message only on first
+          message:       msg,   // same message on every file in the batch
           thumb:         file.type.startsWith('video/') ? (itemPosterDataUrls[qId] || null) : null,
           timestamp:     new Date().toISOString(),
           status:        'pending',
@@ -3334,7 +3334,9 @@ body { background: var(--paper); min-height: 100dvh; }
       const entryId = now + i;
       const isAudio = forceFileType === 'audio' || (!forceFileType && file.type.startsWith('audio/'));
       const isVideo = !isAudio && (forceFileType === 'video' || (!forceFileType && file.type.startsWith('video/')));
-      const msgToSend = (i === 0 && msg) ? msg : '';
+      // Apply the message to every file in the batch so the host sees it
+      // when reviewing any photo, not just the first one uploaded.
+      const msgToSend = msg || '';
       const browserPoster = isVideo
         ? (
             queueId === 'record'

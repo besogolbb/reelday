@@ -4610,6 +4610,16 @@
     const streamScoped    = filterByStream(uploads);
     const filteredUploads = filterUploads(streamScoped, currentTab);
 
+    // Older uploads only saved the guest's message on the FIRST file of a
+    // batch. Build a batch_id → message lookup so we can show the message
+    // on every photo in the batch, not just the first one uploaded.
+    const batchMsgMap = new Map();
+    for (const u of uploads) {
+      if (u.batch_id && u.message && !batchMsgMap.has(u.batch_id)) {
+        batchMsgMap.set(u.batch_id, u.message);
+      }
+    }
+
     const placeholderClasses = ['placeholder--clay', 'placeholder--ochre', 'placeholder--coral', 'placeholder--sage', 'placeholder--ink', 'placeholder--paper'];
 
     if (!filteredUploads.length) {
@@ -4670,8 +4680,9 @@
         audioBtn = `<div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;border:2px solid rgba(255,255,255,.3);font-size:20px;line-height:1;pointer-events:none;z-index:3;display:flex;align-items:center;justify-content:center;">🎙</div>`;
       }
 
-      const msgPreview = u.message
-        ? `<div style="font-family:var(--display);font-style:italic;font-size:12px;color:var(--ink-soft);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px;">"${escapeHtml(u.message)}"</div>`
+      const tileMsg = u.message || (u.batch_id ? batchMsgMap.get(u.batch_id) : null);
+      const msgPreview = tileMsg
+        ? `<div style="font-family:var(--display);font-style:italic;font-size:12px;color:var(--ink-soft);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px;">"${escapeHtml(tileMsg)}"</div>`
         : '';
 
       const showLabelFallback = !mediaSrc && !isVideo && !isAudioOnly;
@@ -6242,9 +6253,19 @@
     } else {
       previewWhen.textContent = '';
     }
-    if (upload.message) {
+    // Older uploads only saved the guest's message on the FIRST file in a
+    // batch. Fall back to a sibling in the same batch_id so the host
+    // sees the note on every photo from that submission.
+    let msgText = upload.message;
+    if (!msgText && upload.batch_id) {
+      const sibling = (allUploads || []).find(u =>
+        u.batch_id === upload.batch_id && u.id !== upload.id && u.message
+      );
+      if (sibling) msgText = sibling.message;
+    }
+    if (msgText) {
       previewMsg.style.display = 'block';
-      previewMsg.textContent = `"${upload.message}"`;
+      previewMsg.textContent = `"${msgText}"`;
     } else {
       previewMsg.style.display = 'none';
     }
