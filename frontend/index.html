@@ -597,7 +597,11 @@
     letter-spacing: .12em; text-transform: uppercase;
     color: var(--ink-soft); width: fit-content;
   }
-  .feat-dark .feat-pill, .feat-accent .feat-pill { background: rgba(255,255,255,.22); color: #fff; }
+  /* Dark card: light overlay (pill stands out against ink). Accent card:
+     dark overlay (white-overlay-on-coral was too pale — white text
+     measured 3.33:1; dark overlay drops bg to ~#8e3f25, ratio ~7.5:1). */
+  .feat-dark .feat-pill   { background: rgba(255,255,255,.22); color: #fff; }
+  .feat-accent .feat-pill { background: rgba(0,0,0,.22);       color: #fff; }
   .feat h3 { font-family: var(--display); font-weight: 500; font-size: 22px; line-height: 1.2; letter-spacing: -.01em; }
   .feat h3 em { font-style: italic; }
   /* opacity .75 was failing contrast when applied over the dark / accent feat
@@ -607,7 +611,7 @@
   .feat-dark p, .feat-accent p { opacity: 1; color: #fff; }
   .feat .feat-visual { flex: 1; min-height: 70px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
   .feat-dark .feat-visual { background: rgba(255,255,255,.06); }
-  .feat-accent .feat-visual { background: rgba(255,255,255,.15); }
+  .feat-accent .feat-visual { background: rgba(0,0,0,.14); } /* dark overlay so white inner text passes AA (was .15 white = ~3.56:1) */
 
   .feat-wall-preview {
     border-radius: 10px; overflow: hidden; position: relative;
