@@ -70,9 +70,12 @@ async function presign(key, expiresIn = 7200) {
 // Cloudflare Image Resizing — resize photos at the edge so Chromium decodes
 // 1920px JPEGs instead of 6000px originals (10x faster per frame, much less RAM).
 // Only works because R2 is served publicly through media.reelday.ph.
+// Matches the wall's cdnImage() transform string exactly so SDE benefits
+// from the cache that guests populated while browsing — first render is
+// effectively free for any photo someone has already viewed.
 function photoSrc(key, width = 1920) {
   const base = (process.env.R2_PUBLIC_URL || 'https://media.reelday.ph').replace(/\/+$/, '');
-  return `${base}/cdn-cgi/image/width=${width},quality=85,format=auto/${key}`;
+  return `${base}/cdn-cgi/image/width=${width},quality=82,format=auto,fit=scale-down/${key}`;
 }
 
 function runFfmpeg(args) {
