@@ -77,19 +77,24 @@ function buildTimeline(
       const doFlash = isHero && !flashCutInserted && flatIndex > 0;
 
       if (doCollage) {
-        const collageSrcs = chapter.clips.slice(0, 4).map((c) => c.src);
-        entries.push({
-          clip,
-          startFrame: cursor,
-          durationInFrames: COLLAGE_FRAMES,
-          anchorIndex,
-          flatIndex,
-          chapterLabel,
-          isFlashCut: false,
-          isCollage: true,
-          collageSrcs,
-        });
-        cursor += COLLAGE_FRAMES;
+        const collageSrcs = chapter.clips
+          .filter((c) => c.type === "photo")
+          .slice(0, 4)
+          .map((c) => c.src);
+        if (collageSrcs.length >= 2) {
+          entries.push({
+            clip,
+            startFrame: cursor,
+            durationInFrames: COLLAGE_FRAMES,
+            anchorIndex,
+            flatIndex,
+            chapterLabel,
+            isFlashCut: false,
+            isCollage: true,
+            collageSrcs,
+          });
+          cursor += COLLAGE_FRAMES;
+        }
       }
 
       if (doFlash) {
