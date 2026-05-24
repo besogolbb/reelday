@@ -302,11 +302,11 @@ async function main() {
       codec: 'h264',
       outputLocation: outputPath,
       inputProps,
-      concurrency: 16,
+      concurrency: 8,
       crf: 26,
       imageFormat: 'jpeg',
       jpegQuality: 90,
-      timeoutInMilliseconds: 120000,
+      timeoutInMilliseconds: 300000,
       offthreadVideoCacheSizeInBytes: 4 * 1024 * 1024 * 1024,
       browserExecutable: '/usr/bin/chromium',
       chromiumOptions: {
