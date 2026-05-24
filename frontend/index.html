@@ -597,10 +597,14 @@
     letter-spacing: .12em; text-transform: uppercase;
     color: var(--ink-soft); width: fit-content;
   }
-  .feat-dark .feat-pill, .feat-accent .feat-pill { background: rgba(255,255,255,.15); color: rgba(255,255,255,.8); }
+  .feat-dark .feat-pill, .feat-accent .feat-pill { background: rgba(255,255,255,.22); color: #fff; }
   .feat h3 { font-family: var(--display); font-weight: 500; font-size: 22px; line-height: 1.2; letter-spacing: -.01em; }
   .feat h3 em { font-style: italic; }
+  /* opacity .75 was failing contrast when applied over the dark / accent feat
+     cards (white-ish at .75 over coral measured 3.12:1). Keep the soft look
+     on plain white cards only — accent/dark cards use full-opacity white. */
   .feat p { font-size: 14px; line-height: 1.6; opacity: .75; }
+  .feat-dark p, .feat-accent p { opacity: 1; color: #fff; }
   .feat .feat-visual { flex: 1; min-height: 70px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
   .feat-dark .feat-visual { background: rgba(255,255,255,.06); }
   .feat-accent .feat-visual { background: rgba(255,255,255,.15); }
@@ -757,7 +761,7 @@
   .price-card.featured .tier { color: var(--accent-soft); }
   .price-card .price { font-family: var(--display); font-size: 44px; font-weight: 400; line-height: 1; letter-spacing: -.03em; margin-bottom: 4px; }
   .price-card .price sub { font-family: var(--sans); font-size: 12px; color: var(--ink-faint); font-weight: 400; }
-  .price-card.featured .price sub { color: rgba(251,245,236,.45); }
+  .price-card.featured .price sub { color: rgba(251,245,236,.85); }
   .price-card .desc { font-size: 13px; color: var(--ink-soft); margin-bottom: 20px; padding-bottom: 18px; border-bottom: 1px solid var(--line); line-height: 1.6; }
   .price-card.featured .desc { color: rgba(251,245,236,.6); border-color: rgba(255,255,255,.1); }
   .price-card ul { list-style: none; display: grid; gap: 9px; font-size: 13px; flex: 1; color: var(--ink-soft); }
@@ -1054,7 +1058,7 @@
         <h3>Full-quality <em>archive.</em></h3>
         <p>Every photo and video downloadable as a full-res .zip. Yours to keep forever.</p>
         <div class="feat-visual">
-          <div style="font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.7);">your-event-photos.zip · 4.2 GB</div>
+          <div style="font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.95);">your-event-photos.zip · 4.2 GB</div>
         </div>
       </div>
     </div>

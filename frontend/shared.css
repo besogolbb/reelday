@@ -19,7 +19,7 @@
   --line-2:       rgba(42,26,20,.18);
 
   /* Accent (per-theme) */
-  --accent:       #c45a3a;     /* warm terracotta */
+  --accent:       #b85230;     /* warm terracotta — darkened from #c45a3a so white-on-accent clears WCAG AA (4.31→~4.6) */
   --accent-deep:  #7a3b2e;     /* deep clay */
   --accent-soft:  #f0a37a;     /* sunset peach */
   --gold:         #d8a05a;     /* sunlit ochre */
