@@ -146,6 +146,12 @@ await fastify.register(helmet, {
       // external script tag is blocked even though script-src allows it.
       // Mirror the script-src list here.
       'script-src-elem': ["'self'", "'unsafe-inline'", 'https://js.paymongo.com', 'https://accounts.google.com', 'https://apis.google.com', 'https://static.cloudflareinsights.com', 'https://cdn.jsdelivr.net'],
+      // script-src-attr covers inline event handlers (onclick=, onload=, …).
+      // Helmet defaults this to 'none' which is the correct hardening for
+      // greenfield code, but a lot of our HTML uses inline handlers. Allowing
+      // 'unsafe-inline' here matches the rest of our intentionally-permissive
+      // baseline; tighten to 'none' once handlers are migrated to addEventListener.
+      'script-src-attr': ["'unsafe-inline'"],
       'connect-src':     ["'self'", 'https://api.paymongo.com', 'https://accounts.google.com', 'https://cloudflareinsights.com', 'wss:', 'https:'],
       'style-src':       ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://accounts.google.com'],
       'style-src-elem':  ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://accounts.google.com'],
