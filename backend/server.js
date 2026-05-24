@@ -139,9 +139,16 @@ await fastify.register(helmet, {
     useDefaults: true,
     directives: {
       'default-src':  ["'self'"],
-      'script-src':   ["'self'", "'unsafe-inline'", 'https://js.paymongo.com', 'https://accounts.google.com', 'https://apis.google.com', 'https://static.cloudflareinsights.com'],
-      'connect-src':  ["'self'", 'https://api.paymongo.com', 'https://accounts.google.com', 'https://cloudflareinsights.com', 'wss:', 'https:'],
-      'style-src':    ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      'script-src':      ["'self'", "'unsafe-inline'", 'https://js.paymongo.com', 'https://accounts.google.com', 'https://apis.google.com', 'https://static.cloudflareinsights.com'],
+      // script-src-elem controls <script src=...> tags specifically. Helmet's
+      // useDefaults:true injects its own script-src-elem (just 'self'), which
+      // overrides the script-src fallback — so without this line, every
+      // external script tag is blocked even though script-src allows it.
+      // Mirror the script-src list here.
+      'script-src-elem': ["'self'", "'unsafe-inline'", 'https://js.paymongo.com', 'https://accounts.google.com', 'https://apis.google.com', 'https://static.cloudflareinsights.com'],
+      'connect-src':     ["'self'", 'https://api.paymongo.com', 'https://accounts.google.com', 'https://cloudflareinsights.com', 'wss:', 'https:'],
+      'style-src':       ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      'style-src-elem':  ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       'font-src':     ["'self'", 'data:', 'https://fonts.gstatic.com'],
       'img-src':      ["'self'", 'data:', 'blob:', 'https:'],
       'media-src':    ["'self'", 'blob:', 'https:'],
