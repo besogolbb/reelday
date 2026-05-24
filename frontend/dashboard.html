@@ -3401,7 +3401,7 @@
 </div>
 
 <!-- ── Upgrade modal (in-dashboard pricing) ──────────────── -->
-<div class="upgrade-modal" id="upgrade-modal" role="dialog" aria-modal="true" aria-labelledby="upgrade-modal-title" aria-hidden="true">
+<div class="upgrade-modal" id="upgrade-modal" role="dialog" aria-modal="true" aria-labelledby="upgrade-modal-title" inert>
   <div class="upgrade-modal-card">
     <button type="button" class="upgrade-modal-close" id="upgrade-modal-close" aria-label="Close">×</button>
     <div class="upgrade-modal-eyebrow">— Simple pricing</div>
@@ -3467,7 +3467,7 @@
 </div>
 
 <!-- ── Settings modal ─────────────────────────────────────── -->
-<div class="settings-modal" id="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title" aria-hidden="true">
+<div class="settings-modal" id="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title" inert>
   <div class="settings-card">
     <button type="button" class="upgrade-modal-close" id="settings-close" aria-label="Close">×</button>
     <div class="settings-eyebrow">— Event settings</div>
@@ -5826,13 +5826,17 @@
       }
     });
     upgradeModal.classList.add('open');
-    upgradeModal.setAttribute('aria-hidden', 'false');
+    // Use `inert` not `aria-hidden`: putting aria-hidden=true on a modal
+    // that contains focused elements is a WCAG violation (focus leaks
+    // into hidden AT subtree). `inert` both hides from AT and blocks
+    // focus, which is exactly what a closed modal needs.
+    upgradeModal.removeAttribute('inert');
     document.body.style.overflow = 'hidden';
   }
   function closeUpgradeModal() {
     if (!upgradeModal) return;
     upgradeModal.classList.remove('open');
-    upgradeModal.setAttribute('aria-hidden', 'true');
+    upgradeModal.setAttribute('inert', '');
     document.body.style.overflow = '';
   }
 
@@ -5881,12 +5885,12 @@
     settingsStatus.textContent = '';
     settingsStatus.classList.remove('error');
     settingsModal.classList.add('open');
-    settingsModal.setAttribute('aria-hidden', 'false');
+    settingsModal.removeAttribute('inert');
   }
   function closeSettings() {
     if (!settingsModal) return;
     settingsModal.classList.remove('open');
-    settingsModal.setAttribute('aria-hidden', 'true');
+    settingsModal.setAttribute('inert', '');
   }
 
   document.getElementById('settings-nav-link')?.addEventListener('click', (e) => {
