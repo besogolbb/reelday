@@ -116,13 +116,15 @@ export async function triggerLambdaRender(payload) {
     jpegQuality: 90,
     crf: 28,
     x264Preset: 'veryfast',
-    // Account quota = 10 concurrent Lambdas. Remotion uses 1 'main'
-    // coordinator + N chunk Lambdas + retry slack, so we must leave
-    // headroom. framesPerLambda=1000 means ~6 chunks for a 6000-frame
-    // render, fitting comfortably in 10 concurrent slots even under
-    // 1-2 retries. Bump this DOWN once the quota increase is approved
-    // (more chunks = more parallelism = faster).
-    framesPerLambda: 1000,
+    // Two competing constraints with our current AWS limits:
+    //   1. Memory cap 3008 MB → each Lambda has ~2 vCPU → ~46 fpm rendering
+    //   2. Quota = 10 concurrent → max 9 chunks + 1 main coordinator
+    //   3. Lambda hard timeout = 15 min (900s)
+    // At 46 fpm, a chunk needs <690 frames to finish in 15 min. With 9
+    // chunks of ≤690 frames we cover up to ~6200 frames per render.
+    // Setting framesPerLambda=650 gives a small safety margin.
+    // Bump this DOWN once memory/concurrency quotas are approved.
+    framesPerLambda: 650,
     maxRetries: 1,
     // Each Lambda chunk fetches source videos via Remotion's proxy
     // before frame extraction. Default 28s is too tight for large
