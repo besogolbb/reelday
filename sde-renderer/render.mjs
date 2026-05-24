@@ -67,6 +67,14 @@ async function presign(key, expiresIn = 7200) {
   return getSignedUrl(r2, new GetObjectCommand({ Bucket: BUCKET, Key: key }), { expiresIn });
 }
 
+// Cloudflare Image Resizing — resize photos at the edge so Chromium decodes
+// 1920px JPEGs instead of 6000px originals (10x faster per frame, much less RAM).
+// Only works because R2 is served publicly through media.reelday.ph.
+function photoSrc(key, width = 1920) {
+  const base = (process.env.R2_PUBLIC_URL || 'https://media.reelday.ph').replace(/\/+$/, '');
+  return `${base}/cdn-cgi/image/width=${width},quality=85,format=auto/${key}`;
+}
+
 function runFfmpeg(args) {
   return new Promise((resolve, reject) => {
     const proc = spawn(FFMPEG, ['-y', ...args], { stdio: ['ignore', 'pipe', 'pipe'] });
@@ -193,7 +201,9 @@ async function main() {
     const clipsWithSrc = await Promise.all(
       rawClips.map(async (clip, i) => ({
         ...clip,
-        src: await presign(clip.key),
+        // Photos: CDN-resized to 1920px (10x faster decode).
+        // Videos: presigned R2 URL (OffthreadVideo extracts frames via ffmpeg).
+        src: clip.type === 'photo' ? photoSrc(clip.key) : await presign(clip.key),
         createdAt: clip.createdAt ?? new Date().toISOString(),
         reactionCount: clip.reactionCount ?? 0,
         isPinned: clip.isPinned ?? false,
@@ -278,7 +288,17 @@ async function main() {
       title: title ?? null,
       subtitle: subtitle ?? null,
       endcardText: endcardText ?? null,
-      coverImageSrc: coverImageUrl ?? null,
+      coverImageSrc: coverImageUrl
+        ? (() => {
+            // Route cover image through CDN resizer too (used as blurred bg).
+            const base = (process.env.R2_PUBLIC_URL || 'https://media.reelday.ph').replace(/\/+$/, '');
+            if (coverImageUrl.startsWith(base + '/')) {
+              const key = coverImageUrl.slice(base.length + 1);
+              return photoSrc(key, 1920);
+            }
+            return coverImageUrl;
+          })()
+        : null,
       audioSrc,
       voiceoverSrc,
       qrCodeDataUrl,
@@ -302,11 +322,11 @@ async function main() {
       codec: 'h264',
       outputLocation: outputPath,
       inputProps,
-      concurrency: 8,
+      concurrency: 16,
       crf: 26,
       imageFormat: 'jpeg',
       jpegQuality: 90,
-      timeoutInMilliseconds: 300000,
+      timeoutInMilliseconds: 180000,
       offthreadVideoCacheSizeInBytes: 4 * 1024 * 1024 * 1024,
       browserExecutable: '/usr/bin/chromium',
       chromiumOptions: {
