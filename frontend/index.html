@@ -42,6 +42,16 @@
 <link rel="preload" as="image" fetchpriority="high"
       href="/cdn-cgi/image/width=900,quality=82,format=auto/images/First%20dance%20after%2038%20years.png" />
 
+<!-- Preload the auth module so its fetch races the document parse
+     instead of waiting for the inline <script type="module"> at the
+     bottom of the page to discover the import. Lighthouse network
+     dependency tree showed index.html → auth.js → shared.css as a
+     3.1s critical chain on Slow 4G; the import wasn't requested
+     until ~1700 lines into parsing. modulepreload (NOT plain
+     preload) so the module graph is fully prepared, not just the
+     bytes fetched. -->
+<link rel="modulepreload" href="/js/auth.js" />
+
 <!-- Preconnect + non-blocking font load.
      The Google Fonts CSS was the #1 render-blocker on mobile Lighthouse
      (~2.8s of LCP delay on Slow 4G). The standard fix: load the
