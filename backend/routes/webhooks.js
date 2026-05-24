@@ -1,3 +1,18 @@
+import { timingSafeEqual } from 'crypto';
+
+// Constant-time comparison for shared webhook secrets. Using === leaks
+// info via early-exit timing: an attacker can brute-force the secret one
+// character at a time by measuring response latency. Returns false on
+// any mismatch including length mismatch (Buffer compare requires equal
+// length, so we guard with that first).
+function safeSecretEqual(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  const aBuf = Buffer.from(a, 'utf8');
+  const bBuf = Buffer.from(b, 'utf8');
+  if (aBuf.length !== bBuf.length) return false;
+  return timingSafeEqual(aBuf, bBuf);
+}
+
 function buildPublicUrl(storageKey) {
   const base = (process.env.R2_PUBLIC_URL || 'https://media.reelday.ph').replace(/\/+$/, '');
   const key = String(storageKey || '').replace(/^\/+/, '');
@@ -34,7 +49,7 @@ export default async function webhookRoutes(fastify) {
     }
 
     const providedSecret = readWebhookSecret(request);
-    if (providedSecret !== configuredSecret) {
+    if (!safeSecretEqual(providedSecret, configuredSecret)) {
       request.log.warn('Rejected video-ready webhook with bad/missing secret');
       return reply.status(401).send({ error: true, message: 'Invalid webhook secret' });
     }
@@ -136,7 +151,7 @@ export default async function webhookRoutes(fastify) {
     }
 
     const providedSecret = readWebhookSecret(request);
-    if (providedSecret !== configuredSecret) {
+    if (!safeSecretEqual(providedSecret, configuredSecret)) {
       request.log.warn('Rejected sde-ready webhook with bad/missing secret');
       return reply.status(401).send({ error: true, message: 'Invalid webhook secret' });
     }

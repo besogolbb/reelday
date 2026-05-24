@@ -479,6 +479,17 @@ export default async function uploadRoutes(fastify) {
     });
   });
 
+  // Strict allowlist of content types we'll sign a PUT URL for. Without
+  // this, a client could request `image/svg+xml` (or `text/html`) and PUT
+  // a payload that, when served back from media.reelday.ph, executes JS
+  // — phishing / cross-domain credential theft. The list mirrors what the
+  // upload UI actually produces from mobile cameras and audio recorders.
+  const ALLOWED_UPLOAD_TYPES = new Set([
+    'image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic', 'image/heif',
+    'video/mp4', 'video/quicktime', 'video/webm', 'video/x-m4v',
+    'audio/webm', 'audio/mp4', 'audio/m4a', 'audio/mpeg', 'audio/ogg', 'audio/aac',
+  ]);
+
   // POST /api/uploads/presigned — generate a PUT URL for direct R2 upload
   fastify.post('/uploads/presigned', { config: UPLOAD_WRITE_LIMIT }, async (request, reply) => {
     const { slug, filename, contentType } = request.body;
@@ -494,11 +505,21 @@ export default async function uploadRoutes(fastify) {
       return reply.status(e.statusCode || 500).send({ error: true, message: e.message || 'Upload error', ...e });
     }
 
+    // Type allowlist — must run BEFORE the plan gates so we never sign a
+    // URL for an executable-when-rendered MIME (svg+xml, text/html, etc.)
+    // even if the plan would otherwise permit "an image".
+    const ct = String(contentType || '').toLowerCase();
+    if (!ALLOWED_UPLOAD_TYPES.has(ct)) {
+      return reply.status(400).send({
+        error: true, code: 'unsupported_type',
+        message: 'Unsupported file type. Please upload a photo, video, or audio file.',
+      });
+    }
+
     // Plan gate at the door — reject before issuing the PUT URL so
     // disallowed media never reaches R2 at all (Tala = photos only;
     // audio notes are Dalisay+). Matches the deeper checks in the
     // multipart + /complete paths.
-    const ct = String(contentType || '');
     if (ct.startsWith('video/') && !presignPlan.features?.videoUpload) {
       return reply.status(403).send({
         error: true, code: 'plan_no_video',

@@ -4,6 +4,13 @@ import { Resend } from 'resend';
 import { signToken } from '../plugins/auth.js';
 import { buildAppUrl } from '../utils/appUrl.js';
 
+// Pre-computed bcrypt hash of a random unguessable string. Used to keep
+// /login response time uniform when the email doesn't exist — without
+// this, missing-user logins return in ~1ms (no bcrypt) and existing-user
+// wrong-password logins take ~250ms (bcrypt cost-12), which is a clean
+// timing oracle for account enumeration. Generated once at module load.
+const DUMMY_HASH = bcrypt.hashSync(randomBytes(32).toString('hex'), 12);
+
 function resend() {
   return new Resend(process.env.RESEND_API_KEY);
 }
@@ -118,8 +125,27 @@ async function sendResetEmail(email, token, appUrl) {
 }
 
 export default async function authRoutes(fastify) {
+  // Per-route bucket for credential endpoints. The global 1200/min limiter
+  // is meant for guest upload bursts and is way too loose for /login or
+  // /forgot-password — an attacker would have 1200 brute-force tries per
+  // minute. 10/min per IP makes online password guessing infeasible while
+  // staying loose enough that a fat-fingered user can't lock themselves out.
+  // Keyed on IP (not the per-device X-Guest-Id used elsewhere) because
+  // credential attacks come from rented IPs, not real browsers.
+  const AUTH_LIMIT = {
+    rateLimit: {
+      max: 10,
+      timeWindow: '1 minute',
+      keyGenerator: req => req.ip,
+      errorResponseBuilder: () => ({
+        error: true, code: 'rate_limited',
+        message: 'Too many attempts. Please wait a minute and try again.',
+      }),
+    },
+  };
+
   // POST /api/auth/register
-  fastify.post('/auth/register', async (request, reply) => {
+  fastify.post('/auth/register', { config: AUTH_LIMIT }, async (request, reply) => {
     const { email, password, full_name, phone } = request.body ?? {};
 
     if (!email || !password || !full_name) {
@@ -180,7 +206,7 @@ export default async function authRoutes(fastify) {
   });
 
   // POST /api/auth/login
-  fastify.post('/auth/login', async (request, reply) => {
+  fastify.post('/auth/login', { config: AUTH_LIMIT }, async (request, reply) => {
     const { email, password } = request.body ?? {};
 
     if (!email || !password) {
@@ -193,7 +219,13 @@ export default async function authRoutes(fastify) {
     );
 
     const user = rows[0];
-    if (!user || !user.password_hash || !(await bcrypt.compare(password, user.password_hash))) {
+    // Always run bcrypt.compare — against the real hash if the user exists,
+    // against a constant dummy hash if not. This equalises response time
+    // between "no such email" and "wrong password" so an attacker can't
+    // enumerate registered emails via timing. Same final 401 message either way.
+    const hashToCheck = user?.password_hash || DUMMY_HASH;
+    const passwordOk  = await bcrypt.compare(password, hashToCheck);
+    if (!user || !user.password_hash || !passwordOk) {
       return reply.status(401).send({ error: true, message: 'Invalid email or password' });
     }
     // Admin can soft-deactivate a user from /admin. Treat as account-locked.
@@ -241,7 +273,7 @@ export default async function authRoutes(fastify) {
   });
 
   // POST /api/auth/forgot-password
-  fastify.post('/auth/forgot-password', async (request, reply) => {
+  fastify.post('/auth/forgot-password', { config: AUTH_LIMIT }, async (request, reply) => {
     const { email } = request.body ?? {};
     if (!email) return reply.status(400).send({ error: true, message: 'email is required' });
 
@@ -262,18 +294,20 @@ export default async function authRoutes(fastify) {
 
       const appUrl = buildAppUrl(request);
 
-      try {
-        await sendResetEmail(email, reset_token, appUrl);
-      } catch (err) {
-        fastify.log.warn({ err }, 'Failed to send reset email');
-      }
+      // Fire-and-forget the email send. Awaiting it here would leak account
+      // existence via timing: hits to existing emails would block for the
+      // ~300-800ms Resend round-trip, while hits to non-existent emails
+      // would return immediately. Errors are logged but never surfaced.
+      sendResetEmail(email, reset_token, appUrl).catch(err =>
+        fastify.log.warn({ err: err.message }, 'Failed to send reset email'),
+      );
     }
 
     return { message: 'If that email exists, a reset link has been sent.' };
   });
 
   // POST /api/auth/reset-password
-  fastify.post('/auth/reset-password', async (request, reply) => {
+  fastify.post('/auth/reset-password', { config: AUTH_LIMIT }, async (request, reply) => {
     const { token, password } = request.body ?? {};
     if (!token || !password) {
       return reply.status(400).send({ error: true, message: 'token and password are required' });
