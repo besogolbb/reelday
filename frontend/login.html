@@ -212,8 +212,7 @@
 
       saveAuth(data.token, data.user);
 
-      const next = new URLSearchParams(location.search).get('next');
-      location.href = next || '/my-events';
+      location.href = safeNext();
     } catch (err) {
       errMsg.textContent   = err.message;
       errMsg.style.display = 'block';
@@ -222,6 +221,20 @@
       btnText.textContent  = 'Log in';
     }
   });
+
+  // Open-redirect guard. Without this, ?next=https://evil.com would
+  // happily send a freshly-authenticated user to an attacker page that
+  // mimics the reelday dashboard — classic phishing helper. Accept only
+  // same-origin paths: must start with a single "/" (rejects protocol-
+  // relative "//evil.com") and contain no scheme. Anything else falls
+  // back to the default landing.
+  function safeNext() {
+    const raw = new URLSearchParams(location.search).get('next') || '';
+    if (raw.startsWith('/') && !raw.startsWith('//') && !/^\/[^/]*:/.test(raw)) {
+      return raw;
+    }
+    return '/my-events';
+  }
 
   // ── Google Sign-In ────────────────────────────────────
   async function handleGoogleCredential(response) {
@@ -234,8 +247,7 @@
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Google sign-in failed');
       saveAuth(data.token, data.user);
-      const next = new URLSearchParams(location.search).get('next');
-      location.href = next || '/my-events';
+      location.href = safeNext();
     } catch (err) {
       errMsg.textContent   = err.message;
       errMsg.style.display = 'block';

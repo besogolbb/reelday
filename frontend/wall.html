@@ -3583,7 +3583,10 @@
   }
 
   function updateCaption(item) {
-    const name = item.uploader_name || 'Panauhin';
+    // Guest-supplied — must escape before going through .innerHTML or any
+    // guest can XSS the wall (and the TV running it) with a name like
+    // <img src=x onerror=…>. formatTime() returns sanitized "HH:MM" only.
+    const name = escapeWallHtml(item.uploader_name || 'Panauhin');
     let html = `<span class="uploader-name">${name}</span>`;
     const t = formatTime(item.created_at);
     if (t) html += `<span class="uploader-sep"> • </span><span class="uploader-time">${t}</span>`;

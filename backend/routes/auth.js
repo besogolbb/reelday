@@ -106,6 +106,37 @@ async function sendWelcomeEmail(email, fullName, appUrl) {
   }), 10_000, 'Resend (welcome)');
 }
 
+// Sent to addresses that re-attempt /register when an account already
+// exists. Returning a generic success response is what closes the
+// enumeration oracle; this email is the UX patch so a real legitimate
+// double-signup attempt doesn't silently dead-end.
+async function sendAlreadyRegisteredEmail(email, appUrl) {
+  const loginUrl  = `${appUrl}/login`;
+  const resetUrl  = `${appUrl}/forgot-password`;
+  await withTimeout(resend().emails.send({
+    from:    'Reelday <noreply@reelday.ph>',
+    to:      email,
+    subject: 'You already have a Reelday account',
+    html: `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:2rem">
+        <h2 style="color:#b85230">Welcome back!</h2>
+        <p>Someone (probably you) just tried to sign up for Reelday with this email,
+           but you already have an account. You can:</p>
+        <p style="margin:1.25rem 0">
+          <a href="${loginUrl}" style="display:inline-block;background:#b85230;color:#fff;
+             padding:.75rem 1.5rem;border-radius:8px;text-decoration:none;font-weight:700">
+            Log in
+          </a>
+        </p>
+        <p style="font-size:.9rem">Forgot your password?
+          <a href="${resetUrl}" style="color:#b85230">Reset it here.</a></p>
+        <p style="font-size:.85rem;color:#888;margin-top:1.5rem">
+          If this wasn't you, you can safely ignore this email — no changes were made.
+        </p>
+      </div>`,
+  }), 10_000, 'Resend (already-registered)');
+}
+
 async function sendResetEmail(email, token, appUrl) {
   const link = `${appUrl}/reset-password?token=${token}`;
   await withTimeout(resend().emails.send({
@@ -170,7 +201,23 @@ export default async function authRoutes(fastify) {
     );
 
     if (!rows.length) {
-      return reply.status(409).send({ error: true, message: 'Email already registered' });
+      // Email already exists. Don't tell the client that — the previous
+      // 409 with "Email already registered" was a clean account-enumeration
+      // oracle (any random email could be probed). Instead send the
+      // legitimate user a "you already have an account, come log in"
+      // email, and return the same success-ish payload an attacker
+      // would see for a fresh registration. No token: a brand new
+      // registration also returns a token, but here we don't have a
+      // user_id without giving the game away, so the response is
+      // intentionally "check your email" — same as the unverified path.
+      if (resendReady) {
+        sendAlreadyRegisteredEmail(email, buildAppUrl(request)).catch(err =>
+          fastify.log.warn({ err: err.message }, 'Failed to send already-registered email'),
+        );
+      }
+      return reply.status(201).send({
+        message: 'Account created! Please check your email to verify.',
+      });
     }
 
     const user = rows[0];
@@ -316,21 +363,25 @@ export default async function authRoutes(fastify) {
       return reply.status(400).send({ error: true, message: 'Password must be at least 8 characters' });
     }
 
+    const password_hash = await bcrypt.hash(password, 12);
+
+    // Atomic check-and-clear: a SELECT-then-UPDATE pair lets two
+    // concurrent requests with the same token both pass the SELECT and
+    // both write the hash. Folding the validity check into the UPDATE
+    // WHERE clause means at most one request succeeds — the second sees
+    // zero affected rows because reset_token is already NULL.
     const { rows } = await fastify.db.query(
-      'SELECT id FROM users WHERE reset_token = $1 AND reset_token_expires > NOW()',
-      [token],
+      `UPDATE users
+          SET password_hash = $1, reset_token = NULL, reset_token_expires = NULL
+        WHERE reset_token = $2
+          AND reset_token_expires > NOW()
+        RETURNING id`,
+      [password_hash, token],
     );
 
     if (!rows.length) {
       return reply.status(400).send({ error: true, message: 'Invalid or expired reset token' });
     }
-
-    const password_hash = await bcrypt.hash(password, 12);
-
-    await fastify.db.query(
-      'UPDATE users SET password_hash = $1, reset_token = NULL, reset_token_expires = NULL WHERE id = $2',
-      [password_hash, rows[0].id],
-    );
 
     return { message: 'Password updated successfully.' };
   });

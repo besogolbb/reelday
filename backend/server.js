@@ -164,6 +164,11 @@ await fastify.register(helmet, {
       'base-uri':     ["'self'"],
       'form-action':  ["'self'"],
       'upgrade-insecure-requests': [],
+      // Browsers POST a JSON violation report here whenever a directive
+      // blocks something. Lets us spot new CDNs / actual XSS attempts in
+      // real traffic without waiting for a user to file a bug. The
+      // endpoint below rate-limits and ring-buffers the last N reports.
+      'report-uri':   ['/api/_csp-report'],
     },
   },
   crossOriginEmbedderPolicy: false, // we serve cross-origin R2 media
@@ -357,6 +362,42 @@ fastify.setErrorHandler((error, request, reply) => {
   });
 });
 
+// CSP violation collector. Browsers POST a JSON report here whenever a
+// directive blocks a resource. Buffered in-memory only (no DB write,
+// no third-party); fetch via /api/_errors?key=… alongside 500s.
+// Heavily rate-limited because browser extensions can fire dozens of
+// these per page load — without a cap a chatty user could spam the
+// buffer in seconds. Accept both legacy `application/csp-report` and
+// the newer `application/reports+json` content types.
+const recentCspReports = [];
+const MAX_CSP_REPORTS  = 50;
+fastify.addContentTypeParser(
+  ['application/csp-report', 'application/reports+json'],
+  { parseAs: 'string' },
+  (_req, body, done) => {
+    if (!body) return done(null, {});
+    try { done(null, JSON.parse(body)); }
+    catch { done(null, { raw: String(body).slice(0, 2000) }); }
+  },
+);
+fastify.post('/api/_csp-report', {
+  config: { rateLimit: { max: 20, timeWindow: '1 minute', keyGenerator: req => req.ip } },
+}, async (request, reply) => {
+  const body = request.body || {};
+  const r = body['csp-report'] || body.body || body;
+  recentCspReports.push({
+    at: new Date().toISOString(),
+    ip: request.ip,
+    ua: (request.headers['user-agent'] || '').slice(0, 200),
+    directive:    r['violated-directive'] || r.effectiveDirective || null,
+    blockedUri:   r['blocked-uri']        || r.blockedURL         || null,
+    documentUri:  r['document-uri']       || r.documentURL        || null,
+    sourceFile:   r['source-file']        || r.sourceFile         || null,
+  });
+  while (recentCspReports.length > MAX_CSP_REPORTS) recentCspReports.shift();
+  return reply.code(204).send();
+});
+
 // Debug endpoint — returns the last N 500s as JSON. Gated by DEBUG_KEY env
 // var so it's not public. Set DEBUG_KEY in Easypanel to enable; without it,
 // the endpoint returns 404 (no information leak).
@@ -371,7 +412,11 @@ fastify.get('/api/_errors', async (request, reply) => {
   if (!key || presented !== key) {
     return reply.status(404).send({ error: true, message: 'Not found' });
   }
-  return { count: recentErrors.length, errors: recentErrors.slice().reverse() };
+  return {
+    count:       recentErrors.length,
+    errors:      recentErrors.slice().reverse(),
+    csp_reports: recentCspReports.slice().reverse(),
+  };
 });
 
 // Last-resort safety net: if any async work throws and isn't caught, this
