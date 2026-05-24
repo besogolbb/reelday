@@ -123,7 +123,12 @@ export async function triggerLambdaRender(payload) {
     // 1-2 retries. Bump this DOWN once the quota increase is approved
     // (more chunks = more parallelism = faster).
     framesPerLambda: 1000,
-    maxRetries: 0,
+    maxRetries: 1,
+    // Each Lambda chunk fetches source videos via Remotion's proxy
+    // before frame extraction. Default 28s is too tight for large
+    // wedding videos on the first cold-cache fetch. 180s gives slow
+    // videos room to land without killing the chunk.
+    timeoutInMilliseconds: 180_000,
     privacy: 'public',
     downloadBehavior: { type: 'play-in-browser' },
   });
