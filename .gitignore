@@ -15,3 +15,12 @@ music-library/**/*.mp3
 music-library/**/*.m4a
 music-library/**/*.wav
 music-library/**/*.ogg
+
+# Lighthouse reports (run-time artifacts, not source).
+reelday.ph_*.report.html
+*.lighthouse.html
+*.report.html
+
+# Demo/raw video drops — large binaries, kept locally only.
+video/
+wedding-demo/
