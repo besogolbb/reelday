@@ -1,33 +1,25 @@
 /**
- * Trigger the SDE renderer as an ECS Fargate task.
+ * Dispatch an SDE render to the renderer configured by SDE_RENDERER:
+ *   - 'lambda' → Remotion Lambda (fast, fan-out, ~3-5 min, ~$0.30/render)
+ *   - 'ecs'    → ECS Fargate task (single big box, ~15-20 min, ~$0.20/render)
+ *   - unset    → 'ecs' (safe default — pre-Lambda behavior)
  *
- * Replaces the Lambda InvokeCommand path. Payload is staged to R2 first
- * (ECS env var overrides have a ~4 KB limit; clip lists can exceed that).
- * The Fargate container reads SDE_PAYLOAD_KEY from its env, fetches the
- * JSON from R2, renders, then POSTs the sde-ready webhook — same contract
- * as before, no other backend changes required.
+ * Lambda path: returns { renderId, bucketName } so the poller can track it.
+ * ECS path: returns nothing — the container fires its own webhook on done.
  *
- * New env vars required:
- *   SDE_ECS_CLUSTER        — ECS cluster name (e.g. 'reelday-cluster')
- *   SDE_TASK_DEF           — task definition name (e.g. 'reelday-sde-renderer')
- *   SDE_ECS_SUBNETS        — comma-separated subnet IDs
- *   SDE_ECS_SECURITY_GROUP — security group ID
- *   AWS_REGION             — defaults to ap-southeast-1
- *   AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY — optional (IAM role preferred)
- *   R2_*                   — reuse existing R2 env vars for payload staging
+ * Both paths receive the same payload shape (from kickOffRender).
  */
 
 import { ECSClient, RunTaskCommand } from '@aws-sdk/client-ecs';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { triggerLambdaRender } from './sdeRenderInvokeLambda.js';
 
 const region = process.env.AWS_REGION || 'ap-southeast-1';
-
 const creds = (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY)
   ? { accessKeyId: process.env.AWS_ACCESS_KEY_ID, secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY }
   : undefined;
 
 const ecs = new ECSClient({ region, ...(creds && { credentials: creds }) });
-
 const r2 = new S3Client({
   region: 'auto',
   endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
@@ -37,8 +29,7 @@ const r2 = new S3Client({
   },
 });
 
-export async function triggerSdeRender(payload) {
-  // Stage payload JSON to R2 — avoids ECS env var size limit
+async function triggerEcsRender(payload) {
   const payloadKey = `sde/${payload.eventId}/payload-${Date.now()}.json`;
   await r2.send(new PutObjectCommand({
     Bucket: process.env.R2_BUCKET_NAME,
@@ -65,4 +56,13 @@ export async function triggerSdeRender(payload) {
       }],
     },
   }));
+  return null; // ECS posts its own webhook
+}
+
+export async function triggerSdeRender(payload) {
+  const renderer = (process.env.SDE_RENDERER || 'ecs').toLowerCase();
+  if (renderer === 'lambda') {
+    return triggerLambdaRender(payload);
+  }
+  return triggerEcsRender(payload);
 }

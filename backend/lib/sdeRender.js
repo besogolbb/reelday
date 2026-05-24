@@ -224,9 +224,12 @@ export async function kickOffRender(fastify, event, opts = {}) {
     outKey,
   };
 
-  // 5. Async-invoke the Lambda
+  // 5. Async-invoke the renderer (ECS or Lambda based on SDE_RENDERER env).
+  // Lambda returns { renderId, bucketName } so the poller can track it;
+  // ECS returns null (it fires its own webhook on done).
+  let lambdaTracking = null;
   try {
-    await triggerSdeRender(payload);
+    lambdaTracking = await triggerSdeRender(payload);
   } catch (err) {
     throw new SdeRenderError(
       'sde_invoke_failed',
@@ -238,20 +241,28 @@ export async function kickOffRender(fastify, event, opts = {}) {
   // 6. Upsert. Preserves prior video_url/poster_url on conflict so the
   //    dashboard keeps showing the last good render while the new one
   //    is in flight. auto_rendered records which path triggered.
+  // Stash Lambda tracking info in `config` JSONB so the poller can find it.
+  // ECS renderer returns null → config stays {} and ECS's own webhook
+  // updates the row when done.
+  const config = lambdaTracking
+    ? { lambda: { renderId: lambdaTracking.renderId, bucketName: lambdaTracking.bucketName, startedAt: new Date().toISOString() } }
+    : {};
+
   await fastify.db.query(
     `INSERT INTO event_sde
        (event_id, status, clip_count, track_id, requested_by_user_id,
-        auto_rendered, error_message, updated_at)
-     VALUES ($1, 'queued', $2, $3, $4, $5, NULL, NOW())
+        auto_rendered, config, error_message, updated_at)
+     VALUES ($1, 'queued', $2, $3, $4, $5, $6::jsonb, NULL, NOW())
      ON CONFLICT (event_id) DO UPDATE
        SET status               = 'queued',
            clip_count           = EXCLUDED.clip_count,
            track_id             = EXCLUDED.track_id,
            requested_by_user_id = EXCLUDED.requested_by_user_id,
            auto_rendered        = EXCLUDED.auto_rendered,
+           config               = EXCLUDED.config,
            error_message        = NULL,
            updated_at           = NOW()`,
-    [event.id, clips.length, trackId, requested_by_user_id, auto_rendered],
+    [event.id, clips.length, trackId, requested_by_user_id, auto_rendered, JSON.stringify(config)],
   );
 
   return {

@@ -29,6 +29,7 @@ import eventSiteRoutes, { renderEventSitePage } from './routes/event-site.js';
 import { reconcilePendingTranscodes } from './lib/videoTranscode.js';
 import { startRenewalReminderJob } from './jobs/renewal-reminders.js';
 import { startGalleryCleanupJob }  from './jobs/gallery-cleanup.js';
+import { startSdeLambdaPoller }    from './jobs/sde-lambda-poller.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -375,6 +376,10 @@ try {
   // set. One warning email goes out at the start of the grace window
   // so the host has time to hit "Download all" before deletion.
   startGalleryCleanupJob(fastify);
+
+  // Poll Remotion Lambda for in-flight SDE renders. No-op when
+  // REMOTION_LAMBDA_FUNCTION_NAME isn't set (ECS-only mode).
+  startSdeLambdaPoller(fastify);
 } catch (err) {
   fastify.log.error(err);
   process.exit(1);
