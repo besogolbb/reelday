@@ -14,7 +14,7 @@
   --paper-3:      #ebdec6;
   --ink:          #2a1a14;
   --ink-soft:     #5a443a;
-  --ink-faint:    #8a7468;
+  --ink-faint:    #6a5447;  /* WCAG-AA on --paper (~5.5:1). Was #8a7468 (~3.96:1) — failed Lighthouse contrast. */
   --line:         rgba(42,26,20,.10);
   --line-2:       rgba(42,26,20,.18);
 
