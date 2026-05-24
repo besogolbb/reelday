@@ -1,11 +1,14 @@
-import { useCurrentFrame, interpolate, OffthreadVideo, Img, Audio } from "remotion";
+import { useCurrentFrame, interpolate, Img, Audio } from "remotion";
 import { FilmGrain } from "./overlays/FilmGrain";
 import { Vignette } from "./overlays/Vignette";
 import { ClipCounter } from "./overlays/ClipCounter";
+import { VideoFrame } from "./VideoFrame";
 
 interface Props {
   src: string;
   posterSrc?: string;       // static poster JPEG for blurred bg — avoids 2x video decode
+  frameBaseUrl?: string;    // pre-extracted frame URL base (preferred over OffthreadVideo)
+  frameCount?: number;
   durationInFrames: number;
   isPinned: boolean;        // slow motion if pinned
   ambientSrc?: string;      // ambient audio at -18dB
@@ -17,6 +20,8 @@ interface Props {
 export const VideoClip: React.FC<Props> = ({
   src,
   posterSrc,
+  frameBaseUrl,
+  frameCount,
   durationInFrames,
   isPinned,
   ambientSrc,
@@ -61,9 +66,11 @@ export const VideoClip: React.FC<Props> = ({
       ) : (
         <div style={{ position: "absolute", inset: 0, background: "#000" }} />
       )}
-      {/* Sharp foreground */}
-      <OffthreadVideo
+      {/* Sharp foreground — pre-extracted frames via VideoFrame (falls back to OffthreadVideo) */}
+      <VideoFrame
         src={src}
+        frameBaseUrl={frameBaseUrl}
+        frameCount={frameCount}
         playbackRate={playbackRate}
         muted
         style={{

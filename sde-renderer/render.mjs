@@ -15,13 +15,17 @@ import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { spawn } from 'child_process';
 import { createWriteStream, readFileSync } from 'fs';
-import { writeFile, unlink, mkdtemp, rm } from 'fs/promises';
+import { writeFile, unlink, mkdtemp, mkdir, rm, readdir } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { pipeline } from 'stream/promises';
 import { Readable } from 'stream';
 import OpenAI from 'openai';
 import QRCode from 'qrcode';
+import { startFrameServer } from './static-server.mjs';
+
+// Must match FPS in src/types.ts — used for video frame extraction rate.
+const FPS = 24;
 
 // ─── R2 client ──────────────────────────────────────────────────────────────
 
@@ -167,6 +171,56 @@ async function extractAmbient(srcPath, destPath) {
   ]);
 }
 
+// ─── Video frame pre-extraction ───────────────────────────────────────────────
+
+// Download the compressed mp4 and dump every frame as a JPEG at the output
+// FPS. The composition then renders frame N via an <Img> instead of spawning
+// ffmpeg for that frame. Returns the number of frames extracted, or null if
+// extraction failed (caller falls back to OffthreadVideo for this clip).
+async function extractVideoFrames(clipKey, destDir) {
+  const sourcePath = join(destDir, 'source.mp4');
+  await mkdir(destDir, { recursive: true });
+  try {
+    await r2DownloadToFile(clipKey, sourcePath);
+    // -q:v 3 = good visual quality JPEG (1=best, 31=worst). At 1920p with
+    // a 30-frame video clip, ~200KB/frame → ~6MB per clip — modest.
+    await runFfmpeg([
+      '-i', sourcePath,
+      '-vf', `fps=${FPS},scale=1920:-2:flags=lanczos`,
+      '-q:v', '3',
+      join(destDir, 'frame_%05d.jpg'),
+    ]);
+    await unlink(sourcePath).catch(() => {});
+    const files = await readdir(destDir);
+    return files.filter(f => f.startsWith('frame_')).length;
+  } catch (err) {
+    console.warn(`[render] frame extraction failed for ${clipKey}: ${err.message}`);
+    return null;
+  }
+}
+
+// Extract frames for many videos with bounded parallelism so we don't
+// saturate the Fargate task's I/O on event with 20+ video clips.
+async function extractAllVideoFrames(videoClips, baseDir, concurrency = 4) {
+  const results = new Array(videoClips.length);
+  let cursor = 0;
+  async function worker() {
+    while (true) {
+      const i = cursor++;
+      if (i >= videoClips.length) return;
+      const clip = videoClips[i];
+      const dir = join(baseDir, `v-${clip._origIndex}`);
+      const t0 = Date.now();
+      const count = await extractVideoFrames(clip.key, dir);
+      const ms = Date.now() - t0;
+      console.log(`[render]   v-${clip._origIndex}: ${count ?? 'FAIL'} frames in ${ms}ms`);
+      results[i] = { clip, dir, count };
+    }
+  }
+  await Promise.all(Array.from({ length: concurrency }, worker));
+  return results;
+}
+
 // ─── Landscape detection (aspect ratio heuristic) ────────────────────────────
 
 async function isLandscapeImage(filePath) {
@@ -198,6 +252,8 @@ async function main() {
   const tmpDir = await mkdtemp(join(tmpdir(), 'sde-'));
   console.log(`[render] working in ${tmpDir}`);
 
+  let frameServer = null;
+
   try {
     // ── 1. Presign all clip URLs ──────────────────────────────────────────────
     console.log(`[render] presigning ${rawClips.length} clip URLs`);
@@ -206,14 +262,15 @@ async function main() {
         const isPhoto = clip.type === 'photo';
         return {
           ...clip,
+          _origIndex: i,
           // Photos: CDN-resized to 1920px (10x faster decode than originals).
-          // Videos: presigned R2 URL (OffthreadVideo extracts frames via ffmpeg).
+          // Videos: presigned R2 URL — used as OffthreadVideo fallback if
+          // frame pre-extraction fails for this clip.
           src: isPhoto ? photoSrc(clip.key) : await presign(clip.key),
           // Photos: tiny 480px variant for the blurred background pass —
           // bg is gaussian-blurred 30px anyway so source detail is wasted.
           blurSrc: isPhoto ? photoSrc(clip.key, 480) : undefined,
-          // Videos: CDN-resized poster JPEG. Replaces the second OffthreadVideo
-          // (was decoding every video frame twice) and the freeze-frame seeks.
+          // Videos: CDN-resized poster JPEG for blur-bg + freeze frame.
           posterSrc: !isPhoto && clip.posterKey ? photoSrc(clip.posterKey, 1920) : undefined,
           createdAt: clip.createdAt ?? new Date().toISOString(),
           reactionCount: clip.reactionCount ?? 0,
@@ -255,6 +312,27 @@ async function main() {
         clip.ambientSrc = await presign(ambKey, 3600);
       } catch (e) {
         console.warn(`[render] ambient extraction failed for clip: ${e.message}`);
+      }
+    }
+
+    // ── 4b. Pre-extract video frames ─────────────────────────────────────────
+    //    Replaces per-frame OffthreadVideo decoding (was the biggest cost).
+    //    Falls through per-clip if extraction fails — VideoFrame uses
+    //    OffthreadVideo as fallback when frameBaseUrl is missing.
+    const framesRoot = join(tmpDir, 'frames');
+    await mkdir(framesRoot, { recursive: true });
+    const videoClips = clipsWithSrc.filter(c => c.type === 'video');
+    if (videoClips.length > 0) {
+      console.log(`[render] extracting frames for ${videoClips.length} videos (parallel x4)`);
+      const extractStart = Date.now();
+      const results = await extractAllVideoFrames(videoClips, framesRoot, 4);
+      console.log(`[render] frame extraction done in ${Math.round((Date.now() - extractStart) / 1000)}s`);
+      frameServer = await startFrameServer(framesRoot, 3500);
+      for (const { clip, count } of results) {
+        if (count && count > 0) {
+          clip.frameBaseUrl = `${frameServer.baseUrl}/v-${clip._origIndex}`;
+          clip.frameCount = count;
+        }
       }
     }
 
@@ -335,18 +413,17 @@ async function main() {
       outputLocation: outputPath,
       inputProps,
       concurrency: 16,
-      crf: 26,
-      x264Preset: 'fast',          // ~30% faster encode for ~1% larger file
+      crf: 28,                     // visually indistinguishable from 26 on phone playback
+      x264Preset: 'veryfast',      // ~30% faster encode than 'fast' for ~10% larger file
       imageFormat: 'jpeg',
       jpegQuality: 90,
       timeoutInMilliseconds: 180000,
-      offthreadVideoCacheSizeInBytes: 8 * 1024 * 1024 * 1024,
+      // Tiny offthread cache — used only by the OffthreadVideo fallback path
+      // when frame extraction failed for some clip.
+      offthreadVideoCacheSizeInBytes: 1 * 1024 * 1024 * 1024,
       audioBitrate: '128k',
       enforceAudioTrack: false,
       browserExecutable: '/usr/bin/chromium',
-      chromiumOptions: {
-        disableWebSecurity: true,
-      },
       onProgress: ({ progress }) => {
         if (Math.round(progress * 100) % 10 === 0) {
           console.log(`[render] ${Math.round(progress * 100)}%`);
@@ -395,6 +472,7 @@ async function main() {
     } catch {}
     process.exit(1);
   } finally {
+    if (frameServer) await frameServer.close().catch(() => {});
     await rm(tmpDir, { recursive: true, force: true }).catch(() => {});
   }
 }

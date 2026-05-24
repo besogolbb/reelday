@@ -1,18 +1,19 @@
 import { useCurrentFrame, interpolate } from "remotion";
 import { FilmGrain } from "./overlays/FilmGrain";
+import { FPS } from "../types";
 
-// 3s = 90 frames: countdown 3 → 2 → 1, each 1s with grain + flicker
+// 3s countdown 3 → 2 → 1, each 1s with grain + flicker
 export const FilmLeader: React.FC = () => {
   const frame = useCurrentFrame();
 
-  const countdownNumber = frame < 30 ? 3 : frame < 60 ? 2 : 1;
+  const countdownNumber = frame < FPS ? 3 : frame < FPS * 2 ? 2 : 1;
 
   // Light flicker — random brightness per frame
   const flicker = 0.85 + Math.sin(frame * 7.3) * 0.08 + Math.cos(frame * 13.1) * 0.07;
 
   // Brief white flash at each second boundary
   const flashOpacity =
-    interpolate(frame % 30, [0, 2, 5], [0.4, 0, 0], {
+    interpolate(frame % FPS, [0, 2, 5], [0.4, 0, 0], {
       extrapolateRight: "clamp",
     });
 

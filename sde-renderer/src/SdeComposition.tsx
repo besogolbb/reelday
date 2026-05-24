@@ -226,6 +226,8 @@ export const SdeComposition: React.FC<SdeInputProps> = (props) => {
                 src={entry.clip.src}
                 type={entry.clip.type}
                 posterSrc={entry.clip.posterSrc}
+                frameBaseUrl={entry.clip.frameBaseUrl}
+                frameCount={entry.clip.frameCount}
                 isLandscape={entry.clip.isLandscape ?? false}
                 durationInFrames={entry.durationInFrames}
               />
@@ -255,6 +257,8 @@ export const SdeComposition: React.FC<SdeInputProps> = (props) => {
               <VideoClip
                 src={entry.clip.src}
                 posterSrc={entry.clip.posterSrc}
+                frameBaseUrl={entry.clip.frameBaseUrl}
+                frameCount={entry.clip.frameCount}
                 durationInFrames={entry.durationInFrames}
                 isPinned={entry.clip.isPinned}
                 ambientSrc={entry.clip.ambientSrc}

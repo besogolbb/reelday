@@ -1,4 +1,5 @@
 import { useCurrentFrame, interpolate } from "remotion";
+import { FPS } from "../../types";
 
 interface Particle {
   x: number;
@@ -28,7 +29,7 @@ const PARTICLES: Particle[] = Array.from({ length: 12 }, (_, i) => ({
 
 export const BokehParticles: React.FC = () => {
   const frame = useCurrentFrame();
-  const t = frame / 30;
+  const t = frame / FPS;
 
   return (
     <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>

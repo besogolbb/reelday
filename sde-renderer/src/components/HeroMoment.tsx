@@ -1,26 +1,31 @@
-import { useCurrentFrame, interpolate, Img, OffthreadVideo } from "remotion";
+import { useCurrentFrame, interpolate, Img } from "remotion";
 import { FilmGrain } from "./overlays/FilmGrain";
 import { Vignette } from "./overlays/Vignette";
-import type { ClipType } from "../types";
+import { VideoFrame } from "./VideoFrame";
+import { FPS, type ClipType } from "../types";
 
 interface Props {
   src: string;
   type: ClipType;
   posterSrc?: string;        // video: poster JPEG for blur bg AND freeze frame
+  frameBaseUrl?: string;     // pre-extracted frame URL base
+  frameCount?: number;
   isLandscape: boolean;
-  durationInFrames: number;  // now HERO_FRAMES = 150 (5s)
+  durationInFrames: number;  // HERO_SEC * FPS
 }
 
 // 5s hero. Video plays at constant 0.5x throughout (no variable rate — that
 // forced ffmpeg to re-seek per frame). Freeze frame is rendered from the
-// static poster Img (frames 60-89) rather than seeking video to playbackRate=0.
-const FREEZE_START = 60;
-const FREEZE_END = 90;
+// static poster Img between FREEZE_START..FREEZE_END (2s..3s into hero).
+const FREEZE_START = Math.round(FPS * 2);
+const FREEZE_END = Math.round(FPS * 3);
 
 export const HeroMoment: React.FC<Props> = ({
   src,
   type,
   posterSrc,
+  frameBaseUrl,
+  frameCount,
   isLandscape,
   durationInFrames,
 }) => {
@@ -97,8 +102,10 @@ export const HeroMoment: React.FC<Props> = ({
       )}
 
       {isVideo && !inFreezeWindow && (
-        <OffthreadVideo
+        <VideoFrame
           src={src}
+          frameBaseUrl={frameBaseUrl}
+          frameCount={frameCount}
           playbackRate={0.5}
           muted
           style={{
