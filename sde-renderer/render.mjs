@@ -303,7 +303,10 @@ async function main() {
       inputProps,
       concurrency: 16,
       crf: 26,
-      timeoutInMilliseconds: 120000, // 2 min per frame — large videos can be slow to decode
+      imageFormat: 'jpeg',
+      jpegQuality: 90,
+      timeoutInMilliseconds: 120000,
+      offthreadVideoCacheSizeInBytes: 4 * 1024 * 1024 * 1024, // 4 GB — caches video frames so blur-bg reuses fg extraction
       chromiumOptions: {
         disableWebSecurity: true, // allow cross-origin presigned URLs
       },
