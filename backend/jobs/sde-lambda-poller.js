@@ -17,7 +17,7 @@
 
 import { getRenderProgress } from '@remotion/lambda-client';
 
-const POLL_INTERVAL_MS = 10_000;
+const POLL_INTERVAL_MS = 30_000;
 const RENDER_TIMEOUT_MS = 20 * 60 * 1000;
 const REGION = process.env.REMOTION_LAMBDA_REGION || 'ap-southeast-1';
 
