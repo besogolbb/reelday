@@ -928,6 +928,8 @@
   </div>
 </header>
 
+<main>
+
 <!-- ════ HERO ══════════════════════════════════════════════ -->
 <section class="hero">
   <div class="hero-inner">
@@ -1319,42 +1321,46 @@
       <p class="payment-strip-label">
         Payments processed via PayMongo &nbsp;·&nbsp; Accepted via
         <span class="qrph-badge">
-          <img src="images/QR_Ph_Logo.svg?v=1" alt="QR Ph" style="height:14px;width:auto;display:inline-block;vertical-align:middle;filter:brightness(0) invert(1);" loading="lazy">
+          <img src="images/QR_Ph_Logo.svg?v=1" alt="QR Ph" width="20" height="14" style="height:14px;width:auto;display:inline-block;vertical-align:middle;filter:brightness(0) invert(1);" loading="lazy">
         </span>
       </p>
       <div class="payment-logos">
+        <!-- width/height attrs satisfy Lighthouse "unsized-images" / CLS
+             checks. Actual rendered size comes from .pay-logo CSS rules
+             (height:26px, max-width:80px) — the attrs just give the
+             browser an aspect to reserve space with before load. -->
         <div class="pay-pill">
-          <img class="pay-logo"
+          <img class="pay-logo" width="80" height="26"
             src="https://upload.wikimedia.org/wikipedia/commons/5/52/GCash_logo.svg"
             alt="GCash" loading="lazy">
           <span class="pay-name">GCash</span>
         </div>
         <div class="pay-pill">
-          <img class="pay-logo"
+          <img class="pay-logo" width="80" height="26"
             src="https://www.maya.ph/hubfs/Maya/MAYA-Mint%20Green.svg"
             alt="Maya" loading="lazy">
           <span class="pay-name">Maya</span>
         </div>
         <div class="pay-pill">
-          <img class="pay-logo pay-logo--icon"
+          <img class="pay-logo pay-logo--icon" width="26" height="26"
             src="images/Maribank.jpg?v=1"
             alt="Maribank" loading="lazy">
           <span class="pay-name">Maribank</span>
         </div>
         <div class="pay-pill">
-          <img class="pay-logo"
+          <img class="pay-logo" width="80" height="26"
             src="images/Grabpay.png?v=1"
             alt="GrabPay" loading="lazy">
           <span class="pay-name">GrabPay</span>
         </div>
         <div class="pay-pill">
-          <img class="pay-logo"
+          <img class="pay-logo" width="80" height="26"
             src="images/BPI.png?v=1"
             alt="BPI" loading="lazy">
           <span class="pay-name">BPI</span>
         </div>
         <div class="pay-pill">
-          <img class="pay-logo"
+          <img class="pay-logo" width="80" height="26"
             src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/49/BDO_Unibank_%28logo%29.svg/250px-BDO_Unibank_%28logo%29.svg.png"
             alt="BDO" loading="lazy">
           <span class="pay-name">BDO</span>
@@ -1414,6 +1420,8 @@
   <a class="btn btn-accent" id="final-cta-link" style="font-size:16px;padding:15px 36px;" href="/start" data-i18n="final-cta">Start free — no card needed →</a>
 </section>
 
+</main>
+
 <!-- ════ FOOTER ════════════════════════════════════════════ -->
 <footer class="site-footer">
   <div class="site-footer-inner">
@@ -1424,7 +1432,7 @@
       <p style="color:var(--ink-soft);font-size:14px;max-width:32ch;" data-i18n="footer-desc">The live photo wall for Filipino celebrations. Made in Manila.</p>
     </div>
     <div>
-      <h4>Product</h4>
+      <h3>Product</h3>
       <ul>
         <li><a href="#how">How it works</a></li>
         <li><a href="#pricing">Pricing</a></li>
@@ -1433,7 +1441,7 @@
       </ul>
     </div>
     <div>
-      <h4>Company</h4>
+      <h3>Company</h3>
       <ul>
         <li><a href="/partners">Partners</a></li>
         <li><a href="/contact">Contact</a></li>
@@ -1441,7 +1449,7 @@
       </ul>
     </div>
     <div>
-      <h4>Legal</h4>
+      <h3>Legal</h3>
       <ul>
         <li><a href="/terms#privacy">Privacy</a></li>
         <li><a href="/terms">Terms</a></li>
