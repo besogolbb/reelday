@@ -116,9 +116,14 @@ export async function triggerLambdaRender(payload) {
     jpegQuality: 90,
     crf: 28,
     x264Preset: 'veryfast',
-    // 10 concurrent Lambdas (matches account quota). Each renders ~600 frames.
-    framesPerLambda: 600,
-    maxRetries: 1,
+    // Account quota = 10 concurrent Lambdas. Remotion uses 1 'main'
+    // coordinator + N chunk Lambdas + retry slack, so we must leave
+    // headroom. framesPerLambda=1000 means ~6 chunks for a 6000-frame
+    // render, fitting comfortably in 10 concurrent slots even under
+    // 1-2 retries. Bump this DOWN once the quota increase is approved
+    // (more chunks = more parallelism = faster).
+    framesPerLambda: 1000,
+    maxRetries: 0,
     privacy: 'public',
     downloadBehavior: { type: 'play-in-browser' },
   });
