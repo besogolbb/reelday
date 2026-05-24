@@ -265,9 +265,18 @@ export async function transcodeUploadInBackground(fastify, upload) {
       await runFfmpeg(['-y', '-i', inPath, ...VIDEO_ARGS, webPath]);
       const webBuf = await readFile(webPath);
       const webUrl = await r2Upload(fastify.storage, webKey, webBuf, 'video/mp4');
+      // Persist all three fields together so downstream consumers
+      // (SDE renderer, download bundle) can rely on compressed_key being
+      // set when video_status='ready' — previously web_url was set but
+      // compressed_key stayed NULL, forcing reconcileVideoUpload() in
+      // uploads.js to back-fill on every read.
       await fastify.db.query(
-        `UPDATE uploads SET web_url = $2 WHERE id = $1`,
-        [upload.id, webUrl],
+        `UPDATE uploads
+            SET web_url        = $2,
+                compressed_key = COALESCE(compressed_key, $3),
+                video_status   = 'ready'
+          WHERE id = $1`,
+        [upload.id, webUrl, webKey],
       );
       log.info({ webUrl, webBytes: webBuf.length, elapsedMs: Date.now() - videoStart }, 'Video transcode complete');
     } finally {

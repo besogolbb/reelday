@@ -310,7 +310,7 @@ export default async function adminRoutes(fastify) {
     const { rows } = await fastify.db.query(
       `SELECT e.id, e.slug, e.couple_names, e.event_type, e.plan,
               e.event_date, e.venue, e.event_time, e.is_paid, e.is_active,
-              e.created_at, e.updated_at,
+              e.created_at,
               usr.email AS user_email
          FROM events e
     LEFT JOIN users usr ON usr.id = e.user_id
@@ -378,7 +378,7 @@ export default async function adminRoutes(fastify) {
       lines.push(
         'BEGIN:VEVENT',
         fold(`UID:${e.id}@${host}`),
-        `DTSTAMP:${stamp(e.updated_at || e.created_at)}`,
+        `DTSTAMP:${stamp(e.created_at)}`,
         `DTSTART;VALUE=DATE:${start}`,
         `DTEND;VALUE=DATE:${end}`,
         fold(`SUMMARY:${esc(summary)}`),
