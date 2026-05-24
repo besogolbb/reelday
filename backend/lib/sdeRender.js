@@ -167,9 +167,12 @@ export async function kickOffRender(fastify, event, opts = {}) {
   //    which would crash the Lambda download).
   const clips = curated.ordered
     .map(row => ({
-      key:  clipKey(row),
-      type: row.file_type,
-      dur:  row.file_type === 'video' ? SELECT_DEFAULTS.videoSec : SELECT_DEFAULTS.photoSec,
+      key:           clipKey(row),
+      type:          row.file_type,
+      dur:           row.file_type === 'video' ? SELECT_DEFAULTS.videoSec : SELECT_DEFAULTS.photoSec,
+      createdAt:     row.created_at ?? new Date().toISOString(),
+      reactionCount: row.reaction_count ?? 0,
+      isPinned:      row.sde_pinned ?? false,
     }))
     .filter(c => c.key);
   if (!clips.length) {
