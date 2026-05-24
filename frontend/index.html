@@ -29,12 +29,21 @@
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=5" />
 <link rel="shortcut icon" href="/favicon.ico?v=5" />
 
-<!-- Preconnect + early-fetch Google Fonts. Without these, the @import
-     inside shared.css blocks paint until shared.css is parsed, then
-     blocks again on fonts.gstatic.com TLS handshake. -->
+<!-- Preconnect + non-blocking font load.
+     The Google Fonts CSS was the #1 render-blocker on mobile Lighthouse
+     (~2.8s of LCP delay on Slow 4G). The standard fix: load the
+     stylesheet with media=print so the browser doesn't block paint on
+     it, then swap to media=all once it's parsed. The &display=swap
+     query param already hands users a fallback font during the brief
+     window before the real fonts arrive, so the swap is visually
+     graceful. <noscript> covers JS-disabled users.
+     Preconnects stay so the fetch starts as early as possible. -->
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,400;1,9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" />
+<link rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,400;1,9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      media="print" onload="this.media='all'" />
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,400;1,9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" /></noscript>
 
 <link rel="stylesheet" href="/css/shared.css" />
 <style>
