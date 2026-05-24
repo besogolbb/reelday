@@ -7,6 +7,7 @@ import multipart from '@fastify/multipart';
 import formbody from '@fastify/formbody';
 import staticFiles from '@fastify/static';
 import rateLimit from '@fastify/rate-limit';
+import helmet from '@fastify/helmet';
 
 import dbPlugin from './plugins/database.js';
 import storagePlugin from './plugins/storage.js';
@@ -117,6 +118,46 @@ await fastify.register(rateLimit, {
 // they can apply tighter, per-route buckets without re-implementing both.
 fastify.decorate('limiterKey',          limiterKey);
 fastify.decorate('friendlyRateLimit',   FRIENDLY_RATE_LIMIT);
+
+// Baseline security headers. Started permissive on purpose — the frontend
+// has ~9 inline <script> blocks and ~13 inline style= attrs across the
+// HTML pages, so strict-CSP would break the site on first load. The
+// allowlist below covers our actual third parties (R2 for images/video,
+// PayMongo + Google identity for checkout/login, fonts.googleapis for
+// the display font, Resend tracking pixels in emails). Tighten in a
+// follow-up once we move inline scripts into /js files and add nonces.
+//
+// What this still buys us today:
+//   - HSTS (1 year, includeSubDomains) — locks browsers to HTTPS
+//   - X-Frame-Options: DENY (via frameAncestors) — kills clickjacking
+//   - X-Content-Type-Options: nosniff — kills MIME-sniffing XSS
+//   - Referrer-Policy: strict-origin-when-cross-origin
+//   - Cross-Origin-Resource-Policy: cross-origin (we serve R2 images
+//     into pages on other origins for OG cards — must not be 'same-origin')
+await fastify.register(helmet, {
+  contentSecurityPolicy: {
+    useDefaults: true,
+    directives: {
+      'default-src':  ["'self'"],
+      'script-src':   ["'self'", "'unsafe-inline'", 'https://js.paymongo.com', 'https://accounts.google.com', 'https://apis.google.com'],
+      'style-src':    ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      'font-src':     ["'self'", 'data:', 'https://fonts.gstatic.com'],
+      'img-src':      ["'self'", 'data:', 'blob:', 'https:'],
+      'media-src':    ["'self'", 'blob:', 'https:'],
+      'connect-src':  ["'self'", 'https://api.paymongo.com', 'https://accounts.google.com', 'wss:', 'https:'],
+      'frame-src':    ["'self'", 'https://accounts.google.com', 'https://paymongo.com'],
+      'frame-ancestors': ["'none'"],
+      'object-src':   ["'none'"],
+      'base-uri':     ["'self'"],
+      'form-action':  ["'self'"],
+      'upgrade-insecure-requests': [],
+    },
+  },
+  crossOriginEmbedderPolicy: false, // we serve cross-origin R2 media
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  hsts: { maxAge: 31536000, includeSubDomains: true, preload: false },
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+});
 
 await fastify.register(cors, {
   origin: ['https://reelday.ph', 'http://localhost:3000'], // Allow specific origins for production and local development
@@ -306,9 +347,15 @@ fastify.setErrorHandler((error, request, reply) => {
 // Debug endpoint — returns the last N 500s as JSON. Gated by DEBUG_KEY env
 // var so it's not public. Set DEBUG_KEY in Easypanel to enable; without it,
 // the endpoint returns 404 (no information leak).
+//
+// Key MUST be sent as `Authorization: Bearer <key>` — passing it via the
+// query string would leave it in CDN access logs, browser history, and
+// any Referer header sent to the next click.
 fastify.get('/api/_errors', async (request, reply) => {
   const key = process.env.DEBUG_KEY;
-  if (!key || request.query?.key !== key) {
+  const auth = request.headers.authorization || '';
+  const presented = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+  if (!key || presented !== key) {
     return reply.status(404).send({ error: true, message: 'Not found' });
   }
   return { count: recentErrors.length, errors: recentErrors.slice().reverse() };
