@@ -202,16 +202,25 @@ async function main() {
     // ── 1. Presign all clip URLs ──────────────────────────────────────────────
     console.log(`[render] presigning ${rawClips.length} clip URLs`);
     const clipsWithSrc = await Promise.all(
-      rawClips.map(async (clip, i) => ({
-        ...clip,
-        // Photos: CDN-resized to 1920px (10x faster decode).
-        // Videos: presigned R2 URL (OffthreadVideo extracts frames via ffmpeg).
-        src: clip.type === 'photo' ? photoSrc(clip.key) : await presign(clip.key),
-        createdAt: clip.createdAt ?? new Date().toISOString(),
-        reactionCount: clip.reactionCount ?? 0,
-        isPinned: clip.isPinned ?? false,
-        isLandscape: clip.isLandscape ?? (clip.type === 'photo' ? false : false),
-      }))
+      rawClips.map(async (clip, i) => {
+        const isPhoto = clip.type === 'photo';
+        return {
+          ...clip,
+          // Photos: CDN-resized to 1920px (10x faster decode than originals).
+          // Videos: presigned R2 URL (OffthreadVideo extracts frames via ffmpeg).
+          src: isPhoto ? photoSrc(clip.key) : await presign(clip.key),
+          // Photos: tiny 480px variant for the blurred background pass —
+          // bg is gaussian-blurred 30px anyway so source detail is wasted.
+          blurSrc: isPhoto ? photoSrc(clip.key, 480) : undefined,
+          // Videos: CDN-resized poster JPEG. Replaces the second OffthreadVideo
+          // (was decoding every video frame twice) and the freeze-frame seeks.
+          posterSrc: !isPhoto && clip.posterKey ? photoSrc(clip.posterKey, 1920) : undefined,
+          createdAt: clip.createdAt ?? new Date().toISOString(),
+          reactionCount: clip.reactionCount ?? 0,
+          isPinned: clip.isPinned ?? false,
+          isLandscape: clip.isLandscape ?? false,
+        };
+      })
     );
 
     // ── 2. Presign audio ──────────────────────────────────────────────────────
@@ -327,10 +336,13 @@ async function main() {
       inputProps,
       concurrency: 16,
       crf: 26,
+      x264Preset: 'fast',          // ~30% faster encode for ~1% larger file
       imageFormat: 'jpeg',
       jpegQuality: 90,
       timeoutInMilliseconds: 180000,
-      offthreadVideoCacheSizeInBytes: 4 * 1024 * 1024 * 1024,
+      offthreadVideoCacheSizeInBytes: 8 * 1024 * 1024 * 1024,
+      audioBitrate: '128k',
+      enforceAudioTrack: false,
       browserExecutable: '/usr/bin/chromium',
       chromiumOptions: {
         disableWebSecurity: true,

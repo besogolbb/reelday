@@ -4,7 +4,9 @@ export interface Clip {
   key: string;
   type: ClipType;
   dur: number;           // seconds
-  src: string;           // presigned R2 URL
+  src: string;           // sharp source — CDN-resized 1920px photo OR presigned video URL
+  blurSrc?: string;      // photo only: low-res (480px) variant for blurred background
+  posterSrc?: string;    // video only: CDN-resized poster JPEG for blur-bg + freeze frame
   createdAt: string;     // ISO timestamp — used for chapter grouping
   reactionCount: number; // for hero moment detection
   isPinned: boolean;     // for slow-motion treatment on videos
@@ -51,7 +53,7 @@ export const END_CARD_FRAMES = 150;     // 5s
 export const SLATE_FRAMES = 60;        // 2s
 export const LETTERBOX_ANIM_FRAMES = 30; // 1s
 export const DEFAULT_PHOTO_FRAMES = 90;  // 3s
-export const HERO_FRAMES = 240;          // 8s
+export const HERO_FRAMES = 150;          // 5s (was 8s — trimmed to halve hero decode work)
 export const COLLAGE_FRAMES = 60;        // 2s
 export const FLASH_CUT_FRAMES_PER_PHOTO = 3;
 export const TRANSITION_FRAMES = 15;    // 0.5s overlap

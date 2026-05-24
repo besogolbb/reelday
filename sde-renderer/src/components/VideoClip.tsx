@@ -1,10 +1,11 @@
-import { useCurrentFrame, interpolate, OffthreadVideo, Audio } from "remotion";
+import { useCurrentFrame, interpolate, OffthreadVideo, Img, Audio } from "remotion";
 import { FilmGrain } from "./overlays/FilmGrain";
 import { Vignette } from "./overlays/Vignette";
 import { ClipCounter } from "./overlays/ClipCounter";
 
 interface Props {
   src: string;
+  posterSrc?: string;       // static poster JPEG for blurred bg — avoids 2x video decode
   durationInFrames: number;
   isPinned: boolean;        // slow motion if pinned
   ambientSrc?: string;      // ambient audio at -18dB
@@ -15,6 +16,7 @@ interface Props {
 
 export const VideoClip: React.FC<Props> = ({
   src,
+  posterSrc,
   durationInFrames,
   isPinned,
   ambientSrc,
@@ -42,21 +44,23 @@ export const VideoClip: React.FC<Props> = ({
 
   return (
     <div style={{ width: "100%", height: "100%", position: "relative", overflow: "hidden", opacity }}>
-      {/* Blurred fill background (handles portrait videos) */}
-      <OffthreadVideo
-        src={src}
-        playbackRate={playbackRate}
-        muted
-        style={{
-          position: "absolute",
-          inset: 0,
-          width: "100%",
-          height: "100%",
-          objectFit: "cover",
-          filter: "blur(30px) brightness(0.55)",
-          transform: "scale(1.08)",
-        }}
-      />
+      {/* Blurred fill background — static poster Img instead of second OffthreadVideo */}
+      {posterSrc ? (
+        <Img
+          src={posterSrc}
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            filter: "blur(30px) brightness(0.55)",
+            transform: "scale(1.08)",
+          }}
+        />
+      ) : (
+        <div style={{ position: "absolute", inset: 0, background: "#000" }} />
+      )}
       {/* Sharp foreground */}
       <OffthreadVideo
         src={src}

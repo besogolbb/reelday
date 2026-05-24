@@ -225,6 +225,7 @@ export const SdeComposition: React.FC<SdeInputProps> = (props) => {
               <HeroMoment
                 src={entry.clip.src}
                 type={entry.clip.type}
+                posterSrc={entry.clip.posterSrc}
                 isLandscape={entry.clip.isLandscape ?? false}
                 durationInFrames={entry.durationInFrames}
               />
@@ -243,6 +244,7 @@ export const SdeComposition: React.FC<SdeInputProps> = (props) => {
             {entry.clip.type === "photo" ? (
               <PhotoClip
                 src={entry.clip.src}
+                blurSrc={entry.clip.blurSrc}
                 durationInFrames={entry.durationInFrames}
                 isLandscape={entry.clip.isLandscape ?? false}
                 anchorIndex={entry.anchorIndex}
@@ -252,6 +254,7 @@ export const SdeComposition: React.FC<SdeInputProps> = (props) => {
             ) : (
               <VideoClip
                 src={entry.clip.src}
+                posterSrc={entry.clip.posterSrc}
                 durationInFrames={entry.durationInFrames}
                 isPinned={entry.clip.isPinned}
                 ambientSrc={entry.clip.ambientSrc}

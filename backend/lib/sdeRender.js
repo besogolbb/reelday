@@ -173,6 +173,9 @@ export async function kickOffRender(fastify, event, opts = {}) {
       createdAt:     row.created_at ?? new Date().toISOString(),
       reactionCount: row.reaction_count ?? 0,
       isPinned:      row.sde_pinned ?? false,
+      // Poster key for video clips — used by renderer as static blur-bg and
+      // freeze-frame source so we don't decode the same video twice per frame.
+      posterKey:     row.file_type === 'video' ? r2KeyFromUrl(row.poster_url) : null,
     }))
     .filter(c => c.key);
   if (!clips.length) {

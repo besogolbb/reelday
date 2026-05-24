@@ -12,6 +12,7 @@ const ANCHORS = [
 
 interface Props {
   src: string;
+  blurSrc?: string;    // low-res (480px) variant for blur background — falls back to src
   durationInFrames: number;
   isLandscape: boolean;
   anchorIndex: number; // cycles 0-3
@@ -22,6 +23,7 @@ interface Props {
 
 export const PhotoClip: React.FC<Props> = ({
   src,
+  blurSrc,
   durationInFrames,
   isLandscape,
   anchorIndex,
@@ -29,6 +31,7 @@ export const PhotoClip: React.FC<Props> = ({
   totalClips,
   audioAmplitude = 0,
 }) => {
+  const bgSrc = blurSrc ?? src;
   const frame = useCurrentFrame();
   const anchor = ANCHORS[anchorIndex % 4];
 
@@ -56,9 +59,9 @@ export const PhotoClip: React.FC<Props> = ({
     const panX = interpolate(frame, [0, durationInFrames], [0, anchor.x * 40], {});
     return (
       <div style={{ width: "100%", height: "100%", position: "relative", overflow: "hidden", opacity }}>
-        {/* Blurred fill background */}
+        {/* Blurred fill background — low-res variant (480px) since it's heavily blurred */}
         <Img
-          src={src}
+          src={bgSrc}
           style={{
             position: "absolute",
             inset: 0,
@@ -100,9 +103,9 @@ export const PhotoClip: React.FC<Props> = ({
 
   return (
     <div style={{ width: "100%", height: "100%", position: "relative", overflow: "hidden", opacity }}>
-      {/* Blurred parallax background */}
+      {/* Blurred parallax background — low-res variant (480px) since it's heavily blurred */}
       <Img
-        src={src}
+        src={bgSrc}
         style={{
           position: "absolute",
           inset: 0,
