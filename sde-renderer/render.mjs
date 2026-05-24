@@ -289,6 +289,7 @@ async function main() {
       serveUrl: bundled,
       id: 'SdeComposition',
       inputProps,
+      browserExecutable: '/usr/bin/chromium',
     });
 
     const outputPath = join(tmpDir, 'sde.mp4');
@@ -306,9 +307,10 @@ async function main() {
       imageFormat: 'jpeg',
       jpegQuality: 90,
       timeoutInMilliseconds: 120000,
-      offthreadVideoCacheSizeInBytes: 4 * 1024 * 1024 * 1024, // 4 GB — caches video frames so blur-bg reuses fg extraction
+      offthreadVideoCacheSizeInBytes: 4 * 1024 * 1024 * 1024,
+      browserExecutable: '/usr/bin/chromium',
       chromiumOptions: {
-        disableWebSecurity: true, // allow cross-origin presigned URLs
+        disableWebSecurity: true,
       },
       onProgress: ({ progress }) => {
         if (Math.round(progress * 100) % 10 === 0) {
