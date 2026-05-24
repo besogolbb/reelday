@@ -29,6 +29,19 @@
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=5" />
 <link rel="shortcut icon" href="/favicon.ico?v=5" />
 
+<!-- LCP image preload + priority hint.
+     Mobile Lighthouse identified .wall-mini-mockup .wm-bg as the LCP
+     element (hero mockup background). Without a preload the browser
+     doesn't discover the CSS background-image URL until after parsing
+     the inline <style>, which cost ~200ms of resourceLoadDelay AND
+     left it without fetchpriority. <link rel=preload as=image
+     fetchpriority=high> kicks the fetch off in the head and tells
+     Chrome it's the LCP candidate. Same width/quality/format as the
+     CSS background-image URL so the preload deduplicates with the
+     actual request — otherwise we'd double-download. -->
+<link rel="preload" as="image" fetchpriority="high"
+      href="/cdn-cgi/image/width=900,quality=82,format=auto/images/First%20dance%20after%2038%20years.png" />
+
 <!-- Preconnect + non-blocking font load.
      The Google Fonts CSS was the #1 render-blocker on mobile Lighthouse
      (~2.8s of LCP delay on Slow 4G). The standard fix: load the
