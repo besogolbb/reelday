@@ -1945,8 +1945,10 @@
   const FADE_DURATION    = 1600;  // ms for crossfade (matches CSS 1.6s)
   const KB_DURATION      = 14;    // seconds for Ken Burns
   const KB_ANIMS         = ['kb1', 'kb2', 'kb3', 'kb4'];
-  const POLL_INTERVAL    = 1000;  // ms between upload polls — paired with the server busting its
-                                  // wall cache on /uploads/complete so a new upload shows in ~1s
+  const POLL_INTERVAL    = 2000;  // ms between upload polls — backed off from 1s after wall+dashboard
+                                  // open together stuttered the video. Server cache-bust on
+                                  // /uploads/complete still pushes a fresh upload through on the
+                                  // next tick, so worst-case upload-to-wall is ~2s, not 1s.
   const SIMULTANEOUS_UPLOAD_WINDOW_MS = 4000; // uploads created within ~4s ride the same "fresh" wall run
   const QR_HIDE_AFTER    = 10000; // ms badge stays visible before auto-hiding
   const QR_CYCLE         = 30000; // ms between successive show cycles
