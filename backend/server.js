@@ -326,6 +326,7 @@ fastify.get('/reset-password',   (_r, reply) => reply.sendFile('reset-password.h
 fastify.get('/my-events',        (_r, reply) => reply.sendFile('my-events.html'));
 fastify.get('/account',          (_r, reply) => reply.sendFile('account.html'));
 fastify.get('/terms',            (_r, reply) => reply.sendFile('terms.html'));
+fastify.get('/privacy',          (_r, reply) => reply.redirect(301, '/terms#privacy'));
 fastify.get('/contact',          (_r, reply) => reply.sendFile('contact.html'));
 
 // In-memory ring buffer of recent 5xx errors so we can fetch them via HTTP

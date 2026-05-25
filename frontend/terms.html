@@ -194,7 +194,7 @@
       <li><strong>Payment data:</strong> transaction reference numbers and payment status. We do not store card numbers, CVVs, or GCash PINs — these are handled exclusively by PayMongo.</li>
     </ul>
     <h3>2.2 Guest Upload Data</h3>
-    <p>Guests upload photos and videos without creating an account. We do not collect guest names, email addresses, or device identifiers beyond what is technically necessary to deliver the upload (IP address for abuse prevention, which is not stored permanently).</p>
+    <p>Guests upload photos and videos without creating an account. We do not collect guest names or email addresses. To operate the live wall we generate a random per-browser device identifier so that a single guest's uploads can be grouped together and so the wall can show real-time presence (who is actively viewing). This identifier is not linked to your real identity and is stored only for the lifetime of the event's gallery — it is permanently deleted together with the media when the gallery expires. IP addresses are used transiently for abuse prevention and are not stored permanently.</p>
     <h3>2.3 Technical Data</h3>
     <ul>
       <li>Server logs: request timestamps, IP addresses, HTTP status codes. Retained for up to 30 days for security and debugging purposes.</li>
