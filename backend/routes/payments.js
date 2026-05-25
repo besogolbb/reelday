@@ -96,7 +96,7 @@ export async function sendBookingConfirmationEmail(db, { userId, tier, slug }, l
       `  - Test venue WiFi ahead of time, or bring a mobile hotspot as backup.`,
       `  - Do a dry run on the venue screen before guests arrive.`,
       ``,
-      `Questions? Reply to this email or visit https://reelday.ph`,
+      `Please do not reply to this email. For questions, email admin@reelday.ph or visit https://reelday.ph`,
     ].join('\n');
 
     // BCC (not CC) admin: same internal copy, but hosts don't see admin@
@@ -146,7 +146,7 @@ export async function sendBookingConfirmationEmail(db, { userId, tier, slug }, l
               'Open the wall on the actual venue screen and do a test upload the day before or a few hours before the event. Confirm the display, audio levels, and internet connection.',
             )}
           </table>
-          <p style="font-size:.85rem;color:#888;margin-top:1.5rem">Questions? Reply to this email or visit <a href="https://reelday.ph" style="color:#e8735a">reelday.ph</a>.</p>
+          <p style="font-size:.85rem;color:#888;margin-top:1.5rem">Please do not reply to this email. For questions, email <a href="mailto:admin@reelday.ph" style="color:#e8735a">admin@reelday.ph</a> or visit <a href="https://reelday.ph" style="color:#e8735a">reelday.ph</a>.</p>
         </div>`,
     }), 10_000, 'Resend (booking-confirm)');
   } catch (err) {
