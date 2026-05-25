@@ -3471,23 +3471,40 @@
   // <video> with preload="metadata" so the browser opens a Range request
   // early but doesn't fully buffer (avoids fighting the active stream).
   const prewarmImg = new Image();
-  const prewarmVid = document.createElement('video');
-  prewarmVid.preload = 'metadata';
-  prewarmVid.muted = true;
-  prewarmVid.playsInline = true;
+  // Edge fix (2026-05-25): a long-lived prewarm <video> holds an Edge
+  // media-pipeline slot even with preload='metadata'. Combined with the
+  // two crossfade layers (vid-a + vid-b), that's 3 video elements
+  // competing for Edge's WebMediaPlayer budget — the active player ends
+  // up frame-starved (decodedFrames frozen, readyState drops to 2 even
+  // though bytes are buffered). Chrome has more generous budgets so it
+  // played fine. Use a Range fetch() instead to warm the HTTP/CDN cache
+  // without ever instantiating a decoder. Orientation tagging for the
+  // next video happens via applyOrientationClass when the video actually
+  // mounts in the inactive layer, so dropping the prewarm metadata read
+  // doesn't lose anything visible.
+  const VIDEO_PREWARM_RANGE = 'bytes=0-262143'; // 256 KB — enough for moov + first GOP under faststart
+  let prewarmController = null;
+  let prewarmedVideoUrl = null;
   function prewarmNext() {
     if (items.length < 2) return;
     const next = items[(currentIdx + 1) % items.length];
     const url  = wallMediaUrl(next);
     if (!url) return;
     if (isReadyVideo(next)) {
-      try {
-        if (prewarmVid.src !== new URL(url, location.href).toString()) {
-          prewarmVid.src = url;
-          // load() kicks off the Range request without committing to full buffer
-          prewarmVid.load();
-        }
-      } catch { /* ignore */ }
+      const absUrl = new URL(url, location.href).toString();
+      if (prewarmedVideoUrl === absUrl) return; // already warmed
+      prewarmedVideoUrl = absUrl;
+      try { prewarmController?.abort(); } catch {}
+      prewarmController = new AbortController();
+      fetch(absUrl, {
+        method:  'GET',
+        headers: { Range: VIDEO_PREWARM_RANGE },
+        cache:   'force-cache',
+        signal:  prewarmController.signal,
+        credentials: 'same-origin',
+      })
+        .then(r => r.ok || r.status === 206 ? r.blob() : null)
+        .catch(() => { /* aborted or network — caller doesn't care */ });
     } else {
       try {
         // Cache the next slide's orientation off the prewarm load so the
