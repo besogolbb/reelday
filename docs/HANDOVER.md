@@ -36,7 +36,7 @@ JWT in `localStorage` (30d). `fastify.authenticate` preHandler on routes. Admin 
 | Domain renewal check | Annually · 60d pre-expiry | [add](https://calendar.google.com/calendar/render?action=TEMPLATE&text=Reelday%3A%20Check%20reelday.ph%20renewal&dates=20260901T020000Z%2F20260901T021000Z&details=Confirm%20auto-renew%20still%20on%2C%20payment%20method%20valid%2C%202FA%20active%20on%20registrar.&recur=RRULE%3AFREQ%3DYEARLY) |
 
 ## Automated ops
-- Nightly DB dump 3am UTC → `/var/backups/reelday/` (14d) → R2 `reelday-backups/` (90d). Script: `/usr/local/bin/reelday-backup.sh` on VPS.
+- Nightly DB dump 3am PHT (19:00 UTC) → `/var/backups/reelday/` (14d) → R2 `reelday-backups/` (90d). Script: `/usr/local/bin/reelday-backup.sh` on VPS.
 - Gallery cleanup: 7 days post `gallery_expires_at`, R2 + uploads rows purged, `archived_at` set.
 - Renewal reminders: T-30/T-7/T-0 Hiraya emails.
 - SDE Lambda poller: monitors in-flight renders.
@@ -190,7 +190,7 @@ Pull list of offsite copies: `rclone ls r2:reelday-backups/`
 | | |
 |---|---|
 | Script | `/usr/local/bin/reelday-backup.sh` (mode 700, root only) |
-| Schedule | `0 3 * * * /usr/local/bin/reelday-backup.sh >> /var/log/reelday-backup.log 2>&1` |
+| Schedule | `0 19 * * * /usr/local/bin/reelday-backup.sh >> /var/log/reelday-backup.log 2>&1` (19:00 UTC = 3am PHT) |
 | View log | `tail -50 /var/log/reelday-backup.log` |
 | Run manually | `sudo /usr/local/bin/reelday-backup.sh` |
 | Check next-run | `sudo crontab -l \| grep reelday` |
