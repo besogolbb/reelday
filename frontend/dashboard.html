@@ -3289,6 +3289,18 @@
           <input id="details-time" type="text" maxlength="60"
                  placeholder="e.g. 5:00 PM" />
         </div>
+        <!-- Tala lock card — shown in place of the music controls when the
+             event's plan has customMusic: false. Wall backend (music.js)
+             returns playlist: null for Tala regardless, so showing the picker
+             would be dead UI. -->
+        <div class="details-field" id="wall-music-lock-card" style="display:none;border-top:1px solid #eee;padding-top:14px">
+          <label>Wall music</label>
+          <p class="details-sub" style="margin-top:6px;padding:10px;background:#fff8f3;border:1px dashed #e8735a;border-radius:6px">
+            🔒 Background music plays on the wall with a <strong>Sinag plan</strong> or higher. Tala walls are silent.
+          </p>
+        </div>
+
+        <div id="wall-music-block">
         <div class="details-field">
           <label for="details-music">Wall music <span class="opt">(plays in the background)</span></label>
           <select id="details-music">
@@ -3312,6 +3324,7 @@
             By uploading, you confirm you own or have rights to use this audio at your event. Max 25 MB per file, up to 20 tracks. Supported: MP3, M4A, WAV, OGG, AAC.
           </p>
         </div>
+        </div><!-- /#wall-music-block -->
         <button type="button" class="btn btn-accent details-save" id="btn-save-details">
           Save details
         </button>
@@ -3959,10 +3972,22 @@
       if (msgInput)   msgInput.value   = event.welcome_message ?? '';
       if (venueInput) venueInput.value = event.venue           ?? '';
       if (timeInput)  timeInput.value  = event.event_time      ?? '';
-      // Music playlist picker populates async — current selection applied
-      // once playlists have loaded.
-      loadMusicPicker(event.music_playlist_id);
-      loadCustomMusicList();
+      // Tala (and any plan without customMusic) — the wall backend returns
+      // null for /events/:slug/music, so swap the music controls for a
+      // lock card explaining the upgrade. Skips the playlist + upload
+      // fetches so the dead UI doesn't get populated at all.
+      const _musicPlan       = resolvePlan(event.plan);
+      const _musicUnlocked   = !!_musicPlan?.features?.customMusic;
+      const _musicBlock      = document.getElementById('wall-music-block');
+      const _musicLockCard   = document.getElementById('wall-music-lock-card');
+      if (_musicBlock)    _musicBlock.style.display    = _musicUnlocked ? '' : 'none';
+      if (_musicLockCard) _musicLockCard.style.display = _musicUnlocked ? 'none' : '';
+      if (_musicUnlocked) {
+        // Music playlist picker populates async — current selection applied
+        // once playlists have loaded.
+        loadMusicPicker(event.music_playlist_id);
+        loadCustomMusicList();
+      }
     }
   }
 
@@ -4236,7 +4261,12 @@
           venue:           document.getElementById('details-venue').value,
           event_time:      document.getElementById('details-time').value,
           // '' = "Off — silent wall" (server treats '' as clear-to-null).
-          music_playlist_id: document.getElementById('details-music')?.value ?? undefined,
+          // Skip the field entirely when the music block is hidden (Tala),
+          // so a host who downgrades doesn't accidentally null out the
+          // playlist they'd picked on Sinag+.
+          music_playlist_id: document.getElementById('wall-music-block')?.style.display === 'none'
+            ? undefined
+            : (document.getElementById('details-music')?.value ?? undefined),
         }),
       });
       const data = await res.json();
