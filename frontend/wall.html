@@ -445,8 +445,11 @@
       color: #f0a37a; /* accent-soft — matches corner-credit motif */
       text-shadow: 0 2px 8px rgba(0,0,0,.4);
     }
-    /* White-label: same rule as the corner credit. Premium tiers hide
-       the new ticker brand too, so Dalisay / Hiraya walls stay clean. */
+    /* Top-left ticker brand is reserved for the free Tala tier as the
+       "billboard" credit. Sinag keeps the discreet lower-right corner
+       credit but drops this larger one beside LIVE; Dalisay / Hiraya
+       hide both. */
+    body[data-tier="sinag"]   .ticker .live .ticker-brand,
     body[data-tier="dalisay"] .ticker .live .ticker-brand,
     body[data-tier="hiraya"]  .ticker .live .ticker-brand { display: none !important; }
 
