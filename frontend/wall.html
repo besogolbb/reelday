@@ -2343,21 +2343,6 @@
   const backdropB   = document.getElementById('backdrop-b');
   const vidA        = document.getElementById('vid-a');
   const vidB        = document.getElementById('vid-b');
-
-  // Edge's "Efficiency Mode" pauses muted video-only background media to save
-  // power, even when the tab is foreground — surfaces as AbortError on play()
-  // and a freeze with the audio still going. Resume any involuntary pause as
-  // long as the layer is still meant to be showing this video.
-  const wallEdgeResume = (vid) => {
-    vid.addEventListener('pause', () => {
-      if (!vid.src || vid.ended || document.hidden) return;
-      const layer = vid.parentElement;
-      if (!layer || !layer.classList.contains('video-visible')) return;
-      vid.play().catch(() => {});
-    });
-  };
-  wallEdgeResume(vidA);
-  wallEdgeResume(vidB);
   const loaderA     = document.getElementById('loader-a');
   const loaderB     = document.getElementById('loader-b');
   const audA        = document.getElementById('aud-a');
@@ -3486,23 +3471,38 @@
   // <video> with preload="metadata" so the browser opens a Range request
   // early but doesn't fully buffer (avoids fighting the active stream).
   const prewarmImg = new Image();
-  const prewarmVid = document.createElement('video');
-  prewarmVid.preload = 'metadata';
-  prewarmVid.muted = true;
-  prewarmVid.playsInline = true;
+  // A long-lived prewarm <video> holds a media-pipeline slot even with
+  // preload='metadata'. Combined with the two crossfade layers (vid-a +
+  // vid-b), that's 3 video elements competing for the browser's
+  // WebMediaPlayer budget — the active player ends up frame-starved
+  // (decodedFrames frozen, readyState drops to 2 even though bytes are
+  // buffered). Use a Range fetch() instead to warm the HTTP/CDN cache
+  // without ever instantiating a decoder. Confirmed today via live
+  // diagnostics on Edge + Chrome (both stuttered with the <video>,
+  // both smooth once blocked).
+  const VIDEO_PREWARM_RANGE = 'bytes=0-262143'; // 256 KB — enough for moov + first GOP under faststart
+  let prewarmController = null;
+  let prewarmedVideoUrl = null;
   function prewarmNext() {
     if (items.length < 2) return;
     const next = items[(currentIdx + 1) % items.length];
     const url  = wallMediaUrl(next);
     if (!url) return;
     if (isReadyVideo(next)) {
-      try {
-        if (prewarmVid.src !== new URL(url, location.href).toString()) {
-          prewarmVid.src = url;
-          // load() kicks off the Range request without committing to full buffer
-          prewarmVid.load();
-        }
-      } catch { /* ignore */ }
+      const absUrl = new URL(url, location.href).toString();
+      if (prewarmedVideoUrl === absUrl) return;
+      prewarmedVideoUrl = absUrl;
+      try { prewarmController?.abort(); } catch {}
+      prewarmController = new AbortController();
+      fetch(absUrl, {
+        method:  'GET',
+        headers: { Range: VIDEO_PREWARM_RANGE },
+        cache:   'force-cache',
+        signal:  prewarmController.signal,
+        credentials: 'same-origin',
+      })
+        .then(r => (r.ok || r.status === 206) ? r.blob() : null)
+        .catch(() => { /* aborted or network — caller doesn't care */ });
     } else {
       try {
         // Cache the next slide's orientation off the prewarm load so the
