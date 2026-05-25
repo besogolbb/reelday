@@ -3126,17 +3126,13 @@
     if (itemIsVideo) {
       inPic.style.animation            = 'none';
 
-      // DO NOT apply Ken Burns to <video> elements. Animating a transform
-      // on a <video> forces the compositor to recomposite the video plane
-      // every frame; combined with the parent .layer.ori-portrait
-      // portraitBreathe transform it overruns Edge's compositor budget,
-      // which then drops every decoded frame (decodedFrames climbs but
-      // currentTime + droppedFrames frozen, readyState stuck at 2).
-      // Chrome's compositor is more generous and handles both fine, which
-      // is why this only manifested in Edge. The parent layer's
-      // portraitBreathe already provides the motion language; the
-      // duplicate KB on .vid was redundant.
+      // Mirror the Ken Burns motion onto the <video> element so portrait
+      // videos get the same gentle drift as photos. CSS gates this to
+      // portrait mode — landscape videos fill the wall edge-to-edge so
+      // the scale would visibly crop.
       inVid.style.animation = 'none';
+      void inVid.offsetWidth;
+      inVid.style.animation = `${kbAnim} ${KB_DURATION}s ease-out forwards`;
 
       inLayer.classList.add('has-video');
       inLayer.classList.remove('video-visible');
