@@ -5044,8 +5044,16 @@
       });
 
       renderer.render(scene, camera);
+      // Skip the 60 Hz loop when the tab is hidden. The browser already
+      // throttles rAF in background tabs but the WebGL context + render
+      // calls still consume the shared GPU process budget — which the wall
+      // (running in another tab) needs for its video decoders.
+      if (document.hidden) return;
       requestAnimationFrame(tick);
     }
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) requestAnimationFrame(tick);
+    });
 
     // First frame — snap so it doesn't slide in from origin
     requestAnimationFrame(t => {
