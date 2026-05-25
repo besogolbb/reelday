@@ -2343,6 +2343,21 @@
   const backdropB   = document.getElementById('backdrop-b');
   const vidA        = document.getElementById('vid-a');
   const vidB        = document.getElementById('vid-b');
+
+  // Edge's "Efficiency Mode" pauses muted video-only background media to save
+  // power, even when the tab is foreground — surfaces as AbortError on play()
+  // and a freeze with the audio still going. Resume any involuntary pause as
+  // long as the layer is still meant to be showing this video.
+  const wallEdgeResume = (vid) => {
+    vid.addEventListener('pause', () => {
+      if (!vid.src || vid.ended || document.hidden) return;
+      const layer = vid.parentElement;
+      if (!layer || !layer.classList.contains('video-visible')) return;
+      vid.play().catch(() => {});
+    });
+  };
+  wallEdgeResume(vidA);
+  wallEdgeResume(vidB);
   const loaderA     = document.getElementById('loader-a');
   const loaderB     = document.getElementById('loader-b');
   const audA        = document.getElementById('aud-a');
