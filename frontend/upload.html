@@ -1229,9 +1229,9 @@ body { background: var(--paper); min-height: 100dvh; }
           <rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
         </svg>
       </div>
-      <div class="tab-label">Upload<br>photo or video</div>
+      <div class="tab-label" id="galleryTabLabel">Upload<br>photo or video</div>
     </div>
-    <div class="share-tab share-tab--mini share-tab--record" onclick="switchTab('record',this)">
+    <div class="share-tab share-tab--mini share-tab--record" id="recordTabTile" onclick="switchTab('record',this)">
       <div class="tab-icon">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="9" stroke-dasharray="3 2"/></svg>
       </div>
@@ -1250,7 +1250,7 @@ body { background: var(--paper); min-height: 100dvh; }
       <div class="tab-label">Poll</div>
     </div>
   </div>
-  <p class="share-hint">Up to 30s recording &nbsp;·&nbsp; 100 MB max &nbsp;·&nbsp; 4K auto-optimized</p>
+  <p class="share-hint" id="shareHint">Up to 30s recording &nbsp;·&nbsp; 100 MB max &nbsp;·&nbsp; 4K auto-optimized</p>
 
   <!-- ════ PANEL 1: Gallery ═════════════════════════════ -->
   <div class="share-panel active" id="panel-gallery">
@@ -1588,6 +1588,25 @@ body { background: var(--paper); min-height: 100dvh; }
         const inp = document.getElementById(id);
         if (inp) inp.setAttribute('accept', 'image/*');
       });
+      // Hide the Record tile entirely — it only produces videos, so it's
+      // pure dead-end UI on Tala (server would 403 the upload). The grid
+      // is auto-flow so React/Poll naturally reflow into the empty slot.
+      const recTile = document.getElementById('recordTabTile');
+      if (recTile) recTile.style.display = 'none';
+      // Drop the "or video" half of the upload tile label and rewrite
+      // the share-hint, which today describes the 30s video recording
+      // ceiling that doesn't apply when video is off.
+      const galLabel = document.getElementById('galleryTabLabel');
+      if (galLabel) galLabel.innerHTML = 'Upload<br>photo';
+      const hint = document.getElementById('shareHint');
+      if (hint) hint.textContent = 'Photos only on this event';
+      // If a returning guest had the record panel active from a previous
+      // higher-tier visit, snap them back to the gallery panel.
+      const recPanel = document.getElementById('panel-record');
+      if (recPanel?.classList.contains('active')) {
+        const galTile = document.querySelector('.share-tab--gallery');
+        if (galTile) switchTab('gallery', galTile);
+      }
     }
     if (feats.audioNotes === false) {
       const vp = document.getElementById('msgPillVoice');
