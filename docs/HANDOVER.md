@@ -98,6 +98,104 @@ JWT in `localStorage` (30d). `fastify.authenticate` preHandler on routes. Admin 
 6. `backend/server.js` — entry point, all the wiring
 7. `database/schema.sql` + `backend/plugins/database.js` ALTERs — data model
 
+## Backup & restore (quick reference)
+
+**Backups are automatic. Restores are manual.** Two scenarios:
+
+### Quarterly drill — prove backups still work (10 min)
+
+SSH in, then paste this block. Replace `<PASSWORD>` first:
+
+```bash
+ssh root@72.61.209.165
+export PGPASS='<PASSWORD>'
+
+CONTAINER=$(docker ps --filter "name=reelday-db" --format '{{.Names}}' \
+  | grep -v -e _pgweb -e _dbgate | head -1)
+LATEST=$(ls -t /var/backups/reelday/reelday-*.sql.gz | head -1)
+echo "Drill restore: $LATEST → temp DB"
+
+docker exec -e PGPASSWORD="$PGPASS" "$CONTAINER" \
+  psql -U reelday -d reelday -c "CREATE DATABASE reelday_restore_test;"
+
+zcat "$LATEST" | docker exec -i -e PGPASSWORD="$PGPASS" "$CONTAINER" \
+  psql -U reelday -d reelday_restore_test
+
+echo "── RESTORED ──"
+docker exec -e PGPASSWORD="$PGPASS" "$CONTAINER" psql -U reelday -d reelday_restore_test \
+  -c "SELECT 'events' t, count(*) FROM events
+      UNION ALL SELECT 'uploads', count(*) FROM uploads
+      UNION ALL SELECT 'users',   count(*) FROM users;"
+echo "── PRODUCTION ──"
+docker exec -e PGPASSWORD="$PGPASS" "$CONTAINER" psql -U reelday -d reelday \
+  -c "SELECT 'events' t, count(*) FROM events
+      UNION ALL SELECT 'uploads', count(*) FROM uploads
+      UNION ALL SELECT 'users',   count(*) FROM users;"
+
+docker exec -e PGPASSWORD="$PGPASS" "$CONTAINER" \
+  psql -U reelday -d reelday -c "DROP DATABASE reelday_restore_test;"
+```
+
+✅ Counts match (±1-2 rows) → backups are valid. ❌ Counts mismatched / restore errored → investigate now, NOT during an incident.
+
+### Real restore — production DB is corrupted / wiped
+
+Don't panic. Worst case you've lost ≤24h of data (the gap between last backup and now).
+
+**Step 1 — get the latest backup**
+```bash
+# If local copy is still there:
+ls -lt /var/backups/reelday/reelday-*.sql.gz | head -1
+
+# If local is gone (VPS died), pull from R2:
+mkdir -p /tmp/restore
+rclone copy r2:reelday-backups/ /tmp/restore/ --max-age 48h
+ls -lt /tmp/restore/reelday-*.sql.gz | head -1
+```
+
+**Step 2 — restore over production**
+```bash
+export PGPASS='<PASSWORD>'
+CONTAINER=$(docker ps --filter "name=reelday-db" --format '{{.Names}}' \
+  | grep -v -e _pgweb -e _dbgate | head -1)
+LATEST=/var/backups/reelday/<filename>.sql.gz   # or /tmp/restore/<...>
+
+# Stop the app so it can't write during restore (Easypanel → reelday → stop)
+# Then:
+
+docker exec -e PGPASSWORD="$PGPASS" "$CONTAINER" \
+  psql -U reelday -d postgres -c "DROP DATABASE reelday;"
+docker exec -e PGPASSWORD="$PGPASS" "$CONTAINER" \
+  psql -U reelday -d postgres -c "CREATE DATABASE reelday;"
+
+zcat "$LATEST" | docker exec -i -e PGPASSWORD="$PGPASS" "$CONTAINER" \
+  psql -U reelday -d reelday
+
+# Re-start the app in Easypanel.
+```
+
+**Step 3 — verify**
+Visit `/api/_errors` and `/` to confirm no 500s. Spot-check an event page renders.
+
+### Where backups live
+
+| Copy | Where | Retention |
+|---|---|---|
+| Local | `/var/backups/reelday/reelday-*.sql.gz` on the VPS | 14 days |
+| Offsite | `r2:reelday-backups/` (Cloudflare R2) | 90 days |
+
+Pull list of offsite copies: `rclone ls r2:reelday-backups/`
+
+### Script + schedule
+
+| | |
+|---|---|
+| Script | `/usr/local/bin/reelday-backup.sh` (mode 700, root only) |
+| Schedule | `0 3 * * * /usr/local/bin/reelday-backup.sh >> /var/log/reelday-backup.log 2>&1` |
+| View log | `tail -50 /var/log/reelday-backup.log` |
+| Run manually | `sudo /usr/local/bin/reelday-backup.sh` |
+| Check next-run | `sudo crontab -l \| grep reelday` |
+
 ## When something breaks at 1 AM
 
 1. Easypanel → service → Logs → look for `REELDAY_500` lines
