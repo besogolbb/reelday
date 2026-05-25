@@ -1618,7 +1618,7 @@ body { background: var(--paper); min-height: 100dvh; }
     document.body.setAttribute('data-theme', ev.theme || 'wedding');
 
     // ev.name is host-supplied (couple_names from the DB). A malicious or
-    // careless host could set it to '<script>…</script>' and that would
+    // careless host could set it to a script tag and that would
     // execute on every guest's upload page (stored XSS). Escape first,
     // then re-introduce the styled ampersand via a controlled token.
     const AMP_TOKEN = '\x00AMP\x00';
