@@ -57,7 +57,6 @@ JWT in `localStorage` (30d). `fastify.authenticate` preHandler on routes. Admin 
 
 | Item | Status | Effort |
 |---|---|---|
-| `/privacy` page (PH DPA RA 10173) | Blocked on 4 product decisions | 30 min after answers |
 | JWT in localStorage → HttpOnly cookies | Deferred — needs coordinated migration | ~90 min |
 | Admin auth: shared `ADMIN_TOKEN` → real user + audit log | Deferred — decide A (full) or B (rotate quarterly) | A: 2-3h, B: 0 |
 | R2 object versioning | Skipped — not in Wrangler yet, accepted risk | revisit when Wrangler ships it |

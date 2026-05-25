@@ -2,7 +2,9 @@
 
 This batch landed: helmet+CSP, `events` `SELECT *` denylist (+ `password_hash`/`gcal_event_id`), `DEBUG_KEY` → header, removed `frontend/temp-*` files.
 
-These three were **intentionally not** done in the same commit because they
+**Done 2026-05-25:** `/privacy` route + DPA-accurate guest device ID disclosure (commit 6c6e72d). Privacy policy already existed as a tab in `/terms`; added a `/privacy` redirect for discoverability and corrected §2.2 to disclose the per-browser presence ID.
+
+These two were **intentionally not** done in the same commit because they
 each touch every authed fetch and need a planned migration window.
 
 ## 1. JWT in localStorage → HttpOnly cookies
@@ -48,24 +50,8 @@ file like the one we just deleted) the only mitigation is a redeploy.
 - Optional: TOTP 2FA enforced for admin accounts only.
 - Keep `ADMIN_TOKEN` as a break-glass for one release, then remove.
 
-## 3. Privacy policy (`/privacy`)
+## 3. Privacy policy (`/privacy`) — ✅ DONE 2026-05-25 (commit 6c6e72d)
 
-`/terms` exists, `/privacy` does not. PH Data Privacy Act (RA 10173)
-requires a notice before collecting names/phones/emails/photos of
-attendees. We're already in scope.
-
-**Decisions needed from product/legal before I can draft the page:**
-- Support contact email for privacy requests (use `besogol.b@gmail.com`?
-  or a generic `privacy@reelday.ph`?)
-- Confirm retention windows to state publicly:
-  - galleries: deleted 7 days after `gallery_expires_at` (already in code)
-  - host accounts: ? (we never auto-delete users today)
-  - guest device IDs in `presence`: ?
-- Sub-processors to list: Cloudflare R2 (storage), AWS Lambda
-  (transcode, ap-southeast-1), Resend (email), PayMongo (payments),
-  Google Calendar (admin event sync). Anyone else?
-- NPC complaint channel boilerplate (standard one-liner).
-
-Once those are answered the page is ~30 minutes of writing + a
-`/privacy` route in [backend/server.js](../backend/server.js) and a
-`frontend/privacy.html`.
+Privacy policy already lived as a tab inside `/terms`. Added a `/privacy`
+301-redirect for DPA discoverability and corrected §2.2 to disclose the
+per-browser presence device ID (scoped to gallery lifetime).
