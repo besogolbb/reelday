@@ -92,6 +92,7 @@ export async function sendBookingConfirmationEmail(db, { userId, tier, slug }, l
       `  - 500-guest peak: the wall catches up automatically if everyone uploads at once.`,
       `  - Know your upload window — share the wall link with guests before it opens.`,
       `  - Assign one person to operate the wall display during the event.`,
+      `  - One wall per browser device: don't open the wall in two tabs/windows on the same laptop — video playback will stutter (two TVs from one laptop = use two laptops).`,
       `  - Use Microsoft Edge on the wall device (less RAM than Chrome).`,
       `  - Test venue WiFi ahead of time, or bring a mobile hotspot as backup.`,
       `  - Do a dry run on the venue screen before guests arrive.`,
@@ -132,6 +133,10 @@ export async function sendBookingConfirmationEmail(db, { userId, tier, slug }, l
             ${faqRow(
               '&#128100; Assign a dedicated wall operator',
               'For the best experience, have one person in charge of the wall display during the event. They can control which uploads appear, keeping the show running smoothly.',
+            )}
+            ${faqRow(
+              '&#128250; One wall per browser device',
+              'Open the wall on <strong>one</strong> browser per device only — don\'t run two wall tabs or windows on the same laptop. Two video streams competing for one GPU will stutter or freeze. If you need two TVs, use two separate laptops (one wall window each).',
             )}
             ${faqRow(
               '&#128187; Use Microsoft Edge on the wall device',
