@@ -3962,7 +3962,9 @@
         on ? 'Auto-approve · ON' : 'Auto-approve · OFF';
     }
 
-    // Editable details inputs — only seed once per page load
+    // Editable details inputs — only seed once per page load so typing
+    // doesn't get clobbered by a re-render (PATCH save / auto-approve
+    // toggles all call renderHeader again).
     const detailsForm = document.querySelector('.details-form');
     if (detailsForm && !detailsForm.dataset.seeded) {
       detailsForm.dataset.seeded = '1';
@@ -3972,22 +3974,28 @@
       if (msgInput)   msgInput.value   = event.welcome_message ?? '';
       if (venueInput) venueInput.value = event.venue           ?? '';
       if (timeInput)  timeInput.value  = event.event_time      ?? '';
-      // Tala (and any plan without customMusic) — the wall backend returns
-      // null for /events/:slug/music, so swap the music controls for a
-      // lock card explaining the upgrade. Skips the playlist + upload
-      // fetches so the dead UI doesn't get populated at all.
-      const _musicPlan       = resolvePlan(event.plan);
-      const _musicUnlocked   = !!_musicPlan?.features?.customMusic;
-      const _musicBlock      = document.getElementById('wall-music-block');
-      const _musicLockCard   = document.getElementById('wall-music-lock-card');
-      if (_musicBlock)    _musicBlock.style.display    = _musicUnlocked ? '' : 'none';
-      if (_musicLockCard) _musicLockCard.style.display = _musicUnlocked ? 'none' : '';
-      if (_musicUnlocked) {
-        // Music playlist picker populates async — current selection applied
-        // once playlists have loaded.
-        loadMusicPicker(event.music_playlist_id);
-        loadCustomMusicList();
-      }
+    }
+
+    // Music gate — runs EVERY render, not seed-once. The original seed-once
+    // guard caused a real bug: if the first render came from renderLocalMode
+    // (event.plan = 'demo' → resolves to Tala) or a PATCH that returned an
+    // event missing the plan column, the gate locked permanently even after
+    // a later loadEvent set event.plan correctly. Re-evaluating per render
+    // is cheap and stays in sync with whatever currentDashEvent now holds.
+    // Tala wall backend returns playlist: null regardless of host pick, so
+    // the picker + upload UI are dead unless customMusic is unlocked.
+    const _musicPlan     = resolvePlan(event.plan);
+    const _musicUnlocked = !!_musicPlan?.features?.customMusic;
+    const _musicBlock    = document.getElementById('wall-music-block');
+    const _musicLockCard = document.getElementById('wall-music-lock-card');
+    if (_musicBlock)    _musicBlock.style.display    = _musicUnlocked ? '' : 'none';
+    if (_musicLockCard) _musicLockCard.style.display = _musicUnlocked ? 'none' : '';
+    if (_musicUnlocked && !_musicBlock?.dataset.loaded) {
+      // Picker + uploads list still load once — they don't need to re-fetch
+      // on every renderHeader call.
+      if (_musicBlock) _musicBlock.dataset.loaded = '1';
+      loadMusicPicker(event.music_playlist_id);
+      loadCustomMusicList();
     }
   }
 
