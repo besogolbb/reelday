@@ -256,7 +256,14 @@
 
   async function startRenewCheckout(evt) {
     const btn = evt?.currentTarget;
-    if (btn) { btn.disabled = true; btn.textContent = 'Opening checkout…'; }
+    if (btn) {
+      // Stash original label so a BFCache restore (back-from-PayMongo)
+      // can put the button back to a clickable state.
+      if (!btn.dataset.originalText) btn.dataset.originalText = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Opening checkout…';
+      btn.dataset.checkoutLoading = '1';
+    }
     try {
       const res = await fetch('/api/payments/create', {
         method: 'POST',
@@ -269,10 +276,25 @@
       }
       location.href = data.checkout_url;
     } catch (err) {
-      if (btn) { btn.disabled = false; btn.textContent = 'Renew — ₱9,990'; }
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = btn.dataset.originalText || 'Renew — ₱9,990';
+        delete btn.dataset.checkoutLoading;
+      }
       alert(err.message);
     }
   }
+
+  // BFCache restore: if the user opened PayMongo then hit Back, unfreeze
+  // any checkout button we locked on the way out.
+  window.addEventListener('pageshow', (e) => {
+    if (!e.persisted) return;
+    document.querySelectorAll('button[data-checkout-loading]').forEach((b) => {
+      b.disabled = false;
+      if (b.dataset.originalText) b.textContent = b.dataset.originalText;
+      delete b.dataset.checkoutLoading;
+    });
+  });
 
   // ?renew=1 deep link (from reminder emails): auto-fire the checkout
   // once the page is authed. Strip the query first so a back-navigation

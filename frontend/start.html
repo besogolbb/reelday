@@ -1726,6 +1726,18 @@
       document.querySelector('.auth-divider').style.display = 'none';
     }
   }
+
+  // BFCache restore (e.g. user opened PayMongo checkout then hit Back):
+  // the page comes back with the CTA still disabled+loading from the
+  // outbound navigation. Clear that state so the user can pick another
+  // plan without a hard reload.
+  window.addEventListener('pageshow', (e) => {
+    if (!e.persisted) return;
+    document.querySelectorAll('button.loading').forEach((b) => {
+      b.classList.remove('loading');
+      b.disabled = false;
+    });
+  });
 </script>
 </body>
 </html>

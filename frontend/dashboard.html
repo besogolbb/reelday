@@ -6084,9 +6084,12 @@
         closeUpgradeModal();
         return;
       }
+      // Stash original label BEFORE mutating textContent — needed so a
+      // BFCache restore (back-from-PayMongo) can put it back.
+      if (!btn.dataset.originalLabel) btn.dataset.originalLabel = btn.textContent;
+      const originalLabel = btn.dataset.originalLabel;
       btn.classList.add('loading');
       btn.disabled = true;
-      const originalLabel = btn.dataset.originalLabel || btn.textContent;
       btn.textContent = 'Redirecting…';
       try {
         const res = await fetch('/api/payments/create', {
@@ -6981,6 +6984,17 @@
       }
     });
   }
+
+  // BFCache restore (user opened PayMongo checkout then hit Back):
+  // unfreeze any upgrade button we locked during the outbound navigation.
+  window.addEventListener('pageshow', (e) => {
+    if (!e.persisted) return;
+    document.querySelectorAll('button.loading').forEach((b) => {
+      b.classList.remove('loading');
+      b.disabled = false;
+      if (b.dataset.originalLabel) b.textContent = b.dataset.originalLabel;
+    });
+  });
 
   // ── Init ──────────────────────────────────────────────
   loadAll();
