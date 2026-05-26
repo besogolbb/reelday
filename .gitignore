@@ -24,3 +24,8 @@ reelday.ph_*.report.html
 # Demo/raw video drops — large binaries, kept locally only.
 video/
 wedding-demo/
+
+# Marketing / Remotion wall-recorder tool — kept LOCAL ONLY, never pushed.
+# Per session decision 2026-05-26: marketing source + rendered mp4s stay
+# off the remote.
+tools/wall-recorder/
