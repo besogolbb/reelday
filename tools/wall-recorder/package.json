@@ -6,7 +6,8 @@
   "scripts": {
     "studio": "remotion studio src/index.ts",
     "render": "remotion render src/index.ts DemoWall out/demo-wall.mp4 --codec h264 --crf 18",
-    "render:poll-demo": "remotion render src/index.ts WallPollDemo out/wall-poll-demo.mp4 --codec h264 --crf 18"
+    "render:poll-demo": "remotion render src/index.ts WallPollDemo out/wall-poll-demo.mp4 --codec h264 --crf 18",
+    "render:poll-demo-vertical": "remotion render src/index.ts WallPollDemoVertical out/wall-poll-demo-vertical.mp4 --codec h264 --crf 18"
   },
   "dependencies": {
     "@remotion/cli": "4.0.380",

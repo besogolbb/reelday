@@ -41,6 +41,14 @@ export const Root = () => {
         height={1080}
       />
       <Composition
+        id="WallPollDemoVertical"
+        component={WallPollDemo}
+        durationInFrames={WPD_FRAMES}
+        fps={WPD_FPS}
+        width={1080}
+        height={1920}
+      />
+      <Composition
         id="WallReactions"
         component={WallReactions}
         durationInFrames={WR_FRAMES}

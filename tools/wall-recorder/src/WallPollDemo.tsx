@@ -73,6 +73,92 @@ const QUESTION = {
   fastest: "Kuya Vince — 2.3s",
 };
 
+// ─── Orientation helper ───────────────────────────────────
+// Returns layout knobs scaled for landscape (1920x1080) or vertical
+// (1080x1920) so the same composition renders well for both YT-style
+// and IG/TikTok-style posts.
+type Layout = {
+  vertical: boolean;
+  quoteFs: number;
+  uploaderFs: number;
+  coupleFs: number;
+  coupleSubFs: number;
+  captionPad: string;
+  titleBarH: number;
+  titleFs: number;
+  pollTagFs: number;
+  pollQFs: number;
+  pollQMaxCh: number;
+  pollBarFs: number;
+  pollBarPad: string;
+  pollStatsFs: number;
+  pollBarsWidth: string;
+  fastestFs: number;
+  footFs: number;
+  countFs: number;
+  outroEyebrowFs: number;
+  outroTitleFs: number;
+  outroTagFs: number;
+  tickerH: number;
+  tickerFs: number;
+};
+
+const getLayout = (w: number, h: number): Layout => {
+  const vertical = h > w;
+  if (vertical) {
+    return {
+      vertical: true,
+      quoteFs: 44,
+      uploaderFs: 16,
+      coupleFs: 38,
+      coupleSubFs: 18,
+      captionPad: "0 40px 56px",
+      titleBarH: 130,
+      titleFs: 30,
+      pollTagFs: 18,
+      pollQFs: 64,
+      pollQMaxCh: 14,
+      pollBarFs: 34,
+      pollBarPad: "22px 26px",
+      pollStatsFs: 32,
+      pollBarsWidth: "92%",
+      fastestFs: 28,
+      footFs: 20,
+      countFs: 38,
+      outroEyebrowFs: 18,
+      outroTitleFs: 96,
+      outroTagFs: 32,
+      tickerH: 72,
+      tickerFs: 15,
+    };
+  }
+  return {
+    vertical: false,
+    quoteFs: 60,
+    uploaderFs: 18,
+    coupleFs: 54,
+    coupleSubFs: 22,
+    captionPad: "0 56px 64px",
+    titleBarH: 110,
+    titleFs: 42,
+    pollTagFs: 22,
+    pollQFs: 96,
+    pollQMaxCh: 20,
+    pollBarFs: 48,
+    pollBarPad: "32px 36px",
+    pollStatsFs: 44,
+    pollBarsWidth: "min(1300px, 80%)",
+    fastestFs: 38,
+    footFs: 26,
+    countFs: 46,
+    outroEyebrowFs: 22,
+    outroTitleFs: 120,
+    outroTagFs: 44,
+    tickerH: 84,
+    tickerFs: 18,
+  };
+};
+
 // ─── Kenburns slide ───────────────────────────────────────
 const KenBurns: React.FC<{ src: string; local: number; duration: number }> = ({
   src,
@@ -104,7 +190,8 @@ const Slideshow: React.FC<{
   shots: SlideShot[];
   frame: number;
   phaseStart: number;
-}> = ({ shots, frame, phaseStart }) => {
+  L: Layout;
+}> = ({ shots, frame, phaseStart, L }) => {
   const phaseFrame = frame - phaseStart;
   const cur = shots.find((s) => phaseFrame >= s.start && phaseFrame < s.start + s.duration) ?? shots[shots.length - 1];
   const local = phaseFrame - cur.start;
@@ -143,19 +230,20 @@ const Slideshow: React.FC<{
           bottom: 0,
           left: 0,
           right: 0,
-          padding: "0 56px 64px",
+          padding: L.captionPad,
           display: "flex",
+          flexDirection: L.vertical ? "column" : "row",
           justifyContent: "space-between",
-          alignItems: "flex-end",
-          gap: 32,
+          alignItems: L.vertical ? "flex-start" : "flex-end",
+          gap: L.vertical ? 18 : 32,
           zIndex: 5,
         }}
       >
-        <div style={{ maxWidth: "62%" }}>
+        <div style={{ maxWidth: L.vertical ? "100%" : "62%" }}>
           <div
             style={{
               fontFamily: FONT_MONO,
-              fontSize: 18,
+              fontSize: L.uploaderFs,
               letterSpacing: ".18em",
               textTransform: "uppercase",
               color: "rgba(255,255,255,.78)",
@@ -169,7 +257,7 @@ const Slideshow: React.FC<{
               fontFamily: FONT_DISPLAY,
               fontStyle: "italic",
               fontWeight: 400,
-              fontSize: 60,
+              fontSize: L.quoteFs,
               lineHeight: 1.1,
               letterSpacing: "-.01em",
               color: "#fff",
@@ -179,12 +267,12 @@ const Slideshow: React.FC<{
             {cur.quote}
           </div>
         </div>
-        <div style={{ textAlign: "right", flexShrink: 0 }}>
+        <div style={{ textAlign: L.vertical ? "left" : "right", flexShrink: 0 }}>
           <div
             style={{
               fontFamily: FONT_DISPLAY,
               fontStyle: "italic",
-              fontSize: 54,
+              fontSize: L.coupleFs,
               color: "rgba(255,255,255,.92)",
               marginBottom: 10,
               letterSpacing: "-.01em",
@@ -195,7 +283,7 @@ const Slideshow: React.FC<{
           <div
             style={{
               fontFamily: FONT_MONO,
-              fontSize: 22,
+              fontSize: L.coupleSubFs,
               letterSpacing: ".18em",
               textTransform: "uppercase",
               color: "rgba(255,255,255,.55)",
@@ -210,7 +298,7 @@ const Slideshow: React.FC<{
 };
 
 // ─── LIVE ticker (always-on top corner bits) ──────────────
-const TopTicker: React.FC<{ frame: number }> = ({ frame }) => {
+const TopTicker: React.FC<{ frame: number; L: Layout }> = ({ frame, L }) => {
   const moments = 247 + Math.floor(frame / (FPS * 2));
   return (
     <div
@@ -219,12 +307,12 @@ const TopTicker: React.FC<{ frame: number }> = ({ frame }) => {
         top: 0,
         left: 0,
         right: 0,
-        height: 84,
+        height: L.tickerH,
         background: "linear-gradient(180deg, rgba(0,0,0,.55), transparent)",
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        padding: "0 48px",
+        padding: L.vertical ? "0 28px" : "0 48px",
         zIndex: 6,
       }}
     >
@@ -234,7 +322,7 @@ const TopTicker: React.FC<{ frame: number }> = ({ frame }) => {
           alignItems: "center",
           gap: 12,
           fontFamily: FONT_MONO,
-          fontSize: 18,
+          fontSize: L.tickerFs,
           letterSpacing: ".18em",
           textTransform: "uppercase",
           color: "rgba(255,255,255,.9)",
@@ -256,7 +344,7 @@ const TopTicker: React.FC<{ frame: number }> = ({ frame }) => {
           display: "flex",
           gap: 32,
           fontFamily: FONT_MONO,
-          fontSize: 18,
+          fontSize: L.tickerFs,
           letterSpacing: ".14em",
           textTransform: "uppercase",
           color: "rgba(255,255,255,.55)",
@@ -286,7 +374,8 @@ const PollOverlay: React.FC<{
   liveSecs: number;
   resultsAt: number; // frame within phase when results begin
   fps: number;
-}> = ({ data, frame, phaseStart, phaseEnd, liveSecs, resultsAt, fps }) => {
+  L: Layout;
+}> = ({ data, frame, phaseStart, phaseEnd, liveSecs, resultsAt, fps, L }) => {
   const local = frame - phaseStart;
   const totalDur = phaseEnd - phaseStart;
 
@@ -385,11 +474,11 @@ const PollOverlay: React.FC<{
       <div
         style={{
           fontFamily: FONT_MONO,
-          fontSize: 22,
+          fontSize: L.pollTagFs,
           letterSpacing: ".32em",
           textTransform: "uppercase",
           color: ACCENT_SOFT,
-          marginBottom: 28,
+          marginBottom: L.vertical ? 22 : 28,
           display: "flex",
           alignItems: "center",
           gap: 14,
@@ -413,12 +502,12 @@ const PollOverlay: React.FC<{
           fontFamily: FONT_DISPLAY,
           fontStyle: "italic",
           fontWeight: 500,
-          fontSize: 96,
+          fontSize: L.pollQFs,
           lineHeight: 1.08,
           textAlign: "center",
-          maxWidth: "20ch",
+          maxWidth: `${L.pollQMaxCh}ch`,
           margin: 0,
-          marginBottom: 44,
+          marginBottom: L.vertical ? 32 : 44,
           textShadow: "0 8px 30px rgba(0,0,0,.6)",
         }}
       >
@@ -431,7 +520,7 @@ const PollOverlay: React.FC<{
           display: "flex",
           flexDirection: "column",
           gap: 16,
-          width: "min(1300px, 80%)",
+          width: L.pollBarsWidth,
         }}
       >
         {data.options.map((opt, i) => {
@@ -466,8 +555,8 @@ const PollOverlay: React.FC<{
                 background: "rgba(255,255,255,.08)",
                 border: `1px solid ${borderColor}`,
                 borderRadius: 18,
-                padding: inResults ? "28px 40px" : "32px 36px",
-                fontSize: 48,
+                padding: L.pollBarPad,
+                fontSize: L.pollBarFs,
                 fontWeight: 500,
                 backdropFilter: "blur(6px)",
               }}
@@ -499,7 +588,7 @@ const PollOverlay: React.FC<{
                     <span
                       style={{
                         fontFamily: FONT_MONO,
-                        fontSize: 24,
+                        fontSize: L.vertical ? 18 : 24,
                         fontWeight: 700,
                         letterSpacing: ".12em",
                         padding: "6px 14px",
@@ -517,7 +606,7 @@ const PollOverlay: React.FC<{
                   <span
                     style={{
                       fontFamily: FONT_MONO,
-                      fontSize: 44,
+                      fontSize: L.pollStatsFs,
                       fontWeight: 700,
                       letterSpacing: ".08em",
                       fontVariantNumeric: "tabular-nums",
@@ -544,11 +633,11 @@ const PollOverlay: React.FC<{
             border: "1px solid rgba(216,160,90,.45)",
             fontFamily: FONT_DISPLAY,
             fontStyle: "italic",
-            fontSize: 38,
+            fontSize: L.fastestFs,
             fontWeight: 500,
             color: "#f5d089",
             textAlign: "center",
-            width: "min(1300px, 80%)",
+            width: L.pollBarsWidth,
             opacity: fastestOpacity,
             transform: `translateY(${fastestY}px)`,
           }}
@@ -560,9 +649,9 @@ const PollOverlay: React.FC<{
       {/* Foot — countdown or "Results" */}
       <div
         style={{
-          marginTop: 32,
+          marginTop: L.vertical ? 24 : 32,
           fontFamily: FONT_MONO,
-          fontSize: 26,
+          fontSize: L.footFs,
           letterSpacing: ".26em",
           textTransform: "uppercase",
           opacity: 0.9,
@@ -577,7 +666,7 @@ const PollOverlay: React.FC<{
             <span
               style={{
                 color: GOLD,
-                fontSize: 46,
+                fontSize: L.countFs,
                 fontWeight: 800,
                 fontVariantNumeric: "tabular-nums",
                 marginLeft: 10,
@@ -593,10 +682,11 @@ const PollOverlay: React.FC<{
 };
 
 // ─── Outro card ───────────────────────────────────────────
-const OutroCard: React.FC<{ frame: number; phaseStart: number; fps: number }> = ({
+const OutroCard: React.FC<{ frame: number; phaseStart: number; fps: number; L: Layout }> = ({
   frame,
   phaseStart,
   fps,
+  L,
 }) => {
   const local = frame - phaseStart;
   const fadeIn = interpolate(local, [0, sec(0.8)], [0, 1], {
@@ -623,7 +713,7 @@ const OutroCard: React.FC<{ frame: number; phaseStart: number; fps: number }> = 
       <div
         style={{
           fontFamily: FONT_MONO,
-          fontSize: 22,
+          fontSize: L.outroEyebrowFs,
           letterSpacing: ".32em",
           textTransform: "uppercase",
           color: ACCENT_SOFT,
@@ -636,7 +726,7 @@ const OutroCard: React.FC<{ frame: number; phaseStart: number; fps: number }> = 
         style={{
           fontFamily: FONT_DISPLAY,
           fontStyle: "italic",
-          fontSize: 120,
+          fontSize: L.outroTitleFs,
           fontWeight: 500,
           color: "#fff",
           letterSpacing: "-.01em",
@@ -651,7 +741,7 @@ const OutroCard: React.FC<{ frame: number; phaseStart: number; fps: number }> = 
           fontFamily: FONT_DISPLAY,
           fontStyle: "italic",
           fontWeight: 400,
-          fontSize: 44,
+          fontSize: L.outroTagFs,
           color: "rgba(255,255,255,.8)",
           textAlign: "center",
           maxWidth: "20ch",
@@ -667,7 +757,8 @@ const OutroCard: React.FC<{ frame: number; phaseStart: number; fps: number }> = 
 // ─── Composition ──────────────────────────────────────────
 export const WallPollDemo: React.FC = () => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const { fps, width, height } = useVideoConfig();
+  const L = getLayout(width, height);
 
   // Phase boundaries (frames)
   const SHOW1_START = 0;
@@ -717,7 +808,7 @@ export const WallPollDemo: React.FC = () => {
   const inQ     = frame >= Q_START && frame < Q_END;
   const inOutro = frame >= OUTRO_START;
 
-  const BAR_H = 110;
+  const BAR_H = L.titleBarH;
 
   return (
     <AbsoluteFill style={{ background: "#1a0f0a" }}>
@@ -745,7 +836,7 @@ export const WallPollDemo: React.FC = () => {
           <div
             style={{
               fontFamily: FONT_DISPLAY,
-              fontSize: 42,
+              fontSize: L.titleFs,
               fontStyle: "italic",
               fontWeight: 400,
               color: "#fff",
@@ -755,7 +846,7 @@ export const WallPollDemo: React.FC = () => {
             }}
           >
             <span style={{ color: ACCENT_SOFT, fontWeight: 500 }}>Reelday.ph</span>
-            <span style={{ opacity: 0.55 }}>  —  </span>
+            {L.vertical ? <br /> : <span style={{ opacity: 0.55 }}>  —  </span>}
             live polls &amp; trivia on the photo wall.
           </div>
         </div>
@@ -775,15 +866,15 @@ export const WallPollDemo: React.FC = () => {
         {/* Always-render slideshow underneath (frozen at last frame during overlays) */}
         {inShow1 && (
           <>
-            <Slideshow shots={show1} frame={frame} phaseStart={SHOW1_START} />
-            <TopTicker frame={frame} />
+            <Slideshow shots={show1} frame={frame} phaseStart={SHOW1_START} L={L} />
+            <TopTicker frame={frame} L={L} />
           </>
         )}
 
         {inPoll && (
           <>
             {/* Frozen last slide as backdrop */}
-            <Slideshow shots={show1} frame={SHOW1_END - 1} phaseStart={SHOW1_START} />
+            <Slideshow shots={show1} frame={SHOW1_END - 1} phaseStart={SHOW1_START} L={L} />
             <PollOverlay
               data={POLL}
               frame={frame}
@@ -792,20 +883,21 @@ export const WallPollDemo: React.FC = () => {
               liveSecs={30}
               resultsAt={sec(4.3)}
               fps={fps}
+              L={L}
             />
           </>
         )}
 
         {inShow2 && (
           <>
-            <Slideshow shots={show2} frame={frame} phaseStart={SHOW2_START} />
-            <TopTicker frame={frame} />
+            <Slideshow shots={show2} frame={frame} phaseStart={SHOW2_START} L={L} />
+            <TopTicker frame={frame} L={L} />
           </>
         )}
 
         {inQ && (
           <>
-            <Slideshow shots={show2} frame={SHOW2_END - 1} phaseStart={SHOW2_START} />
+            <Slideshow shots={show2} frame={SHOW2_END - 1} phaseStart={SHOW2_START} L={L} />
             <PollOverlay
               data={QUESTION}
               frame={frame}
@@ -814,11 +906,12 @@ export const WallPollDemo: React.FC = () => {
               liveSecs={20}
               resultsAt={Q_RESULTS_AT}
               fps={fps}
+              L={L}
             />
           </>
         )}
 
-        {inOutro && <OutroCard frame={frame} phaseStart={OUTRO_START} fps={fps} />}
+        {inOutro && <OutroCard frame={frame} phaseStart={OUTRO_START} fps={fps} L={L} />}
       </div>
     </AbsoluteFill>
   );
