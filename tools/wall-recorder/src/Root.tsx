@@ -5,6 +5,7 @@ import { Pricing } from "./Pricing";
 import { WallReactions, TOTAL_FRAMES as WR_FRAMES, FPS as WR_FPS } from "./WallReactions";
 import { WallPollDemo, TOTAL_FRAMES as WPD_FRAMES, FPS as WPD_FPS } from "./WallPollDemo";
 import { Post5_LivePoll, TIKTOK_FRAMES, IG_FRAMES, POST5_FPS } from "./posts/Post5_LivePoll";
+import { Post1_DemoWall, POST1_TIKTOK_FRAMES, POST1_IG_FRAMES, POST1_FPS } from "./posts/Post1_DemoWall";
 
 export const Root = () => {
   return (
@@ -48,6 +49,24 @@ export const Root = () => {
         fps={WPD_FPS}
         width={1080}
         height={1920}
+      />
+      <Composition
+        id="ReeldayTikTok-Post1"
+        component={Post1_DemoWall}
+        durationInFrames={POST1_TIKTOK_FRAMES}
+        fps={POST1_FPS}
+        width={1080}
+        height={1920}
+        defaultProps={{ platform: "tiktok" as const }}
+      />
+      <Composition
+        id="ReeldayIG-Post1"
+        component={Post1_DemoWall}
+        durationInFrames={POST1_IG_FRAMES}
+        fps={POST1_FPS}
+        width={1080}
+        height={1920}
+        defaultProps={{ platform: "ig" as const }}
       />
       <Composition
         id="ReeldayTikTok-Post5"

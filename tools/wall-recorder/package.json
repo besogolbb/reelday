@@ -9,7 +9,9 @@
     "render:poll-demo": "remotion render src/index.ts WallPollDemo out/wall-poll-demo.mp4 --codec h264 --crf 18",
     "render:poll-demo-vertical": "remotion render src/index.ts WallPollDemoVertical out/wall-poll-demo-vertical.mp4 --codec h264 --crf 18",
     "render:tiktok-post5": "remotion render src/index.ts ReeldayTikTok-Post5 out/tiktok-post5-live-poll.mp4 --codec h264 --crf 18",
-    "render:ig-post5": "remotion render src/index.ts ReeldayIG-Post5 out/ig-post5-live-poll.mp4 --codec h264 --crf 18"
+    "render:ig-post5": "remotion render src/index.ts ReeldayIG-Post5 out/ig-post5-live-poll.mp4 --codec h264 --crf 18",
+    "render:tiktok-post1": "remotion render src/index.ts ReeldayTikTok-Post1 out/tiktok-post1-demo-wall.mp4 --codec h264 --crf 18",
+    "render:ig-post1": "remotion render src/index.ts ReeldayIG-Post1 out/ig-post1-demo-wall.mp4 --codec h264 --crf 18"
   },
   "dependencies": {
     "@remotion/cli": "4.0.380",

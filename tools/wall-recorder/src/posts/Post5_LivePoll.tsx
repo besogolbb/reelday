@@ -584,7 +584,7 @@ const BrandFooter: React.FC<{ frame: number; totalFrames: number }> = ({ frame, 
           background: "rgba(0,0,0,.4)",
         }}
       >
-        Try it libre →
+        Try it FREE →
       </div>
     </div>
   );
@@ -681,7 +681,7 @@ const Outro: React.FC<{ frame: number; outroStart: number; totalFrames: number; 
           border: `2px solid ${C.GOLD}`,
         }}
       >
-        Try it libre → reelday.ph
+        Try it FREE → reelday.ph
       </div>
     </AbsoluteFill>
   );

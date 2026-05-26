@@ -186,7 +186,7 @@ zone: 'left' | 'right' | 'center' | 'full'
 reelday.ph branding at the bottom of every video.
 ```ts
 showLogo: boolean
-cta: string                          // default "Try it libre → reelday.ph"
+cta: string                          // default "Try it FREE → reelday.ph"
 animateIn?: boolean                  // default true
 startFrame?: number
 ```
@@ -296,7 +296,7 @@ At the start of every marketing-video session, confirm:
 > Walang app. Walang login. Kahit si Lola kaya. 🙏
 
 **CTA variants:**
-> Try it libre → reelday.ph
+> Try it FREE → reelday.ph
 > Scan lang. → reelday.ph
 > → reelday.ph
 
