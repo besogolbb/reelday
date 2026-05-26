@@ -141,7 +141,7 @@ const WallSlideshow: React.FC<{ frame: number; cfg: PlatformConfig }> = ({ frame
       <div
         style={{
           position: "absolute",
-          bottom: 32,
+          bottom: 180,
           left: 40,
           right: 40,
           opacity: slideOpacity,
@@ -239,7 +239,7 @@ const POVCaption: React.FC<{
     <div
       style={{
         position: "absolute",
-        top: 48,
+        top: 110,
         left: 40,
         right: 40,
         display: "flex",
