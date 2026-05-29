@@ -1,7 +1,7 @@
 import { timingSafeEqual } from 'crypto';
 import { ListObjectsV2Command, DeleteObjectsCommand } from '@aws-sdk/client-s3';
 import { resolvePlan, galleryExpiryFor, uploadWindowStartFor, uploadWindowEndFor } from '../lib/plans.js';
-import { applyTierUpgrade } from './payments.js';
+import { applyTierUpgrade, sendBookingConfirmationEmail } from './payments.js';
 import { extractStorageKey } from '../lib/storageKeys.js';
 import { syncEventToGcal, deleteGcalEvent } from '../lib/gcal.js';
 import { baseSlug, randomSuffix, isSlugCollision } from './events.js';
@@ -142,6 +142,19 @@ export default async function adminRoutes(fastify) {
   // Apply the admin gate to every route in this plugin.
   fastify.addHook('preHandler', requireAdmin);
 
+  // Tiers worth a "Payment Confirmed!" email when an admin upgrades a user
+  // out-of-band (manual payment, comp, plan override). Excludes 'tala' — the
+  // free tier, and a downgrade target — so we never mail "your plan is now
+  // active" for a free/downgrade move. Mirrors sendBookingConfirmationEmail's
+  // tierLabels in payments.js.
+  const EMAILABLE_TIERS = new Set(['sinag', 'dalisay', 'hiraya']);
+  const notifyUpgrade = (userId, tier, slug) => {
+    if (!userId || !EMAILABLE_TIERS.has(tier)) return;
+    sendBookingConfirmationEmail(
+      fastify.db, { userId, tier, slug: slug ?? null }, fastify.log,
+    ).catch(() => {});
+  };
+
   // GET /api/admin/payments/pending — kept for backward-compat with any
   // older clients. New code should use /admin/payments?status=manual_pending.
   fastify.get('/admin/payments/pending', async () => {
@@ -239,6 +252,9 @@ export default async function adminRoutes(fastify) {
       // applyTierUpgrade uses its own db queries (not the transaction client)
       // but the payment row is already committed above so the user credit is safe.
       await applyTierUpgrade(fastify.db, { userId: user_id, tier: tierLower, slug: slug ?? null });
+      // Offline payments never hit the PayMongo webhook, so this is the only
+      // place the confirmation email gets sent for them.
+      notifyUpgrade(user_id, tierLower, slug);
       return { success: true, payment_id: ins[0].id, created_at: ins[0].created_at };
     } catch (err) {
       try { await client.query('ROLLBACK'); } catch {}
@@ -584,6 +600,9 @@ export default async function adminRoutes(fastify) {
 
     // Post-commit, best-effort: mirror the change into Google Calendar.
     await syncEventCalendar(fastify, saved, request.log);
+    // Notify the owner when an admin manually bumps the event's plan. Only on
+    // an actual plan change (not every field edit) and only for paid tiers.
+    if (planChanged) notifyUpgrade(saved.user_id, b.plan, saved.slug);
     return { event: saved };
   });
 
@@ -628,6 +647,7 @@ export default async function adminRoutes(fastify) {
     }
 
     await applyTierUpgrade(fastify.db, { userId: user_id, tier, slug });
+    notifyUpgrade(user_id, tier, slug);
 
     return { success: true };
   });
@@ -949,6 +969,9 @@ export default async function adminRoutes(fastify) {
       [id, tier],
     );
     if (!rowCount) return reply.status(404).send({ error: true, message: 'User not found' });
+    // No event slug on this account-level override → email lands the user on
+    // the bare dashboard. Skipped for tala (downgrade / free) by notifyUpgrade.
+    notifyUpgrade(id, tier, null);
     return { success: true, tier, cleared_subscription: tier !== 'hiraya' };
   });
 
@@ -1022,6 +1045,7 @@ export default async function adminRoutes(fastify) {
     if (!rows.length) {
       return reply.status(404).send({ error: true, message: 'User not found' });
     }
+    notifyUpgrade(id, 'hiraya', null);
     return {
       success: true,
       months,
