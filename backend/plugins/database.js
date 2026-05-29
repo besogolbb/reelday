@@ -333,6 +333,23 @@ const MIGRATIONS = `
   --   from double-warning the same host.
   ALTER TABLE events ADD COLUMN IF NOT EXISTS archived_at             TIMESTAMPTZ;
   ALTER TABLE events ADD COLUMN IF NOT EXISTS cleanup_warning_sent_at TIMESTAMPTZ;
+
+  -- ── Coupons / promo codes ───────────────────────────────────────
+  -- Admin-created discount codes shared via checkout links
+  -- (?coupon=CODE). Discounted price is always recomputed server-side at
+  -- checkout — see backend/lib/coupons.js. Mirrors database/schema.sql.
+  CREATE TABLE IF NOT EXISTS coupons (
+    code             VARCHAR(40)  PRIMARY KEY,
+    discount_type    VARCHAR(10)  NOT NULL,          -- 'percent' | 'amount'
+    discount_value   INTEGER      NOT NULL,          -- percent 1–100, or centavos off
+    applies_to_tier  VARCHAR(20),                    -- 'sinag'|'dalisay'|'hiraya' | NULL=any paid
+    max_redemptions  INTEGER,                         -- NULL = unlimited
+    times_redeemed   INTEGER      NOT NULL DEFAULT 0, -- bumped only on a successful payment
+    expires_at       TIMESTAMPTZ,                     -- NULL = never
+    active           BOOLEAN      NOT NULL DEFAULT true,
+    created_at       TIMESTAMPTZ  DEFAULT NOW()
+  );
+  ALTER TABLE payments ADD COLUMN IF NOT EXISTS coupon_code VARCHAR(40);
 `;
 
 async function dbPlugin(fastify) {
