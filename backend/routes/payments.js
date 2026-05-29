@@ -431,21 +431,31 @@ export default async function paymentRoutes(fastify) {
     ),
   }));
 
-  // POST /api/payments/validate-coupon — preview a code for a tier (auth).
-  // Used by the checkout UI to show "₱2,990 → ₱1,490" before redirecting
-  // to PayMongo. Read-only — no redemption happens here.
-  fastify.get('/payments/validate-coupon', { preHandler: fastify.authenticate }, async (request, reply) => {
+  // GET /api/payments/validate-coupon — preview a code (PUBLIC).
+  // Drives the "₱2,990 → ₱1,490" checkout banner, which must render
+  // before a couple has logged in (they arrive on a shared discount
+  // link). Coupon codes aren't secrets — they're meant to be shared — so
+  // this exposes only the discount, nothing account-specific. Read-only;
+  // no redemption happens here.
+  // When no ?tier is given, price the preview against the coupon's own
+  // applies_to_tier so a tier-locked code (e.g. Dalisay-only) can still
+  // show its exact before/after price on a logged-out page.
+  fastify.get('/payments/validate-coupon', async (request, reply) => {
     const code = normalizeCode(request.query?.code);
-    const tier = request.query?.tier;
     if (!code) return reply.status(400).send({ error: true, message: 'code is required' });
 
-    const tierConfig = tier ? PAID_TIERS[tier] : null;
     const { rows } = await fastify.db.query(`SELECT * FROM coupons WHERE code = $1`, [code]);
     const coupon = rows[0] || null;
-    const problem = couponProblem(coupon, tier, new Date());
+    // Validate against the requested tier if any; otherwise validate the
+    // coupon in isolation (couponProblem ignores tier when it's falsy).
+    const reqTier = request.query?.tier || null;
+    const problem = couponProblem(coupon, reqTier, new Date());
     if (problem) {
       return { valid: false, reason: problem };
     }
+    // Price against: explicit tier → else the coupon's locked tier.
+    const priceTier  = reqTier || coupon.applies_to_tier || null;
+    const tierConfig = priceTier ? PAID_TIERS[priceTier] : null;
     const base  = tierConfig ? tierConfig.amount : null;
     const final = base != null ? discountedAmount(base, coupon) : null;
     return {
@@ -453,6 +463,7 @@ export default async function paymentRoutes(fastify) {
       code,
       label: discountLabel(coupon),
       applies_to_tier: coupon.applies_to_tier,
+      price_tier: priceTier,
       base_amount:  base,
       final_amount: final,
       base_peso:  base  != null ? base  / 100 : null,

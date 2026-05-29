@@ -885,8 +885,9 @@
 <script type="module">
   import { getToken, getUser, saveAuth } from '/js/auth.js';
   import { PLANS, PLAN_ORDER, HIRAYA_PUBLIC } from '/js/plans.js';
-  import { captureCouponFromUrl, getActiveCoupon } from '/js/coupon.js';
+  import { captureCouponFromUrl, getActiveCoupon, renderCouponBanner } from '/js/coupon.js';
   captureCouponFromUrl();
+  renderCouponBanner();
 
   // ── State ──────────────────────────────────────
   const params = new URLSearchParams(location.search);

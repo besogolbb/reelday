@@ -1759,8 +1759,9 @@ function setLang(lang, btn) {
 <!-- Auth-aware header / hero CTA ------------------------------------------ -->
 <script type="module">
   import { getUser, getToken, logout } from '/js/auth.js';
-  import { captureCouponFromUrl } from '/js/coupon.js';
+  import { captureCouponFromUrl, renderCouponBanner } from '/js/coupon.js';
   captureCouponFromUrl();
+  renderCouponBanner();
 
   const user = getToken() ? getUser() : null;
 

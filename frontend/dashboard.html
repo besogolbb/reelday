@@ -3591,8 +3591,9 @@
   });
 
   import { resolvePlan, nextTier, HIRAYA_PUBLIC } from '/js/plans.js';
-  import { captureCouponFromUrl, getActiveCoupon } from '/js/coupon.js';
+  import { captureCouponFromUrl, getActiveCoupon, renderCouponBanner } from '/js/coupon.js';
   captureCouponFromUrl();
+  renderCouponBanner();
 
   // ── Auth guard ────────────────────────────────────────
   // The dashboard is the host control surface — it must never render
