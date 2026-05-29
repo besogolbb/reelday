@@ -1,27 +1,51 @@
-# Reelday Launch Readiness Checklist
+# Reelday Launch Readiness — Reconciled Status
 
-**Target launch:** Wednesday 20 May 2026 (public) — slipped one day to ship the wall background-music feature
-**Last updated:** 19 May 2026 (post SDE rework + dashboard auth guard + soft-launch gating)
+**Last reconciled:** 30 May 2026
+**Mission (source of truth → [LAUNCH-HANDOVER.md](LAUNCH-HANDOVER.md)):** maximize **paying customers by June 30, 2026**. The platform is technically live; the remaining work is *go-to-market*, not a "flip the switch" public launch. The old "Target launch 20 May" framing in earlier revisions of this file is retired.
 
-Use this checklist to confirm everything is in place before the public launch. Work top to bottom — each section gates the next. If a row says "blocker" and isn't checked, do not launch.
+> **Why this doc was reconciled (30 May):** the previous revision (19 May) showed *0/69* and a "launch 20 May" target. Since then most code-side blockers shipped to `main` and the mission moved to the June paying-customer push. This file now reflects verified repo state and **delegates ops/security items to the docs that own them** instead of duplicating them.
+
+### Single source of truth — which doc owns what
+
+| Track | Owner doc | This file's role |
+|---|---|---|
+| Go-to-market / paying customers / Founding 20 | [LAUNCH-HANDOVER.md](LAUNCH-HANDOVER.md) + [LAUNCH-MASTERPLAN-JUNE2026.md](LAUNCH-MASTERPLAN-JUNE2026.md) | summarised in §0 below |
+| Operations / backups / deploy / debug | [HANDOVER.md](HANDOVER.md) | linked, not duplicated |
+| Owner-action security + infra-I-can't-see | [security-checklist.md](security-checklist.md) | linked, not duplicated |
+| SDE beta + Lambda redeploy | [SDE-HANDOVER.md](SDE-HANDOVER.md) | one blocker row in §2 |
+| Backend capacity / perf log | [perf-test-database.md](perf-test-database.md) | summarised in §1 |
+| Manual device QA | **this file, §3** | owned here |
+
+---
+
+## 0. Go-live status (the actual gate now)
+
+The technical platform is shippable. Go-live = **make Founding 20 bookable, then execute Week 1 outreach.** Full detail in [LAUNCH-HANDOVER.md](LAUNCH-HANDOVER.md).
+
+- ✅ **Coupon / promo-code system built** — merged to `main` 29 May (`88631ff`, `6d7f971`, `3999172`); `coupons` table in both `schema.sql` and boot migrations; admin Coupons tab + checkout `?coupon=` banner. Tested 22/22.
+- [ ] **Redeploy in Easypanel** so the boot migration creates the `coupons` table in prod. *(owner action — see [HANDOVER.md](HANDOVER.md) §Deploy)*
+- [ ] **Create the `FOUNDING20` code** (₱1,500 off · Dalisay · max 20 · expires Jun 30) in Admin → 🎟️ Coupons → copy the `?coupon=` link.
+- [ ] **Smoke the discounted checkout** — open the link once, confirm the "₱2,990 → ₱1,490" banner and that PayMongo charges ₱1,490.
+- [ ] **Lock 1–3 free "hero" events** (Week 1 #1 task — the proof pipeline). Sourcing kit: [week1-hero-event-kit.md](week1-hero-event-kit.md); outreach + lead tracker: [week1-outreach-pack.md](week1-outreach-pack.md).
 
 ---
 
 ## Progress
 
-**Overall: 0 / 69 actionable items complete (0%)**
+**Code-side launch blockers: cleared. Remaining = owner/infra actions + manual device QA + go-to-market.**
 
-| Section | Done | Total | % | Status |
-|---|---|---|---|---|
-| 1. Backend Performance | — | — | — | ✅ validated phase (no checkboxes; perf re-confirmed 19 May, entries 37–39) |
-| 2. Operational Readiness (blockers) | 0 | 11 | 0% | ⛔ launch-gating |
-| 3. User Flow Validation | 0 | 37 | 0% | manual test on devices |
-| 4. Day-of-Launch | 0 | 9 | 0% | run launch morning |
-| 5. Communication Readiness | 0 | 7 | 0% | marketing surface |
-| 6. Rollback / Incident Plan | — | — | — | 📖 reference only (no checkboxes) |
-| 7. Post-Launch (Days 1–7) | 0 | 5 | 0% | week-one follow-through |
+| Section | Status |
+|---|---|
+| 0. Go-live (Founding 20) | ⛔ **the real gate** — 4 owner steps open (deploy → create code → smoke → lock hero events) |
+| 1. Backend Performance | ✅ validated; re-confirmed 30 May (perf-db entry 51) |
+| 2. Operational Readiness | mostly cleared in-repo; remaining items are owner/infra → tracked in [security-checklist.md](security-checklist.md) |
+| 3. User Flow Validation | 0 / 37 — **still owed**: manual test on real devices |
+| 4. Day-of-Launch | 0 / 9 — run on the morning you announce |
+| 5. Communication Readiness | partially done (privacy/ToS live); rest is marketing surface |
+| 6. Rollback / Incident Plan | 📖 reference (mirrors [HANDOVER.md](HANDOVER.md) "When something breaks") |
+| 7. Post-Launch (Days 1–7) | 0 / 5 — week-one follow-through |
 
-_Update by hand as you tick boxes — markdown can't auto-count. If you want a one-shot recount later, the `node -e` snippet in `bc79d14`'s commit history walks `- [ ]` vs `- [x]` per `##` heading._
+_Markdown can't auto-count; tick by hand. The §3 device flows are the only launch-gating checkboxes still fully open and owned by this file._
 
 ---
 
@@ -52,66 +76,40 @@ Three additional `perf:full` runs after today's Ken Burns + warm-film LUT rework
 
 **Conclusion:** the SDE Lambda work and reel playback never touch the request path; backend stays cleared for launch even with the heavier renderer live.
 
+**Re-confirmed 30 May 2026** — a further `perf:full` launch-readiness run logged as **entry 51** in [perf-test-database.md](perf-test-database.md) (latest), plus the new capacity suite (guest-arrival storm, multi-event concurrency, video-transcode saturation). Backend remains cleared.
+
 **No backend work required before launch.**
 
 ---
 
-## 2. Operational Readiness — Close Before Launch (Blockers) — 0/11 (0%)
+## 2. Operational Readiness — reconciled 30 May
 
-These are the gaps flagged from the perf review. Each one is a launch blocker.
+Most of the 19-May "blockers" were code-side and have since shipped. The rest are owner/infra actions that live in [security-checklist.md](security-checklist.md) and [HANDOVER.md](HANDOVER.md) — **do not re-track them here.** This section now lists only (a) what's verified done, and (b) the deploy-time steps unique to a launch push.
 
-- [ ] **Verify nightly Postgres backup is running.**
-  - Where: Hostinger control panel → Backups
-  - Test: confirm a backup exists from the last 24h. If not, configure it now.
+### ✅ Cleared in-repo (verified 30 May)
 
-- [ ] **Test restore-from-backup at least once.**
-  - Why: a backup you've never restored is not a backup.
-  - Test: spin up a throwaway DB on the VPS, restore last night's snapshot, confirm the schema and a few rows load.
+| Item | Evidence |
+|---|---|
+| Music schema (`music_playlists`, `music_tracks`, `events.music_playlist_id`) | in `database/schema.sql` (11 refs) + boot ALTERs — applies idempotently on deploy |
+| Music library seeded | `music-library/{ceremony,cocktail,dinner,party}/manifest.json` present |
+| Dashboard auth guard | merged `1e9c7fd` |
+| `GET /api/events/:slug` `user_id` leak fix | merged `f29633f` |
+| Privacy / DPA notice | `/privacy` route added 25 May (`6c6e72d`) — covers Comms §5 privacy row |
+| Nightly Postgres backup + offsite | automated 3am PHT → R2 (90d). See [HANDOVER.md](HANDOVER.md) §"Automated ops" / §"Backup & restore" |
 
-- [ ] **Set up uptime monitoring.**
-  - Tool: UptimeRobot (free tier)
-  - Configure: HTTPS check on `https://reelday.ph/api/health` every 5 minutes
-  - Alert: email + SMS to your number
-  - Expected: 200 response in under 2 seconds
+### ⏳ Deploy-time steps for the launch push (owner)
 
-- [ ] **Configure Easypanel container restart alerts.**
-  - Where: Easypanel → Reelday app → Notifications
-  - Alert on: container restart, CPU > 90% sustained 5 min, memory > 90%
+- [ ] **Redeploy + restart the Node container** (`git push` → Easypanel auto-deploy) so prod picks up everything above plus the coupon migration. Verify after: incognito `/dashboard?slug=<any>` → redirects to `/login?next=…`; `curl -s https://reelday.ph/api/events/cxzv-fe0y | jq '.event | has("user_id")'` → `false`.
 
-- [ ] **Confirm host-warning copy is wired into booking flow.**
-  - Where: booking confirmation email + post-booking dashboard message
-  - Content: "For events over 500 guests, your wall may take 5–10 minutes to fully display all guest videos during peak upload moments. Nothing is lost — the wall catches up automatically."
+- [ ] **Redeploy the SDE Lambda zip (`reelday-sde-renderer`)** — `git push` does **not** update Lambda. Rebuild `lambda/sde-deploy.zip` → upload via AWS Console → trigger a Regenerate → watch CloudWatch for `[sde] normalized N bricks`. Beta-only (allowlist `demo@reelday.ph`, `besogol.bb@gmail.com`); SDE is "coming soon" publicly. Env vars + fallback knobs: [SDE-HANDOVER.md](SDE-HANDOVER.md).
 
-- [ ] **Verify SQS dead-letter queue is configured.**
-  - Where: AWS Console → SQS → reelday-transcode.fifo
-  - Confirm: a DLQ exists and is wired to the main queue
-  - Why: if a video fails to transcode 3 times, it lands in DLQ instead of looping forever
+- [ ] **Confirm the SDE beta-email allowlist** — `frontend/dashboard.html` → `SDE_BETA_EMAILS` (~L5762). Add any other launch-day beta hosts (lowercase — the gate uses `.toLowerCase()`) **before** the deploy above.
 
-- [ ] **Apply the music schema migration on prod Postgres.**
-  - Run `database/schema.sql` against prod (idempotent — uses `CREATE TABLE IF NOT EXISTS`)
-  - Confirm tables exist: `\d music_playlists`, `\d music_tracks`
-  - Confirm `events.music_playlist_id` column exists
+- [ ] **Confirm host-warning copy** is wired into the booking confirmation email + post-booking dashboard message: "For events over 500 guests, your wall may take 5–10 minutes to fully display all guest videos during peak upload moments. Nothing is lost — the wall catches up automatically."
 
-- [ ] **Seed the music library.**
-  - Curate 4 playlists (one per mood: ceremony, cocktail, dinner, party) with 5–8 royalty-free tracks each
-  - Sources: YouTube Audio Library, FreePD, Bensound (with attribution)
-  - Layout: `./music-library/<mood>/manifest.json` + `.mp3` files
-  - Run from Easypanel terminal: `node scripts/seed-music-library.mjs`
-  - Verify in dashboard: open event settings → "Wall music" dropdown shows the playlists
+### → Owned elsewhere (don't duplicate — go tick them there)
 
-- [ ] **Redeploy the SDE Lambda zip (`reelday-sde-renderer`).** *(Added 19 May)*
-  - Why: today's Ken Burns rework (`3da4a12`) + warm-film LUT (`9029df2`) are merged to `main` but **not** yet on AWS — `git push` doesn't update Lambda.
-  - How: rebuild `lambda/sde-deploy.zip` → upload via AWS Console → trigger a Regenerate → watch CloudWatch for `[sde] normalized N bricks` and a successful upload line.
-  - Even though SDE is "coming soon" publicly, the two allowlisted beta testers (`demo@reelday.ph`, `besogol.bb@gmail.com`) need this live before they can usefully test on launch day. See [docs/SDE-HANDOVER.md](SDE-HANDOVER.md) for env vars + the fallback knobs.
-
-- [ ] **Restart the backend Node container (Easypanel) after final code pull.** *(Added 19 May)*
-  - Picks up: dashboard client-side auth guard (`1e9c7fd`), `GET /api/events/:slug` `user_id` leak fix (`f29633f`), single "Save & publish" wizard (`1e9c7fd`), new landing copy (`e378f4f`), SDE "coming soon" labels (`d952638`), SDE panel email-allowlist gate (`075abe2`).
-  - Verify: incognito visit to `/dashboard?slug=<any>` redirects to `/login?next=…`; `curl -s https://reelday.ph/api/events/cxzv-fe0y | jq '.event | has("user_id")'` returns `false`.
-
-- [ ] **Confirm the SDE beta-email allowlist matches the intended testers.** *(Added 19 May)*
-  - Where: `frontend/dashboard.html` → `SDE_BETA_EMAILS` constant in the isolated SDE module (~L5762).
-  - Currently allows: `demo@reelday.ph`, `besogol.bb@gmail.com`. Add any other launch-day beta hosts **before** the deploy above.
-  - All addresses must be **lowercase** — the gate normalises with `.toLowerCase()`.
+- Restore-from-backup drill, R2 object versioning, SQS DLQ, IAM key scoping/rotation, UptimeRobot uptime monitor, Easypanel restart/CPU alerts, registrar/DNS 2FA → **[security-checklist.md](security-checklist.md) §2 + §4**.
 
 ---
 
@@ -201,7 +199,7 @@ Before announcing publicly, make sure the basics are in place.
 - [ ] Contact / support method visible (email or Messenger link)
 - [ ] FAQ covers the top 5 questions: how does it work, what's the cost, video time limit, what if my guests aren't tech-savvy, what about privacy
 - [ ] Social proof: at least 1 testimonial or sample event visible on the landing page
-- [ ] Privacy policy and terms of service exist and are linked in the footer
+- [x] Privacy policy and terms of service exist and are linked in the footer — `/privacy` route live since 25 May (`6c6e72d`)
 - [ ] Launch announcement post drafted for Instagram, Facebook, TikTok
 
 ---
