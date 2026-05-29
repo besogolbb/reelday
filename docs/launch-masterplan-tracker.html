@@ -1,394 +1,506 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Reelday — June 2026 Launch Tracker</title>
+<title>Reelday · June Launch Tracker</title>
 <style>
-  @page { size: A4; margin: 18mm 16mm; }
+  :root {
+    --accent: #ef6c1f;
+    --accent-2: #f59e0b;
+    --accent-grad: linear-gradient(135deg, #ef6c1f 0%, #f59e0b 100%);
+    --bg: #f6f7f9;
+    --bg-soft: #eef0f3;
+    --card: #ffffff;
+    --text: #14171f;
+    --text-soft: #5b626f;
+    --text-faint: #9aa1ad;
+    --line: #e7e9ee;
+    --line-strong: #d6dae1;
+    --ok: #16a34a;
+    --ok-soft: #dcfce7;
+    --done-strike: #aeb4bf;
+    --shadow: 0 1px 2px rgba(16,20,28,.04), 0 8px 24px rgba(16,20,28,.06);
+    --shadow-lg: 0 12px 40px rgba(16,20,28,.12);
+    --radius: 18px;
+    --radius-sm: 12px;
+    --w1: #16a34a; --w2: #d97706; --w3: #7c3aed; --w4: #dc2626;
+  }
+  html[data-theme="dark"] {
+    --bg: #0e1116; --bg-soft: #161b22; --card: #181d25;
+    --text: #e8eaee; --text-soft: #a9b1bd; --text-faint: #6b7280;
+    --line: #262c36; --line-strong: #313845;
+    --ok-soft: #052e1a; --done-strike: #5b626f;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.4);
+    --shadow-lg: 0 16px 50px rgba(0,0,0,.55);
+  }
   * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
   body {
-    font: 11pt/1.45 -apple-system, "Segoe UI", Inter, Roboto, sans-serif;
-    color: #1a1a1a; max-width: 200mm; margin: 0 auto; padding: 0;
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.55 -apple-system, "Segoe UI", Inter, Roboto, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
   }
-  h1 { font-size: 22pt; margin: 0 0 4pt; letter-spacing: -0.02em; }
-  h2 { font-size: 13pt; margin: 18pt 0 6pt; border-bottom: 1.5pt solid #1a1a1a; padding-bottom: 3pt; }
-  h3 { font-size: 11pt; margin: 12pt 0 4pt; color: #333; }
-  .sub { color: #666; font-size: 10pt; margin-bottom: 12pt; }
-  .meta { font-size: 9pt; color: #888; margin-top: 2pt; }
-  table { width: 100%; border-collapse: collapse; margin: 6pt 0 12pt; font-size: 10pt; }
-  th, td { border: 1px solid #ccc; padding: 5pt 7pt; text-align: left; vertical-align: top; }
-  th { background: #f3f3f3; font-weight: 600; }
-  td.num { text-align: right; font-variant-numeric: tabular-nums; }
-  td.center { text-align: center; }
-  .verdict-ok    { background: #e9f7ec; }
-  .verdict-warn  { background: #fff7e0; }
-  .verdict-bad   { background: #fbe6e6; }
-  .pill {
-    display: inline-block; padding: 1pt 7pt; border-radius: 8pt;
-    font-size: 9pt; font-weight: 600; letter-spacing: 0.02em;
+  .wrap { max-width: 880px; margin: 0 auto; padding: 0 18px 80px; }
+
+  /* ===== Sticky mini bar ===== */
+  .topbar {
+    position: sticky; top: 0; z-index: 50;
+    backdrop-filter: saturate(160%) blur(12px);
+    background: color-mix(in srgb, var(--bg) 82%, transparent);
+    border-bottom: 1px solid var(--line);
   }
-  .pill-ok      { background: #c8eccd; color: #1a5d29; }
-  .pill-warn    { background: #ffe28a; color: #6a4a00; }
-  .pill-bad     { background: #f5b6b6; color: #6a0a0a; }
-  .pill-accent  { background: #ffd9b8; color: #8a3b00; }
-  .callout {
-    border-left: 3pt solid #1a1a1a; background: #fafafa;
-    padding: 7pt 10pt; margin: 8pt 0; font-size: 10pt;
+  .topbar-inner {
+    max-width: 880px; margin: 0 auto; padding: 10px 18px;
+    display: flex; align-items: center; gap: 14px;
   }
-  .callout strong { display: block; margin-bottom: 2pt; }
-  .callout.warn { border-left-color: #c08800; background: #fffaeb; }
-  .callout.accent { border-left-color: #d96b1f; background: #fff6ee; }
-  ul.checklist, ol.checklist { padding-left: 0; list-style: none; }
-  ul.checklist li, ol.checklist li {
-    margin: 5pt 0; padding-left: 22pt; position: relative;
-    page-break-inside: avoid;
+  .logo { display: flex; align-items: center; gap: 9px; font-weight: 800; letter-spacing: -.02em; }
+  .logo .dot {
+    width: 26px; height: 26px; border-radius: 8px; background: var(--accent-grad);
+    display: grid; place-items: center; color: #fff; font-size: 14px; box-shadow: var(--shadow);
   }
-  ul.checklist input[type="checkbox"] {
-    position: absolute; left: 0; top: 3pt;
-    width: 14pt; height: 14pt;
-    accent-color: #d96b1f; cursor: pointer;
+  .topbar .mini-track {
+    flex: 1; height: 8px; background: var(--bg-soft); border-radius: 99px; overflow: hidden;
+    border: 1px solid var(--line);
   }
-  ul.checklist input[type="checkbox"]:checked + label { color: #888; text-decoration: line-through; }
-  ul.checklist input[type="checkbox"]:checked + label strong { color: #888; }
-  .check-detail { display: block; color: #666; font-size: 9pt; margin-top: 1pt; }
-  code {
-    background: #f0f0f0; padding: 1pt 4pt; border-radius: 3pt;
-    font: 9.5pt/1.3 "SF Mono", Consolas, Menlo, monospace;
+  .topbar .mini-fill { height: 100%; width: 0; background: var(--accent-grad); border-radius: 99px; transition: width .4s cubic-bezier(.3,.9,.3,1); }
+  .topbar .mini-pct { font-weight: 700; font-variant-numeric: tabular-nums; font-size: 13px; min-width: 38px; text-align: right; }
+  .icon-btn {
+    border: 1px solid var(--line-strong); background: var(--card); color: var(--text-soft);
+    width: 34px; height: 34px; border-radius: 10px; cursor: pointer; font-size: 15px;
+    display: grid; place-items: center; transition: .15s;
   }
-  .footer { margin-top: 20pt; font-size: 9pt; color: #888; border-top: 1px solid #ddd; padding-top: 6pt; }
-  .section-banner {
-    color: #fff; padding: 6pt 10pt; margin-top: 16pt;
-    font-size: 13pt; font-weight: 600; border-radius: 3pt;
+  .icon-btn:hover { color: var(--text); border-color: var(--accent); transform: translateY(-1px); }
+
+  /* ===== Hero ===== */
+  .hero {
+    margin-top: 22px; background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 26px; box-shadow: var(--shadow);
+    display: grid; grid-template-columns: 1fr auto; gap: 22px; align-items: center;
+    position: relative; overflow: hidden;
   }
-  .banner-w1 { background: #1a5d29; }
-  .banner-w2 { background: #b06a00; }
-  .banner-w3 { background: #7a3da0; }
-  .banner-w4 { background: #c01010; }
-  .banner-neutral { background: #1a1a1a; }
-  .banner-accent  { background: #d96b1f; }
-  .gate-note {
-    border: 1.5pt solid #1a1a1a; padding: 8pt 12pt; margin: 8pt 0 14pt;
-    background: #f8f8f8; font-size: 10pt;
+  .hero::before {
+    content: ""; position: absolute; inset: 0;
+    background: radial-gradient(120% 120% at 100% 0%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 55%);
+    pointer-events: none;
   }
-  .gate-note strong { color: #c01010; }
-  .week-meta { color: #666; font-size: 9.5pt; font-style: italic; margin: 2pt 0 8pt; }
+  .hero h1 { margin: 0 0 4px; font-size: 26px; letter-spacing: -.03em; }
+  .hero .tag { color: var(--text-soft); font-size: 14px; max-width: 46ch; }
+  .chips { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 14px; }
+  .chip {
+    font-size: 12px; font-weight: 600; padding: 4px 11px; border-radius: 99px;
+    background: var(--bg-soft); color: var(--text-soft); border: 1px solid var(--line);
+  }
+  .chip.accent { background: color-mix(in srgb, var(--accent) 15%, var(--card)); color: var(--accent); border-color: color-mix(in srgb, var(--accent) 35%, transparent); }
+
+  /* ===== Progress ring ===== */
+  .ring-wrap { text-align: center; }
+  .ring { position: relative; width: 132px; height: 132px; }
+  .ring svg { transform: rotate(-90deg); }
+  .ring .bg-c { stroke: var(--bg-soft); }
+  .ring .fg-c { stroke: url(#grad); stroke-linecap: round; transition: stroke-dashoffset .5s cubic-bezier(.3,.9,.3,1); }
+  .ring .pct { position: absolute; inset: 0; display: grid; place-content: center; }
+  .ring .pct b { font-size: 30px; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+  .ring .pct span { display: block; font-size: 11px; color: var(--text-faint); margin-top: -2px; }
+  .ring-sub { margin-top: 8px; font-size: 12px; color: var(--text-soft); }
+
+  /* ===== Section label ===== */
+  .seclabel { display: flex; align-items: center; gap: 9px; margin: 34px 4px 12px; font-size: 13px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text-faint); }
+  .seclabel::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+
+  /* ===== Thesis / callouts ===== */
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
+  .callout { border-left: 4px solid var(--accent); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 14px 18px; background: color-mix(in srgb, var(--accent) 7%, var(--card)); }
+  .callout b { color: var(--accent); }
+  .levers { display: grid; gap: 10px; margin-top: 14px; }
+  .lever { display: grid; grid-template-columns: 130px 1fr; gap: 14px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--bg-soft); font-size: 13.5px; }
+  .lever .k { font-weight: 700; color: var(--text); }
+  .lever .v { color: var(--text-soft); }
+
+  /* ===== Week cards ===== */
+  .week { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 16px; overflow: hidden; transition: box-shadow .2s; }
+  .week.complete { box-shadow: 0 0 0 1.5px var(--ok) inset, var(--shadow); }
+  .week-head { display: flex; align-items: center; gap: 14px; padding: 16px 18px; cursor: pointer; user-select: none; }
+  .week-head:hover { background: var(--bg-soft); }
+  .wk-badge { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; font-size: 20px; color: #fff; flex-shrink: 0; box-shadow: var(--shadow); }
+  .w1 .wk-badge { background: linear-gradient(135deg,#16a34a,#22c55e); }
+  .w2 .wk-badge { background: linear-gradient(135deg,#d97706,#f59e0b); }
+  .w3 .wk-badge { background: linear-gradient(135deg,#7c3aed,#a855f7); }
+  .w4 .wk-badge { background: linear-gradient(135deg,#dc2626,#f87171); }
+  .wk-title { flex: 1; min-width: 0; }
+  .wk-title h3 { margin: 0; font-size: 16px; letter-spacing: -.02em; }
+  .wk-title .dates { font-size: 12.5px; color: var(--text-faint); }
+  .wk-meter { display: flex; align-items: center; gap: 10px; }
+  .wk-track { width: 96px; height: 7px; background: var(--bg-soft); border-radius: 99px; overflow: hidden; border: 1px solid var(--line); }
+  .wk-fill { height: 100%; width: 0; border-radius: 99px; transition: width .4s cubic-bezier(.3,.9,.3,1); }
+  .w1 .wk-fill { background: var(--w1); } .w2 .wk-fill { background: var(--w2); }
+  .w3 .wk-fill { background: var(--w3); } .w4 .wk-fill { background: var(--w4); }
+  .wk-count { font-size: 12.5px; font-weight: 700; color: var(--text-soft); font-variant-numeric: tabular-nums; min-width: 30px; text-align: right; }
+  .chevron { color: var(--text-faint); transition: transform .25s; font-size: 13px; }
+  .week.collapsed .chevron { transform: rotate(-90deg); }
+  .week-body { padding: 4px 18px 8px; }
+  .week.collapsed .week-body, .week.collapsed .gate { display: none; }
+
+  /* ===== Tasks ===== */
+  .task { display: flex; gap: 13px; padding: 13px 4px; border-top: 1px solid var(--line); align-items: flex-start; }
+  .task:first-child { border-top: none; }
+  .cbox {
+    flex-shrink: 0; width: 24px; height: 24px; border-radius: 8px; border: 2px solid var(--line-strong);
+    background: var(--card); cursor: pointer; display: grid; place-items: center; margin-top: 1px;
+    transition: .18s; position: relative;
+  }
+  .cbox:hover { border-color: var(--accent); }
+  .cbox svg { width: 14px; height: 14px; stroke: #fff; stroke-width: 3.5; fill: none; stroke-dasharray: 22; stroke-dashoffset: 22; transition: stroke-dashoffset .25s ease .05s; }
+  .task.done .cbox { background: var(--ok); border-color: var(--ok); }
+  .task.done .cbox svg { stroke-dashoffset: 0; }
+  .task-text { flex: 1; }
+  .task-text .t { font-weight: 600; font-size: 14.5px; }
+  .task-text .d { color: var(--text-soft); font-size: 13px; margin-top: 2px; }
+  .task.done .task-text .t { color: var(--done-strike); text-decoration: line-through; }
+  .task.done .task-text .d { color: var(--text-faint); }
+
+  .scripts { margin-top: 10px; }
+  .scripts summary { cursor: pointer; font-size: 12.5px; font-weight: 700; color: var(--accent); list-style: none; display: inline-flex; align-items: center; gap: 6px; }
+  .scripts summary::-webkit-details-marker { display: none; }
+  .scripts summary::before { content: "▸"; transition: transform .2s; }
+  .scripts[open] summary::before { transform: rotate(90deg); }
+  .script {
+    position: relative; margin-top: 10px; padding: 12px 14px; padding-right: 84px;
+    background: var(--bg-soft); border: 1px solid var(--line); border-radius: var(--radius-sm); font-size: 13px;
+  }
+  .script .lbl { font-weight: 700; display: block; margin-bottom: 3px; color: var(--text); }
+  .copy-btn {
+    position: absolute; top: 10px; right: 10px; font-size: 11px; font-weight: 700;
+    border: 1px solid var(--line-strong); background: var(--card); color: var(--text-soft);
+    padding: 4px 9px; border-radius: 8px; cursor: pointer; transition: .15s;
+  }
+  .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .copy-btn.copied { background: var(--ok); border-color: var(--ok); color: #fff; }
+
+  .gate { margin: 6px 18px 18px; padding: 12px 14px; border: 1.5px dashed var(--line-strong); border-radius: var(--radius-sm); font-size: 13px; background: var(--bg-soft); }
+  .gate b { color: var(--accent); }
+
+  /* ===== KPI ===== */
+  .kpi-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; }
+  .kpi-table th, .kpi-table td { padding: 9px 8px; border-bottom: 1px solid var(--line); text-align: center; }
+  .kpi-table th:first-child, .kpi-table td:first-child { text-align: left; font-weight: 600; }
+  .kpi-table thead th { color: var(--text-faint); font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; }
+  .kpi-table .target { font-weight: 700; color: var(--accent); white-space: nowrap; }
+  .kpi-input {
+    width: 52px; padding: 5px 4px; text-align: center; font: inherit; font-size: 13px;
+    border: 1px solid var(--line); border-radius: 8px; background: var(--bg-soft); color: var(--text);
+  }
+  .kpi-input:focus { outline: none; border-color: var(--accent); background: var(--card); }
+
+  /* ===== Rhythm ===== */
+  .rhythm { display: grid; gap: 8px; }
+  .rrow { display: grid; grid-template-columns: 120px 1fr; gap: 14px; padding: 11px 14px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--bg-soft); font-size: 13.5px; }
+  .rrow .when { font-weight: 700; }
+  .rrow .what { color: var(--text-soft); }
+  .guard { margin-top: 12px; }
+  .guard b { color: var(--accent); }
+
+  .footer { margin-top: 30px; text-align: center; color: var(--text-faint); font-size: 12px; }
+  .footer code { background: var(--bg-soft); padding: 1px 6px; border-radius: 6px; }
+
+  /* ===== Celebrate ===== */
+  .celebrate { display: none; margin-top: 16px; padding: 16px 20px; border-radius: var(--radius); text-align: center; color: #fff; background: var(--accent-grad); box-shadow: var(--shadow-lg); font-weight: 700; }
+  body.all-done .celebrate { display: block; animation: pop .5s ease; }
+  @keyframes pop { 0% { transform: scale(.92); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+  @media (max-width: 640px) {
+    .hero { grid-template-columns: 1fr; text-align: center; }
+    .ring-wrap { justify-self: center; }
+    .lever, .rrow { grid-template-columns: 1fr; gap: 3px; }
+    .wk-meter .wk-track { display: none; }
+  }
   @media print {
-    h2, h3 { page-break-after: avoid; }
-    table, .callout, .gate-note { page-break-inside: avoid; }
-    ul.checklist input[type="checkbox"] { border: 1pt solid #999; }
-  }
-  @media screen { body { padding: 24pt 18pt; } }
-  .progress-block { margin: 14pt 0 18pt; }
-  .progress-bar {
-    position: relative; height: 16pt; background: #ececec;
-    border: 1px solid #ccc; border-radius: 8pt; overflow: hidden;
-    margin: 4pt 0 10pt;
-  }
-  .progress-bar > .fill {
-    height: 100%; width: 0%; background: #d96b1f;
-    transition: width 0.25s ease;
-  }
-  .progress-bar > .label {
-    position: absolute; inset: 0; text-align: center;
-    font-size: 9.5pt; line-height: 16pt; color: #1a1a1a; font-weight: 600;
-  }
-  .progress-badge {
-    display: inline-block; margin-left: 10pt;
-    font-size: 10pt; font-weight: 600; opacity: 0.95;
-    background: rgba(255,255,255,0.18); padding: 1pt 7pt; border-radius: 8pt;
-  }
-  .progress-badge .mini-bar {
-    display: inline-block; vertical-align: middle;
-    width: 60pt; height: 5pt; background: rgba(255,255,255,0.3);
-    border-radius: 3pt; overflow: hidden; margin: 0 6pt 0 4pt;
-  }
-  .progress-badge .mini-bar > .fill {
-    height: 100%; width: 0%; background: #fff;
-    transition: width 0.25s ease;
-  }
-  .reset-btn {
-    font: inherit; font-size: 9pt; color: #c01010; background: none;
-    border: 1px solid #c01010; border-radius: 6pt; padding: 2pt 8pt;
-    cursor: pointer; margin-left: 8pt;
-  }
-  .reset-btn:hover { background: #fff0f0; }
-  @media print {
-    .reset-btn { display: none; }
-    .progress-bar, .progress-bar > .fill,
-    .progress-badge, .progress-badge .mini-bar, .progress-badge .mini-bar > .fill {
-      -webkit-print-color-adjust: exact; print-color-adjust: exact;
-    }
-    .section-banner { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  }
-  details.scripts { margin: 8pt 0; border: 1px solid #ddd; border-radius: 4pt; padding: 6pt 10pt; background: #fafafa; }
-  details.scripts summary { cursor: pointer; font-weight: 600; font-size: 10pt; }
-  details.scripts blockquote {
-    margin: 8pt 0 4pt; padding: 6pt 10pt; border-left: 3pt solid #d96b1f;
-    background: #fff; font-size: 9.5pt; color: #333;
+    .topbar, .icon-btn, .copy-btn, .chevron, #resetBtn, #themeBtn { display: none !important; }
+    .week.collapsed .week-body, .week.collapsed .gate { display: block !important; }
+    body { background: #fff; }
+    .card, .week, .hero { box-shadow: none; border-color: #ccc; }
   }
 </style>
 </head>
 <body>
 
-<h1>Reelday — June 2026 Launch Tracker</h1>
-<div class="sub">Goal: <strong>maximum paying customers by 30 June 2026</strong> · Budget: ≤₱5,000 ads · Capacity: 1–3 hero events. Work week by week — each week ends in a <strong>GATE</strong>; don't pile on the next week's work until the gate is met.</div>
-<div class="meta">Companion docs: <code>docs/LAUNCH-MASTERPLAN-JUNE2026.md</code> (narrative) · <code>docs/LAUNCH-BLUEPRINT.md</code> (schematic). Pricing truth: <code>backend/lib/plans.js</code>.</div>
-
-<div class="gate-note" style="border-color:#d96b1f">
-<strong style="color:#8a3b00">How to use this page:</strong> Open in a browser and tick boxes as you go. The progress bars update live and your checks are saved in <em>this browser</em> (they survive refreshes). Print to PDF anytime for a snapshot. The strategy thesis below is reference — the checkboxes are your weekly to-dos.
-</div>
-
-<!-- ============================= STRATEGY AT A GLANCE ============================= -->
-<div class="section-banner banner-neutral">🎯 The thesis (read once, then act)</div>
-<div class="callout accent">
-  <strong>Sell to intent, not reach.</strong>
-  Reelday is an event <em>utility</em>, not a content product. At any moment ~99% of people watching a wedding reel are NOT planning a wedding — so views with zero conversion is expected, not a content failure. Spend 80% of effort reaching people who already have an upcoming event (FB groups, DMs, vendors) and only 20% on broad content (which exists only to make the brand look legit when a lead checks your profile).
-</div>
-
-<table>
-  <tr><th style="width:22%">Lever</th><th>What it is</th></tr>
-  <tr><td><strong>The offer</strong></td><td><span class="pill pill-accent">Founding 20</span> First 20 events booked before 30 June: <strong>Dalisay ₱1,490</strong> (50% off ₱2,990) + money-back guarantee, in exchange for a testimonial + footage rights. Anchored discount + risk-reversal + scarcity beats "brand-new, no reviews" hesitation.</td></tr>
-  <tr><td><strong>Steer by event</strong></td><td>Wedding/milestone → Dalisay (Founding ₱1,490) · Debut/birthday/party → Sinag (₱1,490) · Coordinator/venue/multi-event → Hiraya pipeline (free trial now).</td></tr>
-  <tr><td><strong>Channel priority</strong></td><td>1) FB groups + warm DMs (free, highest intent) · 2) Vendor partners (multiplier) · 3) ₱5k paid ads (only after 1 testimonial) · 4) IG (proof + DM funnel) · 5) TikTok (minimal).</td></tr>
-  <tr><td><strong>Money rule</strong></td><td>Don't spend a peso on ads until ≥1 testimonial exists. Then ~₱3k lead ad + ~₱2k boost; reallocate weekly to the lowest cost-per-booking source.</td></tr>
-</table>
-
-<!-- ============================= PROGRESS ============================= -->
-<div class="progress-block">
-  <h2 style="margin-top:0">Progress
-    <button class="reset-btn" id="resetBtn" title="Clear all checks in this browser">reset</button>
-  </h2>
-  <div class="progress-bar" data-progress="overall">
-    <div class="fill"></div>
-    <div class="label"><span data-done>0</span> / <span data-total>21</span> actions complete (<span data-pct>0%</span>)</div>
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="logo"><span class="dot">▶</span> Reelday</div>
+    <div class="mini-track"><div class="mini-fill" id="miniFill"></div></div>
+    <div class="mini-pct" id="miniPct">0%</div>
+    <button class="icon-btn" id="themeBtn" title="Toggle dark mode">◐</button>
+    <button class="icon-btn" id="resetBtn" title="Reset all progress">↺</button>
   </div>
-  <table>
-    <tr><th>Week</th><th style="width:8%" class="center">Done</th><th style="width:8%" class="center">Total</th><th style="width:8%" class="center">%</th><th>Theme · Gate</th></tr>
-    <tr data-progress-row="w1"><td>Wk 1 · May 29 – Jun 4</td><td class="center"><span data-done>0</span></td><td class="center"><span data-total>7</span></td><td class="center"><span data-pct>0%</span></td><td>Foundation &amp; proof · <em>booking link live + 3 heroes locked</em></td></tr>
-    <tr data-progress-row="w2"><td>Wk 2 · Jun 5 – 11</td><td class="center"><span data-done>0</span></td><td class="center"><span data-total>5</span></td><td class="center"><span data-pct>0%</span></td><td>Capture &amp; activate · <em>1 asset live + ads on + 1st pay</em></td></tr>
-    <tr data-progress-row="w3"><td>Wk 3 · Jun 12 – 18</td><td class="center"><span data-done>0</span></td><td class="center"><span data-total>5</span></td><td class="center"><span data-pct>0%</span></td><td>Scale winner · <em>booking pace up week-over-week</em></td></tr>
-    <tr data-progress-row="w4"><td>Wk 4 · Jun 19 – 30</td><td class="center"><span data-done>0</span></td><td class="center"><span data-total>4</span></td><td class="center"><span data-pct>0%</span></td><td>Close · <em>≥5 paid + 3 testimonials banked</em></td></tr>
-  </table>
 </div>
 
-<!-- ============================= WEEK 1 ============================= -->
-<div class="section-banner banner-w1" data-section="w1">🧱 Week 1 · Foundation &amp; Proof <span class="progress-badge"><span data-done>0</span>/<span data-total>7</span><span class="mini-bar"><span class="fill"></span></span><span data-pct>0%</span></span></div>
-<div class="week-meta">May 29 – Jun 4 · Make it bookable + look legit + line up the heroes.</div>
+<div class="wrap">
 
-<ul class="checklist">
-  <li>
-    <input type="checkbox" id="w1a"><label for="w1a"><strong>Build the conversion path.</strong></label>
-    <span class="check-detail">Bio link → one clean booking action (DM auto-reply or a Jotform/booking link → <code>start.html</code>). Put the same link in all 4 bios. Test end-to-end on a phone.</span>
-  </li>
-  <li>
-    <input type="checkbox" id="w1b"><label for="w1b"><strong>Pin a 15-sec "what is Reelday + Founding 20" post</strong> to each profile.</label>
-    <span class="check-detail">First thing a lead sees when they check you out. Show the wall-on-TV payoff in the first second.</span>
-  </li>
-  <li>
-    <input type="checkbox" id="w1c"><label for="w1c"><strong>Lock 1–3 hero events</strong> happening in June.</label>
-    <span class="check-detail">Ask your network: any wedding/debut/party in June? Free in exchange for footage. Handpick photogenic, high-visibility events. Schedule the setup.</span>
-  </li>
-  <li>
-    <input type="checkbox" id="w1d"><label for="w1d"><strong>Join 15–20 PH event-planning FB groups — don't post yet.</strong></label>
-    <span class="check-detail">Wedding, debut, kids' party, christening, corporate/HR groups. Read the rules. Start answering "looking for…" threads <em>helpfully</em>, not as an ad.</span>
-  </li>
-  <li>
-    <input type="checkbox" id="w1e"><label for="w1e"><strong>Write the DM + vendor-partner scripts.</strong></label>
-    <span class="check-detail">Templates ready to copy-paste below ↓. Personalize per lead.</span>
-    <details class="scripts">
-      <summary>Show scripts</summary>
-      <blockquote><strong>FB group (helpful):</strong> "Congrats! Tip that saved a friend's wedding: a QR live photo wall turns guests' phones into extra photographers and shows everything on the venue screen in real time. Happy to share how 🙂" → take it to DM.</blockquote>
-      <blockquote><strong>Cold-warm DM:</strong> "Hi [name]! Saw your [wedding/debut] is coming up — congrats 🎉 I run reelday.ph, a live photo wall: guests scan a QR, their photos/videos appear on your venue screen instantly, no app. We're onboarding 20 founding events at 50% off (₱1,490, money-back guarantee). Want a free demo link to try in 30 sec?"</blockquote>
-      <blockquote><strong>Vendor partner:</strong> "Hi [name]! I build reelday.ph — a live guest photo wall + Same-Day-Edit recap. It makes your events look more premium with zero extra shooting. I'd set you up with a free Hiraya account for your next event + a referral cut for couples you send our way. Open to a quick call?"</blockquote>
-    </details>
-  </li>
-  <li>
-    <input type="checkbox" id="w1f"><label for="w1f"><strong>Send 10 warm DMs/day</strong> to recently-engaged couples / debut parents.</label>
-    <span class="check-detail">Tier-3 intent. Log every lead in a sheet: name · event date · channel · stage.</span>
-  </li>
-  <li>
-    <input type="checkbox" id="w1g"><label for="w1g"><strong>Reach out to 5 vendors</strong> (coordinators / photographers) with the partner offer.</label>
-    <span class="check-detail">One coordinator = many events. The biggest multiplier in the whole plan.</span>
-  </li>
-</ul>
-<div class="gate-note">🚦 <strong>GATE 1:</strong> booking link live &amp; tested · 3 hero events locked · 20 groups joined · 50 DMs sent · 5 vendor convos started. Not met? Fix before stacking Week 2.</div>
+  <!-- HERO -->
+  <div class="hero">
+    <div>
+      <h1>June 2026 Launch Tracker</h1>
+      <div class="tag">Goal: <strong>maximum paying customers by June 30</strong>. Work week by week — each ends in a <strong>gate</strong>. Tick tasks as you go; everything saves automatically in this browser.</div>
+      <div class="chips">
+        <span class="chip accent">🎯 Paying customers</span>
+        <span class="chip">💸 ≤₱5,000 ads</span>
+        <span class="chip">🎥 1–3 hero events</span>
+        <span class="chip">🗓️ 32 days</span>
+      </div>
+    </div>
+    <div class="ring-wrap">
+      <div class="ring">
+        <svg width="132" height="132" viewBox="0 0 132 132">
+          <defs><linearGradient id="grad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#ef6c1f"/><stop offset="100%" stop-color="#f59e0b"/>
+          </linearGradient></defs>
+          <circle class="bg-c" cx="66" cy="66" r="58" fill="none" stroke-width="12"/>
+          <circle class="fg-c" id="ringFg" cx="66" cy="66" r="58" fill="none" stroke-width="12" stroke-dasharray="364.4" stroke-dashoffset="364.4"/>
+        </svg>
+        <div class="pct"><div><b id="ringPct">0%</b><span><span id="ringDone">0</span>/<span id="ringTotal">21</span> done</span></div></div>
+      </div>
+    </div>
+  </div>
 
-<!-- ============================= WEEK 2 ============================= -->
-<div class="section-banner banner-w2" data-section="w2">🎥 Week 2 · Capture &amp; Activate <span class="progress-badge"><span data-done>0</span>/<span data-total>5</span><span class="mini-bar"><span class="fill"></span></span><span data-pct>0%</span></span></div>
-<div class="week-meta">Jun 5 – 11 · Run the hero event, harvest proof, switch on paid.</div>
+  <div class="celebrate">🎉 All 21 actions complete. Now go bank those testimonials and set up July.</div>
 
-<ul class="checklist">
-  <li>
-    <input type="checkbox" id="w2a"><label for="w2a"><strong>Run the hero event(s).</strong> Capture the money footage.</label>
-    <span class="check-detail">Get: wall on the venue TV, guests scanning the QR, real reactions, the SDE recap reel. This is the ammo for everything that follows.</span>
-  </li>
-  <li>
-    <input type="checkbox" id="w2b"><label for="w2b"><strong>Cut 2 proof assets</strong> the same week.</label>
-    <span class="check-detail">1 hero testimonial reel + 1 "real event" montage. Use the Remotion templates (<code>tools/wall-recorder/MARKETING.md</code>) — don't build new tooling, feed footage into the existing templates.</span>
-  </li>
-  <li>
-    <input type="checkbox" id="w2c"><label for="w2c"><strong>Launch the ₱5k paid layer.</strong></label>
-    <span class="check-detail">~₱3k FB/IG lead ad (engaged + event interests, PH, 22–40) anchored on the hero clip. ~₱2k boosting the single best organic reel to Page-engagers + lookalike. <em>Only now that a testimonial exists.</em></span>
-  </li>
-  <li>
-    <input type="checkbox" id="w2d"><label for="w2d"><strong>Keep the daily DM + group + vendor cadence running.</strong></label>
-    <span class="check-detail">Paid is additive, not a replacement. The intent channels are still your main source of bookings.</span>
-  </li>
-  <li>
-    <input type="checkbox" id="w2e"><label for="w2e"><strong>Reply to every comment/DM within the hour</strong> during peak (7–10 PM PHT).</label>
-    <span class="check-detail">Speed-to-lead is the single biggest conversion factor for warm inquiries.</span>
-  </li>
-</ul>
-<div class="gate-note">🚦 <strong>GATE 2:</strong> 1 hero event done · ≥1 proof asset published · ads live · first 1–3 paid bookings in.</div>
+  <!-- THESIS -->
+  <div class="seclabel">🧭 The thesis — read once, then act</div>
+  <div class="card callout">
+    <b>Sell to intent, not reach.</b> Reelday is an event <em>utility</em>, not a content product. At any moment ~99% of people watching a wedding reel are NOT planning a wedding — so views with zero conversion is expected, not a content failure. Spend 80% of effort reaching people who already have an upcoming event (FB groups, DMs, vendors); only 20% on broad content, whose only job is to make the brand look legit when a lead checks your profile.
+  </div>
+  <div class="levers">
+    <div class="lever"><div class="k">🎁 The offer</div><div class="v"><b>Founding 20</b> — first 20 events booked before June 30 get <b>Dalisay ₱1,490</b> (50% off ₱2,990) + money-back guarantee, in exchange for a testimonial + footage rights. Anchored discount + risk-reversal + scarcity beats "brand-new, no reviews" hesitation.</div></div>
+    <div class="lever"><div class="k">🎚️ Steer by event</div><div class="v">Wedding/milestone → Dalisay (₱1,490) · Debut/birthday/party → Sinag (₱1,490) · Coordinator/venue/multi-event → Hiraya pipeline (free trial now).</div></div>
+    <div class="lever"><div class="k">📡 Channel order</div><div class="v">1) FB groups + warm DMs (free, highest intent) · 2) Vendor partners (multiplier) · 3) ₱5k paid ads (only after 1 testimonial) · 4) IG (proof + DM funnel) · 5) TikTok (minimal).</div></div>
+    <div class="lever"><div class="k">💰 Money rule</div><div class="v">No ad spend until ≥1 testimonial exists. Then ~₱3k lead ad + ~₱2k boost; reallocate weekly to the lowest cost-per-booking source.</div></div>
+  </div>
 
-<!-- ============================= WEEK 3 ============================= -->
-<div class="section-banner banner-w3" data-section="w3">📈 Week 3 · Scale the Winner <span class="progress-badge"><span data-done>0</span>/<span data-total>5</span><span class="mini-bar"><span class="fill"></span></span><span data-pct>0%</span></span></div>
-<div class="week-meta">Jun 12 – 18 · Double down on what books; create urgency.</div>
+  <!-- WEEKS -->
+  <div class="seclabel">🗓️ The 32-day plan</div>
 
-<ul class="checklist">
-  <li>
-    <input type="checkbox" id="w3a"><label for="w3a"><strong>Identify the channel producing replies/bookings</strong> and pour time there.</label>
-    <span class="check-detail">Likely groups or DMs. Whatever is converting, give it more hours; stop spreading thin.</span>
-  </li>
-  <li>
-    <input type="checkbox" id="w3b"><label for="w3b"><strong>Post a real scarcity update:</strong> "X of 20 Founding spots left."</label>
-    <span class="check-detail">Page + Stories. Use the true number — authenticity matters.</span>
-  </li>
-  <li>
-    <input type="checkbox" id="w3c"><label for="w3c"><strong>Turn the best testimonial into a case study</strong> (before vs after carousel).</label>
-    <span class="check-detail">Before (no wall) → after (live wall + SDE recap). The highest-converting content format you'll have.</span>
-  </li>
-  <li>
-    <input type="checkbox" id="w3d"><label for="w3d"><strong>Scale the winning ad set; kill the losers.</strong></label>
-    <span class="check-detail">Reallocate remaining budget to the lowest cost-per-booking ad. Cut anything with 0 results after a fair test.</span>
-  </li>
-  <li>
-    <input type="checkbox" id="w3e"><label for="w3e"><strong>Follow up every warm lead</strong> from Weeks 1–2.</label>
-    <span class="check-detail">"Still planning your [date] event? 8 founding spots left." Most bookings come on the 2nd–3rd touch.</span>
-  </li>
-</ul>
-<div class="gate-note">🚦 <strong>GATE 3:</strong> booking pace up week-over-week · ad cost-per-booking trending down · 5+ cumulative paid events.</div>
+  <!-- WEEK 1 -->
+  <div class="week w1" data-week="w1">
+    <div class="week-head">
+      <div class="wk-badge">🧱</div>
+      <div class="wk-title"><h3>Week 1 · Foundation &amp; Proof</h3><div class="dates">May 29 – Jun 4 · make it bookable, look legit, line up heroes</div></div>
+      <div class="wk-meter"><div class="wk-track"><div class="wk-fill"></div></div><div class="wk-count">0/7</div><div class="chevron">▾</div></div>
+    </div>
+    <div class="week-body">
+      <div class="task" data-id="w1a"><div class="cbox"><svg viewBox="0 0 18 18"><path d="M3 9l4 4 8-9"/></svg></div><div class="task-text"><div class="t">Build the conversion path</div><div class="d">Bio link → one clean booking action (DM auto-reply or Jotform/booking link → start.html). Same link in all 4 bios. Test end-to-end on a phone.</div></div></div>
+      <div class="task" data-id="w1b"><div class="cbox"><svg viewBox="0 0 18 18"><path d="M3 9l4 4 8-9"/></svg></div><div class="task-text"><div class="t">Pin a 15-sec "what is Reelday + Founding 20" post</div><div class="d">First thing a lead sees. Show the wall-on-TV payoff in the first second.</div></div></div>
+      <div class="task" data-id="w1c"><div class="cbox"><svg viewBox="0 0 18 18"><path d="M3 9l4 4 8-9"/></svg></div><div class="task-text"><div class="t">Lock 1–3 hero events happening in June</div><div class="d">Ask your network. Free in exchange for footage. Handpick photogenic, high-visibility events. Schedule the setup.</div></div></div>
+      <div class="task" data-id="w1d"><div class="cbox"><svg viewBox="0 0 18 18"><path d="M3 9l4 4 8-9"/></svg></div><div class="task-text"><div class="t">Join 15–20 PH event-planning FB groups — don't post yet</div><div class="d">Wedding, debut, kids' party, christening, corporate. Read rules. Answer "looking for…" threads helpfully, not as an ad.</div></div></div>
+      <div class="task" data-id="w1e"><div class="cbox"><svg viewBox="0 0 18 18"><path d="M3 9l4 4 8-9"/></svg></div><div class="task-text"><div class="t">Write the DM + vendor-partner scripts</div><div class="d">Ready to copy below. Personalize per lead.</div>
+        <details class="scripts"><summary>Show 3 scripts</summary>
+          <div class="script"><button class="copy-btn">Copy</button><span class="lbl">FB group (helpful)</span>Congrats! Tip that saved a friend's wedding: a QR live photo wall turns guests' phones into extra photographers and shows everything on the venue screen in real time. Happy to share how 🙂</div>
+          <div class="script"><button class="copy-btn">Copy</button><span class="lbl">Cold-warm DM</span>Hi [name]! Saw your [wedding/debut] is coming up — congrats 🎉 I run reelday.ph, a live photo wall: guests scan a QR, their photos/videos appear on your venue screen instantly, no app. We're onboarding 20 founding events at 50% off (₱1,490, money-back guarantee). Want a free demo link to try in 30 sec?</div>
+          <div class="script"><button class="copy-btn">Copy</button><span class="lbl">Vendor partner</span>Hi [name]! I build reelday.ph — a live guest photo wall + Same-Day-Edit recap. It makes your events look more premium with zero extra shooting. I'd set you up with a free Hiraya account for your next event + a referral cut for couples you send our way. Open to a quick call?</div>
+        </details>
+      </div></div>
+      <div class="task" data-id="w1f"><div class="cbox"><svg viewBox="0 0 18 18"><path d="M3 9l4 4 8-9"/></svg></div><div class="task-text"><div class="t">Send 10 warm DMs/day to engaged couples / debut parents</div><div class="d">Tier-3 intent. Log every lead: name · event date · channel · stage.</div></div></div>
+      <div class="task" data-id="w1g"><div class="cbox"><svg viewBox="0 0 18 18"><path d="M3 9l4 4 8-9"/></svg></div><div class="task-text"><div class="t">Reach out to 5 vendors (coordinators / photographers)</div><div class="d">One coordinator = many events. The biggest multiplier in the plan.</div></div></div>
+    </div>
+    <div class="gate">🚦 <b>Gate 1:</b> booking link live &amp; tested · 3 heroes locked · 20 groups joined · 50 DMs sent · 5 vendor convos. Not met? Fix before stacking Week 2.</div>
+  </div>
 
-<!-- ============================= WEEK 4 ============================= -->
-<div class="section-banner banner-w4" data-section="w4">🏁 Week 4 · Close <span class="progress-badge"><span data-done>0</span>/<span data-total>4</span><span class="mini-bar"><span class="fill"></span></span><span data-pct>0%</span></span></div>
-<div class="week-meta">Jun 19 – 30 · Deadline push + convert the warm list.</div>
+  <!-- WEEK 2 -->
+  <div class="week w2" data-week="w2">
+    <div class="week-head">
+      <div class="wk-badge">🎥</div>
+      <div class="wk-title"><h3>Week 2 · Capture &amp; Activate</h3><div class="dates">Jun 5 – 11 · run the hero event, harvest proof, switch on paid</div></div>
+      <div class="wk-meter"><div class="wk-track"><div class="wk-fill"></div></div><div class="wk-count">0/5</div><div class="chevron">▾</div></div>
+    </div>
+    <div class="week-body">
+      <div class="task" data-id="w2a"><div class="cbox"><svg viewBox="0 0 18 18"><path d="M3 9l4 4 8-9"/></svg></div><div class="task-text"><div class="t">Run the hero event(s) — capture the money footage</div><div class="d">Wall on the venue TV, guests scanning the QR, real reactions, the SDE recap reel. Ammo for everything that follows.</div></div></div>
+      <div class="task" data-id="w2b"><div class="cbox"><svg viewBox="0 0 18 18"><path d="M3 9l4 4 8-9"/></svg></div><div class="task-text"><div class="t">Cut 2 proof assets the same week</div><div class="d">1 hero testimonial reel + 1 "real event" montage. Use the Remotion templates (tools/wall-recorder/MARKETING.md) — feed footage in, don't rebuild tooling.</div></div></div>
+      <div class="task" data-id="w2c"><div class="cbox"><svg viewBox="0 0 18 18"><path d="M3 9l4 4 8-9"/></svg></div><div class="task-text"><div class="t">Launch the ₱5k paid layer</div><div class="d">~₱3k FB/IG lead ad (engaged + event interests, PH, 22–40) on the hero clip. ~₱2k boost the best organic reel. Only now that a testimonial exists.</div></div></div>
+      <div class="task" data-id="w2d"><div class="cbox"><svg viewBox="0 0 18 18"><path d="M3 9l4 4 8-9"/></svg></div><div class="task-text"><div class="t">Keep the daily DM + group + vendor cadence running</div><div class="d">Paid is additive, not a replacement. Intent channels are still your main source of bookings.</div></div></div>
+      <div class="task" data-id="w2e"><div class="cbox"><svg viewBox="0 0 18 18"><path d="M3 9l4 4 8-9"/></svg></div><div class="task-text"><div class="t">Reply to every comment/DM within the hour at peak (7–10 PM)</div><div class="d">Speed-to-lead is the single biggest conversion factor for warm inquiries.</div></div></div>
+    </div>
+    <div class="gate">🚦 <b>Gate 2:</b> 1 hero event done · ≥1 proof asset published · ads live · first 1–3 paid bookings in.</div>
+  </div>
 
-<ul class="checklist">
-  <li>
-    <input type="checkbox" id="w4a"><label for="w4a"><strong>Run the deadline campaign:</strong> "Founding 20 closes June 30 / X spots left."</label>
-    <span class="check-detail">Across all channels. Daily Stories countdown. Deadlines are the #1 driver of "book now" vs "maybe later."</span>
-  </li>
-  <li>
-    <input type="checkbox" id="w4b"><label for="w4b"><strong>Personally follow up every lead who didn't book.</strong></label>
-    <span class="check-detail">Offer to hold their founding spot. Make it a 1-to-1 message, not a broadcast.</span>
-  </li>
-  <li>
-    <input type="checkbox" id="w4c"><label for="w4c"><strong>Ask every June customer for a referral + the promised testimonial.</strong></label>
-    <span class="check-detail">"Know anyone with an event soon?" Seeds the July pipeline + banks your proof library.</span>
-  </li>
-  <li>
-    <input type="checkbox" id="w4d"><label for="w4d"><strong>Publish a "June in review" proof reel.</strong></label>
-    <span class="check-detail">Springboard into July at full price + the Hiraya push. Closes the loop and opens the next month.</span>
-  </li>
-</ul>
-<div class="gate-note">🚦 <strong>GATE 4 (month goal):</strong> ≥5 paid events (stretch 10–12) · ≥3 testimonials banked · winning channel identified · referral + vendor pipeline seeded for July.</div>
+  <!-- WEEK 3 -->
+  <div class="week w3" data-week="w3">
+    <div class="week-head">
+      <div class="wk-badge">📈</div>
+      <div class="wk-title"><h3>Week 3 · Scale the Winner</h3><div class="dates">Jun 12 – 18 · double down on what books, create urgency</div></div>
+      <div class="wk-meter"><div class="wk-track"><div class="wk-fill"></div></div><div class="wk-count">0/5</div><div class="chevron">▾</div></div>
+    </div>
+    <div class="week-body">
+      <div class="task" data-id="w3a"><div class="cbox"><svg viewBox="0 0 18 18"><path d="M3 9l4 4 8-9"/></svg></div><div class="task-text"><div class="t">Identify the channel producing bookings — pour time there</div><div class="d">Likely groups or DMs. Give the converter more hours; stop spreading thin.</div></div></div>
+      <div class="task" data-id="w3b"><div class="cbox"><svg viewBox="0 0 18 18"><path d="M3 9l4 4 8-9"/></svg></div><div class="task-text"><div class="t">Post a real scarcity update: "X of 20 Founding spots left"</div><div class="d">Page + Stories. Use the true number — authenticity matters.</div></div></div>
+      <div class="task" data-id="w3c"><div class="cbox"><svg viewBox="0 0 18 18"><path d="M3 9l4 4 8-9"/></svg></div><div class="task-text"><div class="t">Turn the best testimonial into a before/after case study</div><div class="d">Before (no wall) → after (live wall + SDE). Highest-converting format you'll have.</div></div></div>
+      <div class="task" data-id="w3d"><div class="cbox"><svg viewBox="0 0 18 18"><path d="M3 9l4 4 8-9"/></svg></div><div class="task-text"><div class="t">Scale the winning ad set; kill the losers</div><div class="d">Reallocate budget to the lowest cost-per-booking ad. Cut anything with 0 results after a fair test.</div></div></div>
+      <div class="task" data-id="w3e"><div class="cbox"><svg viewBox="0 0 18 18"><path d="M3 9l4 4 8-9"/></svg></div><div class="task-text"><div class="t">Follow up every warm lead from Weeks 1–2</div><div class="d">"Still planning your [date] event? 8 founding spots left." Most bookings come on the 2nd–3rd touch.</div></div></div>
+    </div>
+    <div class="gate">🚦 <b>Gate 3:</b> booking pace up week-over-week · ad cost-per-booking trending down · 5+ cumulative paid events.</div>
+  </div>
 
-<!-- ============================= KPI DASHBOARD ============================= -->
-<div class="section-banner banner-accent">📊 KPI dashboard — fill in every Sunday</div>
-<div class="sub">Leading indicators (qualified leads, demo links sent, group replies) move first. Lagging indicators (paid events, cost/booking) are the goal. If leading is up but lagging is flat → the leak is your <strong>offer/close</strong>, not the top of funnel.</div>
-<table>
-  <tr><th>Metric</th><th class="center">Wk1</th><th class="center">Wk2</th><th class="center">Wk3</th><th class="center">Wk4</th><th class="center">Target (mo)</th></tr>
-  <tr><td>Paid events</td><td></td><td></td><td></td><td></td><td class="center"><strong>5</strong> (10–12)</td></tr>
-  <tr><td>Hero events</td><td></td><td></td><td></td><td></td><td class="center">2 (3)</td></tr>
-  <tr><td>Testimonials banked</td><td></td><td></td><td></td><td></td><td class="center">3 (6)</td></tr>
-  <tr><td>Vendor partners</td><td></td><td></td><td></td><td></td><td class="center">2 (5)</td></tr>
-  <tr><td>Qualified leads</td><td></td><td></td><td></td><td></td><td class="center">40 (80)</td></tr>
-  <tr><td>Cost / booking</td><td class="center">—</td><td></td><td></td><td></td><td class="center">≤₱500 (≤₱250)</td></tr>
-  <tr><td>Best channel</td><td class="center">?</td><td class="center">?</td><td>→</td><td>→</td><td class="center">lock by Wk3</td></tr>
-</table>
-<div class="callout"><strong>Reality check</strong>Turning cold strangers into ₱-payers for an unproven product in 32 days is hard. 5 paying events + a working acquisition engine + real proof footage is a strong June. The footage + proven channel are what make July onward compound — don't sacrifice them chasing a vanity count.</div>
+  <!-- WEEK 4 -->
+  <div class="week w4" data-week="w4">
+    <div class="week-head">
+      <div class="wk-badge">🏁</div>
+      <div class="wk-title"><h3>Week 4 · Close</h3><div class="dates">Jun 19 – 30 · deadline push + convert the warm list</div></div>
+      <div class="wk-meter"><div class="wk-track"><div class="wk-fill"></div></div><div class="wk-count">0/4</div><div class="chevron">▾</div></div>
+    </div>
+    <div class="week-body">
+      <div class="task" data-id="w4a"><div class="cbox"><svg viewBox="0 0 18 18"><path d="M3 9l4 4 8-9"/></svg></div><div class="task-text"><div class="t">Run the deadline campaign: "Founding 20 closes June 30"</div><div class="d">All channels. Daily Stories countdown. Deadlines drive "book now" over "maybe later."</div></div></div>
+      <div class="task" data-id="w4b"><div class="cbox"><svg viewBox="0 0 18 18"><path d="M3 9l4 4 8-9"/></svg></div><div class="task-text"><div class="t">Personally follow up every lead who didn't book</div><div class="d">Offer to hold their founding spot. 1-to-1 message, not a broadcast.</div></div></div>
+      <div class="task" data-id="w4c"><div class="cbox"><svg viewBox="0 0 18 18"><path d="M3 9l4 4 8-9"/></svg></div><div class="task-text"><div class="t">Ask every June customer for a referral + testimonial</div><div class="d">"Know anyone with an event soon?" Seeds July pipeline + banks your proof library.</div></div></div>
+      <div class="task" data-id="w4d"><div class="cbox"><svg viewBox="0 0 18 18"><path d="M3 9l4 4 8-9"/></svg></div><div class="task-text"><div class="t">Publish a "June in review" proof reel</div><div class="d">Springboard into July at full price + the Hiraya push. Closes the loop, opens the next month.</div></div></div>
+    </div>
+    <div class="gate">🚦 <b>Gate 4 (month goal):</b> ≥5 paid events (stretch 10–12) · ≥3 testimonials banked · winning channel locked · referral + vendor pipeline seeded for July.</div>
+  </div>
 
-<!-- ============================= OPERATING SYSTEM ============================= -->
-<div class="section-banner banner-neutral">⚙️ Daily operating rhythm (~60–90 min)</div>
-<table>
-  <tr><th style="width:18%">When</th><th>Do</th></tr>
-  <tr><td><strong>Morning (15m)</strong></td><td>Clear overnight DMs/comments, reply to all. Glance at ad metrics.</td></tr>
-  <tr><td><strong>Midday (30m)</strong></td><td>10 warm DMs + answer 2–3 group threads + 1 vendor touch.</td></tr>
-  <tr><td><strong>Evening (30m)</strong></td><td>Publish the day's post (7–9 PM PHT), engage 20 min, log leads in the sheet.</td></tr>
-  <tr><td><strong>Weekly (Sun)</strong></td><td>Update KPI table vs targets · kill/scale ads · check this week's GATE · plan next week's content + follow-ups.</td></tr>
-</table>
-<div class="callout warn"><strong>Guardrails (non-negotiable)</strong>1 CTA per post · proof before pricing · help in groups, don't advertise · reply within the hour at peak · never buy engagement · intent &gt; reach, always.</div>
+  <!-- KPI -->
+  <div class="seclabel">📊 KPI dashboard — fill in every Sunday</div>
+  <div class="card">
+    <table class="kpi-table">
+      <thead><tr><th>Metric</th><th>Wk1</th><th>Wk2</th><th>Wk3</th><th>Wk4</th><th>Target</th></tr></thead>
+      <tbody id="kpiBody">
+        <tr data-kpi="paid"><td>Paid events</td><td></td><td></td><td></td><td></td><td class="target">5 (10–12)</td></tr>
+        <tr data-kpi="hero"><td>Hero events</td><td></td><td></td><td></td><td></td><td class="target">2 (3)</td></tr>
+        <tr data-kpi="testi"><td>Testimonials</td><td></td><td></td><td></td><td></td><td class="target">3 (6)</td></tr>
+        <tr data-kpi="vendor"><td>Vendor partners</td><td></td><td></td><td></td><td></td><td class="target">2 (5)</td></tr>
+        <tr data-kpi="leads"><td>Qualified leads</td><td></td><td></td><td></td><td></td><td class="target">40 (80)</td></tr>
+        <tr data-kpi="cpb"><td>Cost / booking</td><td></td><td></td><td></td><td></td><td class="target">≤₱500</td></tr>
+      </tbody>
+    </table>
+    <div class="callout" style="margin-top:14px"><b>Read the leak:</b> leading indicators (leads, demo links, replies) move first; lagging ones (paid events, cost/booking) are the goal. If leading is up but lagging is flat → the leak is your <b>offer/close</b>, not the top of funnel.</div>
+  </div>
 
-<div class="footer">
-Reelday marketing · June 2026 launch tracker v1 · Generated 29 May 2026 · Companion docs: <code>LAUNCH-MASTERPLAN-JUNE2026.md</code>, <code>LAUNCH-BLUEPRINT.md</code>
+  <!-- RHYTHM -->
+  <div class="seclabel">⚙️ Daily operating rhythm (~60–90 min)</div>
+  <div class="card">
+    <div class="rhythm">
+      <div class="rrow"><div class="when">🌅 Morning · 15m</div><div class="what">Clear overnight DMs/comments, reply to all. Glance at ad metrics.</div></div>
+      <div class="rrow"><div class="when">☀️ Midday · 30m</div><div class="what">10 warm DMs + answer 2–3 group threads + 1 vendor touch.</div></div>
+      <div class="rrow"><div class="when">🌙 Evening · 30m</div><div class="what">Publish the day's post (7–9 PM PHT), engage 20 min, log leads.</div></div>
+      <div class="rrow"><div class="when">📅 Sunday</div><div class="what">Update KPIs vs targets · kill/scale ads · check the week's gate · plan next week.</div></div>
+    </div>
+    <div class="callout guard">🛡️ <b>Guardrails:</b> 1 CTA per post · proof before pricing · help in groups, don't advertise · reply within the hour at peak · never buy engagement · intent &gt; reach, always.</div>
+  </div>
+
+  <div class="footer">Reelday marketing · June 2026 launch tracker · progress saved locally in this browser · companion docs: <code>LAUNCH-MASTERPLAN-JUNE2026.md</code> · <code>LAUNCH-BLUEPRINT.md</code></div>
 </div>
 
 <script>
 (function () {
-  // Group every checkbox by the data-section banner that precedes it, then
-  // re-render on any change. Same engine as launch-readiness-checklist.html.
-  const sections = new Map();
-  let current = null;
-  document.querySelectorAll('.section-banner, input[type="checkbox"]').forEach(el => {
-    if (el.classList && el.classList.contains('section-banner')) {
-      current = el.dataset.section || null;
-      if (current && !sections.has(current)) sections.set(current, []);
-    } else if (current) {
-      sections.get(current).push(el);
+  const STORE = 'reelday-june-tracker-v2';
+  const RING_CIRC = 2 * Math.PI * 58; // 364.4
+  let state = load();
+
+  function load() {
+    try { return JSON.parse(localStorage.getItem(STORE) || '{}') || {}; } catch (_) { return {}; }
+  }
+  function save() { try { localStorage.setItem(STORE, JSON.stringify(state)); } catch (_) {} }
+
+  const tasks = Array.from(document.querySelectorAll('.task'));
+  const weeks = Array.from(document.querySelectorAll('.week'));
+
+  // ---- restore task state ----
+  state.tasks = state.tasks || {};
+  tasks.forEach(t => { if (state.tasks[t.dataset.id]) t.classList.add('done'); });
+
+  // ---- restore collapse state ----
+  state.collapsed = state.collapsed || {};
+  weeks.forEach(w => { if (state.collapsed[w.dataset.week]) w.classList.add('collapsed'); });
+
+  // ---- restore theme ----
+  if (state.theme) document.documentElement.setAttribute('data-theme', state.theme);
+
+  function render() {
+    let done = 0;
+    weeks.forEach(w => {
+      const wt = Array.from(w.querySelectorAll('.task'));
+      const d = wt.filter(t => t.classList.contains('done')).length;
+      done += d;
+      const pct = wt.length ? Math.round(d / wt.length * 100) : 0;
+      w.querySelector('.wk-fill').style.width = pct + '%';
+      w.querySelector('.wk-count').textContent = d + '/' + wt.length;
+      w.classList.toggle('complete', d === wt.length && wt.length > 0);
+    });
+    const total = tasks.length;
+    const pct = total ? Math.round(done / total * 100) : 0;
+    document.getElementById('ringFg').style.strokeDashoffset = RING_CIRC * (1 - done / total);
+    document.getElementById('ringPct').textContent = pct + '%';
+    document.getElementById('ringDone').textContent = done;
+    document.getElementById('ringTotal').textContent = total;
+    document.getElementById('miniFill').style.width = pct + '%';
+    document.getElementById('miniPct').textContent = pct + '%';
+    document.body.classList.toggle('all-done', done === total);
+  }
+
+  // ---- task toggle (click box or text) ----
+  tasks.forEach(t => {
+    const toggle = (e) => {
+      if (e.target.closest('.scripts') || e.target.closest('.copy-btn')) return;
+      t.classList.toggle('done');
+      state.tasks[t.dataset.id] = t.classList.contains('done');
+      save(); render();
+    };
+    t.querySelector('.cbox').addEventListener('click', toggle);
+    t.querySelector('.task-text .t').addEventListener('click', toggle);
+  });
+
+  // ---- collapse weeks ----
+  weeks.forEach(w => {
+    w.querySelector('.week-head').addEventListener('click', () => {
+      w.classList.toggle('collapsed');
+      state.collapsed[w.dataset.week] = w.classList.contains('collapsed');
+      save();
+    });
+  });
+
+  // ---- copy buttons ----
+  document.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      // Message = the trailing text node(s) of .script, excluding button + label.
+      const msg = Array.from(btn.parentElement.childNodes)
+        .filter(n => n.nodeType === 3).map(n => n.textContent).join('').trim();
+      navigator.clipboard.writeText(msg).then(() => {
+        btn.textContent = 'Copied ✓'; btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1400);
+      });
+    });
+  });
+
+  // ---- KPI inputs (editable + saved) ----
+  state.kpi = state.kpi || {};
+  document.querySelectorAll('#kpiBody tr[data-kpi]').forEach(tr => {
+    const key = tr.dataset.kpi;
+    const cells = tr.querySelectorAll('td');
+    for (let i = 1; i <= 4; i++) {
+      const cell = cells[i];
+      const inp = document.createElement('input');
+      inp.className = 'kpi-input'; inp.type = 'text'; inp.placeholder = '–';
+      inp.value = (state.kpi[key] && state.kpi[key][i]) || '';
+      inp.addEventListener('input', () => {
+        state.kpi[key] = state.kpi[key] || {};
+        state.kpi[key][i] = inp.value; save();
+      });
+      cell.appendChild(inp);
     }
   });
 
-  function pct(done, total) { return total ? Math.round((done / total) * 100) : 0; }
-  function setText(scope, sel, val) { scope.querySelectorAll(sel).forEach(n => { n.textContent = val; }); }
-  function setFill(scope, p) { scope.querySelectorAll('.fill').forEach(n => { n.style.width = p + '%'; }); }
-
-  function render() {
-    let overallDone = 0, overallTotal = 0;
-    sections.forEach((boxes, id) => {
-      const done = boxes.filter(b => b.checked).length;
-      const total = boxes.length;
-      const p = pct(done, total);
-      overallDone += done; overallTotal += total;
-      document.querySelectorAll('.section-banner[data-section="' + id + '"]').forEach(b => {
-        setText(b, '[data-done]', done); setText(b, '[data-total]', total);
-        setText(b, '[data-pct]', p + '%'); setFill(b, p);
-      });
-      document.querySelectorAll('[data-progress-row="' + id + '"]').forEach(r => {
-        setText(r, '[data-done]', done); setText(r, '[data-total]', total);
-        setText(r, '[data-pct]', p + '%');
-      });
-    });
-    const op = pct(overallDone, overallTotal);
-    document.querySelectorAll('[data-progress="overall"]').forEach(bar => {
-      setText(bar, '[data-done]', overallDone); setText(bar, '[data-total]', overallTotal);
-      setText(bar, '[data-pct]', op + '%'); setFill(bar, op);
-    });
-  }
-
-  const STORE_KEY = 'reelday-june-launch-tracker-v1';
-  function saveState() {
-    const state = {};
-    document.querySelectorAll('input[type="checkbox"]').forEach(cb => { if (cb.id) state[cb.id] = cb.checked; });
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (_) {}
-  }
-  function restoreState() {
-    let state;
-    try { state = JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); } catch (_) {}
-    if (!state) return;
-    document.querySelectorAll('input[type="checkbox"]').forEach(cb => { if (cb.id && state[cb.id]) cb.checked = true; });
-  }
-
-  restoreState();
-  document.addEventListener('change', e => {
-    if (e.target && e.target.matches && e.target.matches('input[type="checkbox"]')) { saveState(); render(); }
+  // ---- theme toggle ----
+  document.getElementById('themeBtn').addEventListener('click', () => {
+    const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    state.theme = next; save();
   });
-  const resetBtn = document.getElementById('resetBtn');
-  if (resetBtn) resetBtn.addEventListener('click', () => {
-    if (!confirm('Clear all checked items in this browser?')) return;
-    document.querySelectorAll('input[type="checkbox"]').forEach(cb => { cb.checked = false; });
-    saveState(); render();
+
+  // ---- reset ----
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    if (!confirm('Reset all checked tasks and KPI numbers in this browser?')) return;
+    state.tasks = {}; state.kpi = {};
+    tasks.forEach(t => t.classList.remove('done'));
+    document.querySelectorAll('.kpi-input').forEach(i => i.value = '');
+    save(); render();
   });
+
   render();
 })();
 </script>
