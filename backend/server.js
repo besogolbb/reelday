@@ -158,7 +158,7 @@ await fastify.register(helmet, {
       'font-src':     ["'self'", 'data:', 'https://fonts.gstatic.com'],
       'img-src':      ["'self'", 'data:', 'blob:', 'https:'],
       'media-src':    ["'self'", 'blob:', 'https:'],
-      'frame-src':    ["'self'", 'https://accounts.google.com', 'https://paymongo.com'],
+      'frame-src':    ["'self'", 'https://accounts.google.com', 'https://paymongo.com', 'https://www.google.com'],
       'frame-ancestors': ["'none'"],
       'object-src':   ["'none'"],
       'base-uri':     ["'self'"],
