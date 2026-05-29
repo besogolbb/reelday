@@ -408,10 +408,24 @@ export default async function eventSiteRoutes(fastify) {
       [ev.id],
     );
     const r = rows[0] || {};
+
+    // Seats live in their own table (not the config blob), so the editor
+    // can't round-trip them from config alone. Return the saved list so
+    // the textarea prefills — otherwise a saved guest list looks lost on
+    // reopen, reading as "seat plan isn't saving".
+    const { rows: seatRows } = await fastify.db.query(
+      `SELECT guest_name, table_label, location_note, seat_note
+         FROM event_seats
+        WHERE event_id = $1
+        ORDER BY id`,
+      [ev.id],
+    );
+
     return {
       slug: ev.slug,
       is_published: r.is_published ?? false,
       config: r.config ?? {},
+      seats: seatRows,
       updated_at: r.updated_at ?? null,
       // Autofill source for the wizard's first run.
       event: {

@@ -7275,7 +7275,17 @@
         'Juan Dela Cruz\tTable 4\tNear the stage\n' +
         'Maria Santos\tTable 4\tNear the stage\n' +
         'Anna Reyes\tTable 7\tBeside the bar';
-      const seatArea = area('', SEAT_SAMPLE, 6);
+      // Prefill from the saved guest list (seats live in their own table,
+      // returned by /admin as state.seats) so reopening the editor shows
+      // what was saved instead of an empty textarea. Rebuilt in the same
+      // TAB-separated shape the placeholder demonstrates; trailing empty
+      // columns are trimmed so rows stay clean.
+      const seatPrefill = (state.seats || []).map(s => {
+        const cols = [s.guest_name || '', s.table_label || '', s.location_note || '', s.seat_note || ''];
+        while (cols.length && !cols[cols.length - 1]) cols.pop();
+        return cols.join('\t');
+      }).join('\n');
+      const seatArea = area(seatPrefill, SEAT_SAMPLE, 6);
       // Monospaced + tab-friendly so pasted Excel rows visually line up
       // into columns instead of looking like a jumbled string.
       seatArea.style.cssText = (seatArea.style.cssText || '') +
