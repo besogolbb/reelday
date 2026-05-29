@@ -2,6 +2,7 @@ import { createHmac, timingSafeEqual } from 'crypto';
 import { Resend } from 'resend';
 import { buildAppUrl } from '../utils/appUrl.js';
 import { PLANS, resolvePlan, galleryExpiryFor, uploadWindowStartFor, uploadWindowEndFor } from '../lib/plans.js';
+import { normalizeCode, discountedAmount, discountLabel, couponProblem } from '../lib/coupons.js';
 
 /**
  * Verify a PayMongo webhook signature.
@@ -392,6 +393,26 @@ export async function applyTierUpgrade(db, { userId, tier, slug }) {
   }
 }
 
+/**
+ * Bump coupons.times_redeemed for a code, once. Called from the payment
+ * success paths AFTER the status row has flipped pending→succeeded (the
+ * caller gates on that transition via `RETURNING coupon_code`, so a
+ * re-delivered webhook for an already-succeeded payment won't re-count).
+ */
+async function redeemCoupon(db, couponCode, log) {
+  if (!couponCode) return;
+  try {
+    await db.query(
+      `UPDATE coupons SET times_redeemed = times_redeemed + 1 WHERE code = $1`,
+      [couponCode],
+    );
+  } catch (err) {
+    // Non-fatal: the buyer already paid and was upgraded. A miscount on
+    // the promo cap is not worth failing the webhook over.
+    log?.warn?.({ err: err.message, couponCode }, 'redeemCoupon failed (non-fatal)');
+  }
+}
+
 export default async function paymentRoutes(fastify) {
   // GET /api/payments/plans — public catalog
   fastify.get('/payments/plans', async () => ({
@@ -410,9 +431,38 @@ export default async function paymentRoutes(fastify) {
     ),
   }));
 
+  // POST /api/payments/validate-coupon — preview a code for a tier (auth).
+  // Used by the checkout UI to show "₱2,990 → ₱1,490" before redirecting
+  // to PayMongo. Read-only — no redemption happens here.
+  fastify.get('/payments/validate-coupon', { preHandler: fastify.authenticate }, async (request, reply) => {
+    const code = normalizeCode(request.query?.code);
+    const tier = request.query?.tier;
+    if (!code) return reply.status(400).send({ error: true, message: 'code is required' });
+
+    const tierConfig = tier ? PAID_TIERS[tier] : null;
+    const { rows } = await fastify.db.query(`SELECT * FROM coupons WHERE code = $1`, [code]);
+    const coupon = rows[0] || null;
+    const problem = couponProblem(coupon, tier, new Date());
+    if (problem) {
+      return { valid: false, reason: problem };
+    }
+    const base  = tierConfig ? tierConfig.amount : null;
+    const final = base != null ? discountedAmount(base, coupon) : null;
+    return {
+      valid: true,
+      code,
+      label: discountLabel(coupon),
+      applies_to_tier: coupon.applies_to_tier,
+      base_amount:  base,
+      final_amount: final,
+      base_peso:  base  != null ? base  / 100 : null,
+      final_peso: final != null ? final / 100 : null,
+    };
+  });
+
   // POST /api/payments/create — create PayMongo checkout session (auth required)
   fastify.post('/payments/create', { preHandler: fastify.authenticate }, async (request, reply) => {
-    const { tier, slug, success_path } = request.body ?? {};
+    const { tier, slug, success_path, coupon: couponInput } = request.body ?? {};
 
     if (!tier) {
       return reply.status(400).send({ error: true, message: 'tier is required' });
@@ -421,6 +471,32 @@ export default async function paymentRoutes(fastify) {
     const tierConfig = PAID_TIERS[tier];
     if (!tierConfig) {
       return reply.status(400).send({ error: true, message: `Unknown tier: ${tier}` });
+    }
+
+    // ── Coupon (optional) ─────────────────────────────────
+    // Recompute the price server-side; never trust a client amount. A code
+    // that doesn't exist or targets a different tier is silently ignored
+    // (stale ?coupon= in the session shouldn't block an unrelated
+    // checkout). A code that DOES target this tier but is expired/maxed/
+    // off is rejected — better than silently charging full price when the
+    // buyer opened a discount link expecting the deal.
+    let chargeAmount = tierConfig.amount;
+    let appliedCoupon = null;
+    const couponCode = normalizeCode(couponInput);
+    if (couponCode) {
+      const { rows } = await fastify.db.query(`SELECT * FROM coupons WHERE code = $1`, [couponCode]);
+      const coupon = rows[0] || null;
+      const problem = couponProblem(coupon, tier, new Date());
+      if (!problem) {
+        chargeAmount  = discountedAmount(tierConfig.amount, coupon);
+        appliedCoupon = couponCode;
+      } else if (problem !== 'not_found' && problem !== 'wrong_tier') {
+        return reply.status(400).send({
+          error: true, code: 'coupon_invalid', reason: problem,
+          message: 'This promo code is no longer valid.',
+        });
+      }
+      // not_found / wrong_tier → ignore, charge full price.
     }
 
     const userId = request.user.id;
@@ -463,8 +539,8 @@ export default async function paymentRoutes(fastify) {
             attributes: {
               billing: { email: request.user.email || 'no-reply@reelday.ph' },
               line_items: [{
-                name:     `Reelday ${tierConfig.label}`,
-                amount:   tierConfig.amount,
+                name:     `Reelday ${tierConfig.label}${appliedCoupon ? ` (${appliedCoupon})` : ''}`,
+                amount:   chargeAmount,
                 currency: 'PHP',
                 quantity: 1,
               }],
@@ -472,7 +548,7 @@ export default async function paymentRoutes(fastify) {
               success_url: successUrl,
               cancel_url:  cancelUrl,
               description: `Reelday ${tierConfig.label} — account upgrade`,
-              metadata:    { user_id: userId, tier, slug: slug ?? '' },
+              metadata:    { user_id: userId, tier, slug: slug ?? '', coupon: appliedCoupon ?? '' },
             },
           },
         }),
@@ -495,10 +571,13 @@ export default async function paymentRoutes(fastify) {
     }
 
     // ── Record pending payment ────────────────────────────
+    // amount = the actually-charged (possibly discounted) total, so
+    // admin revenue reports and the amount-match webhook fallback line up
+    // with what PayMongo collected.
     await fastify.db.query(
-      `INSERT INTO payments (user_id, event_id, paymongo_payment_id, amount, plan, tier, status)
-       VALUES ($1, NULL, $2, $3, $4, $4, 'pending')`,
-      [userId, paymentIntentId, tierConfig.amount, tier],
+      `INSERT INTO payments (user_id, event_id, paymongo_payment_id, amount, plan, tier, status, coupon_code)
+       VALUES ($1, NULL, $2, $3, $4, $4, 'pending', $5)`,
+      [userId, paymentIntentId, chargeAmount, tier, appliedCoupon],
     );
 
     // If a slug was passed, also attach this payment to that event for traceability
@@ -514,8 +593,9 @@ export default async function paymentRoutes(fastify) {
     return reply.status(201).send({
       checkout_url:      checkoutUrl,
       payment_intent_id: paymentIntentId,
-      amount:            tierConfig.amount,
+      amount:            chargeAmount,
       tier,
+      coupon:            appliedCoupon,
     });
   });
 
@@ -629,10 +709,13 @@ export default async function paymentRoutes(fastify) {
       }
 
       await applyTierUpgrade(fastify.db, { userId, tier: pmt.tier, slug });
-      await fastify.db.query(
-        `UPDATE payments SET status = 'succeeded' WHERE id = $1`,
+      const { rows: doneRows } = await fastify.db.query(
+        `UPDATE payments SET status = 'succeeded'
+          WHERE id = $1 AND status <> 'succeeded'
+        RETURNING coupon_code`,
         [pmt.id],
       );
+      if (doneRows.length) await redeemCoupon(fastify.db, doneRows[0].coupon_code, request.log);
       // Defer the email when slug is null: the wizard creates the event
       // AFTER reconcile, so POST /api/events sends the confirmation with
       // the new slug. Sending here would link to /dashboard with no slug
@@ -697,10 +780,13 @@ export default async function paymentRoutes(fastify) {
       const { user_id: userId, tier, slug } = meta;
       if (userId && PAID_TIERS[tier]) {
         await applyTierUpgrade(fastify.db, { userId, tier, slug: slug || null });
-        await fastify.db.query(
-          `UPDATE payments SET status = 'succeeded' WHERE paymongo_payment_id = $1`,
+        const { rows: doneRows } = await fastify.db.query(
+          `UPDATE payments SET status = 'succeeded'
+            WHERE paymongo_payment_id = $1 AND status <> 'succeeded'
+          RETURNING coupon_code`,
           [resourceId],
         );
+        if (doneRows.length) await redeemCoupon(fastify.db, doneRows[0].coupon_code, request.log);
         if (slug) {
           sendBookingConfirmationEmail(fastify.db, { userId, tier, slug }, request.log).catch(() => {});
         }
@@ -757,15 +843,19 @@ export default async function paymentRoutes(fastify) {
 
       if (userId && PAID_TIERS[tier]) {
         await applyTierUpgrade(fastify.db, { userId, tier, slug });
+        let doneRows = [];
         if (pendingRowId) {
-          await fastify.db.query(
-            `UPDATE payments SET status = 'succeeded' WHERE id = $1`, [pendingRowId],
-          );
+          ({ rows: doneRows } = await fastify.db.query(
+            `UPDATE payments SET status = 'succeeded'
+              WHERE id = $1 AND status <> 'succeeded' RETURNING coupon_code`, [pendingRowId],
+          ));
         } else if (resourceId) {
-          await fastify.db.query(
-            `UPDATE payments SET status = 'succeeded' WHERE paymongo_payment_id = $1`, [resourceId],
-          );
+          ({ rows: doneRows } = await fastify.db.query(
+            `UPDATE payments SET status = 'succeeded'
+              WHERE paymongo_payment_id = $1 AND status <> 'succeeded' RETURNING coupon_code`, [resourceId],
+          ));
         }
+        if (doneRows.length) await redeemCoupon(fastify.db, doneRows[0].coupon_code, request.log);
         if (slug) {
           sendBookingConfirmationEmail(fastify.db, { userId, tier, slug }, request.log).catch(() => {});
         }
@@ -777,7 +867,7 @@ export default async function paymentRoutes(fastify) {
     if (!applied && type === 'payment_intent.succeeded' && resourceId) {
       const { rows: paymentRows } = await fastify.db.query(
         `UPDATE payments SET status = 'succeeded'
-            WHERE paymongo_payment_id = $1
+            WHERE paymongo_payment_id = $1 AND status <> 'succeeded'
         RETURNING *`,
         [resourceId],
       );
@@ -787,6 +877,7 @@ export default async function paymentRoutes(fastify) {
           await applyTierUpgrade(fastify.db, {
             userId: payment.user_id, tier: payment.tier, slug: null,
           });
+          await redeemCoupon(fastify.db, payment.coupon_code, request.log);
           // No slug on legacy intent path → defer email to event creation.
           applied = true;
         }

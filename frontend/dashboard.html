@@ -3591,6 +3591,8 @@
   });
 
   import { resolvePlan, nextTier, HIRAYA_PUBLIC } from '/js/plans.js';
+  import { captureCouponFromUrl, getActiveCoupon } from '/js/coupon.js';
+  captureCouponFromUrl();
 
   // ── Auth guard ────────────────────────────────────────
   // The dashboard is the host control surface — it must never render
@@ -6103,7 +6105,7 @@
         const res = await fetch('/api/payments/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...authHeader() },
-          body: JSON.stringify({ slug, tier }),
+          body: JSON.stringify({ slug, tier, coupon: getActiveCoupon() }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.message || 'Payment gateway error.');

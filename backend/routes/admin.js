@@ -6,6 +6,7 @@ import { extractStorageKey } from '../lib/storageKeys.js';
 import { syncEventToGcal, deleteGcalEvent } from '../lib/gcal.js';
 import { baseSlug, randomSuffix, isSlugCollision } from './events.js';
 import { runGalleryCleanupOnce } from '../jobs/gallery-cleanup.js';
+import { normalizeCode, DISCOUNT_TYPES } from '../lib/coupons.js';
 
 // Best-effort Google Calendar sync after an admin event mutation. Never
 // throws into the request path — a Calendar hiccup must not fail the DB
@@ -1146,5 +1147,110 @@ export default async function adminRoutes(fastify) {
       request.log.error({ err: err.message }, 'manual gallery-cleanup failed');
       return reply.status(500).send({ ok: false, error: err.message });
     }
+  });
+
+  // ── Coupons / promo codes ───────────────────────────────────────
+  const COUPON_TIERS = new Set(['sinag', 'dalisay', 'hiraya']);
+
+  // GET /api/admin/coupons — list all, newest first.
+  fastify.get('/admin/coupons', async () => {
+    const { rows } = await fastify.db.query(
+      `SELECT code, discount_type, discount_value, applies_to_tier,
+              max_redemptions, times_redeemed, expires_at, active, created_at
+         FROM coupons
+        ORDER BY created_at DESC`,
+    );
+    return { coupons: rows };
+  });
+
+  // POST /api/admin/coupons — create a code.
+  fastify.post('/admin/coupons', async (request, reply) => {
+    const b = request.body ?? {};
+    const code = normalizeCode(b.code);
+    if (!code || code.length > 40 || !/^[A-Z0-9_-]+$/.test(code)) {
+      return reply.status(400).send({ error: true, message: 'Code must be 1–40 chars: A–Z, 0–9, dash or underscore.' });
+    }
+    if (!DISCOUNT_TYPES.includes(b.discount_type)) {
+      return reply.status(400).send({ error: true, message: `discount_type must be one of: ${DISCOUNT_TYPES.join(', ')}` });
+    }
+    // percent → whole 1–100; amount → centavos > 0.
+    const value = Number(b.discount_value);
+    if (!Number.isInteger(value) || value <= 0
+        || (b.discount_type === 'percent' && value > 100)) {
+      return reply.status(400).send({ error: true, message: 'discount_value must be a positive integer (1–100 for percent, centavos for amount).' });
+    }
+    const tier = b.applies_to_tier || null;
+    if (tier && !COUPON_TIERS.has(tier)) {
+      return reply.status(400).send({ error: true, message: `applies_to_tier must be blank (any) or one of: ${[...COUPON_TIERS].join(', ')}` });
+    }
+    const maxR = b.max_redemptions == null || b.max_redemptions === ''
+      ? null : Number(b.max_redemptions);
+    if (maxR != null && (!Number.isInteger(maxR) || maxR < 1)) {
+      return reply.status(400).send({ error: true, message: 'max_redemptions must be blank (unlimited) or a positive integer.' });
+    }
+    let expiresAt = null;
+    if (b.expires_at) {
+      const d = new Date(b.expires_at);
+      if (Number.isNaN(d.getTime())) {
+        return reply.status(400).send({ error: true, message: 'expires_at is not a valid date.' });
+      }
+      expiresAt = d.toISOString();
+    }
+
+    try {
+      const { rows } = await fastify.db.query(
+        `INSERT INTO coupons (code, discount_type, discount_value, applies_to_tier, max_redemptions, expires_at, active)
+         VALUES ($1, $2, $3, $4, $5, $6, true)
+         RETURNING *`,
+        [code, b.discount_type, value, tier, maxR, expiresAt],
+      );
+      return reply.status(201).send({ coupon: rows[0] });
+    } catch (err) {
+      if (err.code === '23505') { // unique_violation
+        return reply.status(409).send({ error: true, message: `Coupon "${code}" already exists.` });
+      }
+      throw err;
+    }
+  });
+
+  // PATCH /api/admin/coupons/:code — toggle active or edit limit/expiry.
+  fastify.patch('/admin/coupons/:code', async (request, reply) => {
+    const code = normalizeCode(request.params.code);
+    const b = request.body ?? {};
+    const sets = [];
+    const params = [];
+    let i = 1;
+    if (typeof b.active === 'boolean') { sets.push(`active = $${i++}`); params.push(b.active); }
+    if ('max_redemptions' in b) {
+      const maxR = b.max_redemptions == null || b.max_redemptions === '' ? null : Number(b.max_redemptions);
+      if (maxR != null && (!Number.isInteger(maxR) || maxR < 1)) {
+        return reply.status(400).send({ error: true, message: 'max_redemptions must be blank or a positive integer.' });
+      }
+      sets.push(`max_redemptions = $${i++}`); params.push(maxR);
+    }
+    if ('expires_at' in b) {
+      let expiresAt = null;
+      if (b.expires_at) {
+        const d = new Date(b.expires_at);
+        if (Number.isNaN(d.getTime())) return reply.status(400).send({ error: true, message: 'expires_at is not a valid date.' });
+        expiresAt = d.toISOString();
+      }
+      sets.push(`expires_at = $${i++}`); params.push(expiresAt);
+    }
+    if (!sets.length) return reply.status(400).send({ error: true, message: 'Nothing to update.' });
+    params.push(code);
+    const { rows } = await fastify.db.query(
+      `UPDATE coupons SET ${sets.join(', ')} WHERE code = $${i} RETURNING *`, params,
+    );
+    if (!rows.length) return reply.status(404).send({ error: true, message: 'Coupon not found.' });
+    return { coupon: rows[0] };
+  });
+
+  // DELETE /api/admin/coupons/:code
+  fastify.delete('/admin/coupons/:code', async (request, reply) => {
+    const code = normalizeCode(request.params.code);
+    const { rowCount } = await fastify.db.query(`DELETE FROM coupons WHERE code = $1`, [code]);
+    if (!rowCount) return reply.status(404).send({ error: true, message: 'Coupon not found.' });
+    return { ok: true };
   });
 }

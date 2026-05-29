@@ -68,6 +68,32 @@ CREATE TABLE IF NOT EXISTS payments (
   created_at           TIMESTAMPTZ  DEFAULT NOW()
 );
 
+-- ── Coupons / promo codes ─────────────────────────────────────────
+-- Admin-created discount codes shared via checkout links (?coupon=CODE).
+-- The code is the primary key, always stored UPPER-cased and trimmed.
+--   discount_type   'percent' (1–100) | 'amount' (centavos off the base)
+--   applies_to_tier 'sinag'|'dalisay'|'hiraya' | NULL = any paid tier
+--   max_redemptions NULL = unlimited; otherwise hard cap on successful uses
+--   times_redeemed  incremented ONLY when a payment using it succeeds
+--   expires_at      NULL = never expires
+-- The discounted amount is always recomputed server-side at checkout —
+-- the browser never sends a price. See backend/lib/coupons.js.
+CREATE TABLE IF NOT EXISTS coupons (
+  code             VARCHAR(40)  PRIMARY KEY,
+  discount_type    VARCHAR(10)  NOT NULL,
+  discount_value   INTEGER      NOT NULL,
+  applies_to_tier  VARCHAR(20),
+  max_redemptions  INTEGER,
+  times_redeemed   INTEGER      NOT NULL DEFAULT 0,
+  expires_at       TIMESTAMPTZ,
+  active           BOOLEAN      NOT NULL DEFAULT true,
+  created_at       TIMESTAMPTZ  DEFAULT NOW()
+);
+
+-- Which coupon (if any) was applied to a payment — set at /payments/create,
+-- read on success to bump coupons.times_redeemed exactly once.
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS coupon_code VARCHAR(40);
+
 -- Add user_id to events (migration for existing databases)
 ALTER TABLE events ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES users(id);
 

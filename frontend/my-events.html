@@ -188,6 +188,8 @@
 
 <script type="module">
   import { getToken, getUser, authHeaders, requireAuth, logout } from '/js/auth.js';
+  import { captureCouponFromUrl } from '/js/coupon.js';
+  captureCouponFromUrl();
 
   if (!requireAuth()) throw new Error('redirect');
 

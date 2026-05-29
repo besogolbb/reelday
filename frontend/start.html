@@ -885,6 +885,8 @@
 <script type="module">
   import { getToken, getUser, saveAuth } from '/js/auth.js';
   import { PLANS, PLAN_ORDER, HIRAYA_PUBLIC } from '/js/plans.js';
+  import { captureCouponFromUrl, getActiveCoupon } from '/js/coupon.js';
+  captureCouponFromUrl();
 
   // ── State ──────────────────────────────────────
   const params = new URLSearchParams(location.search);
@@ -1286,7 +1288,7 @@
       const res = await fetch('/api/payments/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ tier: state.plan, success_path: 'start_resume' }),
+        body: JSON.stringify({ tier: state.plan, success_path: 'start_resume', coupon: getActiveCoupon() }),
       });
       const data = await res.json();
       if (!res.ok || !data.checkout_url) throw new Error(data.message || 'Could not start checkout.');
@@ -1533,7 +1535,7 @@
         // back to /start?resumeCreate=1 after PayMongo checkout instead
         // of /my-events, so the resume block below can finalize the
         // event the user was midway through creating.
-        body: JSON.stringify({ tier: tierId, success_path: 'start_resume' }),
+        body: JSON.stringify({ tier: tierId, success_path: 'start_resume', coupon: getActiveCoupon() }),
       });
       const data = await res.json();
       if (!res.ok || !data.checkout_url) {
@@ -1654,7 +1656,7 @@
         const pmtRes = await fetch('/api/payments/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ tier: state.plan, success_path: 'start_resume' }),
+          body: JSON.stringify({ tier: state.plan, success_path: 'start_resume', coupon: getActiveCoupon() }),
         });
         const checkoutData = await pmtRes.json();
         if (!pmtRes.ok || !checkoutData.checkout_url) throw new Error(checkoutData.message || 'Could not start checkout.');
@@ -1690,7 +1692,7 @@
         const pmtRes = await fetch('/api/payments/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ tier: state.plan, success_path: 'start_resume' }),
+          body: JSON.stringify({ tier: state.plan, success_path: 'start_resume', coupon: getActiveCoupon() }),
         });
         const checkoutData = await pmtRes.json();
         if (!pmtRes.ok || !checkoutData.checkout_url) throw new Error(checkoutData.message || 'Could not start checkout.');

@@ -507,6 +507,7 @@
       <button class="nav-item" data-view="events"><span class="nav-ico">📋</span><span>Events</span><span class="nav-badge" id="nav-events-count">—</span></button>
       <button class="nav-item" data-view="payments"><span class="nav-ico">💳</span><span>Payments</span><span class="nav-badge" id="nav-payments-count">—</span></button>
       <button class="nav-item" data-view="users"><span class="nav-ico">👥</span><span>Users</span><span class="nav-badge" id="nav-users-count">—</span></button>
+      <button class="nav-item" data-view="coupons"><span class="nav-ico">🎟️</span><span>Coupons</span><span class="nav-badge" id="nav-coupons-count">—</span></button>
     </nav>
     <div class="sidebar-footer">
       <div class="stats-mini">
@@ -770,6 +771,45 @@
         </table>
       </div>
     </section>
+
+    <!-- Coupons view -->
+    <section class="view" id="view-coupons" style="display:none">
+      <div class="manual-form" id="coupon-form" style="display:block;margin-bottom:1rem">
+        <div class="manual-grid">
+          <label>Code <input type="text" id="c-code" placeholder="FOUNDING20" maxlength="40" style="text-transform:uppercase" /></label>
+          <label>Discount type
+            <select id="c-type">
+              <option value="amount">₱ off</option>
+              <option value="percent">% off</option>
+            </select>
+          </label>
+          <label><span id="c-value-label">Amount off (₱)</span> <input type="number" id="c-value" min="1" step="1" placeholder="1500" /></label>
+          <label>Applies to
+            <select id="c-tier">
+              <option value="">Any paid tier</option>
+              <option value="sinag">Sinag</option>
+              <option value="dalisay" selected>Dalisay</option>
+              <option value="hiraya">Hiraya</option>
+            </select>
+          </label>
+          <label>Max redemptions <input type="number" id="c-max" min="1" step="1" placeholder="20 (blank = unlimited)" /></label>
+          <label>Expires <input type="date" id="c-expires" /></label>
+        </div>
+        <div style="display:flex;gap:.55rem;justify-content:flex-end;margin-top:1rem">
+          <button class="btn-verify" id="btn-create-coupon">Create coupon</button>
+        </div>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Code</th><th>Discount</th><th>Applies to</th><th>Used</th><th>Expires</th><th>Status</th><th>Share link</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="coupons-tbody"></tbody>
+        </table>
+      </div>
+    </section>
   </main>
 </div>
 
@@ -897,11 +937,12 @@
     events:   { title: 'Events',    sub: 'Filter, edit, reassign, or comp any event in the system.' },
     payments: { title: 'Payments',  sub: 'Verify GCash transfers, refund, or record manual payments.' },
     users:    { title: 'Users',     sub: 'Manage plan tiers, verification, and account status.' },
+    coupons:  { title: 'Coupons',   sub: 'Create discount codes, then share the checkout link in DMs. Redemptions count only on paid checkouts.' },
   };
 
   function switchView(name) {
     document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.view === name));
-    ['dashboard','calendar','events','payments','users'].forEach(v => {
+    ['dashboard','calendar','events','payments','users','coupons'].forEach(v => {
       document.getElementById(`view-${v}`).style.display = v === name ? '' : 'none';
     });
     const meta = VIEW_META[name] || {};
@@ -911,6 +952,7 @@
     if (name === 'dashboard') renderDashboard();
     if (name === 'calendar') renderCalendar();
     if (name === 'events')   renderEvents();
+    if (name === 'coupons')  loadCoupons();
   }
   document.querySelectorAll('.nav-item').forEach(b => b.onclick = () => switchView(b.dataset.view));
 
@@ -939,7 +981,7 @@
   let paymentStatusFilter = '';
 
   async function loadAll() {
-    await Promise.all([loadStats(), loadEvents(), loadUsers(), loadPayments()]);
+    await Promise.all([loadStats(), loadEvents(), loadUsers(), loadPayments(), loadCoupons()]);
     switchView('dashboard');
   }
 
@@ -991,6 +1033,137 @@
       document.getElementById('payments-tbody').innerHTML = `<tr><td colspan="8" class="empty-state">Error loading payments.</td></tr>`;
     }
   }
+
+  // ────────────────────────────────────────────────────────────────
+  // Coupons view
+  // ────────────────────────────────────────────────────────────────
+  let allCoupons = [];
+
+  const couponDiscountLabel = c => c.discount_type === 'percent'
+    ? `${c.discount_value}% off`
+    : `₱${(c.discount_value / 100).toLocaleString('en-PH')} off`;
+
+  async function loadCoupons() {
+    try {
+      const r = await adminFetch('/api/admin/coupons');
+      const { coupons } = await r.json();
+      allCoupons = coupons || [];
+      document.getElementById('nav-coupons-count').textContent = allCoupons.length.toString();
+      renderCoupons();
+    } catch {
+      document.getElementById('coupons-tbody').innerHTML =
+        '<tr><td colspan="8" class="empty-state">Error loading coupons.</td></tr>';
+    }
+  }
+
+  function renderCoupons() {
+    const tb = document.getElementById('coupons-tbody');
+    if (!allCoupons.length) {
+      tb.innerHTML = '<tr><td colspan="8" class="empty-state">No coupons yet. Create one above.</td></tr>';
+      return;
+    }
+    const now = Date.now();
+    tb.innerHTML = allCoupons.map(c => {
+      const expired = c.expires_at && new Date(c.expires_at).getTime() < now;
+      const maxed   = c.max_redemptions != null && c.times_redeemed >= c.max_redemptions;
+      const live    = c.active && !expired && !maxed;
+      const status  = !c.active ? '<span style="color:var(--ink-faint)">Off</span>'
+        : expired ? '<span style="color:#c0392b">Expired</span>'
+        : maxed   ? '<span style="color:#c0392b">Maxed out</span>'
+        : '<span style="color:#1a7a3a">Active</span>';
+      const used = c.max_redemptions != null
+        ? `${c.times_redeemed} / ${c.max_redemptions}`
+        : `${c.times_redeemed}`;
+      const link = `${location.origin}/?coupon=${encodeURIComponent(c.code)}`;
+      return `<tr>
+        <td><strong>${esc(c.code)}</strong></td>
+        <td>${esc(couponDiscountLabel(c))}</td>
+        <td>${c.applies_to_tier ? esc(c.applies_to_tier[0].toUpperCase() + c.applies_to_tier.slice(1)) : 'Any paid'}</td>
+        <td>${used}</td>
+        <td>${fmtDate(c.expires_at)}</td>
+        <td>${status}</td>
+        <td><button class="btn-ghost-sm" data-copy="${esc(link)}" title="${esc(link)}">⧉ Copy link</button></td>
+        <td style="white-space:nowrap">
+          <button class="btn-ghost-sm" data-toggle="${esc(c.code)}">${c.active ? 'Disable' : 'Enable'}</button>
+          <button class="btn-ghost-sm" data-del="${esc(c.code)}" style="color:#c0392b">Delete</button>
+        </td>
+      </tr>`;
+    }).join('');
+
+    tb.querySelectorAll('[data-copy]').forEach(b => b.onclick = () => {
+      navigator.clipboard.writeText(b.dataset.copy)
+        .then(() => toast('Checkout link copied — paste it into a DM.', 'ok'))
+        .catch(() => toast('Could not copy.'));
+    });
+    tb.querySelectorAll('[data-toggle]').forEach(b => b.onclick = () => toggleCoupon(b.dataset.toggle));
+    tb.querySelectorAll('[data-del]').forEach(b => b.onclick = () => deleteCoupon(b.dataset.del));
+  }
+
+  async function toggleCoupon(code) {
+    const c = allCoupons.find(x => x.code === code);
+    if (!c) return;
+    try {
+      const r = await adminFetch(`/api/admin/coupons/${encodeURIComponent(code)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ active: !c.active }),
+      });
+      if (!r.ok) throw new Error((await r.json()).message || 'Update failed.');
+      toast(`Coupon ${!c.active ? 'enabled' : 'disabled'}.`, 'ok');
+      loadCoupons();
+    } catch (err) { toast(err.message); }
+  }
+
+  async function deleteCoupon(code) {
+    if (!confirm(`Delete coupon "${code}"? This cannot be undone.`)) return;
+    try {
+      const r = await adminFetch(`/api/admin/coupons/${encodeURIComponent(code)}`, { method: 'DELETE' });
+      if (!r.ok) throw new Error((await r.json()).message || 'Delete failed.');
+      toast('Coupon deleted.', 'ok');
+      loadCoupons();
+    } catch (err) { toast(err.message); }
+  }
+
+  // Form: relabel the value field as the discount type changes.
+  document.getElementById('c-type').addEventListener('change', e => {
+    document.getElementById('c-value-label').textContent =
+      e.target.value === 'percent' ? 'Percent off (%)' : 'Amount off (₱)';
+    document.getElementById('c-value').placeholder = e.target.value === 'percent' ? '50' : '1500';
+  });
+
+  document.getElementById('btn-create-coupon').onclick = async () => {
+    const code  = document.getElementById('c-code').value.trim().toUpperCase();
+    const type  = document.getElementById('c-type').value;
+    const rawV  = Number(document.getElementById('c-value').value);
+    const tier  = document.getElementById('c-tier').value;
+    const maxV  = document.getElementById('c-max').value;
+    const exp   = document.getElementById('c-expires').value;
+    if (!code)        return toast('Enter a code.');
+    if (!(rawV > 0))  return toast('Enter a positive discount value.');
+    if (type === 'percent' && rawV > 100) return toast('Percent cannot exceed 100.');
+    // ₱ off → centavos. Percent → as-is.
+    const discount_value = type === 'amount' ? Math.round(rawV * 100) : Math.round(rawV);
+    try {
+      const r = await adminFetch('/api/admin/coupons', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code, discount_type: type, discount_value,
+          applies_to_tier: tier || null,
+          max_redemptions: maxV === '' ? null : Number(maxV),
+          expires_at: exp || null,
+        }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.message || 'Create failed.');
+      toast(`Coupon ${code} created.`, 'ok');
+      document.getElementById('c-code').value = '';
+      document.getElementById('c-value').value = '';
+      document.getElementById('c-max').value = '';
+      document.getElementById('c-expires').value = '';
+      loadCoupons();
+    } catch (err) { toast(err.message); }
+  };
 
   // ────────────────────────────────────────────────────────────────
   // Calendar view
