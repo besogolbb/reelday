@@ -25,51 +25,63 @@ if (slugs.length < 1) { console.error('Usage: node scripts/stress-multi-event.mj
 
 const EMOJIS = ['❤️','😂','🔥','👏','💃','🙏','🥰','✨','🎉','🥹'];
 const jitter = ms => ms * (0.6 + Math.random() * 0.8); // ±40%
+const REQ_TIMEOUT_MS = 15000; // a guest waiting >15s = a failed experience; also stops one
+                              // wedged socket from hanging the final aggregate report.
+const tfetch = (url, opts = {}) => fetch(url, { ...opts, signal: AbortSignal.timeout(REQ_TIMEOUT_MS) });
 
 // Per-event stat buckets.
 const stats = Object.fromEntries(slugs.map(s => [s, {
-  wall: { lat: [], ok: 0, fail: 0 },
-  rx:   { lat: [], ok: 0, fail: 0 },
-  up:   { lat: [], ok: 0, fail: 0 },
+  wall: { lat: [], ok: 0, fail: 0, rejected: 0 },
+  rx:   { lat: [], ok: 0, fail: 0, rejected: 0 },
+  up:   { lat: [], ok: 0, fail: 0, rejected: 0 },
   statuses: {},
 }]));
 
-function rec(bucket, ms, ok, status, ev) {
+// Classify a response. A 4xx is the APP correctly rejecting (closed gallery,
+// rate limit, gating) — that is policy working, NOT a capacity ceiling, so it
+// must not count as a failure. Only 5xx and transport errors (status=null) are
+// real failures. 2xx is ok.
+function rec(bucket, ms, status, ev, label) {
   bucket.lat.push(ms);
-  if (ok) bucket.ok++; else bucket.fail++;
-  if (status) stats[ev].statuses[status] = (stats[ev].statuses[status] || 0) + 1;
+  if (status && status >= 200 && status < 300) bucket.ok++;
+  else if (status && status >= 400 && status < 500) bucket.rejected++;
+  else bucket.fail++; // 5xx or transport error
+  if (!status || status < 200 || status >= 300) {
+    const key = `${label}:${status || 'err'}`;
+    stats[ev].statuses[key] = (stats[ev].statuses[key] || 0) + 1;
+  }
 }
 
 async function wallPoll(slug, guestId) {
   const b = stats[slug].wall, t0 = performance.now();
   try {
-    const r = await fetch(`${base}/api/uploads/${slug}`, { headers: { 'X-Guest-Id': guestId, 'Accept-Encoding': 'gzip' } });
-    await r.text(); rec(b, performance.now() - t0, r.ok, r.ok ? null : `wall:${r.status}`, slug);
-  } catch (e) { rec(b, performance.now() - t0, false, e.code || 'err', slug); }
+    const r = await tfetch(`${base}/api/uploads/${slug}`, { headers: { 'X-Guest-Id': guestId, 'Accept-Encoding': 'gzip' } });
+    await r.text(); rec(b, performance.now() - t0, r.status, slug, 'wall');
+  } catch { rec(b, performance.now() - t0, null, slug, 'wall'); }
 }
 
 async function react(slug, guestId) {
   const b = stats[slug].rx, t0 = performance.now();
   try {
-    const r = await fetch(`${base}/api/reactions/${slug}`, {
+    const r = await tfetch(`${base}/api/reactions/${slug}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Guest-Id': guestId },
       body: JSON.stringify({ emoji: EMOJIS[Math.floor(Math.random() * EMOJIS.length)], guest_name: `Guest-${guestId.slice(-5)}` }),
     });
-    await r.text(); rec(b, performance.now() - t0, r.ok, r.ok ? null : `rx:${r.status}`, slug);
-  } catch (e) { rec(b, performance.now() - t0, false, e.code || 'err', slug); }
+    await r.text(); rec(b, performance.now() - t0, r.status, slug, 'rx');
+  } catch { rec(b, performance.now() - t0, null, slug, 'rx'); }
 }
 
 async function uploadKickoff(slug, guestId) {
   const b = stats[slug].up, t0 = performance.now();
   try {
-    const r = await fetch(`${base}/api/uploads/presigned`, {
+    const r = await tfetch(`${base}/api/uploads/presigned`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Guest-Id': guestId },
       body: JSON.stringify({ slug, filename: `multi-${guestId}.jpg`, contentType: 'image/jpeg', guest_name: `Guest-${guestId.slice(-5)}` }),
     });
-    await r.text(); rec(b, performance.now() - t0, r.ok, r.ok ? null : `up:${r.status}`, slug);
-  } catch (e) { rec(b, performance.now() - t0, false, e.code || 'err', slug); }
+    await r.text(); rec(b, performance.now() - t0, r.status, slug, 'up');
+  } catch { rec(b, performance.now() - t0, null, slug, 'up'); }
 }
 
 const deadline = () => performance.now() < end;
@@ -114,22 +126,23 @@ clearInterval(ticker);
 console.log('\n');
 
 console.log('═══ PER-EVENT RESULTS ═══');
-let totalFail = 0, worstWallP95 = 0;
+let totalFail = 0, totalRejected = 0, worstWallP95 = 0;
+const line = (label, b) => `  ${label}  ok=${b.ok}${b.rejected ? ` rejected(4xx)=${b.rejected}` : ''}${b.fail ? ` FAIL=${b.fail}` : ''}  p50=${pct(b.lat,50)|0} p95=${pct(b.lat,95)|0} p99=${pct(b.lat,99)|0}ms`;
 for (const s of slugs) {
   const { wall, rx, up, statuses } = stats[s];
-  const fails = wall.fail + rx.fail + up.fail;
-  totalFail += fails;
+  totalFail += wall.fail + rx.fail + up.fail;
+  totalRejected += wall.rejected + rx.rejected + up.rejected;
   worstWallP95 = Math.max(worstWallP95, pct(wall.lat, 95));
   console.log(`\n▶ ${s}`);
-  console.log(`  wall  ok=${wall.ok} fail=${wall.fail}  p50=${pct(wall.lat,50)|0} p95=${pct(wall.lat,95)|0} p99=${pct(wall.lat,99)|0}ms`);
-  console.log(`  rx    ok=${rx.ok} fail=${rx.fail}  p50=${pct(rx.lat,50)|0} p95=${pct(rx.lat,95)|0} p99=${pct(rx.lat,99)|0}ms`);
-  console.log(`  up    ok=${up.ok} fail=${up.fail}  p50=${pct(up.lat,50)|0} p95=${pct(up.lat,95)|0} p99=${pct(up.lat,99)|0}ms`);
-  if (Object.keys(statuses).length) console.log(`  non-200:`, statuses);
+  console.log(line('wall', wall));
+  console.log(line('rx  ', rx));
+  console.log(line('up  ', up));
+  if (Object.keys(statuses).length) console.log(`  non-2xx:`, statuses);
 }
 
 console.log(`\n═══ VERDICT ═══`);
 console.log(`  ${slugs.length} simultaneous hot events · ${slugs.length * guestsPerEvent} total guests`);
-console.log(`  total failures: ${totalFail} · worst wall p95: ${worstWallP95 | 0}ms`);
-if (totalFail === 0 && worstWallP95 < 1000) console.log(`  ✅ all events held — wall p95 < 1s, 0 fail (pool isolation intact across ${slugs.length} live events)`);
-else if (totalFail === 0) console.log(`  ⚠️ 0 fail but worst wall p95 ${worstWallP95 | 0}ms > 1s — getting warm; add events to find the ceiling (or it's laptop-pipe noise — re-run local)`);
-else console.log(`  ❌ ${totalFail} failures — a ceiling was crossed; check non-200 statuses above`);
+console.log(`  real failures (5xx/transport): ${totalFail} · policy 4xx (closed/gated/rate-limited): ${totalRejected} · worst wall p95: ${worstWallP95 | 0}ms`);
+if (totalFail > 0) console.log(`  ❌ ${totalFail} REAL failures — a capacity ceiling was crossed; check non-2xx statuses above`);
+else if (worstWallP95 < 1000) console.log(`  ✅ all events held — wall p95 < 1s, 0 real failures (pool isolation intact across ${slugs.length} live events)`);
+else console.log(`  ⚠️ 0 real failures but worst wall p95 ${worstWallP95 | 0}ms > 1s — getting warm; add events to find the ceiling (or remote pipe noise — re-run local). 4xx rejects are expected app behavior, not a ceiling.`);
