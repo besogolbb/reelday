@@ -335,7 +335,11 @@ export default async function uploadRoutes(fastify) {
     // Once the guest window opens this branch is inert and the normal
     // plan.uploadLimit applies (Sinag/Dalisay/Hiraya = unlimited). The
     // guest-facing window gates below stay owner-bypassed as before.
-    const ownerPreWindow = isOwner && !demoOpen
+    //
+    // Tala is carved out: it's the free tier with its own 48h demo window,
+    // so it keeps the original owner-bypass behavior (no payment gate, no
+    // preview cap — just the plan's normal 25-upload limit below).
+    const ownerPreWindow = isOwner && !demoOpen && plan.id !== 'tala'
       && event.upload_window_starts_at
       && new Date(event.upload_window_starts_at) > new Date();
     if (ownerPreWindow) {
