@@ -44,7 +44,7 @@ Reelday is **not** a content product you sell with reach — it's an **event uti
 Brand-new product + no reviews = buyers hesitate. Beat hesitation with scarcity + risk-reversal + proof-trade:
 
 > **"Reelday Founding 20"** — the first 20 events booked before **June 30** get:
-> - **Dalisay for ₱1,490** (50% off ₱2,990) — full features + event website + SDE
+> - **Dalisay for ₱1,490** (50% off ₱2,990) — full features + event website (SDE is hidden/not offered yet — keep it out of all offer copy)
 > - **Money-back guarantee**: if your guests don't fill the wall, full refund, no questions
 > - In exchange: a short testimonial + permission to use 2–3 clips/photos from your event
 > - Founding badge / locked-in price on any future event

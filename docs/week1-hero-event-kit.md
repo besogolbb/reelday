@@ -20,7 +20,7 @@ a paying Founding 20 booking.
 >
 > Reelday is a **live photo wall**: your guests scan a QR, and their photos & videos appear **live on your venue screen** during the event. Guests' phones become your second photographer. No app, no login, no hassle.
 >
-> 💛 **You get:** the full Dalisay experience free — live wall, unlimited guest uploads, event website, and a Same-Day-Edit recap reel.
+> 💛 **You get:** the full Dalisay experience free — live wall, unlimited guest photos & videos, live emoji reactions & polls, and an event website.
 > 🎥 **In return:** we capture a few photos/short clips of the wall in action, and you give us a short testimonial after.
 >
 > **To qualify:** your event is in **June 2026**, and your venue has a **TV/projector/screen** we can display the wall on.
