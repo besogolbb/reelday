@@ -149,6 +149,19 @@ body { background: var(--paper); min-height: 100dvh; }
 /* ── Share mode tabs ─────────────────────────────────── */
 .share-tabs { display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; margin-bottom: 16px; }
 
+/* Host-preview banner — shown to the owner when they upload before the
+   guest window opens. Sits above the share tabs; the UI stays usable. */
+.host-preview-banner {
+  display: none;
+  background: rgba(214, 168, 78, .12);
+  border: 1px solid rgba(214, 168, 78, .35);
+  border-radius: 14px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  font-size: 13px; line-height: 1.5; color: rgba(0,0,0,.7);
+}
+.host-preview-banner strong { color: rgba(0,0,0,.82); }
+
 /* Closed-state card — replaces the upload UI when the event's window ends */
 .closed-card {
   background: rgba(255,255,255,.85);
@@ -1567,6 +1580,21 @@ body { background: var(--paper); min-height: 100dvh; }
       };
     }
 
+    // Host-preview probe: if a logged-in host is viewing their own event
+    // before the guest window opens, the server tells us to reveal the
+    // upload UI (guests still see the "opens soon" card). Only fires when a
+    // token is present, so guests never hit it. The endpoint echoes only a
+    // boolean — never the owner's user_id.
+    const _hpToken = localStorage.getItem('reelday_token');
+    if (slug && _hpToken) {
+      try {
+        const hpRes = await fetch(`/api/uploads/${slug}/host-preview`, {
+          headers: { 'Authorization': `Bearer ${_hpToken}` },
+        });
+        if (hpRes.ok) event.hostPreview = await hpRes.json();
+      } catch (e) {}
+    }
+
     currentEvent = event;
     applyEvent(event);
     loadHappeningNow(event.slug);
@@ -1696,6 +1724,18 @@ body { background: var(--paper); min-height: 100dvh; }
 
     const notYetOpen = ev.locks?.uploads_not_yet_open;
     const closed     = ev.locks?.uploads_closed || ev.locks?.gallery_locked;
+    // Host preview: the owner may upload before the guest window opens
+    // (see the owner-pre-window gate in uploads.js). When that applies we
+    // keep the upload UI visible for them instead of the "opens soon" card.
+    const hostPreview  = ev.hostPreview;
+    // Reveal the upload UI only when the host preview would actually be
+    // accepted server-side: owner, pre-window, and paid. An unpaid host
+    // falls through to the normal "opens soon" card (matches the backend
+    // preview_requires_payment gate) instead of seeing UI that 403s.
+    const ownerPreview = notYetOpen
+      && hostPreview?.isOwner
+      && hostPreview?.window_open === false
+      && hostPreview?.is_paid === true;
 
     function hideShareUI() {
       if (shareTabs)    shareTabs.style.display    = 'none';
@@ -1703,7 +1743,28 @@ body { background: var(--paper); min-height: 100dvh; }
       if (recordPanel)  recordPanel.style.display  = 'none';
     }
 
-    if (notYetOpen && notOpenCard) {
+    if (ownerPreview) {
+      // Reveal the upload UI for the host and explain it's a pre-window
+      // preview. Numeric usage (X/20) lives on the dashboard; here we just
+      // set expectations + flag the cap so a 403 isn't a surprise.
+      const opensAt = ev.upload_window_starts_at ? new Date(ev.upload_window_starts_at) : null;
+      const opensStr = opensAt && !isNaN(opensAt)
+        ? opensAt.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })
+        : 'the event date';
+      let banner = document.getElementById('hostPreviewBanner');
+      if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'hostPreviewBanner';
+        banner.className = 'host-preview-banner';
+        if (shareTabs && shareTabs.parentNode) {
+          shareTabs.parentNode.insertBefore(banner, shareTabs);
+        }
+      }
+      banner.innerHTML =
+        `<strong>Host preview</strong> — guests can upload starting ${escapeHtml(opensStr)}. ` +
+        `Anything you add now goes live on your wall (up to ${hostPreview.cap || 20} uploads until then).`;
+      banner.style.display = 'block';
+    } else if (notYetOpen && notOpenCard) {
       notOpenCard.style.display = 'block';
       hideShareUI();
       // Friendly "Uploads open on …" date + a "(in 3 days)" countdown.

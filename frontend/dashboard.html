@@ -2325,6 +2325,11 @@
       letter-spacing: .04em; color: var(--ink-soft);
       text-transform: none;
     }
+    /* Host-preview usage counter — sits under the "Opens …" hint when a
+       paid host can upload before the guest window opens. */
+    #info-window-row .win-hint .host-preview-count {
+      color: #8a5a1a; font-weight: 700;
+    }
     .info-card .row.row-highlight span:last-child { color: var(--accent-deep); }
 
     /* Quota meter slot — only visible on plans that have a cap */
@@ -3004,7 +3009,7 @@
       <div class="row row-highlight"><span>Type</span><span id="info-type">—</span></div>
       <div class="row row-highlight" data-cell="plan"><span>Plan</span><span id="info-plan">—</span></div>
       <div class="row row-highlight" id="info-window-row">
-        <span>Uploads</span>
+        <span>Guest uploads</span>
         <span>
           <span class="win-pill" id="mini-access">—</span>
           <span class="win-hint" id="mini-next"></span>
@@ -3691,6 +3696,9 @@
   // Mirrors demoDays=2 in plans.js — defined locally so the display logic
   // works even when the browser has an old cached version of plans.js.
   const TALA_DEMO_MS = 2 * 86_400_000;
+  // Mirrors HOST_PREVIEW_CAP in uploads.js — max uploads the host can post
+  // before the guest window opens (paid events only).
+  const HOST_PREVIEW_CAP = 20;
 
   // ── State ─────────────────────────────────────────────
   const params  = new URLSearchParams(location.search);
@@ -4306,7 +4314,7 @@
   });
 
   // ── Render quota meter + soft-lock banner ─────────────
-  function renderSidebarState(event) {
+  function renderSidebarState(event, uploadCount = allUploads.length) {
     const now           = new Date();
     const startsAt      = event.upload_window_starts_at ? new Date(event.upload_window_starts_at) : null;
     const endsAt        = event.upload_window_ends_at   ? new Date(event.upload_window_ends_at)   : null;
@@ -4341,7 +4349,18 @@
       if (notYetOpen && isTala && _sideDemoEnd) {
         miniNext.textContent = `Demo: ${formatDate(event.created_at)} – ${formatDate(_sideDemoEnd)}`;
       } else if (notYetOpen) {
-        miniNext.textContent = `Opens ${formatDate(event.upload_window_starts_at)}`;
+        // Guests can't post yet, but a paid host gets a pre-window "host
+        // preview" (test the flow / pre-fill the wall), capped at
+        // HOST_PREVIEW_CAP. Surface the usage counter so they know how much
+        // headroom is left before guests open.
+        const opensStr = `Opens ${formatDate(event.upload_window_starts_at)}`;
+        if (event.is_paid) {
+          const used = Math.min(uploadCount, HOST_PREVIEW_CAP);
+          miniNext.innerHTML =
+            `${opensStr}<br><span class="host-preview-count">Host preview ${used}/${HOST_PREVIEW_CAP}</span>`;
+        } else {
+          miniNext.textContent = opensStr;
+        }
       } else if (uploadsClosed) {
         miniNext.textContent = 'Extend upload window';
       } else if (_sideDemoOpen && isTala) {
@@ -6652,7 +6671,7 @@
       applyTheme(event.event_type);
       renderHeader(event);
       renderQR(qr_code);
-      renderSidebarState(event);
+      renderSidebarState(event, merged.length);
       renderStats(merged);
       renderGallery(merged);
 

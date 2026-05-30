@@ -106,6 +106,11 @@ const EVENT_VALIDATION_TTL = 10_000;
 const eventValidationCache = new Map(); // slug → { data: {event, plan}, expiresAt }
 const eventValidationInflight = new Map(); // slug → Promise<{event,plan}|null>  (single-flight dedup)
 
+// Max uploads the host may post BEFORE the guest upload window opens
+// ("host preview" — test the flow / pre-fill the wall). Paid events only;
+// see the owner-pre-window guard in getValidatedEvent().
+const HOST_PREVIEW_CAP = 20;
+
 export default async function uploadRoutes(fastify) {
   function publicMediaUrl(key) {
     const base = (process.env.R2_PUBLIC_URL || 'https://media.reelday.ph').replace(/\/+$/, '');
@@ -259,7 +264,7 @@ export default async function uploadRoutes(fastify) {
         // One query: event columns + owner's live subscription tier via LEFT JOIN.
         // LEFT JOIN (not INNER) so we can distinguish owner_missing from not_found.
         const { rows } = await fastify.db.query(
-          `SELECT e.id, e.slug, e.user_id, e.plan, e.is_active, e.created_at,
+          `SELECT e.id, e.slug, e.user_id, e.plan, e.is_active, e.created_at, e.is_paid,
                   e.gallery_expires_at, e.upload_window_starts_at, e.upload_window_ends_at,
                   e.auto_approve, e.video_auto_approve, e.video_message_auto_approve,
                   e.couple_names, e.playback_burst_id, e.playback_burst_queue,
@@ -320,6 +325,39 @@ export default async function uploadRoutes(fastify) {
     // users can try the product before their event date arrives. Both
     // window gates are bypassed while the demo window is open.
     const demoOpen = !isOwner && isDemoWindowOpen(plan.id, event.created_at);
+
+    // Host preview: the owner may upload *before* the guest window opens so
+    // they can test the flow and/or pre-fill the wall. Two guards keep this
+    // from becoming a free shadow-event:
+    //   • the event must be paid (is_paid) — blocks unpaid/free-tier abuse,
+    //   • capped at HOST_PREVIEW_CAP uploads — enough to test/pre-fill, not
+    //     enough to run a full event ahead of the window.
+    // Once the guest window opens this branch is inert and the normal
+    // plan.uploadLimit applies (Sinag/Dalisay/Hiraya = unlimited). The
+    // guest-facing window gates below stay owner-bypassed as before.
+    const ownerPreWindow = isOwner && !demoOpen
+      && event.upload_window_starts_at
+      && new Date(event.upload_window_starts_at) > new Date();
+    if (ownerPreWindow) {
+      if (!event.is_paid) {
+        throw {
+          statusCode: 403,
+          code: 'preview_requires_payment',
+          message: 'Host preview uploads unlock once your event is paid.',
+        };
+      }
+      const { rows: previewRows } = await fastify.db.query(
+        'SELECT COUNT(*)::int AS count FROM uploads WHERE event_id = $1',
+        [event.id],
+      );
+      if (previewRows[0].count >= HOST_PREVIEW_CAP) {
+        throw {
+          statusCode: 403,
+          code: 'host_preview_limit',
+          message: `Host preview is limited to ${HOST_PREVIEW_CAP} uploads until guests can post.`,
+        };
+      }
+    }
 
     // Start-of-window gate: NULL means legacy event (centered model
     // wasn't a thing when it was created) — skip the check so those
@@ -913,6 +951,45 @@ export default async function uploadRoutes(fastify) {
     };
 
     return { uploads: hydratedUploads, event, locks, guest_count: getPresenceCount(slug) };
+  });
+
+  // GET /api/uploads/:slug/host-preview — "host preview" status for the owner.
+  // The public upload page calls this with the host's token to decide whether
+  // to reveal the upload UI before the guest window opens. Tolerant auth: a
+  // missing/invalid token (or a logged-in non-owner) resolves to
+  // { isOwner: false } so guests just see the normal "opens soon" card.
+  // user_id is never echoed back — only the boolean — keeping the PII-strip
+  // contract the public /api/events/:slug endpoint relies on.
+  fastify.get('/uploads/:slug/host-preview', async (request, reply) => {
+    const { slug } = request.params;
+    let userId = null;
+    const header = request.headers.authorization;
+    if (header && header.startsWith('Bearer ')) {
+      try { userId = verifyToken(header.slice(7))?.id ?? null; } catch { userId = null; }
+    }
+
+    const { rows } = await fastify.db.query(
+      'SELECT id, user_id, is_paid, upload_window_starts_at FROM events WHERE slug = $1 AND is_active = true',
+      [slug],
+    );
+    if (!rows.length) return reply.status(404).send({ error: true, message: 'Event not found' });
+    const ev = rows[0];
+
+    if (!userId || userId !== ev.user_id) return { isOwner: false };
+
+    const windowOpen = !ev.upload_window_starts_at
+      || new Date(ev.upload_window_starts_at) <= new Date();
+    const { rows: cnt } = await fastify.db.query(
+      'SELECT COUNT(*)::int AS count FROM uploads WHERE event_id = $1',
+      [ev.id],
+    );
+    return {
+      isOwner:     true,
+      is_paid:     !!ev.is_paid,
+      window_open: windowOpen,
+      used:        cnt[0].count,
+      cap:         HOST_PREVIEW_CAP,
+    };
   });
 
   // POST /api/uploads/:slug/download-token — owner-only. Issues a short-
