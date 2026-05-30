@@ -20,13 +20,14 @@
 
 ## 0. Go-live status (the actual gate now)
 
-The technical platform is shippable. Go-live = **make Founding 20 bookable, then execute Week 1 outreach.** Full detail in [LAUNCH-HANDOVER.md](LAUNCH-HANDOVER.md).
+**Founding 20 is LIVE and bookable** (deployed + code created + checkout smoke-tested, 30 May). The remaining work is purely Week 1 outreach: **lock the hero events and get the group post out.** Full detail in [LAUNCH-HANDOVER.md](LAUNCH-HANDOVER.md).
 
 - ✅ **Coupon / promo-code system built** — merged to `main` 29 May (`88631ff`, `6d7f971`, `3999172`); `coupons` table in both `schema.sql` and boot migrations; admin Coupons tab + checkout `?coupon=` banner. Tested 22/22.
-- [ ] **Redeploy in Easypanel** so the boot migration creates the `coupons` table in prod. *(owner action — see [HANDOVER.md](HANDOVER.md) §Deploy)*
-- [ ] **Create the `FOUNDING20` code** (₱1,500 off · Dalisay · max 20 · expires Jun 30) in Admin → 🎟️ Coupons → copy the `?coupon=` link.
-- [ ] **Smoke the discounted checkout** — open the link once, confirm the "₱2,990 → ₱1,490" banner and that PayMongo charges ₱1,490.
-- [ ] **Lock 1–3 free "hero" events** (Week 1 #1 task — the proof pipeline). Sourcing kit: [week1-hero-event-kit.md](week1-hero-event-kit.md); outreach + lead tracker: [week1-outreach-pack.md](week1-outreach-pack.md).
+- [x] **Redeploy in Easypanel** — boot migration created the `coupons` table in prod (done 30 May).
+- [x] **Create the `FOUNDING20` code** (₱1,500 off · Dalisay · max 20 · expires Jun 30) — created in Admin → 🎟️ Coupons, link copied (done 30 May).
+- [x] **Smoke the discounted checkout** — link opened, "₱2,990 → ₱1,490" banner confirmed, PayMongo charged ₱1,490 (done 30 May).
+- [ ] **Lock 1–3 free "hero" events** (Week 1 #1 task — the proof pipeline) — **the one remaining go-live item.** Sourcing kit: [week1-hero-event-kit.md](week1-hero-event-kit.md); outreach + lead tracker: [week1-outreach-pack.md](week1-outreach-pack.md).
+  - [ ] **Pending: FB group page post** — the hero-event call still needs to go out to the target groups. Post copy (3 versions) + qualifying questions in [week1-hero-event-kit.md](week1-hero-event-kit.md).
 - [x] **Scrub test data off the demo event** — cleared ~325 fake reactions + the test-payment row from `andrea-jm` so the public demo wall shows clean state (done 30 May, owner DB action). This was the last open platform-data chore.
 
 ---
@@ -37,7 +38,7 @@ The technical platform is shippable. Go-live = **make Founding 20 bookable, then
 
 | Section | Status |
 |---|---|
-| 0. Go-live (Founding 20) | ⛔ **the real gate** — 4 owner steps open (deploy → create code → smoke → lock hero events) |
+| 0. Go-live (Founding 20) | ✅ **bookable** (deploy + code + smoke done 30 May) — only outreach left: lock hero events + send the FB group post |
 | 1. Backend Performance | ✅ validated; re-confirmed 30 May (perf-db entry 51) |
 | 2. Operational Readiness | mostly cleared in-repo; remaining items are owner/infra → tracked in [security-checklist.md](security-checklist.md) |
 | 3. User Flow Validation | 0 / 37 — **still owed**: manual test on real devices |
