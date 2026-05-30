@@ -142,9 +142,10 @@ few partners and they feed you bookings on autopilot.
 ### The DM sequence
 
 **Touch 1 — lead with what's in it for THEM:**
-> Hi [name]! I build **reelday.ph** — a live guest photo wall + Same-Day-Edit
-> recap for events. It makes your events look more premium and gives your
-> couples an extra "wow" with **zero extra shooting for you.** I'd love to set
+> Hi [name]! I build **reelday.ph** — a live guest photo wall for events
+> (guests' phones become extra photographers, shown live on the venue
+> screen). It gives your couples an extra "wow" with **zero extra shooting
+> for you.** I'd love to set
 > you up with a **free Hiraya account** for your next event + a **referral cut**
 > for couples you send our way. Open to a quick chat?
 

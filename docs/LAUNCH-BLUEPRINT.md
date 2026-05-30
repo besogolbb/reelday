@@ -88,7 +88,7 @@ The flywheel: **each delivered event → testimonial/footage → better ad + gro
 ```
 
 Steering rule by event type:
-- **Wedding / big milestone** → Dalisay (Founding ₱1,490) — full features + website + SDE
+- **Wedding / big milestone** → Dalisay (Founding ₱1,490) — full features + event website
 - **Debut / birthday / party** → Sinag (₱1,490) — unlimited photo+video, reactions
 - **Coordinator / venue / multi-event** → Hiraya pipeline (free trial now, ₱9,990/yr later)
 

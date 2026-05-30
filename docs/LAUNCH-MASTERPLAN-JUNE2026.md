@@ -75,7 +75,7 @@ Free events (your 1–3 capacity) are **invite-only hero shoots**, never adverti
 
 ### Week 2 — Capture & Activate (Jun 5 – Jun 11)
 **Theme: run the hero events, harvest proof, switch on paid.**
-- [ ] Run hero event(s). Capture: wall on the venue TV, guests scanning the QR, reactions, the SDE recap. This is your money footage.
+- [ ] Run hero event(s). Capture: wall on the venue TV, guests scanning the QR, live reactions, full wall of guest photos. This is your money footage.
 - [ ] Same-week: cut **1 hero testimonial reel** + **1 "real event" montage** (use the Remotion templates — see §7).
 - [ ] Launch the **₱5k paid layer**: ~₱3k FB/IG lead ad (engaged + event interests, PH, 22–40) anchored on the hero clip; ~₱2k boosting the single best organic reel to a *Page-engagers + lookalike* audience.
 - [ ] Keep DM + group + vendor cadence (tiers 1–3) running daily.
@@ -86,7 +86,7 @@ Free events (your 1–3 capacity) are **invite-only hero shoots**, never adverti
 **Theme: double down on the winning channel; create urgency.**
 - [ ] Identify the channel producing replies/bookings (likely groups or DMs) → pour time there.
 - [ ] Post a **"X of 20 Founding spots left"** counter update (real scarcity) on Page + Stories.
-- [ ] Turn the best testimonial into a **carousel/case study**: before (no wall) vs after (live wall + SDE).
+- [ ] Turn the best testimonial into a **carousel/case study**: before (photos stuck in guests' phones) vs after (live wall full of guest photos on the venue screen).
 - [ ] Scale the winning ad set; kill the losers. Reallocate remaining budget.
 - [ ] Follow up every warm lead from Weeks 1–2 ("still planning your [date] event? 8 founding spots left").
 - **Targets:** booking pace up week-over-week · ad CPL trending down · 5+ cumulative paid events.
@@ -125,7 +125,7 @@ Free events (your 1–3 capacity) are **invite-only hero shoots**, never adverti
 > "Hi [name]! Saw your [wedding/debut] is coming up — congrats 🎉 I run reelday.ph, a live photo wall for PH celebrations: guests scan a QR, their photos/videos appear on your venue screen instantly, no app. We're onboarding 20 founding events at 50% off (₱1,490, money-back guarantee). Want a free demo link to try it in 30 seconds?"
 
 **Vendor partner (coordinator / photographer / venue):**
-> "Hi [name]! I build reelday.ph — a live guest photo wall + Same-Day-Edit recap for events. It makes *your* events look more premium and gives you extra deliverables with zero extra shooting. I'd love to set you up with a free Hiraya account for your next event, plus a referral cut for couples you send our way. Open to a quick call?"
+> "Hi [name]! I build reelday.ph — a live guest photo wall for events (guests' phones become extra photographers, live on the venue screen). It makes *your* events look more premium with zero extra shooting. I'd love to set you up with a free Hiraya account for your next event, plus a referral cut for couples you send our way. Open to a quick call?"
 
 ---
 
