@@ -1695,8 +1695,13 @@ function setLang(lang, btn) {
   const DURATION = 6500;
   // Full-bleed demo wall — width 1600 for the large stage, transformed
   // + edge-cached via Cloudflare (AVIF/WebP, ~95% smaller than the
-  // source PNGs).
-  const C = (p) => `url(/cdn-cgi/image/width=1600,quality=82,format=auto/images/${p})`;
+  // source PNGs). Width adapts to the stage: the demo is ~1100px wide on
+  // desktop but only ~370px on phones, so a fixed 1600 made mobile pull a
+  // hugely oversized image (Lighthouse flagged ~59KB of wasted image
+  // delivery from this demo). DPR is capped at 2 — this is a decorative,
+  // auto-cycling Ken Burns stage, so 3x retina isn't worth the bytes.
+  const C_W = Math.min(1600, Math.ceil(Math.min(window.innerWidth, 1140) * Math.min(window.devicePixelRatio || 1, 2)));
+  const C = (p) => `url(/cdn-cgi/image/width=${C_W},quality=82,format=auto/images/${p})`;
   const slides = [
     { img: C('First%20dance%20after%2038%20years.png'),                      uploader: '— Tita Marivic · 8:42 pm', quote: '"First dance after 38 years — still got it."' },
     { img: C('The%20whole%20family%20finally%20in%20one%20frame.png'),        uploader: '— Kuya Mike · 9:01 pm',    quote: '"The whole family finally in one frame."' },
