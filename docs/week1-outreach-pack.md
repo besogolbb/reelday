@@ -19,7 +19,23 @@ once you get real leads.
 
 **Columns:** Date Added · Name · Event Type · Event Date · Channel · Source
 Detail · Contact · Stage · Hero Candidate? · Founding20 Link Sent? · Last Touch
-· Next Follow-up · Notes.
+· Next Follow-up · Notes · **then the hero-scoring block:** Screen? (Y/N) ·
+Date OK? (Y/N) · Venue 1-3 · Guests 1-3 · Testimonial 1-3 · Responsive 1-3 ·
+Screen Size 1-3 · **HERO SCORE**.
+
+**Hero scoring — how to pick your 3 free events.** For each applicant marked
+`Hero Candidate? = Yes`, fill the two gates (Screen?, Date OK?) and rate the
+five factors 1–3 (rubric in [week1-hero-event-kit.md](week1-hero-event-kit.md) §E).
+After importing to Google Sheets, paste this into the first **HERO SCORE** cell
+(row 2) and drag down — it disqualifies anyone missing a screen or workable
+date, and only scores Hero Candidate = Yes rows:
+
+```
+=IF($I2<>"Yes","",IF(AND($N2="Y",$O2="Y"),SUM($P2:$T2),"DQ"))
+```
+
+Max = 15. "DQ" = missing a non-negotiable. Blank = not a hero candidate. Sort
+high→low; your **top 3 scores win**, everyone else gets the FOUNDING20 link.
 
 **The pipeline stages (the "Stage" column):**
 
