@@ -4421,7 +4421,7 @@
       block.style.display = 'none';
       banner.classList.add('hidden');
       // Still surface the upload-window soft-lock if it has closed
-      maybeShowWindowLock(event, plan, banner);
+      maybeShowWindowLock(event, plan, banner, uploadCount);
       return;
     }
 
@@ -4457,11 +4457,11 @@
         `You've used all ${limit} uploads on the ${plan.name} plan. Existing photos remain visible — upgrade to keep accepting new ones.`;
     } else {
       // No cap-related lock; let the window check decide
-      maybeShowWindowLock(event, plan, banner);
+      maybeShowWindowLock(event, plan, banner, uploadCount);
     }
   }
 
-  function maybeShowWindowLock(event, plan, banner) {
+  function maybeShowWindowLock(event, plan, banner, uploadCount = 0) {
     const now      = new Date();
     const startsAt = event.upload_window_starts_at ? new Date(event.upload_window_starts_at) : null;
     const endsAt   = event.upload_window_ends_at   ? new Date(event.upload_window_ends_at)   : null;
