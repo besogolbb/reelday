@@ -2407,6 +2407,15 @@
       color: var(--ink); margin-bottom: 2px;
     }
     .lock-banner .lb-msg { font-size: 13px; color: var(--ink-soft); line-height: 1.4; }
+    /* Host pre-window upload count — emphasized pill inside the banner. */
+    .lock-banner .lb-msg .lb-hp-count {
+      display: inline-block;
+      font-weight: 800; color: #8a5a1a;
+      background: rgba(216,160,90,.20);
+      padding: 1px 8px; border-radius: 999px;
+      white-space: nowrap;
+    }
+    .lock-banner .lb-msg .lb-hp-locked { font-weight: 700; }
     .lock-banner .lb-cta {
       flex-shrink: 0; padding: 8px 16px; font-size: 13px;
       background: var(--accent); color: #fff; border-radius: 999px;
@@ -4541,10 +4550,13 @@
         // HOST_PREVIEW_CAP) to test/pre-fill; an unpaid host is told it
         // unlocks on payment. Mirrors the backend host-preview gate.
         $('lb-title').textContent = 'Uploads open soon';
+        // Emphasize the count with a pill so the host's pre-window allowance
+        // stands out from the guest-window prose. Only dates/numbers go into
+        // innerHTML here (no user input), so it's XSS-safe.
         const hostLine = event.is_paid
-          ? `As the host you can upload now — ${Math.min(uploadCount, HOST_PREVIEW_CAP)} of ${HOST_PREVIEW_CAP} pre-window uploads used.`
-          : `Host uploads unlock once your event is paid.`;
-        $('lb-msg').textContent   =
+          ? `As the host you can upload now — <span class="lb-hp-count">${Math.min(uploadCount, HOST_PREVIEW_CAP)} of ${HOST_PREVIEW_CAP}</span> pre-window uploads used.`
+          : `<span class="lb-hp-count lb-hp-locked">Host uploads unlock once your event is paid.</span>`;
+        $('lb-msg').innerHTML =
           `Guests can start uploading on ${formatDate(event.upload_window_starts_at)}. ` +
           (endsAt
             ? `The window stays open through ${formatDate(event.upload_window_ends_at)}. `
