@@ -27,6 +27,7 @@ The technical platform is shippable. Go-live = **make Founding 20 bookable, then
 - [ ] **Create the `FOUNDING20` code** (₱1,500 off · Dalisay · max 20 · expires Jun 30) in Admin → 🎟️ Coupons → copy the `?coupon=` link.
 - [ ] **Smoke the discounted checkout** — open the link once, confirm the "₱2,990 → ₱1,490" banner and that PayMongo charges ₱1,490.
 - [ ] **Lock 1–3 free "hero" events** (Week 1 #1 task — the proof pipeline). Sourcing kit: [week1-hero-event-kit.md](week1-hero-event-kit.md); outreach + lead tracker: [week1-outreach-pack.md](week1-outreach-pack.md).
+- [x] **Scrub test data off the demo event** — cleared ~325 fake reactions + the test-payment row from `andrea-jm` so the public demo wall shows clean state (done 30 May, owner DB action). This was the last open platform-data chore.
 
 ---
 
