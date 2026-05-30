@@ -2325,11 +2325,6 @@
       letter-spacing: .04em; color: var(--ink-soft);
       text-transform: none;
     }
-    /* Host pre-window upload card value (its own cell). */
-    #info-host-preview-row .host-preview-val { font-weight: 600; }
-    #info-host-preview-row .host-preview-val em {
-      font-style: normal; font-weight: 700; color: #8a5a1a;
-    }
     .info-card .row.row-highlight span:last-child { color: var(--accent-deep); }
 
     /* Quota meter slot — only visible on plans that have a cap */
@@ -3014,13 +3009,6 @@
           <span class="win-pill" id="mini-access">—</span>
           <span class="win-hint" id="mini-next"></span>
         </span>
-      </div>
-      <!-- Host pre-window upload: only shown for paid events before the
-           guest window opens. Kept as its own cell so it never reads like
-           part of the guest window above it. -->
-      <div class="row row-highlight" id="info-host-preview-row" style="display:none">
-        <span>Host pre-window upload</span>
-        <span class="host-preview-val"><em id="host-preview-used">0</em> / <span id="host-preview-cap">20</span></span>
       </div>
       <div class="row row-highlight"><span>Wall expires</span><span id="info-expires">—</span></div>
 
@@ -4321,7 +4309,7 @@
   });
 
   // ── Render quota meter + soft-lock banner ─────────────
-  function renderSidebarState(event, uploadCount = allUploads.length) {
+  function renderSidebarState(event) {
     const now           = new Date();
     const startsAt      = event.upload_window_starts_at ? new Date(event.upload_window_starts_at) : null;
     const endsAt        = event.upload_window_ends_at   ? new Date(event.upload_window_ends_at)   : null;
@@ -4373,22 +4361,6 @@
           (nextOpenStr ? `<br>Opens again on ${nextOpenStr}` : '');
       } else {
         miniNext.textContent = 'Share the QR';
-      }
-    }
-
-    // Host pre-window upload card: its own cell (not part of the guest
-    // window above). Paid events only, and only before guests can post —
-    // mirrors the backend host-preview gate. Tala is excluded (free tier,
-    // uses its own demo window instead).
-    const hostPreviewRow = $('info-host-preview-row');
-    if (hostPreviewRow) {
-      const showHostPreview = notYetOpen && !isTala && !!event.is_paid;
-      hostPreviewRow.style.display = showHostPreview ? '' : 'none';
-      if (showHostPreview) {
-        const usedEl = $('host-preview-used');
-        const capEl  = $('host-preview-cap');
-        if (usedEl) usedEl.textContent = String(Math.min(uploadCount, HOST_PREVIEW_CAP));
-        if (capEl)  capEl.textContent  = String(HOST_PREVIEW_CAP);
       }
     }
 
@@ -4564,16 +4536,20 @@
           `Guests can upload again on the event day (${formatDate(event.upload_window_starts_at)}). ` +
           `Upgrade to unlock a longer window. You can upload anytime as the host.`;
       } else {
-        // Pre-window state — host can still upload (owner bypass) but
-        // guests will see the friendly "stay tuned" banner. Reassure
-        // the host their event is set up correctly.
+        // Pre-window state — guests see the "stay tuned" banner. A paid
+        // host gets a pre-window upload allowance (capped at
+        // HOST_PREVIEW_CAP) to test/pre-fill; an unpaid host is told it
+        // unlocks on payment. Mirrors the backend host-preview gate.
         $('lb-title').textContent = 'Uploads open soon';
+        const hostLine = event.is_paid
+          ? `As the host you can upload now — ${Math.min(uploadCount, HOST_PREVIEW_CAP)} of ${HOST_PREVIEW_CAP} pre-window uploads used.`
+          : `Host uploads unlock once your event is paid.`;
         $('lb-msg').textContent   =
           `Guests can start uploading on ${formatDate(event.upload_window_starts_at)}. ` +
           (endsAt
             ? `The window stays open through ${formatDate(event.upload_window_ends_at)}. `
             : '') +
-          `You can upload anytime as the host.`;
+          hostLine;
       }
     } else if (!demoOpen && endsAt && endsAt < now) {
       banner.classList.remove('hidden');
@@ -6683,7 +6659,7 @@
       applyTheme(event.event_type);
       renderHeader(event);
       renderQR(qr_code);
-      renderSidebarState(event, merged.length);
+      renderSidebarState(event);
       renderStats(merged);
       renderGallery(merged);
 
