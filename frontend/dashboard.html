@@ -2325,10 +2325,10 @@
       letter-spacing: .04em; color: var(--ink-soft);
       text-transform: none;
     }
-    /* Host-preview usage counter — sits under the "Opens …" hint when a
-       paid host can upload before the guest window opens. */
-    #info-window-row .win-hint .host-preview-count {
-      color: #8a5a1a; font-weight: 700;
+    /* Host pre-window upload card value (its own cell). */
+    #info-host-preview-row .host-preview-val { font-weight: 600; }
+    #info-host-preview-row .host-preview-val em {
+      font-style: normal; font-weight: 700; color: #8a5a1a;
     }
     .info-card .row.row-highlight span:last-child { color: var(--accent-deep); }
 
@@ -3014,6 +3014,13 @@
           <span class="win-pill" id="mini-access">—</span>
           <span class="win-hint" id="mini-next"></span>
         </span>
+      </div>
+      <!-- Host pre-window upload: only shown for paid events before the
+           guest window opens. Kept as its own cell so it never reads like
+           part of the guest window above it. -->
+      <div class="row row-highlight" id="info-host-preview-row" style="display:none">
+        <span>Host pre-window upload</span>
+        <span class="host-preview-val"><em id="host-preview-used">0</em> / <span id="host-preview-cap">20</span></span>
       </div>
       <div class="row row-highlight"><span>Wall expires</span><span id="info-expires">—</span></div>
 
@@ -4349,18 +4356,7 @@
       if (notYetOpen && isTala && _sideDemoEnd) {
         miniNext.textContent = `Demo: ${formatDate(event.created_at)} – ${formatDate(_sideDemoEnd)}`;
       } else if (notYetOpen) {
-        // Guests can't post yet, but a paid host gets a pre-window "host
-        // preview" (test the flow / pre-fill the wall), capped at
-        // HOST_PREVIEW_CAP. Surface the usage counter so they know how much
-        // headroom is left before guests open.
-        const opensStr = `Opens ${formatDate(event.upload_window_starts_at)}`;
-        if (event.is_paid) {
-          const used = Math.min(uploadCount, HOST_PREVIEW_CAP);
-          miniNext.innerHTML =
-            `${opensStr}<br><span class="host-preview-count">Host preview ${used}/${HOST_PREVIEW_CAP}</span>`;
-        } else {
-          miniNext.textContent = opensStr;
-        }
+        miniNext.textContent = `Opens ${formatDate(event.upload_window_starts_at)}`;
       } else if (uploadsClosed) {
         miniNext.textContent = 'Extend upload window';
       } else if (_sideDemoOpen && isTala) {
@@ -4377,6 +4373,22 @@
           (nextOpenStr ? `<br>Opens again on ${nextOpenStr}` : '');
       } else {
         miniNext.textContent = 'Share the QR';
+      }
+    }
+
+    // Host pre-window upload card: its own cell (not part of the guest
+    // window above). Paid events only, and only before guests can post —
+    // mirrors the backend host-preview gate. Tala is excluded (free tier,
+    // uses its own demo window instead).
+    const hostPreviewRow = $('info-host-preview-row');
+    if (hostPreviewRow) {
+      const showHostPreview = notYetOpen && !isTala && !!event.is_paid;
+      hostPreviewRow.style.display = showHostPreview ? '' : 'none';
+      if (showHostPreview) {
+        const usedEl = $('host-preview-used');
+        const capEl  = $('host-preview-cap');
+        if (usedEl) usedEl.textContent = String(Math.min(uploadCount, HOST_PREVIEW_CAP));
+        if (capEl)  capEl.textContent  = String(HOST_PREVIEW_CAP);
       }
     }
 
