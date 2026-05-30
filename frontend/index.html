@@ -1,13 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZRYFGKG85J"></script>
+<!-- Google Analytics — deferred load.
+     gtag.js was the top forced-reflow source on mobile Lighthouse (~59ms)
+     and ~62KB of unused JS competing on the critical path during first
+     paint. We keep the dataLayer stub inline so any gtag() calls still
+     queue immediately, then inject the library after `load` so it never
+     races LCP. gtag.js drains the queued events once it arrives. -->
 <script>
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
   gtag('config', 'G-ZRYFGKG85J');
+  window.addEventListener('load', function () {
+    var s = document.createElement('script');
+    s.async = true;
+    s.src = 'https://www.googletagmanager.com/gtag/js?id=G-ZRYFGKG85J';
+    document.head.appendChild(s);
+  });
 </script>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -59,6 +69,12 @@
      preload) so the module graph is fully prepared, not just the
      bytes fetched. -->
 <link rel="modulepreload" href="/js/auth.js" />
+<!-- coupon.js is imported alongside auth.js in the bottom module block but
+     wasn't preloaded — so it was discovered ~1,760 lines into parsing and
+     became the longest critical-request chain (mobile Lighthouse: 956ms,
+     reelday.ph → coupon.js → shared.css). Preload it for the same reason
+     auth.js is preloaded above. -->
+<link rel="modulepreload" href="/js/coupon.js" />
 
 <!-- Preconnect + non-blocking font load.
      The Google Fonts CSS was the #1 render-blocker on mobile Lighthouse
