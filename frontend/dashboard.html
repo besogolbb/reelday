@@ -1201,6 +1201,13 @@
     }
     .poll-row .poll-runall-toggle input { cursor: pointer; margin: 0; }
     .poll-row .poll-runall-toggle.excluded { color: rgba(83,48,33,.40); }
+    /* Sequence number prefix on the question text — quiet accent colour so
+       it orders the list without competing with the question itself. */
+    .poll-row .poll-seq {
+      color: var(--accent, #c45a3a);
+      font-weight: 700;
+      margin-right: 2px;
+    }
     @keyframes pollPulse { 50% { opacity: .35; } }
     @keyframes pollStripePulse {
       0%, 100% { opacity: 1; }
@@ -5364,7 +5371,8 @@
       pollsList.innerHTML = `<div class="polls-empty">${emptyMsg}</div>`;
       return;
     }
-    pollsList.innerHTML = filtered.map(p => {
+    pollsList.innerHTML = filtered.map((p, i) => {
+      const seqNo = i + 1;   // 1-based position in the (oldest-first) list
       const total = p.total_votes || 0;
       const isLive  = p.status === 'live';
       const isDraft = p.status === 'draft';
@@ -5432,8 +5440,8 @@
           </div>
           <div class="poll-stack">
             <div class="poll-panel question">
-              <div class="poll-panel-label">Question</div>
-              <div class="poll-q">${escapeHtml(p.question)}</div>
+              <div class="poll-panel-label">${isQuestion ? 'Question' : 'Poll'} ${seqNo}</div>
+              <div class="poll-q"><span class="poll-seq">${seqNo}.</span> ${escapeHtml(p.question)}</div>
             </div>
             <div class="poll-panel choices">
               <div class="poll-panel-label">Choices</div>
