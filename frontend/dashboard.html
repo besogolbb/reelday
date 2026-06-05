@@ -1189,6 +1189,18 @@
       color: var(--ink-soft);
       border: 1px solid rgba(83,48,33,.10);
     }
+    /* Run-all inclusion toggle — sits on the trailing edge of a question
+       row's meta line. Unchecking excludes the question from the "Run all"
+       sweep without deleting it (state persists per-event in localStorage). */
+    .poll-row .poll-runall-toggle {
+      display: inline-flex; align-items: center; gap: 6px;
+      margin-left: auto; cursor: pointer; user-select: none;
+      font-family: var(--mono); font-size: 9px; font-weight: 700;
+      letter-spacing: .10em; text-transform: uppercase;
+      color: var(--ink-soft);
+    }
+    .poll-row .poll-runall-toggle input { cursor: pointer; margin: 0; }
+    .poll-row .poll-runall-toggle.excluded { color: rgba(83,48,33,.40); }
     @keyframes pollPulse { 50% { opacity: .35; } }
     @keyframes pollStripePulse {
       0%, 100% { opacity: 1; }
@@ -5398,12 +5410,21 @@
       const durationChip = (!isLive && p.duration_s)
         ? `<span class="poll-meta">${p.duration_s}s on wall</span>`
         : '';
+      // Run-all inclusion toggle — questions only (Run all skips polls).
+      const isExcluded = runAllExcluded.has(p.id);
+      const runAllToggle = isQuestion
+        ? `<label class="poll-runall-toggle${isExcluded ? ' excluded' : ''}" title="Uncheck to skip this question when you press Run all">
+             <input type="checkbox" data-runall-id="${p.id}" ${isExcluded ? '' : 'checked'} />
+             In Run all
+           </label>`
+        : '';
       return `
         <div class="poll-row" data-poll-id="${p.id}">
           <div class="poll-meta-row">
             <span class="poll-status ${p.status}">${statusLabel}</span>
             ${kindBadge}
             ${durationChip}
+            ${runAllToggle}
           </div>
           <div class="poll-stack">
             <div class="poll-panel question">
@@ -5421,6 +5442,13 @@
 
     pollsList.querySelectorAll('.poll-actions button').forEach(b => {
       b.addEventListener('click', () => onPollAction(b.dataset.act, b.dataset.id));
+    });
+
+    pollsList.querySelectorAll('input[data-runall-id]').forEach(cb => {
+      cb.addEventListener('change', () => {
+        setRunAllExcluded(cb.dataset.runallId, !cb.checked);
+        cb.closest('.poll-runall-toggle')?.classList.toggle('excluded', !cb.checked);
+      });
     });
   }
 
@@ -5455,6 +5483,25 @@
   // re-fetching just-to-pull-options.
   let pollsCache = new Map();
   let pollsList_ = [];   // cached array form for Run-all ordering
+
+  // ── Run-all exclusion set ────────────────────────────
+  // Questions the host has unchecked are skipped by "Run all" but kept in
+  // the list (still runnable individually). Persisted per-event in
+  // localStorage so the choice survives refreshes / re-renders.
+  const RUNALL_EXCLUDE_KEY = `reelday:runall-excluded:${slug || 'event'}`;
+  let runAllExcluded = (() => {
+    try { return new Set(JSON.parse(localStorage.getItem(RUNALL_EXCLUDE_KEY) || '[]')); }
+    catch { return new Set(); }
+  })();
+  function persistRunAllExcluded() {
+    try { localStorage.setItem(RUNALL_EXCLUDE_KEY, JSON.stringify([...runAllExcluded])); }
+    catch { /* private mode / quota — toggle still works for this session */ }
+  }
+  function setRunAllExcluded(id, excluded) {
+    if (excluded) runAllExcluded.add(id);
+    else          runAllExcluded.delete(id);
+    persistRunAllExcluded();
+  }
   const _renderPolls = renderPolls;
   renderPolls = function (polls) {
     pollsCache  = new Map(polls.map(p => [p.id, p]));
@@ -5772,13 +5819,20 @@
 
   // ── Run-all orchestrator ─────────────────────────────
   function startRunAll() {
-    const questions = pollsList_
-      .filter(p => p.kind === 'question')
+    const allQuestions = pollsList_.filter(p => p.kind === 'question');
+    if (!allQuestions.length) {
+      // Spec: prompt the host that they only have polls saved.
+      showToast('Add a Question first — Run all only runs trivia questions, not opinion polls');
+      return;
+    }
+    // Honour the per-question "In Run all" checkboxes — excluded ones are
+    // kept in the list (still runnable individually) but skipped here.
+    const questions = allQuestions
+      .filter(p => !runAllExcluded.has(p.id))
       .slice()
       .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
     if (!questions.length) {
-      // Spec: prompt the host that they only have polls saved.
-      showToast('Add a Question first — Run all only runs trivia questions, not opinion polls');
+      showToast('Every question is unchecked — tick at least one "In Run all" box first');
       return;
     }
     if (!confirm(`Run all ${questions.length} question${questions.length === 1 ? '' : 's'} on the wall in order?`)) return;
