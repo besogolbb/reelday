@@ -5900,6 +5900,14 @@
     };
     pollsRunAllBtn.classList.add('running');
     pollsRunAllBtn.textContent = '■ Stop run';
+    // Tell the wall a Run-all session is in progress so it keeps the photo
+    // slideshow frozen for the *whole* run instead of flickering photos back
+    // in during the gap between questions.
+    fetch(`/api/events/${slug}/quiz/start`, {
+      method: 'POST',
+      headers: { ...authHeader(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ total: questions.length }),
+    }).catch(() => { /* non-fatal — wall falls back to per-poll grace */ });
     runOneAndChain();
   }
   async function runOneAndChain() {
@@ -5930,6 +5938,12 @@
     runAllState = { active: false, queue: [], index: 0, timer: null };
     pollsRunAllBtn.classList.remove('running');
     pollsRunAllBtn.textContent = '▶ Run all';
+    // Close the session so the wall releases its slideshow freeze (and
+    // snapshots the leaderboard server-side for a stable wall reveal).
+    if (wasActive) {
+      fetch(`/api/events/${slug}/quiz/end`, { method: 'POST', headers: authHeader() })
+        .catch(() => { /* non-fatal */ });
+    }
     // The wall is the canonical surface for the final tally — fire the
     // trigger so the wall pulls up the leaderboard with fireworks instead
     // of showing it back here on the host's screen.

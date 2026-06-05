@@ -4116,6 +4116,9 @@
 
     pollSlideshowResumeAt = Date.now() + 10000;
     if (pollResultsHideTimer) clearTimeout(pollResultsHideTimer);
+    // During a Run-all session, keep this tally up until the next question
+    // replaces it (or the session ends) — don't auto-hide back to photos.
+    if (quizSessionActive) return;
     pollResultsHideTimer = setTimeout(() => {
       pollResultsHideTimer = null;
       // Only hide if no NEW poll has started in the meantime.
@@ -4500,6 +4503,40 @@
     pollConfettiRightFx.stop();
   }
 
+  // ── Run-all session freeze ───────────────────────────────
+  // While the host is running every question in sequence ("Run all"), the
+  // wall must NOT flicker photos back in during the gap between questions.
+  // The dashboard marks the session via /quiz/start|end; we mirror that
+  // flag here and suppress the per-poll auto-hide for its duration.
+  let quizSessionActive = false;
+  async function pollQuizState() {
+    if (wallArchived) return;
+    if (planFeatures && planFeatures.polls === false) return;
+    try {
+      const res = await fetch(`/api/events/${slug}/quiz/state`, { cache: 'no-store' });
+      if (!res.ok) return;
+      const { state } = await res.json();
+      const nowActive = !!(state && state.active);
+      if (nowActive === quizSessionActive) return;
+      quizSessionActive = nowActive;
+      if (!nowActive) {
+        // Session just ended. We suppressed the results overlay's auto-hide
+        // during the run, so a final-question tally may be lingering. Give
+        // the final-leaderboard reveal a moment to claim the wall; if it
+        // doesn't (e.g. the host stopped early), release the overlay and
+        // resume photos.
+        setTimeout(() => {
+          // Bail if a new run started or the leaderboard claimed the wall.
+          if (quizSessionActive || leaderboardActive) return;
+          if (pollOverlay.classList.contains('visible') &&
+              !pollOverlay.classList.contains('live-state')) {
+            hidePollOverlay();
+          }
+        }, 3500);
+      }
+    } catch { /* network blip — keep last-known flag */ }
+  }
+
   async function pollPolls() {
     if (wallArchived) return;
     // Tier gate: Live polls/games are a Dalisay+ feature.
@@ -4530,9 +4567,13 @@
           pollOverlay.classList.add('results-state');
           triggerPollResultConfetti();
           if (pollCountdownTimer) clearInterval(pollCountdownTimer);
-          // Hide after a short grace — tracked so a re-run can cancel it.
-          if (pollHideTimer) clearTimeout(pollHideTimer);
-          pollHideTimer = setTimeout(() => { pollHideTimer = null; hidePollOverlay(); }, 4000);
+          // During a Run-all session, hold the tally for the next question
+          // instead of dropping back to photos in the gap.
+          if (!quizSessionActive) {
+            // Hide after a short grace — tracked so a re-run can cancel it.
+            if (pollHideTimer) clearTimeout(pollHideTimer);
+            pollHideTimer = setTimeout(() => { pollHideTimer = null; hidePollOverlay(); }, 4000);
+          }
         } else if (!activePollId) {
           // Already idle — nothing to do.
         }
@@ -5252,6 +5293,11 @@
     // tally as votes arrive.
     pollPolls();
     setInterval(pollPolls, 2000);
+
+    // Run-all session flag: poll a touch ahead of pollPolls so the freeze is
+    // already set before the first question's overlay opens.
+    pollQuizState();
+    setInterval(pollQuizState, 2000);
   }
 
   init();
