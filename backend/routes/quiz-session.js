@@ -10,7 +10,7 @@
  * needed across restarts).
  */
 
-const sessions = new Map(); // eventId -> { active, total, started_at, ended_at, leaderboard, total_questions }
+import { quizSessions as sessions } from '../lib/quizSessions.js';
 
 export default async function quizSessionRoutes(fastify) {
   async function loadOwnedEvent(request, reply) {
@@ -23,14 +23,21 @@ export default async function quizSessionRoutes(fastify) {
     return rows[0];
   }
 
-  // Snapshot the cumulative leaderboard at the moment a Run-all ends so
-  // the wall sees a stable list rather than racing the next vote in.
-  async function snapshotLeaderboard(eventId) {
+  // Snapshot the leaderboard at the moment a Run-all ends so the wall sees
+  // a stable list rather than racing the next vote in.
+  //
+  // `sinceDb` is the session start (DB-clock ISO). We scope BOTH the score
+  // counts and the question total to polls started during THIS run — without
+  // it, votes left in poll_votes from an earlier *solo* question run (never
+  // wiped because that question wasn't re-run) leak into the result, showing
+  // phantom answers nobody gave this session.
+  async function snapshotLeaderboard(eventId, sinceDb) {
     const { rows: counts } = await fastify.db.query(
       `SELECT COUNT(*)::int AS n
          FROM polls
-        WHERE event_id = $1 AND kind = 'question' AND correct_key IS NOT NULL`,
-      [eventId],
+        WHERE event_id = $1 AND kind = 'question' AND correct_key IS NOT NULL
+          AND ($2::timestamptz IS NULL OR started_at >= $2::timestamptz)`,
+      [eventId, sinceDb || null],
     );
     const total_questions = counts[0]?.n || 0;
 
@@ -46,10 +53,11 @@ export default async function quizSessionRoutes(fastify) {
           AND p.correct_key IS NOT NULL
           AND pv.guest_name IS NOT NULL
           AND pv.guest_name <> ''
+          AND ($2::timestamptz IS NULL OR p.started_at >= $2::timestamptz)
         GROUP BY pv.guest_name
         ORDER BY correct_count DESC, avg_correct_seconds ASC NULLS LAST, pv.guest_name ASC
         LIMIT 20`,
-      [eventId],
+      [eventId, sinceDb || null],
     );
     return { total_questions, leaderboard: rows };
   }
@@ -59,10 +67,14 @@ export default async function quizSessionRoutes(fastify) {
     const ev = await loadOwnedEvent(request, reply);
     if (!ev) return;
     const total = Math.max(1, parseInt(request.body?.total, 10) || 1);
+    // Capture the start from the DB clock so it lines up exactly with the
+    // poll.started_at values we later compare against (no app-vs-DB skew).
+    const { rows: nowRows } = await fastify.db.query('SELECT NOW() AS now');
     sessions.set(ev.id, {
       active: true,
       total,
       started_at: Date.now(),
+      started_at_db: nowRows[0]?.now || null,
       ended_at: null,
       leaderboard: null,
       total_questions: 0,
@@ -76,10 +88,11 @@ export default async function quizSessionRoutes(fastify) {
     const ev = await loadOwnedEvent(request, reply);
     if (!ev) return;
 
-    const { leaderboard, total_questions } = await snapshotLeaderboard(ev.id);
+    const prev = sessions.get(ev.id);
+    const { leaderboard, total_questions } = await snapshotLeaderboard(ev.id, prev?.started_at_db || null);
 
     sessions.set(ev.id, {
-      ...(sessions.get(ev.id) || { total: total_questions, started_at: Date.now() }),
+      ...(prev || { total: total_questions, started_at: Date.now() }),
       active: false,
       ended_at: Date.now(),
       leaderboard,

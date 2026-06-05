@@ -19,6 +19,9 @@
  */
 
 import { resolvePlan } from '../lib/plans.js';
+// Shared with the quiz-session routes so the wall reveal can scope its
+// leaderboard to the current Run-all session (see the reveal block below).
+import { quizSessions } from '../lib/quizSessions.js';
 
 const MAX_OPTIONS    = 4;
 const MIN_OPTIONS    = 2;
@@ -601,11 +604,18 @@ export default async function pollRoutes(fastify) {
     let leaderboardPayload = null;
     const reveal = leaderboardRevealUntil.get(eventId);
     if (reveal && reveal > Date.now()) {
+      // Scope the tally to the current Run-all session so votes left in
+      // poll_votes from an earlier SOLO question run (never wiped because
+      // that question wasn't re-run this time) don't leak in as phantom
+      // results. When no session is recorded (e.g. backend restarted), fall
+      // back to the unscoped count rather than showing nothing.
+      const sinceDb = quizSessions.get(eventId)?.started_at_db || null;
       const { rows: questionsRows } = await fastify.db.query(
         `SELECT COUNT(*)::int AS n
            FROM polls
-          WHERE event_id = $1 AND kind = 'question' AND correct_key IS NOT NULL`,
-        [eventId],
+          WHERE event_id = $1 AND kind = 'question' AND correct_key IS NOT NULL
+            AND ($2::timestamptz IS NULL OR started_at >= $2::timestamptz)`,
+        [eventId, sinceDb],
       );
       const totalQuestions = questionsRows[0]?.n || 0;
       const { rows: lbRows } = await fastify.db.query(
@@ -620,10 +630,11 @@ export default async function pollRoutes(fastify) {
             AND p.correct_key IS NOT NULL
             AND pv.guest_name IS NOT NULL
             AND pv.guest_name <> ''
+            AND ($2::timestamptz IS NULL OR p.started_at >= $2::timestamptz)
           GROUP BY pv.guest_name
           ORDER BY correct_count DESC, avg_correct_seconds ASC NULLS LAST, pv.guest_name ASC
           LIMIT 10`,
-        [eventId],
+        [eventId, sinceDb],
       );
       leaderboardPayload = {
         total_questions: totalQuestions,
