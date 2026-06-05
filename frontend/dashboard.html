@@ -659,6 +659,22 @@
       justify-content: center;
       font-weight: 700;
     }
+    /* Modern emerald "play" fill — contrasts with the orange + New and reads
+       as the go action. The running state below flips it to red (stop). */
+    .polls-runall-btn:not(.running) {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: #fff;
+      border: 1px solid transparent;
+      box-shadow:
+        0 4px 14px rgba(16,185,129,.30),
+        inset 0 1px 0 rgba(255,255,255,.28);
+    }
+    .polls-runall-btn:not(.running):hover {
+      background: linear-gradient(135deg, #059669 0%, #047857 100%);
+      box-shadow:
+        0 6px 20px rgba(16,185,129,.42),
+        inset 0 1px 0 rgba(255,255,255,.28);
+    }
     .polls-runall-btn.running { background: #b03022; color: #fff; border-color: #b03022; }
     .polls-runall-btn.running:hover { background: #8a2418; }
     .polls-runall-btn:disabled { opacity: .5; cursor: not-allowed; }
