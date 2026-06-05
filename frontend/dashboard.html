@@ -686,7 +686,30 @@
       border: 1px solid rgba(196,90,58,.14);
     }
 
-    .polls-list { display: flex; flex-direction: column; gap: 14px; }
+    /* Long lists (many questions) scroll inside the panel instead of being
+       clipped by the .polls-body max-height collapse cap. Only kicks in once
+       the rows exceed ~62vh; short lists render at natural height with no
+       scrollbar. The small right padding keeps the scrollbar off the row
+       content + run-all checkboxes. */
+    .polls-list {
+      display: flex; flex-direction: column; gap: 14px;
+      max-height: 62vh;
+      overflow-y: auto;
+      /* Reserve the gutter only when a scrollbar is actually present so
+         short lists don't get an off-centre look. */
+      scrollbar-gutter: stable;
+      padding-right: 4px;
+      /* Faint scrollbar that matches the warm dashboard palette. */
+      scrollbar-width: thin;
+      scrollbar-color: rgba(196,90,58,.45) transparent;
+    }
+    .polls-list::-webkit-scrollbar { width: 8px; }
+    .polls-list::-webkit-scrollbar-thumb {
+      background: rgba(196,90,58,.40);
+      border-radius: 999px;
+    }
+    .polls-list::-webkit-scrollbar-thumb:hover { background: rgba(196,90,58,.6); }
+    .polls-list::-webkit-scrollbar-track { background: transparent; }
     .polls-empty { font-size: 13px; color: var(--dash-muted); padding: 18px 0; text-align: center; font-style: italic; }
 
     /* ── Sub-tabs: Questions · Polls · Leaderboard ────────── */
