@@ -2695,6 +2695,43 @@ body { background: var(--paper); min-height: 100dvh; }
     return '.webm';
   }
 
+  // Server's presign whitelist (keep in sync with ALLOWED_UPLOAD_TYPES in
+  // backend/routes/uploads.js). Used to decide whether the browser-reported
+  // type is trustworthy or we should fall back to the filename extension.
+  const ACCEPTED_UPLOAD_MIMES = new Set([
+    'image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic', 'image/heif',
+    'video/mp4', 'video/quicktime', 'video/webm', 'video/x-m4v',
+    'audio/webm', 'audio/mp4', 'audio/m4a', 'audio/mpeg', 'audio/ogg', 'audio/aac',
+  ]);
+  const EXT_TO_MIME = {
+    '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp',
+    '.heic': 'image/heic', '.heif': 'image/heif',
+    '.mov': 'video/quicktime', '.mp4': 'video/mp4', '.m4v': 'video/x-m4v', '.webm': 'video/webm',
+    '.m4a': 'audio/mp4', '.caf': 'audio/mp4', '.aac': 'audio/aac', '.mp3': 'audio/mpeg', '.ogg': 'audio/ogg',
+  };
+  // Resolve a guaranteed-valid upload MIME for a File. iOS Safari frequently
+  // hands back an empty (or non-whitelisted) file.type for clips chosen from
+  // the Photos library — especially HEVC .mov — which made the presign call
+  // reject them as "unsupported file type". When the reported type isn't one
+  // we accept, derive it from the filename extension instead.
+  function resolveUploadMime(file, forceFileType) {
+    const reported = (file.type || '').toLowerCase().trim();
+    if (reported && ACCEPTED_UPLOAD_MIMES.has(reported)) return reported;
+    const name = (file.name || '').toLowerCase();
+    const dot  = name.lastIndexOf('.');
+    const byExt = dot >= 0 ? EXT_TO_MIME[name.slice(dot)] : null;
+    if (byExt) return byExt;
+    // Last resort — honour an explicit kind hint from the recorder paths,
+    // otherwise pass the reported type through and let the server decide.
+    if (forceFileType === 'video') return 'video/mp4';
+    if (forceFileType === 'audio') return 'audio/mp4';
+    return reported;
+  }
+  // Extension-aware kind checks so iOS clips with an empty file.type still
+  // get treated as video (duration probe, poster capture) rather than being
+  // mistaken for a photo.
+  function isVideoFile(f) { return resolveUploadMime(f, null).startsWith('video/'); }
+
   async function handleFiles(e) {
     const incoming = Array.from(e.target.files);
     const queue = document.getElementById('galleryQueue');
@@ -2705,7 +2742,7 @@ body { background: var(--paper); min-height: 100dvh; }
     let rejectedLong = 0, rejectedBig = 0;
     const files = [];
     for (const f of incoming) {
-      if ((f.type || '').startsWith('video/')) {
+      if (isVideoFile(f)) {
         if (f.size > MAX_VIDEO_BYTES) { rejectedBig++; continue; }
         const meta = await probeVideo(f);
         if (meta.duration > MAX_RECORD_SECS + 0.5) { rejectedLong++; continue; }
@@ -2720,7 +2757,7 @@ body { background: var(--paper); min-height: 100dvh; }
       alert(`Videos must be under ${mb} MB. ${rejectedBig} clip${rejectedBig > 1 ? 's were' : ' was'} skipped — try a shorter or lower-resolution clip.`);
     }
 
-    const largeVideoCount = files.filter(f => (f.type || '').startsWith('video/') && f.size >= LARGE_VIDEO_WARN_BYTES).length;
+    const largeVideoCount = files.filter(f => isVideoFile(f) && f.size >= LARGE_VIDEO_WARN_BYTES).length;
     if (largeVideoCount > 0) {
       showToast('Large videos can take longer on weak Wi-Fi. Photos usually upload faster first.', 5200);
     }
@@ -2738,7 +2775,7 @@ body { background: var(--paper); min-height: 100dvh; }
       queue.appendChild(item);
       itemFiles[id] = f;
       const th = document.getElementById(thumbId);
-      if ((f.type || '').startsWith('video/')) {
+      if (isVideoFile(f)) {
         itemPosterJobs[id] = captureVideoThumbnail(f).then(poster => {
           if (poster && th) {
             th.style.backgroundImage = `url(${poster})`;
@@ -2853,7 +2890,7 @@ body { background: var(--paper); min-height: 100dvh; }
   }
 
   function refreshVoiceAvailability() {
-    const hasVideo = Object.values(itemFiles).some(f => (f.type || '').startsWith('video/'));
+    const hasVideo = Object.values(itemFiles).some(f => isVideoFile(f));
     const voicePill = document.getElementById('msgPillVoice');
     if (!voicePill) return;
     if (hasVideo) {
@@ -3310,11 +3347,11 @@ body { background: var(--paper); min-height: 100dvh; }
           id:            now + i,
           uploader_name: name,
           message:       msg,   // same message on every file in the batch
-          thumb:         file.type.startsWith('video/') ? (itemPosterDataUrls[qId] || null) : null,
+          thumb:         isVideoFile(file) ? (itemPosterDataUrls[qId] || null) : null,
           timestamp:     new Date().toISOString(),
           status:        'pending',
           featured:      false,
-          file_type:     file.type.startsWith('video/') ? 'video' : 'photo',
+          file_type:     isVideoFile(file) ? 'video' : 'photo',
         }))
       : [{
           id:               now,
@@ -3337,7 +3374,7 @@ body { background: var(--paper); min-height: 100dvh; }
     // the /complete call, which runs in parallel with the R2 PUT.
     const photoThumbPromises = new Map();
     fileEntries.forEach(([qId, file]) => {
-      if ((file.type || '').startsWith('video/')) return;
+      if (isVideoFile(file)) return;
       const fullUrl = itemDataUrls[qId];
       if (!fullUrl) { photoThumbPromises.set(qId, Promise.resolve(null)); return; }
       photoThumbPromises.set(qId, new Promise(resolve => {
@@ -3426,8 +3463,11 @@ body { background: var(--paper); min-height: 100dvh; }
 
     const processUpload = async (file, queueId, i, isVidMsg = false, forceFileType = null) => {
       const entryId = now + i;
-      const isAudio = forceFileType === 'audio' || (!forceFileType && file.type.startsWith('audio/'));
-      const isVideo = !isAudio && (forceFileType === 'video' || (!forceFileType && file.type.startsWith('video/')));
+      // Resolve a whitelisted MIME up front (file.type can be empty on iOS).
+      // Used for the presign request, the R2 PUT header, and classification.
+      const uploadMime = resolveUploadMime(file, forceFileType);
+      const isAudio = forceFileType === 'audio' || (!forceFileType && uploadMime.startsWith('audio/'));
+      const isVideo = !isAudio && (forceFileType === 'video' || (!forceFileType && uploadMime.startsWith('video/')));
       // Apply the message to every file in the batch so the host sees it
       // when reviewing any photo, not just the first one uploaded.
       const msgToSend = msg || '';
@@ -3450,7 +3490,7 @@ body { background: var(--paper); min-height: 100dvh; }
             'X-Guest-Id': GUEST_ID,
             ...(token ? { 'Authorization': `Bearer ${token}` } : {})
           },
-          body: JSON.stringify({ slug: currentEvent.slug, filename: file.name || 'blob', contentType: file.type })
+          body: JSON.stringify({ slug: currentEvent.slug, filename: file.name || 'blob', contentType: uploadMime })
         }, { label: 'upload ticket', queueId });
 
         if (!preRes.ok) {
@@ -3473,7 +3513,9 @@ body { background: var(--paper); min-height: 100dvh; }
         await new Promise((resolve, reject) => {
           const xhr = new XMLHttpRequest();
           xhr.open('PUT', uploadUrl);
-          xhr.setRequestHeader('Content-Type', file.type);
+          // Must match the contentType the presign was signed with, or R2
+          // rejects the PUT with a SignatureDoesNotMatch error.
+          xhr.setRequestHeader('Content-Type', uploadMime);
           xhr.upload.onprogress = (e) => {
             if (!e.lengthComputable) return;
             const pct = Math.round((e.loaded / e.total) * 100);
