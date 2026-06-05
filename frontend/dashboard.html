@@ -5349,9 +5349,13 @@
     // Filter to whichever sub-tab is active. The Leaderboard tab handles
     // its own rendering elsewhere — bail here so we don't overwrite it.
     if (pollsTab === 'leaderboard') return;
-    const filtered = pollsTab === 'polls'
+    // Oldest-first so newly added items append to the bottom of the list
+    // (matches the Run-all order, which also sorts by created_at ascending).
+    const filtered = (pollsTab === 'polls'
       ? polls.filter(p => p.kind !== 'question')
-      : polls.filter(p => p.kind === 'question');
+      : polls.filter(p => p.kind === 'question'))
+      .slice()
+      .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
     if (!filtered.length) {
       const emptyMsg = pollsTab === 'polls'
