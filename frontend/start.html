@@ -17,14 +17,34 @@
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=5" />
 <link rel="shortcut icon" href="/favicon.ico?v=5" />
 
-<!-- Preconnect + early-fetch Google Fonts. Without these, the @import
-     inside shared.css blocks paint until shared.css is parsed, then
-     blocks again on fonts.gstatic.com TLS handshake. Pulling the link
-     up here parallelises font fetch with everything else and warms the
-     cross-origin TLS connections during HTML parse. -->
+<!-- Preconnect warms the cross-origin TLS handshakes during HTML parse. -->
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,400;1,9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" />
+
+<!-- Fonts loaded NON-render-blocking. The Google Fonts stylesheet (and the
+     woff2 chain behind it) was the dominant render-blocker on slow 4G
+     (~750ms+ before first paint, per Lighthouse). We preload it as a
+     stylesheet, then flip rel to 'stylesheet' on load. display=swap means
+     headings/body paint immediately in the Georgia/system-ui fallback
+     (defined in shared.css) and swap to Fraunces/Inter when ready, so this
+     moves the request off the critical path without a FOUC. The unused 800
+     weight is dropped. <noscript> keeps fonts working with JS disabled.
+     (CSP: inline onload is allowed by script-src-attr 'unsafe-inline'.) -->
+<link rel="preload" as="style"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      onload="this.onload=null;this.rel='stylesheet'" />
+<noscript>
+  <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" />
+</noscript>
+
+<!-- LCP is the first (Wedding) event tile — a CSS background-image, so the
+     browser can't discover it until shared.css parses. Preload it so the
+     fetch starts during HTML parse instead of after CSS (fixes Lighthouse's
+     "LCP request discovery" flag). Same cdn-cgi transform the tile uses, so
+     it's a cache hit, not a second download. -->
+<link rel="preload" as="image" fetchpriority="high"
+      href="/cdn-cgi/image/width=500,quality=82,format=auto/images/First%20kiss.png" />
 
 <link rel="stylesheet" href="/css/shared.css" />
 <style>
