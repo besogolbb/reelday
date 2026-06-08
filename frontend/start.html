@@ -1,13 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZRYFGKG85J"></script>
+<!-- Analytics deferred to window 'load'. gtag's init forces a reflow (~48ms,
+     per Lighthouse) and was competing with first paint/LCP on slow 4G. The
+     stub queues calls immediately; the real script + pageview fire only after
+     the page has loaded, so analytics still works without taxing the render. -->
 <script>
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-ZRYFGKG85J');
+  window.addEventListener('load', function () {
+    gtag('js', new Date());
+    gtag('config', 'G-ZRYFGKG85J');
+    var s = document.createElement('script');
+    s.async = true;
+    s.src = 'https://www.googletagmanager.com/gtag/js?id=G-ZRYFGKG85J';
+    document.head.appendChild(s);
+  });
 </script>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -44,7 +52,7 @@
      "LCP request discovery" flag). Same cdn-cgi transform the tile uses, so
      it's a cache hit, not a second download. -->
 <link rel="preload" as="image" fetchpriority="high"
-      href="/cdn-cgi/image/width=500,quality=82,format=auto/images/First%20kiss.png" />
+      href="/cdn-cgi/image/width=400,quality=82,format=auto/images/First%20kiss.png" />
 
 <link rel="stylesheet" href="/css/shared.css" />
 <style>
@@ -699,23 +707,23 @@
 
       <div class="types-grid" id="types-grid">
         <button type="button" class="type-card selected" data-type="wedding">
-          <div class="pic" style="background-image:url(/cdn-cgi/image/width=500,quality=82,format=auto/images/First%20kiss.png)"></div>
+          <div class="pic" style="background-image:url(/cdn-cgi/image/width=400,quality=82,format=auto/images/First%20kiss.png)"></div>
           <div><div class="name">Wedding</div><div class="tag">Kasal</div></div>
         </button>
         <button type="button" class="type-card" data-type="birthday">
-          <div class="pic" style="background-image:url(/cdn-cgi/image/width=500,quality=82,format=auto/images/Birthday.png?v=2)"></div>
+          <div class="pic" style="background-image:url(/cdn-cgi/image/width=400,quality=82,format=auto/images/Birthday.png?v=2)"></div>
           <div><div class="name">Birthday</div><div class="tag">Kaarawan</div></div>
         </button>
         <button type="button" class="type-card" data-type="baptism">
-          <div class="pic" style="background-image:url(/cdn-cgi/image/width=500,quality=82,format=auto/images/Baptism.png?v=2)"></div>
+          <div class="pic" style="background-image:url(/cdn-cgi/image/width=400,quality=82,format=auto/images/Baptism.png?v=2)"></div>
           <div><div class="name">Baptism</div><div class="tag">Binyag</div></div>
         </button>
         <button type="button" class="type-card" data-type="corporate">
-          <div class="pic" style="background-image:url(/cdn-cgi/image/width=500,quality=82,format=auto/images/Corporate.png?v=2)"></div>
+          <div class="pic" style="background-image:url(/cdn-cgi/image/width=400,quality=82,format=auto/images/Corporate.png?v=2)"></div>
           <div><div class="name">Corporate</div><div class="tag">Kompanya</div></div>
         </button>
         <button type="button" class="type-card" data-type="reunion">
-          <div class="pic" style="background-image:url(/cdn-cgi/image/width=500,quality=82,format=auto/images/gen%20event.png)"></div>
+          <div class="pic" style="background-image:url(/cdn-cgi/image/width=400,quality=82,format=auto/images/gen%20event.png)"></div>
           <!-- data-type stays 'reunion' for back-compat with existing
                events / themes / wall emoji sets; only the display label
                broadens to 'General Event' so the card is the catch-all
