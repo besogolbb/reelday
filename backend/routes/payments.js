@@ -413,6 +413,59 @@ async function redeemCoupon(db, couponCode, log) {
   }
 }
 
+/**
+ * Atomically settle a payment row and apply the tier upgrade — the ONLY
+ * way the webhook + reconcile paths may upgrade an account.
+ *
+ * Why one transaction: applyTierUpgrade used to run BEFORE the
+ * pending→succeeded flip, with only coupon redemption gated on the
+ * transition. A re-delivered webhook, or the frontend-triggered
+ * /payments/reconcile racing the webhook, applied the upgrade twice
+ * (double Sinag credit; Hiraya got +2 years and +20 credits).
+ *
+ * The UPDATE … RETURNING here both gates and locks: the row lock makes a
+ * concurrent settle for the same payment wait, then see status='succeeded'
+ * and apply nothing. And because the flip + upgrade commit together, a
+ * crash between them rolls both back — the payment can't get stuck
+ * succeeded-but-never-upgraded.
+ *
+ * Identify the row by our internal `rowId` when the caller already
+ * resolved it, else by `paymongoId` (the checkout-session id stored at
+ * /payments/create). Returns { applied, couponCode }; applied=false means
+ * another path already settled this payment (or no matching row exists).
+ */
+async function settlePaymentAndUpgrade(db, { rowId, paymongoId, userId, tier, slug }) {
+  const client = await db.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = rowId
+      ? await client.query(
+          `UPDATE payments SET status = 'succeeded'
+            WHERE id = $1 AND status <> 'succeeded'
+          RETURNING coupon_code`,
+          [rowId],
+        )
+      : await client.query(
+          `UPDATE payments SET status = 'succeeded'
+            WHERE paymongo_payment_id = $1 AND status <> 'succeeded'
+          RETURNING coupon_code`,
+          [paymongoId],
+        );
+    if (!rows.length) {
+      await client.query('ROLLBACK');
+      return { applied: false, couponCode: null };
+    }
+    await applyTierUpgrade(client, { userId, tier, slug });
+    await client.query('COMMIT');
+    return { applied: true, couponCode: rows[0].coupon_code };
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
 export default async function paymentRoutes(fastify) {
   // GET /api/payments/plans — public catalog
   fastify.get('/payments/plans', async () => ({
@@ -666,13 +719,15 @@ export default async function paymentRoutes(fastify) {
       return reply.status(503).send({ error: true, message: 'Payment gateway not configured' });
     }
 
-    // Pull this user's recent pending payments — newest first. Cap at 5
-    // so a stuck-pending row from weeks ago doesn't drown the call.
+    // Pull this user's recent pending payments — newest first. LIMIT 5
+    // bounds the PayMongo round-trips per call; 7 days (was 24h) keeps a
+    // missed-webhook payment self-service recoverable when the buyer only
+    // comes back days later, instead of stranding it as pending forever.
     const { rows: pending } = await fastify.db.query(
       `SELECT id, paymongo_payment_id, tier, event_id
          FROM payments
         WHERE user_id = $1 AND status = 'pending'
-          AND created_at > NOW() - INTERVAL '24 hours'
+          AND created_at > NOW() - INTERVAL '7 days'
         ORDER BY created_at DESC
         LIMIT 5`,
       [userId],
@@ -719,14 +774,13 @@ export default async function paymentRoutes(fastify) {
         slug = evRows[0]?.slug || null;
       }
 
-      await applyTierUpgrade(fastify.db, { userId, tier: pmt.tier, slug });
-      const { rows: doneRows } = await fastify.db.query(
-        `UPDATE payments SET status = 'succeeded'
-          WHERE id = $1 AND status <> 'succeeded'
-        RETURNING coupon_code`,
-        [pmt.id],
-      );
-      if (doneRows.length) await redeemCoupon(fastify.db, doneRows[0].coupon_code, request.log);
+      const settled = await settlePaymentAndUpgrade(fastify.db, {
+        rowId: pmt.id, userId, tier: pmt.tier, slug,
+      });
+      // applied=false: a webhook settled this payment between our SELECT
+      // and here — the upgrade already happened exactly once, move on.
+      if (!settled.applied) continue;
+      await redeemCoupon(fastify.db, settled.couponCode, request.log);
       // Defer the email when slug is null: the wizard creates the event
       // AFTER reconcile, so POST /api/events sends the confirmation with
       // the new slug. Sending here would link to /dashboard with no slug
@@ -786,22 +840,27 @@ export default async function paymentRoutes(fastify) {
 
     // ── checkout_session.payment.paid ─────────────────────
     // Direct path: metadata is on the checkout session resource we
-    // attached in /payments/create.
+    // attached in /payments/create. The upgrade is gated on OUR pending
+    // row flipping to succeeded (settlePaymentAndUpgrade), so a
+    // re-delivered webhook — or the reconcile path racing us — can never
+    // apply it twice. A payload whose session id has no payments row at
+    // all (i.e. one we never created) now applies nothing.
     if (type === 'checkout_session.payment.paid' && resourceId) {
       const { user_id: userId, tier, slug } = meta;
       if (userId && PAID_TIERS[tier]) {
-        await applyTierUpgrade(fastify.db, { userId, tier, slug: slug || null });
-        const { rows: doneRows } = await fastify.db.query(
-          `UPDATE payments SET status = 'succeeded'
-            WHERE paymongo_payment_id = $1 AND status <> 'succeeded'
-          RETURNING coupon_code`,
-          [resourceId],
-        );
-        if (doneRows.length) await redeemCoupon(fastify.db, doneRows[0].coupon_code, request.log);
-        if (slug) {
-          sendBookingConfirmationEmail(fastify.db, { userId, tier, slug }, request.log).catch(() => {});
+        const settled = await settlePaymentAndUpgrade(fastify.db, {
+          paymongoId: resourceId, userId, tier, slug: slug || null,
+        });
+        if (settled.applied) {
+          await redeemCoupon(fastify.db, settled.couponCode, request.log);
+          if (slug) {
+            sendBookingConfirmationEmail(fastify.db, { userId, tier, slug }, request.log).catch(() => {});
+          }
+          applied = true;
+        } else {
+          request.log.info({ resource_id: resourceId },
+            'checkout_session.payment.paid already settled — re-delivery ignored');
         }
-        applied = true;
       }
     }
 
@@ -812,21 +871,34 @@ export default async function paymentRoutes(fastify) {
     // checkout in the related-resources block, or by metadata if PayMongo
     // happens to have copied it through.
     if (!applied && type === 'payment.paid' && resourceId) {
-      // PayMongo's payment object exposes the originating checkout
-      // session via `attributes.source.id` (varies by integration) or
-      // via `attributes.metadata` (when the metadata was attached to
-      // the underlying payment intent). Try metadata first, fall back
-      // to the most recent matching pending row.
-      let userId = meta.user_id;
-      let tier   = meta.tier;
-      let slug   = meta.slug || null;
-      let pendingRowId = null;
+      // The inner resource here is the PAYMENT (pay_…), but /payments/create
+      // stored the checkout-session id (cs_…) in paymongo_payment_id — so
+      // resourceId never matches our rows and must not be used to settle.
+      // (It used to be: the status flip matched 0 rows, the row stayed
+      // pending, and the later reconcile applied the upgrade a second
+      // time.) Resolve OUR pending row instead — by metadata (user+tier)
+      // when PayMongo copied it through, else by the amount-match
+      // fallback — and gate the upgrade on that row's pending→succeeded
+      // transition like every other path.
+      let pendingRow = null;
 
-      if (!userId || !PAID_TIERS[tier]) {
-        // Best effort: look up the most recent pending payment whose
-        // total matches this payment's amount. This is conservative —
-        // we still require an authenticated payments-table row that we
-        // ourselves created in /payments/create.
+      if (meta.user_id && PAID_TIERS[meta.tier]) {
+        const { rows } = await fastify.db.query(
+          `SELECT id, user_id, tier, event_id
+             FROM payments
+            WHERE user_id = $1 AND tier = $2 AND status = 'pending'
+              AND created_at > NOW() - INTERVAL '24 hours'
+            ORDER BY created_at DESC
+            LIMIT 1`,
+          [meta.user_id, meta.tier],
+        );
+        pendingRow = rows[0] || null;
+      }
+
+      if (!pendingRow) {
+        // Best effort: the most recent pending payment whose total matches
+        // this payment's amount. Conservative — we still require an
+        // authenticated payments-table row we ourselves created.
         const amount = innerAttrs.amount;
         if (amount) {
           const { rows } = await fastify.db.query(
@@ -838,57 +910,49 @@ export default async function paymentRoutes(fastify) {
               LIMIT 1`,
             [amount],
           );
-          if (rows.length) {
-            userId = rows[0].user_id;
-            tier   = rows[0].tier;
-            pendingRowId = rows[0].id;
-            if (rows[0].event_id) {
-              const { rows: ev } = await fastify.db.query(
-                `SELECT slug FROM events WHERE id = $1`, [rows[0].event_id],
-              );
-              slug = ev[0]?.slug || null;
-            }
-          }
+          pendingRow = rows[0] || null;
         }
       }
 
-      if (userId && PAID_TIERS[tier]) {
-        await applyTierUpgrade(fastify.db, { userId, tier, slug });
-        let doneRows = [];
-        if (pendingRowId) {
-          ({ rows: doneRows } = await fastify.db.query(
-            `UPDATE payments SET status = 'succeeded'
-              WHERE id = $1 AND status <> 'succeeded' RETURNING coupon_code`, [pendingRowId],
-          ));
-        } else if (resourceId) {
-          ({ rows: doneRows } = await fastify.db.query(
-            `UPDATE payments SET status = 'succeeded'
-              WHERE paymongo_payment_id = $1 AND status <> 'succeeded' RETURNING coupon_code`, [resourceId],
-          ));
+      if (pendingRow && pendingRow.user_id && PAID_TIERS[pendingRow.tier]) {
+        let slug = meta.slug || null;
+        if (!slug && pendingRow.event_id) {
+          const { rows: ev } = await fastify.db.query(
+            `SELECT slug FROM events WHERE id = $1`, [pendingRow.event_id],
+          );
+          slug = ev[0]?.slug || null;
         }
-        if (doneRows.length) await redeemCoupon(fastify.db, doneRows[0].coupon_code, request.log);
-        if (slug) {
-          sendBookingConfirmationEmail(fastify.db, { userId, tier, slug }, request.log).catch(() => {});
+        const settled = await settlePaymentAndUpgrade(fastify.db, {
+          rowId: pendingRow.id,
+          userId: pendingRow.user_id,
+          tier: pendingRow.tier,
+          slug,
+        });
+        if (settled.applied) {
+          await redeemCoupon(fastify.db, settled.couponCode, request.log);
+          if (slug) {
+            sendBookingConfirmationEmail(fastify.db,
+              { userId: pendingRow.user_id, tier: pendingRow.tier, slug }, request.log).catch(() => {});
+          }
+          applied = true;
         }
-        applied = true;
       }
     }
 
     // ── payment_intent.succeeded (legacy) ─────────────────
     if (!applied && type === 'payment_intent.succeeded' && resourceId) {
-      const { rows: paymentRows } = await fastify.db.query(
-        `UPDATE payments SET status = 'succeeded'
-            WHERE paymongo_payment_id = $1 AND status <> 'succeeded'
-        RETURNING *`,
+      const { rows: intentRows } = await fastify.db.query(
+        `SELECT id, user_id, tier FROM payments
+          WHERE paymongo_payment_id = $1 AND status <> 'succeeded'`,
         [resourceId],
       );
-      if (paymentRows.length) {
-        const payment = paymentRows[0];
-        if (payment.user_id && PAID_TIERS[payment.tier]) {
-          await applyTierUpgrade(fastify.db, {
-            userId: payment.user_id, tier: payment.tier, slug: null,
-          });
-          await redeemCoupon(fastify.db, payment.coupon_code, request.log);
+      const payment = intentRows[0];
+      if (payment && payment.user_id && PAID_TIERS[payment.tier]) {
+        const settled = await settlePaymentAndUpgrade(fastify.db, {
+          rowId: payment.id, userId: payment.user_id, tier: payment.tier, slug: null,
+        });
+        if (settled.applied) {
+          await redeemCoupon(fastify.db, settled.couponCode, request.log);
           // No slug on legacy intent path → defer email to event creation.
           applied = true;
         }
