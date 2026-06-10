@@ -283,22 +283,40 @@ export default async function eventRoutes(fastify) {
     //      recent succeeded payment row with event_id still NULL.
     let isPaid = false;
     let claimPaymentId = null;
+    let paidViaSubscription = false;
 
     if (planForEvent.id === 'hiraya') {
-      isPaid = !!(user.subscription_expires_at && new Date(user.subscription_expires_at) > new Date());
+      paidViaSubscription = !!(user.subscription_expires_at && new Date(user.subscription_expires_at) > new Date());
+      isPaid = paidViaSubscription;
     }
     // Also run the claim-search for ALL paid tiers (including Hiraya) so
     // we can link the matching payment to this event AND fire the deferred
     // payment-confirmation email with the new slug. For Hiraya, isPaid was
     // already set above via the subscription window; the claim here is
     // strictly for the email + payment-event linkage on a fresh purchase.
+    //
+    // No time window for Sinag/Dalisay: the payment IS the event credit,
+    // and a buyer who paid but only came back to finish the wizard the
+    // next day (or in a fresh browser that lost the sessionStorage stash)
+    // must still be able to mint their event — the old 30-minute cutoff
+    // left them at a permanent 402 with money already collected.
+    // event_id IS NULL prevents double-spending a payment; the link
+    // UPDATE after the insert re-checks it atomically. Oldest-first so
+    // multiple stockpiled credits are spent FIFO.
+    //
+    // Hiraya keeps the 30-minute window: its isPaid comes from the
+    // subscription, the claim is only linkage + the deferred receipt
+    // email — a renewal payment from months ago (always un-linked, since
+    // renewals have no slug) must not attach itself, and re-send a
+    // receipt, for whatever event the host creates next.
     if (PAID_PLAN_IDS.has(planForEvent.id)) {
       const { rows: pmtRows } = await fastify.db.query(
         `SELECT id FROM payments
          WHERE user_id = $1 AND tier = $2 AND status = 'succeeded'
-           AND event_id IS NULL AND created_at > NOW() - INTERVAL '30 minutes'
-         ORDER BY created_at DESC LIMIT 1`,
-        [userId, planForEvent.id],
+           AND event_id IS NULL
+           AND ($3::boolean OR created_at > NOW() - INTERVAL '30 minutes')
+         ORDER BY created_at ASC LIMIT 1`,
+        [userId, planForEvent.id, planForEvent.id !== 'hiraya'],
       );
       if (pmtRows.length) {
         isPaid = true;
@@ -408,20 +426,39 @@ export default async function eventRoutes(fastify) {
 
     // Link the pre-claimed payment to this event (upgrade-panel path where
     // payment completed before event creation, leaving event_id NULL).
+    // The `event_id IS NULL` re-check makes the claim atomic: two
+    // concurrent creates can both find the same unclaimed payment in the
+    // SELECT above, but only one can win this UPDATE.
     if (claimPaymentId) {
-      await fastify.db.query(
-        `UPDATE payments SET event_id = $1 WHERE id = $2`,
+      const { rowCount: claimed } = await fastify.db.query(
+        `UPDATE payments SET event_id = $1 WHERE id = $2 AND event_id IS NULL`,
         [inserted.id, claimPaymentId],
       );
+      if (!claimed && !paidViaSubscription) {
+        // Lost the race — another event already spent this payment, and
+        // nothing else funds this one (Hiraya-on-subscription doesn't get
+        // here). Remove the just-inserted row rather than keeping a paid
+        // event nobody paid for; a retry re-runs the claim search and
+        // picks up the user's next unclaimed payment if they have one.
+        await fastify.db.query('DELETE FROM events WHERE id = $1', [inserted.id]);
+        return reply.status(402).send({
+          error: true,
+          code:    'payment_required',
+          message: `Please complete checkout for ${planForEvent.name} before creating this event.`,
+          plan:    planForEvent.id,
+        });
+      }
       // Deferred payment-confirmation email: reconcile/webhook skipped it
       // because slug was null at payment time. Now that the event exists,
       // fire the email with the proper slug so "Go to Dashboard" lands on
       // the actual event instead of a bare /dashboard.
-      sendBookingConfirmationEmail(
-        fastify.db,
-        { userId, tier: planForEvent.id, slug: inserted.slug },
-        request.log,
-      ).catch(() => {});
+      if (claimed) {
+        sendBookingConfirmationEmail(
+          fastify.db,
+          { userId, tier: planForEvent.id, slug: inserted.slug },
+          request.log,
+        ).catch(() => {});
+      }
     }
 
     const event = inserted;
