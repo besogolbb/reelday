@@ -1,5 +1,10 @@
 # Reelday.ph — June 2026 Launch Masterplan
 
+> ⚠️ **SUPERSEDED (2026-06-11).** The active plan is now
+> [`docs/MARKETING-PLAN.md`](MARKETING-PLAN.md) ("Own the Party" — kids'-party
+> niche, Laguna-first, supplier-led, ₱1,490 launch price to Jul 31). This file
+> is kept for reference only; do not execute from it.
+
 **Owner:** Benz · **Window:** May 29 → June 30, 2026 (~32 days)
 **Goal (locked):** Maximum *paying* customers (Sinag ₱1,490 / Dalisay ₱2,990 events) by June 30.
 **Budget:** ≤ ₱5,000 paid (boosting + one small lead-ad test)
