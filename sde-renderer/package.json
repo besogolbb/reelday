@@ -7,7 +7,7 @@
     "studio": "npx remotion studio src/index.ts"
   },
   "dependencies": {
-    "@remotion/bundler": "^4.0.0",
+    "@remotion/bundler": "^4.0.482",
     "@remotion/media-utils": "^4.0.0",
     "@remotion/noise": "^4.0.0",
     "@remotion/renderer": "^4.0.0",
