@@ -1,4 +1,4 @@
-FROM node:20-alpine
+FROM node:26-alpine
 
 # ffmpeg powers the server-side video transcode pipeline
 # (backend/lib/videoTranscode.js). Without it, video uploads still
