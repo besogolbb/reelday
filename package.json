@@ -30,7 +30,7 @@
     "@fastify/rate-limit": "^11.0.0",
     "@fastify/static": "^9.1.3",
     "@remotion/lambda-client": "^4.0.0",
-    "archiver": "^7.0.1",
+    "archiver": "^8.0.0",
     "bcryptjs": "^2.4.3",
     "dotenv": "^16.4.5",
     "fastify": "^5.8.5",
