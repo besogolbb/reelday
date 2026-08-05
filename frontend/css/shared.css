@@ -53,7 +53,7 @@
   --motif-color:  rgba(182,69,122,.08);
 }
 [data-theme="birthday"] {
-  --accent:       #d97706;
+  --accent:       #B45309;     /* darkened from #d97706 so white-on-accent clears WCAG AA (3.19 → 5.05). Was the only failing theme of the eight. */
   --accent-deep:  #7c2d12;
   --accent-soft:  #fbbf6f;
   --gold:         #d4a64a;

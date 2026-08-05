@@ -19,11 +19,19 @@
   <link rel="stylesheet" href="/css/shared.css" />
   <style>
     :root {
-      --dash-surface: rgba(255,255,255,.9);
-      --dash-border: rgba(83,48,33,.10);
+      /* Surface ladder. The page used to sit at ~#FBF6EF with cards at
+         rgba(255,255,255,.9) — a 1.05:1 step, so nothing had an edge and
+         twenty stacked panels read as one continuous cream wash. Darkening
+         the canvas and making cards solid white takes that to ~1.21:1, which
+         is what actually separates panels. The hairline below is a supporting
+         detail (~1.5:1), not the main event — a true 3:1 border would need
+         roughly #A89078 and would read as a heavy outline. */
+      --dash-surface: #ffffff;
+      --dash-border: #e0d2c0;
       --dash-shadow: 0 18px 38px rgba(63,35,24,.10);
       --dash-muted: #7f6b62;
       --dash-green: #2d7a4a;
+      --dash-danger: #b42318;   /* warm brick — replaces off-palette #dc3545 */
     }
     /* Horizontal-scroll safety net. Some long inline content was
        pushing the viewport wider on phones. overflow-x: clip is the
@@ -51,9 +59,11 @@
       #btn-select-mode { margin-left: 0 !important; }
     }
     body {
+      /* Canvas sits BELOW the card surface in value (see --dash-surface).
+         Was #f7efe4 → #fbf6ef, which was lighter than the cards it hosted. */
       background:
-        radial-gradient(circle at top left, rgba(255,232,214,.8), transparent 26%),
-        linear-gradient(180deg, #f7efe4 0%, #fbf6ef 100%);
+        radial-gradient(circle at top left, rgba(255,232,214,.55), transparent 26%),
+        linear-gradient(180deg, #efe5d7 0%, #f3ebe0 100%);
       min-height: 100dvh;
     }
 
@@ -407,12 +417,15 @@
       padding: 8px 0 14px;
       perspective: 1400px;
     }
+    /* Was top/bottom:-8px with height calc(100% + 16px), which let the
+       canvas paint 8px outside the component box — it showed up as a gray
+       smudge on the panel background under the active tab. Constrained to
+       the container so the glow stays inside its own bounds. */
     .stream-tabs-3d-canvas {
       position: absolute;
-      left: 0; right: 0;
-      top: -8px; bottom: -8px;
+      inset: 0;
       width: 100%;
-      height: calc(100% + 16px);
+      height: 100%;
       pointer-events: none;
       z-index: 0;
     }
@@ -1703,7 +1716,7 @@
       border-color: rgba(220,53,69,.55);
       color: #ffd6d9;
     }
-    .preview-modal-actions .btn-delete:hover { background: rgba(220,53,69,.32); border-color: #dc3545; color: #fff; }
+    .preview-modal-actions .btn-delete:hover { background: rgba(180,35,24,.32); border-color: var(--dash-danger); color: #fff; }
     .preview-modal-actions button:disabled { opacity: .5; cursor: not-allowed; transform: none; }
     .pill { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); padding: 8px 12px; border-radius: 999px; background: #f6eadc; border: 1px solid rgba(196,90,58,.12); white-space: nowrap; }
 
@@ -1879,14 +1892,14 @@
       box-sizing: border-box;
     }
     .photo-grid.select-mode > div.bulk-selected::after {
-      background: #dc3545;
-      border-color: #dc3545;
+      background: var(--dash-danger);
+      border-color: var(--dash-danger);
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2 6l3 3 5-5' stroke='%23fff' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
       background-repeat: no-repeat;
       background-position: center;
       background-size: 12px;
     }
-    .photo-grid.select-mode > div.bulk-selected { outline: 3px solid #dc3545; outline-offset: -3px; }
+    .photo-grid.select-mode > div.bulk-selected { outline: 3px solid var(--dash-danger); outline-offset: -3px; }
 
     /* Placeholder color classes */
     .placeholder--clay   { background: #b07a5c; }
@@ -1919,7 +1932,11 @@
     .qr-card .url { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; color: var(--ink-soft); margin-bottom: 16px; word-break: break-all; }
     .actions-stack { display: grid; gap: 8px; }
     .actions-stack .btn { width: 100%; min-width: 0; }
-    .sidebar-stack { display: grid; gap: 16px; }
+    /* Sticky so the QR and primary actions stay reachable at any scroll
+       depth — the left column can run very long. Disabled below 1024px
+       where .body collapses to one column and the sidebar sits inline. */
+    .sidebar-stack { display: grid; gap: 16px; position: sticky; top: 20px; align-self: start; }
+    @media (max-width: 1024px) { .sidebar-stack { position: static; } }
     .mini-card {
       background: var(--dash-surface);
       border: 1px solid var(--dash-border);
@@ -3331,7 +3348,7 @@
     <div id="bulk-bar" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:999;background:var(--ink);color:#fff;border-radius:999px;padding:10px 20px;display:none;align-items:center;gap:16px;box-shadow:0 8px 32px rgba(0,0,0,.35);font-family:var(--mono);font-size:11px;letter-spacing:.1em;white-space:nowrap;">
       <span id="bulk-count">0 selected</span>
       <button type="button" id="btn-bulk-cancel" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:999px;padding:5px 14px;cursor:pointer;font-family:var(--mono);font-size:11px;letter-spacing:.1em;">Cancel</button>
-      <button type="button" id="btn-bulk-delete" style="background:#dc3545;border:none;color:#fff;border-radius:999px;padding:5px 14px;cursor:pointer;font-family:var(--mono);font-size:11px;letter-spacing:.1em;font-weight:600;">Delete selected</button>
+      <button type="button" id="btn-bulk-delete" style="background:var(--dash-danger);border:none;color:#fff;border-radius:999px;padding:5px 14px;cursor:pointer;font-family:var(--mono);font-size:11px;letter-spacing:.1em;font-weight:600;">Delete selected</button>
     </div>
 
     <!-- Poll editor modal — appended at body-level below for proper stacking -->
@@ -3774,6 +3791,11 @@
   let currentTab    = 'all';
   let currentStream = 'photo';   // 'photo' | 'video' | 'message'
 
+  // Same Day Edit ships dark. While false the gallery hides the Feature
+  // pin (its only job is setting sde_pinned) and the "Featured" sub-tab.
+  // Flip to true when the reel launches — nothing else needs to change.
+  const SDE_SHIPPED = false;
+
   // API uploads carry is_approved (boolean); the UI uses u.status. Map server
   // truth to the local model so the existing tab pipeline works for both.
   function normalizeUpload(u) {
@@ -3926,6 +3948,24 @@
     $('tab-approved-count').textContent = approvedCount;
     $('tab-featured-count').textContent = featuredCount;
     $('tab-hidden-count').textContent   = hiddenCount;
+
+    // Hide sub-tabs with nothing in them. On a well-configured event
+    // (auto-approve on, nothing hidden) four of the five read "0", so the
+    // whole moderation row was dead chrome. `All` always shows; a tab the
+    // host is currently viewing stays visible even at zero so the view
+    // doesn't yank out from under them.
+    const counts = {
+      approved: approvedCount, pending: pendingCount,
+      featured: featuredCount, hidden:   hiddenCount,
+    };
+    for (const [tab, n] of Object.entries(counts)) {
+      const el = document.querySelector(`.tab[data-tab="${tab}"]`);
+      if (!el) continue;
+      // "Featured" is the Same Day Edit pin bucket — keep it hidden until
+      // SDE ships (see docs/dashboard-overhaul-plan.md, scope decisions).
+      const shipped = tab !== 'featured';
+      el.style.display = (shipped && (n > 0 || currentTab === tab)) ? '' : 'none';
+    }
   }
 
   // ── Render header ─────────────────────────────────────
@@ -4853,7 +4893,11 @@
       // included in the Same Day Edit. Voice-only standalone tiles never
       // make it into the SDE, so we suppress the pin there.
       const isPinned    = u.sde_pinned === true;
-      const featurePin  = isAudioOnly ? '' :
+      // Same Day Edit is not shipped yet, and this pin exists only to set
+      // sde_pinned. Rendering it put a white pill on all 12+ tiles — the
+      // loudest repeated chrome in the gallery — for a feature that does
+      // nothing yet. Flip SDE_SHIPPED when the reel goes live.
+      const featurePin  = (!SDE_SHIPPED || isAudioOnly) ? '' :
         `<button type="button" class="feature-pin${isPinned ? ' on' : ''}" data-feature-id="${u.id}"
                  aria-pressed="${isPinned}" title="${isPinned ? 'Featured in Same Day Edit — click to remove' : 'Add to Same Day Edit'}">
            <span class="feature-pin-star" aria-hidden="true">${isPinned ? '★' : '☆'}</span>
@@ -5334,9 +5378,19 @@
       try { localStorage.setItem(POLLS_COLLAPSED_KEY, collapsed ? '1' : '0'); } catch {}
     }
   }
+  // The summary line is rebuilt by refreshPolls() with a "tap to expand"
+  // suffix, which was still showing while the panel was open. Swap the verb
+  // to match the actual state whenever it changes.
+  function syncPollsSummaryVerb() {
+    if (!pollsSummary) return;
+    const collapsed = pollsPanel.classList.contains('polls-collapsed');
+    pollsSummary.textContent = pollsSummary.textContent
+      .replace(/tap to (expand|collapse)/i, collapsed ? 'tap to expand' : 'tap to collapse');
+  }
   pollsToggle?.addEventListener('click', () => {
     const wasCollapsed = pollsPanel.classList.contains('polls-collapsed');
     setPollsCollapsed(!wasCollapsed);
+    syncPollsSummaryVerb();
     pollsAutoExpanded = true; // any manual click locks out the auto-expand
   });
   // Initial collapsed state — default true unless localStorage says otherwise.
@@ -5411,6 +5465,7 @@
       } else if (live)        pollsSummary.textContent = `${live} live · tap to view`;
       else if (draft || ended) pollsSummary.textContent = `${draft + ended} saved · tap to expand`;
       else             pollsSummary.textContent = 'Tap to add your first';
+      syncPollsSummaryVerb();  // "expand" vs "collapse" must match reality
 
       // First time we see something live, pop the panel open. Once the
       // host has clicked the chevron themselves we leave their choice alone.
@@ -7210,6 +7265,19 @@
     const toggleBtn = document.getElementById('esite-toggle');
     const chev      = document.getElementById('esite-chevron');
     const summaryEl = document.getElementById('esite-summary');
+    // Summary = status + a verb that reflects the panel's actual state.
+    // Previously the verb was baked into the status string, so the header
+    // still read "tap to set up" while the wizard was open on screen.
+    let esiteBase      = 'Draft';
+    let esiteCollapsed = true;
+    function renderEsiteSummary() {
+      if (!summaryEl) return;
+      if (/unavailable|locked/i.test(esiteBase)) { summaryEl.textContent = esiteBase; return; }
+      const verb = !esiteCollapsed        ? 'tap to collapse'
+                 : /draft/i.test(esiteBase) ? 'tap to set up'
+                 :                            'tap to open';
+      summaryEl.textContent = `${esiteBase} — ${verb} · /e/${slug}`;
+    }
     document.getElementById('esite-url-hint').textContent = slug;
 
     // Collapse — mirrors the polls panel's UX (chevron + persisted state)
@@ -7220,6 +7288,8 @@
       bodyEl.style.display = c ? 'none' : 'block';
       toggleBtn.setAttribute('aria-expanded', String(!c));
       chev.style.transform = c ? '' : 'rotate(180deg)';
+      esiteCollapsed = c;
+      renderEsiteSummary();  // the verb has to match the actual state
       if (persist) { try { localStorage.setItem(COLLAPSE_KEY, c ? '1' : '0'); } catch {} }
     }
     setCollapsed(localStorage.getItem(COLLAPSE_KEY) !== '0', false); // default collapsed
@@ -7307,13 +7377,13 @@
       if (!r.ok) throw new Error('upload failed');
       return (await r.json()).url;
     }
-    function setSummary(text) { if (summaryEl) summaryEl.textContent = text + ' · /e/' + slug; }
+    function setSummary(text) { esiteBase = text; renderEsiteSummary(); }
 
     function buildEditor(state) {
       const cfg = state.config || {};
       const ev  = state.event || {};
       editorEl.textContent = '';
-      setSummary(state.is_published ? 'Published' : 'Draft — tap to set up');
+      setSummary(state.is_published ? 'Published' : 'Draft');
 
       // ── controls (created up front, grouped into steps below) ──
       // Theme is auto-derived server-side from events.event_type — not
