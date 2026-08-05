@@ -25,7 +25,9 @@
 //   reactions    — live emoji reactions on the wall
 //   polls        — live polls & games
 //   customMusic  — host-uploaded wall background music
-//   website      — full event website + seat/table finder
+//   website      — event website + RSVP + seat/table finder. Free on every
+//                  tier (lead magnet) — the wall (photo/video collection)
+//                  is the only thing actually monetized here.
 //   sde          — auto-rendered Same Day Edit recap reel (Dalisay+)
 //   customDomain — bring-your-own domain for the event website
 export const PLANS = {
@@ -47,7 +49,7 @@ export const PLANS = {
       reactions:    false,
       polls:        false,
       customMusic:  false,
-      website:      false,
+      website:      true,       // scoped-down free event website + RSVP (lead magnet)
       sde:          false,
       customDomain: false,
     },
@@ -75,7 +77,7 @@ export const PLANS = {
       // so the trivia/quiz experience stays on the higher tiers.
       polls:        false,
       customMusic:  true,
-      website:      false,
+      website:      true,       // event website + RSVP + seat finder now free from Sinag up
       sde:          false,
       customDomain: false,
     },

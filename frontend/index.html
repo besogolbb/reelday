@@ -22,7 +22,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="theme-color" content="#fdfaf5" />
-<meta name="description" content="Every shot from your celebration. One QR code. Instantly. The cinematic photo-sharing platform for Filipino weddings, birthdays, and celebrations." />
+<meta name="description" content="Create a free event website with RSVP for your wedding, birthday, or celebration — countdown, details, seat finder, and a shared photo & video album, all in one link. Built for Filipino celebrations." />
 
 <!-- Open Graph / social share previews. Messenger, Viber, FB, IG, and
      Twitter/X all read these to render the rich card when someone shares
@@ -31,21 +31,43 @@
      it for a dedicated social card when one's ready. -->
 <meta property="og:type"        content="website" />
 <meta property="og:site_name"   content="Reelday" />
-<meta property="og:title"       content="Reelday — Every shot. Every guest. One QR." />
-<meta property="og:description" content="Every shot from your celebration. One QR code. Instantly. Built for Filipino weddings, birthdays, and celebrations." />
+<meta property="og:title"       content="Reelday — Free Event Website with RSVP" />
+<meta property="og:description" content="Create a free event website with RSVP — countdown, details, seat finder, and a shared photo & video album, all in one link. Built for Filipino celebrations." />
 <meta property="og:url"         content="https://reelday.ph/" />
 <meta property="og:image"       content="https://reelday.ph/images/og-card.jpg" />
 <meta property="og:image:alt"   content="A Filipino couple's wedding moment captured by Reelday." />
 <meta property="og:locale"      content="en_PH" />
 <meta name="twitter:card"        content="summary_large_image" />
-<meta name="twitter:title"       content="Reelday — Every shot. Every guest. One QR." />
-<meta name="twitter:description" content="Every shot from your celebration. One QR code. Instantly. Built for Filipino weddings, birthdays, and celebrations." />
+<meta name="twitter:title"       content="Reelday — Free Event Website with RSVP" />
+<meta name="twitter:description" content="Create a free event website with RSVP — countdown, details, seat finder, and a shared photo & video album, all in one link." />
 <meta name="twitter:image"       content="https://reelday.ph/images/og-card.jpg" />
 
-<title>Reelday — Every shot. Every guest. One QR.</title>
+<title>Reelday — Free Event Website with RSVP</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=5" />
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=5" />
 <link rel="shortcut icon" href="/favicon.ico?v=5" />
+
+<!-- Baseline structured data for AI answer engines (Google AI Overviews,
+     Perplexity, ChatGPT search) — a factual anchor they can cite Reelday
+     from independent of any dedicated landing page content. -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "Reelday",
+  "url": "https://reelday.ph/",
+  "logo": "https://reelday.ph/images/LOGO.png",
+  "description": "Reelday lets Filipino hosts create a free event website with RSVP — countdown, details, seat finder — plus a shared photo & video album for weddings, birthdays, and celebrations.",
+  "areaServed": "PH",
+  "makesOffer": {
+    "@type": "Offer",
+    "name": "Tala — Free Event Website",
+    "price": "0",
+    "priceCurrency": "PHP",
+    "description": "Free event website with countdown, RSVP, event details, schedule, registry, and seat finder for one event."
+  }
+}
+</script>
 
 <!-- LCP image preload + priority hint.
      Mobile Lighthouse identified .wall-mini-mockup .wm-bg as the LCP
@@ -1002,9 +1024,9 @@
     <div class="hero-text">
       <div class="chip"><span class="chip-dot"></span><span data-i18n="hero-chip">Built for Filipino celebrations</span></div>
       <h1>
-        Every shot.<br/>
-        <em>Every guest.</em><br/>
-        <span class="underline">One QR.</span>
+        Your free<br/>
+        <em>event website.</em><br/>
+        <span class="underline">RSVP included.</span>
       </h1>
 
       <!-- Mobile-only live wall demo. Drives off the same .wall-mini-mockup
@@ -1021,7 +1043,7 @@
         </div>
       </div>
 
-      <p data-i18n="hero-desc">Guests scan one code and upload photos straight to your live cinematic wall — no app, no sign-up, no missed moments.</p>
+      <p data-i18n="hero-desc">Countdown, details, seat finder, and RSVP — all in one link, free forever. Plus a live photo &amp; video wall your guests fill up on the day, no app, no sign-up.</p>
       <div class="hero-cta" id="hero-cta">
         <a class="btn btn-accent" href="/start" data-i18n="hero-cta1">Start free →</a>
         <a class="btn btn-ghost" href="#demo" data-i18n="hero-cta2">See live demo</a>
@@ -1536,7 +1558,7 @@ const i18n = {
     'nav-pricing':      'Pricing',
     'nav-faq':          'FAQ',
     'hero-chip':        'Built for Filipino celebrations',
-    'hero-desc':        'Guests scan one code and upload photos straight to your live cinematic wall — no app, no sign-up, no missed moments.',
+    'hero-desc':        'Countdown, details, seat finder, and RSVP — all in one link, free forever. Plus a live photo &amp; video wall your guests fill up on the day, no app, no sign-up.',
     'hero-cta1':        'Start free →',
     'hero-cta2':        'See live demo',
     'how-eyebrow':      '— How it works',
@@ -1585,7 +1607,7 @@ const i18n = {
     'nav-pricing':      'Presyo',
     'nav-faq':          'FAQ',
     'hero-chip':        'Para sa mga selebrasyon ng Pilipino',
-    'hero-desc':        'Mag-scan ang mga bisita ng isang code at mag-upload ng mga larawan diretso sa inyong live cinematic wall — walang app, walang sign-up, walang napalampas na sandali.',
+    'hero-desc':        'Countdown, detalye, seat finder, at RSVP — lahat nasa isang link, libre magpakailanman. Kasama na rin ang live photo &amp; video wall na pupunuin ng mga bisita sa araw mismo, walang app, walang sign-up.',
     'hero-cta1':        'Magsimula nang libre →',
     'hero-cta2':        'Panoorin ang live demo',
     'how-eyebrow':      '— Paano gumagana',

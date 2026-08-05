@@ -350,6 +350,12 @@ const MIGRATIONS = `
     created_at       TIMESTAMPTZ  DEFAULT NOW()
   );
   ALTER TABLE payments ADD COLUMN IF NOT EXISTS coupon_code VARCHAR(40);
+
+  -- ── Free-website lead magnet: RSVP milestone nudges (Tala only) ─────
+  -- Tracks the highest attending-RSVP milestone (10/25/50/100) we've
+  -- already emailed the host about, so each milestone fires exactly
+  -- once per event no matter how many more RSVPs come in.
+  ALTER TABLE events ADD COLUMN IF NOT EXISTS wall_nudge_last_milestone INTEGER NOT NULL DEFAULT 0;
 `;
 
 async function dbPlugin(fastify) {

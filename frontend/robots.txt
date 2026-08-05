@@ -1,0 +1,16 @@
+User-agent: *
+Allow: /
+Disallow: /e/
+Disallow: /dashboard
+Disallow: /upload
+Disallow: /account
+Disallow: /admin
+Disallow: /my-events
+Disallow: /wall
+Disallow: /login
+Disallow: /register
+Disallow: /reset-password
+Disallow: /forgot-password
+Disallow: /verify
+
+Sitemap: https://reelday.ph/sitemap.xml

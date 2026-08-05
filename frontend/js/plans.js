@@ -46,7 +46,7 @@ export const PLANS = {
       reactions:    false,
       polls:        false,
       customMusic:  false,
-      website:      false,
+      website:      true,       // scoped-down free event website + RSVP (lead magnet)
       sde:          false,
       customDomain: false,
     },
@@ -70,7 +70,7 @@ export const PLANS = {
       // Live Questions & Poll is a Dalisay/Hiraya feature.
       polls:        false,
       customMusic:  true,
-      website:      false,
+      website:      true,       // event website + RSVP + seat finder now free from Sinag up
       sde:          false,
       customDomain: false,
     },

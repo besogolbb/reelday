@@ -4631,9 +4631,42 @@
       $('lb-msg').textContent   =
         `The ${plan.name} plan's upload window for this event ended on ${formatDate(event.upload_window_ends_at)}.` +
         (upgradeTarget ? ' Upgrade to extend it.' : '');
+    } else if (plan.id === 'tala' && showMemoryMilestoneBanner(event, banner)) {
+      // Nothing more urgent to say (no cap/window lock) — surface the
+      // RSVP milestone nudge instead. See showMemoryMilestoneBanner().
     } else {
       banner.classList.add('hidden');
     }
+  }
+
+  // ── Tala RSVP milestone banner — same milestones/copy as the email
+  // nudge in backend/routes/event-site.js (MEMORY_NUDGE_COPY). Never
+  // says "Live Wall" or "Upgrade" — sold as completing the event, not
+  // buying an add-on. Returns true if it rendered something.
+  const MEMORY_MILESTONE_COPY = {
+    10:  (n) => ({ title: `${n} guests are attending — congratulations!`, msg: 'Your guest list is coming together nicely.', cta: false }),
+    25:  (n) => ({ title: `${n} guests and counting`, msg: 'Your guests will soon be taking hundreds of photos. Consider collecting every memory in one place.', cta: true }),
+    50:  (n) => ({ title: "Don't let the memories get lost", msg: `${n} guests confirmed — don't let memories get lost in Messenger and WhatsApp. Collect them all in one place.`, cta: true }),
+    100: (n) => ({ title: 'Expected Memories', msg: `With ${n} guests attending, expect around ${Math.round(n * 8)} photos and ${Math.round(n * 1.2)} videos from your celebration.`, cta: true }),
+  };
+  function showMemoryMilestoneBanner(event, banner) {
+    const milestone = event.wall_nudge_last_milestone || 0;
+    const copyFn = MEMORY_MILESTONE_COPY[milestone];
+    if (!copyFn) return false;
+    const copy = copyFn(event.attending_headcount || 0);
+    banner.classList.remove('hidden');
+    if (!copy.cta) banner.classList.add('is-info');
+    const lbIcon = $('lb-icon');
+    if (lbIcon) lbIcon.textContent = copy.cta ? '✨' : '🎉';
+    $('lb-title').textContent = copy.title;
+    $('lb-msg').textContent   = copy.msg;
+    const lbCta = $('lb-cta');
+    if (lbCta && copy.cta) {
+      lbCta.style.display = '';
+      lbCta.textContent = 'Complete Your Event →';
+      lbCta.href = '/#pricing';
+    }
+    return true;
   }
 
   // ── Render QR ─────────────────────────────────────────
@@ -6774,6 +6807,8 @@
       // Backend resolves owner's current subscription tier into plan_info.id;
       // override event.plan locally so all downstream rendering follows it.
       if (eventJson.plan_info?.id) event.plan = eventJson.plan_info.id;
+      // RSVP headcount for the Tala milestone banner (see maybeShowWindowLock).
+      event.attending_headcount = eventJson.attending_headcount ?? 0;
 
       // Polls panel visibility + locked state mirrors the resolved plan.
       const pollsAllowed = !!eventJson.plan_info?.features?.polls;
@@ -7962,7 +7997,7 @@
         const allowed = !!(ej && ej.plan_info && ej.plan_info.features && ej.plan_info.features.website);
         panel.style.display = '';
         if (!allowed) {
-          setSummary('Locked · Dalisay plan');
+          setSummary('Event website unavailable');
           lockedEl.style.display = ''; editorEl.style.display = 'none';
           return;
         }

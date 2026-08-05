@@ -583,6 +583,15 @@ export default async function eventRoutes(fastify) {
       [event.id],
     );
 
+    // RSVP headcount — feeds the dashboard's Tala-tier milestone banner
+    // (frontend/dashboard.html) without a separate endpoint/query.
+    const { rows: rsvpRows } = await fastify.db.query(
+      `SELECT COALESCE(SUM(party_size), 0)::int AS headcount
+         FROM event_rsvps WHERE event_id = $1 AND attending = true`,
+      [event.id],
+    );
+    const attendingHeadcount = rsvpRows[0].headcount;
+
     // Per-event tier (locked in at create / upgrade time). The wall +
     // upload page gate features off the event's plan, NOT the owner's
     // current account tier — so an event the host paid for as Dalisay
@@ -610,6 +619,7 @@ export default async function eventRoutes(fastify) {
     return {
       event,
       upload_count: countRows[0].count,
+      attending_headcount: attendingHeadcount,
       plan_info: {
         id:           planInfo.id,
         name:         planInfo.name,

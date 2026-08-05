@@ -144,6 +144,12 @@ ALTER TABLE events ADD COLUMN IF NOT EXISTS gallery_expires_at      TIMESTAMPTZ;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS upload_window_starts_at TIMESTAMPTZ;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS upload_window_ends_at   TIMESTAMPTZ;
 
+-- ── Free-website lead magnet: RSVP milestone nudges (Tala only) ─────
+-- Tracks the highest attending-RSVP milestone (10/25/50/100) we've
+-- already emailed the host about, so each milestone fires exactly
+-- once per event no matter how many more RSVPs come in.
+ALTER TABLE events ADD COLUMN IF NOT EXISTS wall_nudge_last_milestone INTEGER NOT NULL DEFAULT 0;
+
 -- ── Optional event details surfaced on the upload page ──
 -- venue:           free text, e.g. "Manila Hotel"
 -- event_time:      free text, e.g. "5:00 PM"

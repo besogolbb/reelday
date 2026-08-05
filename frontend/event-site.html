@@ -1188,7 +1188,12 @@
       eyebrowFaq:'— things to know —',
       eyebrowEntourage:'— with us in the celebration —',
       eyebrowFootInvite:'— we can’t wait —',
-      footTitle:'Save the date.'
+      footTitle:'Save the date.',
+      memoryAlbum:'Memory Album',
+      eyebrowMemoryAlbum:'— every smile, every laugh —',
+      memoryAlbumPreMsg:'Photos and videos from our celebration will appear here after the event. Check back after the celebration to relive every memory.',
+      memoryAlbumLiveMsg:'The celebration is happening — add your photos and videos to our shared album.',
+      memoryAlbumCountMsg:'{count} memories shared so far — add yours to the album.'
     };
     function t(k) { return L[k] || k; }
 
@@ -1733,6 +1738,31 @@
         app.appendChild(section('gallery', t('eyebrowGallery'), cfg.gallery.label || t('gallery'), g));
       }
 
+      // ── Memory Album (guest-facing "the wall goes here" section) ──
+      // Always rendered, unlike Gallery above (which only appears once
+      // the host has curated photos). Pre-event this is pure anticipation
+      // copy with no CTA — it's a guest's wedding/party site, a paywall
+      // pitch here reads wrong. During the upload window it links to the
+      // real wall. States driven off upload_window_starts_at/ends_at
+      // (same columns events.js uses for the dashboard's own lock UI).
+      (function () {
+        addNav('memory-album', t('memoryAlbum'));
+        var wrap = el('div', { class: 'es-note' });
+        var now = Date.now();
+        var startsAt = data.upload_window_starts_at ? new Date(data.upload_window_starts_at).getTime() : null;
+        var endsAt = data.upload_window_ends_at ? new Date(data.upload_window_ends_at).getTime() : null;
+        var uploading = (startsAt === null || now >= startsAt) && (endsAt === null || now < endsAt);
+        if (uploading) {
+          var count = data.upload_count || 0;
+          wrap.appendChild(el('p', { text: count > 0 ? t('memoryAlbumCountMsg').replace('{count}', count) : t('memoryAlbumLiveMsg') }));
+          var up = el('a', { class: 'es-btn', href: '/upload/' + SLUG, text: t('upload') });
+          wrap.appendChild(up);
+        } else {
+          wrap.appendChild(el('p', { text: t('memoryAlbumPreMsg') }));
+        }
+        app.appendChild(section('memory-album', t('eyebrowMemoryAlbum'), t('memoryAlbum'), wrap));
+      })();
+
       // ── Find your seat ───────────────────────────────
       if (cfg.seatEnabled !== false) {
         addNav('seat', t('seat'));
@@ -2114,7 +2144,10 @@
       actions.appendChild(up);
       foot.appendChild(actions);
 
-      foot.appendChild(el('div', { class: 'es-foot-credit', text: 'reelday.ph' }));
+      var credit = el('div', { class: 'es-foot-credit' });
+      var creditLink = el('a', { href: '/', text: 'Create your own free event website — reelday.ph' });
+      credit.appendChild(creditLink);
+      foot.appendChild(credit);
       app.appendChild(foot);
 
       document.getElementById('state').hidden = true;

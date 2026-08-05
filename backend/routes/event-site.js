@@ -46,6 +46,14 @@ const TEMPLATE_PATH = join(__dirname, '..', '..', 'frontend', 'event-site.html')
 function _resend() {
   return new Resend(process.env.RESEND_API_KEY || '');
 }
+function resolveAppUrl() {
+  return (
+    process.env.APP_URL ||
+    (process.env.APP_PUBLIC_HOST
+      ? `https://${process.env.APP_PUBLIC_HOST}`
+      : 'https://reelday.ph')
+  ).replace(/\/+$/, '');
+}
 function _withTimeout(promise, ms, label) {
   return Promise.race([
     promise,
@@ -75,11 +83,7 @@ const _esc = (s) => String(s ?? '')
 // rejection. Looks up the host email via the event's user_id — if the
 // event has no owner (legacy anon events) the host email is skipped.
 async function sendRsvpEmails(fastify, event, rsvp) {
-  const appUrl =
-    (process.env.APP_URL ||
-     (process.env.APP_PUBLIC_HOST
-       ? `https://${process.env.APP_PUBLIC_HOST}`
-       : 'https://reelday.ph')).replace(/\/+$/, '');
+  const appUrl = resolveAppUrl();
 
   const couple    = event.couple_names || 'your event';
   const attending = rsvp.attending;
@@ -158,6 +162,111 @@ async function sendRsvpEmails(fastify, event, rsvp) {
   }
 }
 
+// ── Tala-only RSVP milestone nudges (lead-magnet mechanic) ──────────
+// Free website hosts get staged, escalating nudges as their guest list
+// grows — each fires once, ever, per event. Terminology note: never say
+// "Live Wall" or "Upgrade" to the host — sold as "Guest Memories" /
+// "Collect Every Memory", framed as completing the event, not buying
+// an add-on (see plan doc — this is intentional, not an oversight).
+const WALL_NUDGE_MILESTONES = [10, 25, 50, 100];
+
+// Simple, deliberately-rough multipliers — the point is making the
+// scale of "who's collecting all this?" tangible, not precise.
+function memoryForecast(headcount) {
+  return {
+    photos: Math.round(headcount * 8),
+    videos: Math.round(headcount * 1.2),
+  };
+}
+
+const MEMORY_NUDGE_COPY = {
+  10: (headcount) => ({
+    subject: '10 guests are attending your celebration!',
+    heading: `${headcount} guests are attending — congratulations!`,
+    body: 'Your guest list is coming together nicely.',
+    cta: false,
+  }),
+  25: (headcount) => ({
+    subject: 'Your guest list is growing',
+    heading: `${headcount} guests and counting`,
+    body: 'Your guests will soon be taking hundreds of photos. Consider collecting every memory in one place.',
+    cta: true,
+  }),
+  50: (headcount) => ({
+    subject: `${headcount} guests confirmed for your celebration`,
+    heading: "Don't let the memories get lost",
+    body: "Don't let memories get lost in Messenger and WhatsApp — collect them all in one place.",
+    cta: true,
+  }),
+  100: (headcount) => {
+    const f = memoryForecast(headcount);
+    return {
+      subject: 'Your Memory Forecast is ready',
+      heading: 'Expected Memories',
+      body: `With ${headcount} guests attending, expect around ${f.photos} photos and ${f.videos} videos from your celebration.`,
+      cta: true,
+      forecast: f,
+    };
+  },
+};
+
+async function sendWallNudgeEmail(fastify, event, milestone, headcount) {
+  if (!event.user_id) return;
+  const { rows } = await fastify.db.query(
+    'SELECT email FROM users WHERE id = $1', [event.user_id]);
+  const hostEmail = rows[0]?.email;
+  if (!hostEmail) return;
+
+  const copy = MEMORY_NUDGE_COPY[milestone](headcount);
+  const appUrl = resolveAppUrl();
+  const couple = event.couple_names || 'your event';
+
+  await sendMail({
+    to: hostEmail,
+    subject: copy.subject,
+    html: `
+      <div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;max-width:520px;margin:0 auto;padding:2rem;color:#2a1a14">
+        <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#c45a3a;margin-bottom:8px">— ${_esc(couple)} —</div>
+        <h2 style="font-family:Fraunces,Georgia,serif;font-weight:500;font-size:1.6rem;margin:0 0 1rem;color:#2a1a14">${_esc(copy.heading)}</h2>
+        <p style="font-size:15px;line-height:1.6;color:#5a443a;margin:0 0 1.5rem">${_esc(copy.body)}</p>
+        ${copy.forecast ? `
+          <table style="width:100%;border-collapse:collapse;font-size:14px;line-height:1.55;background:#fbf3e2;border-radius:12px;padding:8px;margin-bottom:1.5rem">
+            <tr><td style="padding:14px 16px 8px;color:#8a7468">Expected Photos</td><td style="padding:14px 16px 8px;text-align:right;font-weight:600">${copy.forecast.photos}+</td></tr>
+            <tr><td style="padding:6px 16px 14px;color:#8a7468">Expected Videos</td><td style="padding:6px 16px 14px;text-align:right;font-weight:600">${copy.forecast.videos}+</td></tr>
+          </table>` : ''}
+        ${copy.cta ? `<a href="${appUrl}/#pricing" style="display:inline-block;margin-top:.5rem;padding:.75rem 1.5rem;background:#c45a3a;color:#fff;border-radius:999px;text-decoration:none;font-weight:600;font-size:13px;letter-spacing:.06em">Complete Your Event →</a>` : ''}
+        <p style="font-size:11px;color:#8a7468;margin-top:2rem;letter-spacing:.12em;text-transform:uppercase">reelday.ph</p>
+      </div>`,
+  });
+}
+
+// Checks whether this event just crossed a new RSVP milestone and, if
+// so, atomically claims it (so a burst of concurrent RSVPs can't send
+// the same milestone email twice) before sending. Tala-tier only —
+// other tiers already have the wall or the full package.
+async function checkWallNudgeMilestone(fastify, gate) {
+  if (gate.effectiveTier !== 'tala') return;
+
+  const { rows } = await fastify.db.query(
+    `SELECT COALESCE(SUM(party_size), 0)::int AS headcount
+       FROM event_rsvps WHERE event_id = $1 AND attending = true`,
+    [gate.event.id],
+  );
+  const headcount = rows[0].headcount;
+  const milestone = WALL_NUDGE_MILESTONES.filter((m) => headcount >= m).pop();
+  if (!milestone) return;
+
+  const { rows: claimed } = await fastify.db.query(
+    `UPDATE events SET wall_nudge_last_milestone = $2
+       WHERE id = $1 AND wall_nudge_last_milestone < $2
+       RETURNING id`,
+    [gate.event.id, milestone],
+  );
+  if (!claimed.length) return; // already sent this milestone (or a higher one)
+
+  await sendWallNudgeEmail(fastify, gate.event, milestone, headcount);
+}
+
 // ── Module-level caches (shared by the plugin + the exported renderer) ──
 const GATE_TTL_MS = 5_000;
 const gateCache = new Map(); // slug → { expires, event|null, allowed }
@@ -217,6 +326,7 @@ async function loadGate(db, slug) {
     `SELECT e.id, e.slug, e.is_active, e.user_id, e.plan,
             e.couple_names, e.event_type, e.event_date, e.event_time,
             e.cover_photo_url, e.theme_override,
+            e.upload_window_starts_at, e.upload_window_ends_at,
             u.subscription_tier,
             s.is_published, s.config
        FROM events e
@@ -246,8 +356,14 @@ async function loadGate(db, slug) {
   return entry;
 }
 // Build the public payload (lean — only what the page renders).
-function buildPayload(gate) {
+// Async: the Memory Album section needs a live approved-upload count so
+// guests (and the host) can see the wall filling up, not just a link.
+async function buildPayload(db, gate) {
   const e = gate.event;
+  const { rows } = await db.query(
+    `SELECT COUNT(*)::int AS count FROM uploads WHERE event_id = $1 AND is_approved = true`,
+    [e.id],
+  );
   return {
     slug: e.slug,
     couple_names: e.couple_names,
@@ -257,6 +373,9 @@ function buildPayload(gate) {
     cover_photo_url: e.cover_photo_url,
     theme: e.theme_override || e.event_type || 'wedding',
     config: e.config || {},
+    upload_window_starts_at: e.upload_window_starts_at,
+    upload_window_ends_at: e.upload_window_ends_at,
+    upload_count: rows[0].count,
   };
 }
 
@@ -341,10 +460,18 @@ export default async function eventSiteRoutes(fastify) {
   // WHERE clause so a guess-the-slug attempt 404s identically.
   async function ownedEvent(slug, userId) {
     const { rows } = await fastify.db.query(
-      `SELECT id, slug FROM events WHERE slug = $1 AND user_id = $2`,
+      `SELECT e.id, e.slug, e.plan, u.subscription_tier
+         FROM events e
+         LEFT JOIN users u ON u.id = e.user_id
+        WHERE e.slug = $1 AND e.user_id = $2`,
       [slug, userId],
     );
-    return rows[0] || null;
+    if (!rows.length) return null;
+    const r = rows[0];
+    // Same effective-tier resolution as loadGate() — events.plan wins,
+    // subscription_tier is the legacy fallback.
+    r.effectiveTier = r.plan || r.subscription_tier || 'tala';
+    return r;
   }
 
   // ── Public: published site config ──────────────────────────────────
@@ -370,7 +497,7 @@ export default async function eventSiteRoutes(fastify) {
       inflight = (async () => {
         const gate = await loadGate(fastify.db, slug);
         if (!gate || !gate.allowed || !gate.event.is_published) return null;
-        const payload = buildPayload(gate);
+        const payload = await buildPayload(fastify.db, gate);
         const gzipped = gzipSync(Buffer.from(JSON.stringify(payload)));
         siteCache.set(slug, { payload, gzipped });
         return payload;
@@ -397,6 +524,9 @@ export default async function eventSiteRoutes(fastify) {
   fastify.get('/event-site/:slug/admin', { preHandler: fastify.authenticate }, async (request, reply) => {
     const ev = await ownedEvent(request.params.slug, request.user.id);
     if (!ev) return reply.status(404).send({ error: true, message: 'Event not found' });
+    if (!planHasFeature(ev.effectiveTier, 'website')) {
+      return reply.status(403).send({ error: true, message: 'Event website not available on this plan' });
+    }
 
     const { rows } = await fastify.db.query(
       `SELECT s.is_published, s.config, s.updated_at,
@@ -445,6 +575,9 @@ export default async function eventSiteRoutes(fastify) {
   fastify.put('/event-site/:slug', { preHandler: fastify.authenticate }, async (request, reply) => {
     const ev = await ownedEvent(request.params.slug, request.user.id);
     if (!ev) return reply.status(404).send({ error: true, message: 'Event not found' });
+    if (!planHasFeature(ev.effectiveTier, 'website')) {
+      return reply.status(403).send({ error: true, message: 'Event website not available on this plan' });
+    }
 
     const body = request.body ?? {};
     const config = (body.config && typeof body.config === 'object') ? body.config : {};
@@ -523,6 +656,9 @@ export default async function eventSiteRoutes(fastify) {
   fastify.post('/event-site/:slug/image', { preHandler: fastify.authenticate }, async (request, reply) => {
     const ev = await ownedEvent(request.params.slug, request.user.id);
     if (!ev) return reply.status(404).send({ error: true, message: 'Event not found' });
+    if (!planHasFeature(ev.effectiveTier, 'website')) {
+      return reply.status(403).send({ error: true, message: 'Event website not available on this plan' });
+    }
 
     let buf = null, mime = null, ext = '.jpg';
     for await (const part of request.parts()) {
@@ -628,6 +764,13 @@ export default async function eventSiteRoutes(fastify) {
         '[rsvp] notification email failed');
     });
 
+    // Tala-only lead-magnet nudge: fire-and-forget, never blocks the
+    // guest's RSVP response.
+    checkWallNudgeMilestone(fastify, gate).catch((err) => {
+      fastify.log.warn({ err: err?.message || err, slug: gate.event.slug },
+        '[rsvp] wall nudge milestone check failed');
+    });
+
     return reply.status(201).send({ ok: true });
   });
 
@@ -674,6 +817,9 @@ export default async function eventSiteRoutes(fastify) {
   fastify.post('/event-site/:slug/seats/import', { preHandler: fastify.authenticate }, async (request, reply) => {
     const ev = await ownedEvent(request.params.slug, request.user.id);
     if (!ev) return reply.status(404).send({ error: true, message: 'Event not found' });
+    if (!planHasFeature(ev.effectiveTier, 'website')) {
+      return reply.status(403).send({ error: true, message: 'Event website not available on this plan' });
+    }
 
     const seats = Array.isArray(request.body?.seats) ? request.body.seats : null;
     if (!seats) return reply.status(400).send({ error: true, message: 'seats[] required' });
