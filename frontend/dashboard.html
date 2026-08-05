@@ -378,6 +378,86 @@
       color: var(--dash-green); margin-top: 0;
     }
 
+    /* ── Sections ──────────────────────────────────────────
+       Polls / Website / Reel used to be accordions stacked in one
+       scroll, so expanding any of them buried the rest and the page
+       ran to ~9,500px. They're destinations now: one renders at a
+       time, driven by location.hash. */
+    .dash-section[hidden] { display: none; }
+    .col-main { min-width: 0; }
+
+    /* The sidebar (QR, event info, details form) belongs to Gallery.
+       Every other section gets the full width — the website form and
+       the poll manager both need it. */
+    body:not([data-section="gallery"]) .body { grid-template-columns: 1fr; }
+    body:not([data-section="gallery"]) .sidebar-stack { display: none; }
+
+    /* Inside a dedicated section the panel is the whole point, so drop
+       the outer card's own margin — it no longer sits in a stack. */
+    .dash-section > .panel:last-child { margin-bottom: 0 !important; }
+
+    /* ── Condensed sticky nav ──────────────────────────────
+       Pins once the header scrolls away so navigation survives a long
+       section. Mirrors the header nav's data-section contract. */
+    /* Fixed rather than sticky: a sticky bar toggled in and out of flow
+       shifts everything below it by its own height at the exact moment
+       it appears. Fixed + translate costs no layout at all. */
+    .sticky-nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 60;
+      background: rgba(42,26,20,.94);
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(255,255,255,.10);
+      transform: translateY(-100%);
+      transition: transform .22s ease;
+      will-change: transform;
+    }
+    .sticky-nav.pinned { transform: translateY(0); }
+    @media (prefers-reduced-motion: reduce) { .sticky-nav { transition: none; } }
+    .sticky-nav-inner {
+      max-width: 1200px; margin: 0 auto; padding: 8px 28px;
+      display: flex; align-items: center; gap: 16px;
+    }
+    .sticky-home {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: none; border: 0; cursor: pointer; padding: 4px 2px;
+      color: var(--paper); font-family: var(--display);
+      font-size: 15px; font-weight: 500; letter-spacing: -.01em;
+      max-width: 320px; min-width: 0;
+    }
+    .sticky-home .sticky-event {
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .sticky-nav .nav { margin-left: auto; }
+    #header-sentinel { height: 1px; margin-top: -1px; }
+
+    /* External links (Wall / Upload) sit apart from the section nav —
+       they open a new tab, which is a different kind of destination. */
+    .nav-external { background: transparent; padding: 0; gap: 2px; }
+    .nav-external a { font-size: 12px; opacity: .8; }
+    .nav-external a:hover { opacity: 1; }
+
+    /* ── Event info, sidebar-scoped ────────────────────────
+       Was a full-width band; the auto-fit cell grid collapses to one
+       column on its own, so it only needs its chrome neutralised. */
+    .sidebar-stack .info-hero { max-width: none; margin: 0; padding: 0; }
+    .sidebar-stack .info-card {
+      grid-template-columns: 1fr;
+      gap: 14px;
+      padding: 20px;
+      border-radius: 22px;
+      background: var(--dash-surface);
+      border-color: var(--dash-border);
+      box-shadow: var(--dash-shadow);
+    }
+    .sidebar-stack .info-card h3 {
+      grid-column: 1;
+      padding-right: 0; border-right: 0;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--dash-border);
+      font-size: 18px;
+    }
+    .sidebar-stack .info-card .info-cells { grid-column: 1; }
+
     /* ── Body grid ────────────────────────────────────────── */
     .body {
       max-width: 1200px; margin: 32px auto 0;
@@ -3020,6 +3100,26 @@
         transition: color .15s;
       }
       .mnav-btn:active { color: var(--accent, #c45a3a); }
+      .mnav-btn[hidden] { display: none; }
+      /* Active section — the bar is now navigation, so it has to say
+         where you are, not just where you can go. */
+      .mnav-btn.active { color: var(--accent); }
+      .mnav-btn.active .mnav-icon {
+        background: rgba(196,90,58,.14);
+        border-color: rgba(196,90,58,.34);
+      }
+      .mnav-btn .mnav-icon { position: relative; }
+      .mnav-btn .mnav-badge {
+        position: absolute; top: -2px; right: -2px;
+        min-width: 18px; height: 18px; padding: 0 5px;
+        border-radius: 999px;
+        background: var(--accent); color: #fff;
+        font-family: var(--mono); font-size: 10px; line-height: 18px;
+        letter-spacing: 0; text-align: center;
+        border: 2px solid var(--paper);
+        box-sizing: content-box;
+      }
+      .mnav-btn .mnav-badge[hidden] { display: none; }
       .mnav-btn .mnav-icon {
         width: 44px; height: 44px;
         border-radius: 50%;
@@ -3045,14 +3145,22 @@
   <div class="event-header-inner">
     <div class="event-header-top">
       <a class="brand brand-lockup" href="/" aria-label="Reelday.ph — home"><img src="/images/LOGO.png?v=2" alt="Reelday.ph" class="brand-img" /></a>
+      <!-- Section nav. These four switch the view below (one section
+           renders at a time, hash-driven); the pair on the right open a
+           new tab and are grouped apart so the two kinds of destination
+           never read as the same thing. -->
       <div class="nav" id="site-nav">
-        <a class="active" href="#">Dashboard</a>
-        <a id="wall-nav-link" href="#" target="_blank" rel="noopener">Wall</a>
-        <a id="upload-nav-link" href="#" target="_blank" rel="noopener"><span class="nav-full">Upload page</span><span class="nav-short">Upload</span></a>
-        <a href="#qr-wrap" id="qr-nav-link"><span class="nav-full">QR Code</span><span class="nav-short">QR</span></a>
-        <a href="#" id="settings-nav-link">Settings</a>
+        <a class="nav-sec active" data-section="gallery" href="#gallery">Gallery</a>
+        <a class="nav-sec" data-section="polls" href="#polls">Polls</a>
+        <a class="nav-sec" data-section="website" href="#website"><span class="nav-full">Website</span><span class="nav-short">Site</span></a>
+        <a class="nav-sec" data-section="reel" href="#reel" id="nav-sec-reel" hidden>Reel</a>
+        <a href="#" id="settings-nav-link"><span class="nav-full">Settings</span><span class="nav-short">⚙</span></a>
       </div>
       <div class="event-header-top-right">
+        <div class="nav nav-external">
+          <a id="wall-nav-link" href="#" target="_blank" rel="noopener">Wall <span aria-hidden="true">↗</span></a>
+          <a id="upload-nav-link" href="#" target="_blank" rel="noopener"><span class="nav-full">Upload page</span><span class="nav-short">Upload</span> <span aria-hidden="true">↗</span></a>
+        </div>
         <div id="dash-nav-links"></div>
       </div>
     </div>
@@ -3064,6 +3172,28 @@
     </div>
   </div>
 </section>
+
+<!-- Sentinel — when this scrolls out of view the condensed nav pins. -->
+<div id="header-sentinel" aria-hidden="true"></div>
+
+<!-- ── Condensed sticky nav ───────────────────────────────
+     Sections can run long (21-question poll manager, the website
+     form), so navigation has to survive scroll depth. Same
+     data-section contract as the header nav — one delegated handler
+     drives both. -->
+<div class="sticky-nav" id="sticky-nav" hidden>
+  <div class="sticky-nav-inner">
+    <button type="button" class="sticky-home" id="sticky-home">
+      <span aria-hidden="true">⌂</span><span class="sticky-event" id="sticky-event-name">Event</span>
+    </button>
+    <div class="nav" id="sticky-sections">
+      <a class="nav-sec active" data-section="gallery" href="#gallery">Gallery</a>
+      <a class="nav-sec" data-section="polls" href="#polls">Polls</a>
+      <a class="nav-sec" data-section="website" href="#website"><span class="nav-full">Website</span><span class="nav-short">Site</span></a>
+      <a class="nav-sec" data-section="reel" href="#reel" id="sticky-sec-reel" hidden>Reel</a>
+    </div>
+  </div>
+</div>
 
 <!-- ── Stats (overlapping header) ────────────────────────── -->
 <div class="stats" id="stats-row" style="display:none">
@@ -3084,51 +3214,6 @@
   </div>
 </div>
 
-<!-- ── Event info (promoted hero strip) ───────────────────── -->
-<div class="info-hero" id="info-hero" style="display:none">
-  <div class="info-card">
-    <h3>Event info</h3>
-    <div class="info-cells">
-      <div class="row row-highlight"><span>Type</span><span id="info-type">—</span></div>
-      <div class="row row-highlight" data-cell="plan"><span>Plan</span><span id="info-plan">—</span></div>
-      <div class="row row-highlight" id="info-window-row">
-        <span>Guest uploads</span>
-        <span>
-          <span class="win-pill" id="mini-access">—</span>
-          <span class="win-hint" id="mini-next"></span>
-        </span>
-      </div>
-      <div class="row row-highlight"><span>Wall expires</span><span id="info-expires">—</span></div>
-
-      <!-- Bulk download — always present so the info card has a stable
-           5-cell layout. renderQuota toggles the BUTTON's disabled
-           state (not the cell's visibility) based on upload count +
-           archived_at, so an empty event shows a greyed-out button
-           with a "no uploads yet" hint instead of the cell vanishing. -->
-      <div class="row row-highlight" id="info-download-row">
-        <span>Backup</span>
-        <span>
-          <button type="button" class="info-download-btn" id="btn-download-all" aria-label="Download all uploads as a ZIP">
-            <span class="dl-icon" aria-hidden="true">⬇</span>
-            <span class="dl-label">Download all (.zip)</span>
-            <span class="dl-spinner" aria-hidden="true"></span>
-          </button>
-        </span>
-      </div>
-    </div>
-
-    <!-- upload quota meter (hidden on plans without a cap) -->
-    <div class="quota" id="quota-block" style="display:none;">
-      <div class="quota-row">
-        <span>Uploads used</span>
-        <span class="quota-num"><em id="quota-used">0</em> / <span id="quota-limit">50</span></span>
-      </div>
-      <div class="quota-bar"><div class="fill" id="quota-fill" style="width:0%"></div></div>
-      <div class="quota-hint" id="quota-hint"></div>
-    </div>
-  </div>
-</div>
-
 <!-- ── Page loading ───────────────────────────────────────── -->
 <div class="page-loading" id="page-loading">
   <div class="spinner"></div>
@@ -3143,8 +3228,11 @@
 <!-- ── Main body ──────────────────────────────────────────── -->
 <div class="body" id="dash-main" style="display:none">
 
-  <!-- ── Photo stream panel (left) ─────────────────────── -->
-  <div>
+  <!-- ── Main column — one section renders at a time ────── -->
+  <div class="col-main">
+    <!-- Gallery is the default section: the photos are the product, so
+         they load at the top instead of below three expandable panels. -->
+    <section class="dash-section" id="sec-gallery" data-section="gallery">
     <div class="lock-banner hidden" id="lock-banner">
       <div class="lb-icon" id="lb-icon">⚠</div>
       <div class="lb-body">
@@ -3167,114 +3255,6 @@
       <button type="button" class="we-dismiss" id="we-dismiss">Dismiss</button>
     </div>
 
-    <!-- ── Live polls panel ─────────────────────────────
-         Collapsible: starts collapsed, auto-expands when something is
-         live, and the host's manual choice (in localStorage) wins after
-         that. Keeps the photo grid the centre of attention. -->
-    <div class="panel polls-panel polls-collapsed" id="polls-panel" style="display:none; margin-bottom:18px;">
-      <button type="button" class="polls-head polls-toggle" id="polls-toggle" aria-expanded="false" aria-controls="polls-body">
-        <span class="polls-head-main">
-          <span class="polls-h2">Live Questions &amp; Poll</span>
-          <span class="polls-summary" id="polls-summary">Tap to expand</span>
-        </span>
-        <span class="polls-chevron" aria-hidden="true" style="font-size:24px;line-height:1;color:var(--accent);font-weight:700;width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;border-radius:999px;background:rgba(196,90,58,.10);">▾</span>
-      </button>
-      <div class="polls-body" id="polls-body">
-        <div class="polls-sub">Polls collect opinions; questions reveal a correct answer on the wall. Pick the type when you create one — guests vote from their phones either way.</div>
-        <div class="polls-quick" id="polls-quick">
-          <div class="polls-quick-card">
-            <div class="polls-quick-kicker">Questions</div>
-            <div class="polls-quick-copy">Use for trivia. One answer is marked correct and the wall reveals the winner.</div>
-          </div>
-          <div class="polls-quick-card">
-            <div class="polls-quick-kicker">Polls</div>
-            <div class="polls-quick-copy">Use for fun crowd voting. No right answer, just live audience picks.</div>
-          </div>
-          <div class="polls-quick-card">
-            <div class="polls-quick-kicker">Run all</div>
-            <div class="polls-quick-copy">Best for the MC. Saved questions go live one after another on the wall.</div>
-          </div>
-        </div>
-        <div class="polls-actions">
-          <button type="button" class="btn btn-accent polls-create-btn" id="polls-create-btn">+ New</button>
-          <button type="button" class="btn btn-ghost polls-runall-btn" id="polls-runall-btn">▶ Run all</button>
-        </div>
-
-        <div class="polls-locked" id="polls-locked" style="display:none;">
-          Live Questions &amp; Poll are unlocked on the Dalisay plan. <a href="/#pricing">Upgrade →</a>
-        </div>
-
-        <!-- ── Sub-tabs: Questions · Polls · Leaderboard ─────
-             Same data underneath, three filtered views. The Leaderboard
-             tab is the historical "who answered fastest" view, populated
-             from /api/events/:slug/polls/leaderboard. -->
-        <div class="polls-tabs" id="polls-tabs" role="tablist">
-          <button type="button" class="polls-tab active" role="tab" data-tab="questions">
-            Questions <span class="polls-tab-count" id="polls-tab-count-questions">0</span>
-          </button>
-          <button type="button" class="polls-tab" role="tab" data-tab="polls">
-            Polls <span class="polls-tab-count" id="polls-tab-count-polls">0</span>
-          </button>
-          <button type="button" class="polls-tab" role="tab" data-tab="leaderboard">
-            Leaderboard
-          </button>
-        </div>
-
-        <div class="polls-view-head" id="polls-view-head">
-          <div>
-            <div class="polls-view-title" id="polls-view-title">Questions ready for the wall</div>
-            <div class="polls-view-note" id="polls-view-note">Run one question at a time, or use Run all when the MC is ready to go through the full quiz.</div>
-          </div>
-          <div class="polls-view-chip" id="polls-view-chip">MC friendly</div>
-        </div>
-        <div class="polls-list" id="polls-list"></div>
-        <div class="polls-leaderboard" id="polls-leaderboard" style="display:none;"></div>
-      </div>
-    </div>
-
-    <!-- ── Event Website panel (Dalisay/Hiraya) ──────────────────
-         Collapsible like the polls panel above. Filled by an isolated
-         <script type="module"> at the end of <body> so it shares NO
-         scope with the main dashboard module. -->
-    <div class="panel" id="esite-panel" style="display:none; margin-bottom:18px; padding:0;">
-      <button type="button" class="polls-toggle" id="esite-toggle" aria-expanded="false" aria-controls="esite-body">
-        <span class="polls-head-main">
-          <span class="polls-h2">Event Website</span>
-          <span class="polls-summary" id="esite-summary">Tap to set up · /e/<span id="esite-url-hint">slug</span></span>
-        </span>
-        <span class="polls-chevron" id="esite-chevron" aria-hidden="true" style="font-size:24px;line-height:1;color:var(--accent);font-weight:700;width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;border-radius:999px;background:rgba(196,90,58,.10);">▾</span>
-      </button>
-      <div id="esite-body" style="display:none; padding: 22px; background: var(--paper-2); border-top: 1px solid var(--line);">
-        <div class="polls-locked" id="esite-locked" style="display:none;">
-          The Event Website is unlocked on the <strong>Dalisay</strong> plan. <a href="/#pricing">Upgrade →</a>
-        </div>
-        <div id="esite-editor"></div>
-      </div>
-    </div>
-
-    <!-- ── Same Day Edit panel (Dalisay/Hiraya) ──────────────────
-         Filled by an isolated <script type="module"> at the end of
-         <body> so it shares NO scope with the main dashboard module.
-         Batch 1: curated preview + pin/exclude only (no render yet). -->
-    <div class="panel" id="sde-panel" style="display:none; margin-bottom:18px; padding:0;">
-      <button type="button" class="polls-toggle" id="sde-toggle" aria-expanded="false" aria-controls="sde-body">
-        <span class="polls-head-main">
-          <span class="polls-h2">Same Day Edit</span>
-          <span class="polls-summary" id="sde-summary">Tap to preview your recap reel</span>
-        </span>
-        <span class="polls-chevron" id="sde-chevron" aria-hidden="true" style="font-size:24px;line-height:1;color:var(--accent);font-weight:700;width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;border-radius:999px;background:rgba(196,90,58,.10);">▾</span>
-      </button>
-      <div id="sde-body" style="display:none; padding: 22px; background: var(--paper-2); border-top: 1px solid var(--line);">
-        <div class="polls-locked" id="sde-locked" style="display:none;">
-          Same Day Edit is unlocked on the <strong>Dalisay</strong> plan. <a href="/#pricing">Upgrade →</a>
-        </div>
-        <div id="sde-content" style="display:none;">
-          <div id="sde-render-bar" style="display:none;"></div>
-          <div id="sde-status"></div>
-          <div id="sde-grid"></div>
-        </div>
-      </div>
-    </div>
 
     <div class="panel">
       <div class="panel-head">
@@ -3350,12 +3330,179 @@
       <button type="button" id="btn-bulk-cancel" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:999px;padding:5px 14px;cursor:pointer;font-family:var(--mono);font-size:11px;letter-spacing:.1em;">Cancel</button>
       <button type="button" id="btn-bulk-delete" style="background:var(--dash-danger);border:none;color:#fff;border-radius:999px;padding:5px 14px;cursor:pointer;font-family:var(--mono);font-size:11px;letter-spacing:.1em;font-weight:600;">Delete selected</button>
     </div>
+    </section>
 
-    <!-- Poll editor modal — appended at body-level below for proper stacking -->
+    <section class="dash-section" id="sec-polls" data-section="polls" hidden>
+    <!-- ── Live polls panel ─────────────────────────────
+         Collapsible: starts collapsed, auto-expands when something is
+         live, and the host's manual choice (in localStorage) wins after
+         that. Keeps the photo grid the centre of attention. -->
+    <div class="panel polls-panel polls-collapsed" id="polls-panel" style="display:none; margin-bottom:18px;">
+      <button type="button" class="polls-head polls-toggle" id="polls-toggle" aria-expanded="false" aria-controls="polls-body">
+        <span class="polls-head-main">
+          <span class="polls-h2">Live Questions &amp; Poll</span>
+          <span class="polls-summary" id="polls-summary">Tap to expand</span>
+        </span>
+        <span class="polls-chevron" aria-hidden="true" style="font-size:24px;line-height:1;color:var(--accent);font-weight:700;width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;border-radius:999px;background:rgba(196,90,58,.10);">▾</span>
+      </button>
+      <div class="polls-body" id="polls-body">
+        <div class="polls-sub">Polls collect opinions; questions reveal a correct answer on the wall. Pick the type when you create one — guests vote from their phones either way.</div>
+        <div class="polls-quick" id="polls-quick">
+          <div class="polls-quick-card">
+            <div class="polls-quick-kicker">Questions</div>
+            <div class="polls-quick-copy">Use for trivia. One answer is marked correct and the wall reveals the winner.</div>
+          </div>
+          <div class="polls-quick-card">
+            <div class="polls-quick-kicker">Polls</div>
+            <div class="polls-quick-copy">Use for fun crowd voting. No right answer, just live audience picks.</div>
+          </div>
+          <div class="polls-quick-card">
+            <div class="polls-quick-kicker">Run all</div>
+            <div class="polls-quick-copy">Best for the MC. Saved questions go live one after another on the wall.</div>
+          </div>
+        </div>
+        <div class="polls-actions">
+          <button type="button" class="btn btn-accent polls-create-btn" id="polls-create-btn">+ New</button>
+          <button type="button" class="btn btn-ghost polls-runall-btn" id="polls-runall-btn">▶ Run all</button>
+        </div>
+
+        <div class="polls-locked" id="polls-locked" style="display:none;">
+          Live Questions &amp; Poll are unlocked on the Dalisay plan. <a href="/#pricing">Upgrade →</a>
+        </div>
+
+        <!-- ── Sub-tabs: Questions · Polls · Leaderboard ─────
+             Same data underneath, three filtered views. The Leaderboard
+             tab is the historical "who answered fastest" view, populated
+             from /api/events/:slug/polls/leaderboard. -->
+        <div class="polls-tabs" id="polls-tabs" role="tablist">
+          <button type="button" class="polls-tab active" role="tab" data-tab="questions">
+            Questions <span class="polls-tab-count" id="polls-tab-count-questions">0</span>
+          </button>
+          <button type="button" class="polls-tab" role="tab" data-tab="polls">
+            Polls <span class="polls-tab-count" id="polls-tab-count-polls">0</span>
+          </button>
+          <button type="button" class="polls-tab" role="tab" data-tab="leaderboard">
+            Leaderboard
+          </button>
+        </div>
+
+        <div class="polls-view-head" id="polls-view-head">
+          <div>
+            <div class="polls-view-title" id="polls-view-title">Questions ready for the wall</div>
+            <div class="polls-view-note" id="polls-view-note">Run one question at a time, or use Run all when the MC is ready to go through the full quiz.</div>
+          </div>
+          <div class="polls-view-chip" id="polls-view-chip">MC friendly</div>
+        </div>
+        <div class="polls-list" id="polls-list"></div>
+        <div class="polls-leaderboard" id="polls-leaderboard" style="display:none;"></div>
+      </div>
+    </div>
+
+    </section>
+
+    <section class="dash-section" id="sec-website" data-section="website" hidden>
+    <!-- ── Event Website panel (Dalisay/Hiraya) ──────────────────
+         Collapsible like the polls panel above. Filled by an isolated
+         <script type="module"> at the end of <body> so it shares NO
+         scope with the main dashboard module. -->
+    <div class="panel" id="esite-panel" style="display:none; margin-bottom:18px; padding:0;">
+      <button type="button" class="polls-toggle" id="esite-toggle" aria-expanded="false" aria-controls="esite-body">
+        <span class="polls-head-main">
+          <span class="polls-h2">Event Website</span>
+          <span class="polls-summary" id="esite-summary">Tap to set up · /e/<span id="esite-url-hint">slug</span></span>
+        </span>
+        <span class="polls-chevron" id="esite-chevron" aria-hidden="true" style="font-size:24px;line-height:1;color:var(--accent);font-weight:700;width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;border-radius:999px;background:rgba(196,90,58,.10);">▾</span>
+      </button>
+      <div id="esite-body" style="display:none; padding: 22px; background: var(--paper-2); border-top: 1px solid var(--line);">
+        <div class="polls-locked" id="esite-locked" style="display:none;">
+          The Event Website is unlocked on the <strong>Dalisay</strong> plan. <a href="/#pricing">Upgrade →</a>
+        </div>
+        <div id="esite-editor"></div>
+      </div>
+    </div>
+
+    </section>
+
+    <section class="dash-section" id="sec-reel" data-section="reel" hidden>
+    <!-- ── Same Day Edit panel (Dalisay/Hiraya) ──────────────────
+         Filled by an isolated <script type="module"> at the end of
+         <body> so it shares NO scope with the main dashboard module.
+         Batch 1: curated preview + pin/exclude only (no render yet). -->
+    <div class="panel" id="sde-panel" style="display:none; margin-bottom:18px; padding:0;">
+      <button type="button" class="polls-toggle" id="sde-toggle" aria-expanded="false" aria-controls="sde-body">
+        <span class="polls-head-main">
+          <span class="polls-h2">Same Day Edit</span>
+          <span class="polls-summary" id="sde-summary">Tap to preview your recap reel</span>
+        </span>
+        <span class="polls-chevron" id="sde-chevron" aria-hidden="true" style="font-size:24px;line-height:1;color:var(--accent);font-weight:700;width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;border-radius:999px;background:rgba(196,90,58,.10);">▾</span>
+      </button>
+      <div id="sde-body" style="display:none; padding: 22px; background: var(--paper-2); border-top: 1px solid var(--line);">
+        <div class="polls-locked" id="sde-locked" style="display:none;">
+          Same Day Edit is unlocked on the <strong>Dalisay</strong> plan. <a href="/#pricing">Upgrade →</a>
+        </div>
+        <div id="sde-content" style="display:none;">
+          <div id="sde-render-bar" style="display:none;"></div>
+          <div id="sde-status"></div>
+          <div id="sde-grid"></div>
+        </div>
+      </div>
+    </div>
+
+    </section>
   </div>
 
   <!-- ── Sidebar (right) ────────────────────────────────── -->
   <div class="sidebar-stack">
+  <!-- ── Event info ─────────────────────────────────────────────
+       Moved out of the full-width strip between the stats and the body:
+       as a band it read as a second stats row and pushed the gallery
+       further down. It now lives in the Gallery sidebar, where the
+       auto-fit cell grid collapses to a single column on its own.
+       All ids are unchanged — renderHeader/renderQuota still bind here. -->
+  <div class="info-hero" id="info-hero" style="display:none">
+    <div class="info-card">
+      <h3>Event info</h3>
+      <div class="info-cells">
+        <div class="row row-highlight"><span>Type</span><span id="info-type">—</span></div>
+        <div class="row row-highlight" data-cell="plan"><span>Plan</span><span id="info-plan">—</span></div>
+        <div class="row row-highlight" id="info-window-row">
+          <span>Guest uploads</span>
+          <span>
+            <span class="win-pill" id="mini-access">—</span>
+            <span class="win-hint" id="mini-next"></span>
+          </span>
+        </div>
+        <div class="row row-highlight"><span>Wall expires</span><span id="info-expires">—</span></div>
+
+        <!-- Bulk download — always present so the info card has a stable
+             5-cell layout. renderQuota toggles the BUTTON's disabled
+             state (not the cell's visibility) based on upload count +
+             archived_at, so an empty event shows a greyed-out button
+             with a "no uploads yet" hint instead of the cell vanishing. -->
+        <div class="row row-highlight" id="info-download-row">
+          <span>Backup</span>
+          <span>
+            <button type="button" class="info-download-btn" id="btn-download-all" aria-label="Download all uploads as a ZIP">
+              <span class="dl-icon" aria-hidden="true">⬇</span>
+              <span class="dl-label">Download all (.zip)</span>
+              <span class="dl-spinner" aria-hidden="true"></span>
+            </button>
+          </span>
+        </div>
+      </div>
+
+      <!-- upload quota meter (hidden on plans without a cap) -->
+      <div class="quota" id="quota-block" style="display:none;">
+        <div class="quota-row">
+          <span>Uploads used</span>
+          <span class="quota-num"><em id="quota-used">0</em> / <span id="quota-limit">50</span></span>
+        </div>
+        <div class="quota-bar"><div class="fill" id="quota-fill" style="width:0%"></div></div>
+        <div class="quota-hint" id="quota-hint"></div>
+      </div>
+    </div>
+  </div>
+
     <div class="qr-card">
       <div class="eyebrow" style="margin-bottom:14px;">— Your event QR</div>
       <div class="qr" id="qr-wrap"><img id="qr-img" alt="Event QR Code" style="width:100%;height:100%;object-fit:contain;" /></div>
@@ -3791,10 +3938,98 @@
   let currentTab    = 'all';
   let currentStream = 'photo';   // 'photo' | 'video' | 'message'
 
-  // Same Day Edit ships dark. While false the gallery hides the Feature
-  // pin (its only job is setting sde_pinned) and the "Featured" sub-tab.
-  // Flip to true when the reel launches — nothing else needs to change.
-  const SDE_SHIPPED = false;
+  // ── Same Day Edit beta gate ─────────────────────────────
+  // SDE is "coming soon" in the customer-facing copy while we wait on the
+  // AWS 10 GB Lambda quota, but allowlisted hosts get the full working
+  // feature. This used to live only in the SDE module at the end of
+  // <body>; the gallery needs it too (the Feature pin's sole job is
+  // setting sde_pinned, so hiding the pin from a beta host would remove
+  // their only way to curate the reel). Single source of truth here,
+  // published on window for the SDE module — which runs later — to read.
+  // This is a UX gate, NOT a security boundary: the SDE endpoints stay
+  // auth + tier gated server-side.
+  const SDE_BETA_EMAILS = new Set([
+    'demo@reelday.ph',
+    'besogol.bb@gmail.com',
+  ]);
+  const SDE_SHIPPED = (() => {
+    try {
+      const user = JSON.parse(localStorage.getItem('reelday_user') || 'null');
+      return SDE_BETA_EMAILS.has(String(user?.email || '').toLowerCase());
+    } catch { return false; }
+  })();
+  window.__sdeBeta = SDE_SHIPPED;
+
+  // ── Section router ──────────────────────────────────────
+  // Polls / Website / Reel were accordions stacked under the gallery, so
+  // expanding one buried the rest and the page ran to ~9,500px. They're
+  // destinations now. Hash-driven so back/forward and refresh work, and
+  // so an email can deep-link a host straight to #website.
+  const SECTIONS = ['gallery', 'polls', 'website', 'reel'];
+  function currentSectionFromHash() {
+    const h = (location.hash || '').replace('#', '');
+    return SECTIONS.includes(h) ? h : 'gallery';
+  }
+  function showSection(name, updateHash = true) {
+    if (!SECTIONS.includes(name)) name = 'gallery';
+    if (name === 'reel' && !SDE_SHIPPED) name = 'gallery';
+
+    document.body.dataset.section = name;
+    document.querySelectorAll('.dash-section').forEach(sec => {
+      sec.hidden = sec.dataset.section !== name;
+    });
+    document.querySelectorAll('[data-section]').forEach(el => {
+      if (el.classList.contains('dash-section')) return;
+      el.classList.toggle('active', el.dataset.section === name);
+    });
+
+    if (updateHash && location.hash !== '#' + name) {
+      history.replaceState(null, '', '#' + name);
+    }
+    // Panels inside a dedicated section have no reason to sit collapsed.
+    // Each module owns its own collapse state, so we announce instead of
+    // reaching across scopes.
+    document.dispatchEvent(new CustomEvent('dash:section', { detail: name }));
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }
+
+  // One delegated handler covers the header nav, the sticky nav and the
+  // mobile bar — they all share the data-section contract.
+  document.addEventListener('click', (e) => {
+    const trigger = e.target.closest('[data-section]');
+    if (!trigger || trigger.classList.contains('dash-section')) return;
+    e.preventDefault();
+    showSection(trigger.dataset.section);
+  });
+  window.addEventListener('hashchange', () => showSection(currentSectionFromHash(), false));
+
+  // Reveal the Reel destination only for beta hosts.
+  if (SDE_SHIPPED) {
+    ['nav-sec-reel', 'sticky-sec-reel', 'mnav-reel'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.hidden = false;
+    });
+  }
+
+  document.getElementById('mnav-more')?.addEventListener('click', () => {
+    document.getElementById('settings-nav-link')?.click();
+  });
+
+  // Sticky condensed nav — pins once the header scrolls past.
+  {
+    const sentinel  = document.getElementById('header-sentinel');
+    const stickyNav = document.getElementById('sticky-nav');
+    if (sentinel && stickyNav && 'IntersectionObserver' in window) {
+      stickyNav.hidden = false;   // visibility is the .pinned transform now
+      new IntersectionObserver(
+        ([entry]) => { stickyNav.classList.toggle('pinned', !entry.isIntersecting); },
+        { rootMargin: '0px' },
+      ).observe(sentinel);
+    }
+    document.getElementById('sticky-home')?.addEventListener('click', () => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  }
 
   // API uploads carry is_approved (boolean); the UI uses u.status. Map server
   // truth to the local model so the existing tab pipeline works for both.
@@ -3972,6 +4207,8 @@
   function renderHeader(event) {
     currentDashEvent = event;
     eventNames.textContent = event.couple_names;
+    const stickyName = $('sticky-event-name');
+    if (stickyName) stickyName.textContent = event.couple_names;
     document.title         = `Reelday — ${event.couple_names}`;
 
     const meta = THEME_MAP[event.event_type] || THEME_MAP.wedding;
@@ -4006,14 +4243,9 @@
       wallBtn.style.pointerEvents = wallExpired ? 'none' : '';
     }
 
-    const qrNavLink = $('qr-nav-link');
-    if (qrNavLink) {
-      qrNavLink.addEventListener('click', e => {
-        e.preventDefault();
-        const target = $('qr-wrap');
-        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      });
-    }
+    // (The old "QR Code" nav item was a scroll shortcut to the sidebar.
+    //  The QR now sits above the fold in the Gallery section, so the
+    //  shortcut — and this handler — are no longer needed.)
 
     // Info card
     const infoType    = $('info-type');
@@ -4761,6 +4993,14 @@
     const pending = uploads.filter(u => u.status === 'pending').length;
     $('stat-pending').textContent = pending;
 
+    // Pending is the only number that demands an action, so it's the one
+    // thing the mobile bar surfaces without the host opening the section.
+    const pendingBadge = $('mnav-badge-pending');
+    if (pendingBadge) {
+      pendingBadge.textContent = pending > 99 ? '99+' : String(pending);
+      pendingBadge.hidden = pending === 0;
+    }
+
     // Update tab counts
     updateTabCounts(uploads);
 
@@ -5398,6 +5638,16 @@
     const saved = localStorage.getItem(POLLS_COLLAPSED_KEY);
     setPollsCollapsed(saved === null ? true : saved === '1', false);
   } catch { setPollsCollapsed(true, false); }
+
+  // Landing on the Polls section means the host asked for the panel, so
+  // open it — a collapsed panel as the sole content of a section is a
+  // dead end. Not persisted: their manual choice inside the section wins.
+  document.addEventListener('dash:section', (e) => {
+    if (e.detail === 'polls') {
+      setPollsCollapsed(false, false);
+      syncPollsSummaryVerb();
+    }
+  });
 
   function authHeader() {
     const t = localStorage.getItem('reelday_token');
@@ -6806,6 +7056,7 @@
     document.getElementById('stats-row').style.display = 'grid';
     document.getElementById('info-hero').style.display  = 'block';
     dashMain.style.display    = 'grid';
+    showSection(currentSectionFromHash(), false);
   }
 
   // ── Data loading ──────────────────────────────────────
@@ -6893,6 +7144,7 @@
       document.getElementById('stats-row').style.display = 'grid';
       document.getElementById('info-hero').style.display  = 'block';
       dashMain.style.display    = 'grid';
+      showSection(currentSectionFromHash(), false);
     } catch (err) {
       console.warn('[dashboard] API path failed, falling back to local mode:', err);
       /* API unavailable — fall back to localStorage */
@@ -7294,6 +7546,10 @@
     }
     setCollapsed(localStorage.getItem(COLLAPSE_KEY) !== '0', false); // default collapsed
     toggleBtn.addEventListener('click', () => setCollapsed(bodyEl.style.display !== 'none', true));
+    // Opening the Website section is the request to see the editor.
+    document.addEventListener('dash:section', (e) => {
+      if (e.detail === 'website') setCollapsed(false, false);
+    });
 
     // Scoped readability boost — the dashboard's .details-field labels
     // default to 10px (fine on a dense panel, too small inside a wizard
@@ -8104,17 +8360,10 @@
   // gated, and any allowlisted host gets the full working feature
   // (curate, generate, watch, play on wall). To onboard another beta
   // tester, add their lowercase email here and redeploy.
-  const SDE_BETA_EMAILS = new Set([
-    'demo@reelday.ph',
-    'besogol.bb@gmail.com',
-  ]);
-  function isSdeBetaAllowed() {
-    try {
-      const user = JSON.parse(localStorage.getItem('reelday_user') || 'null');
-      const email = String(user?.email || '').toLowerCase();
-      return SDE_BETA_EMAILS.has(email);
-    } catch { return false; }
-  }
+  // The allowlist itself now lives in the main dashboard module (which
+  // runs first and needs the same answer for the gallery's Feature pin);
+  // it publishes the result on window so there is one source of truth.
+  function isSdeBetaAllowed() { return window.__sdeBeta === true; }
 
   if (slug && panel && isSdeBetaAllowed()) {
     const token     = localStorage.getItem('reelday_token');
@@ -8142,6 +8391,9 @@
       if (persist) { try { localStorage.setItem(COLLAPSE_KEY, c ? '1' : '0'); } catch {} }
     }
     setCollapsed(localStorage.getItem(COLLAPSE_KEY) !== '0', false); // default collapsed
+    document.addEventListener('dash:section', (e) => {
+      if (e.detail === 'reel') setCollapsed(false, false);
+    });
     toggleBtn.addEventListener('click', () => {
       const willOpen = bodyEl.style.display === 'none';
       setCollapsed(!willOpen, true);
@@ -8520,53 +8772,53 @@
 </script>
 
 <!-- ── Mobile sticky bottom nav ──────────────────────────── -->
-<nav class="mobile-bottom-nav" aria-label="Quick navigation">
-  <button type="button" class="mnav-btn" id="mnav-home" aria-label="Back to top">
+<!-- ── Mobile bottom nav ──────────────────────────────────
+     Same four destinations as desktop, same data-section contract —
+     one mental model on both breakpoints. Replaces the old
+     Home/QR/Details buttons, which were only scroll shortcuts. -->
+<nav class="mobile-bottom-nav" aria-label="Sections">
+  <button type="button" class="mnav-btn active" data-section="gallery" aria-label="Photos">
     <div class="mnav-icon">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1z"/>
-        <path d="M9 21V12h6v9"/>
+        <rect x="3" y="6" width="18" height="14" rx="2"/><path d="M8 6V4h8v2"/><circle cx="12" cy="13" r="3.2"/>
       </svg>
+      <span class="mnav-badge" id="mnav-badge-pending" hidden></span>
     </div>
-    Home
+    Photos
   </button>
-  <button type="button" class="mnav-btn" id="mnav-qr" aria-label="View QR Code">
+  <button type="button" class="mnav-btn" data-section="polls" aria-label="Questions and polls">
     <div class="mnav-icon">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <rect x="3" y="3" width="7" height="7" rx="1"/>
-        <rect x="14" y="3" width="7" height="7" rx="1"/>
-        <rect x="3" y="14" width="7" height="7" rx="1"/>
-        <circle cx="17.5" cy="17.5" r="1.5" fill="currentColor" stroke="none"/>
+        <path d="M9.1 9a3 3 0 115.8 1c0 2-3 2.2-3 4"/><line x1="12" y1="18" x2="12" y2="18.01"/>
       </svg>
     </div>
-    QR Code
+    Polls
   </button>
-  <button type="button" class="mnav-btn" id="mnav-details" aria-label="Event Details">
+  <button type="button" class="mnav-btn" data-section="website" aria-label="Event website">
     <div class="mnav-icon">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <circle cx="12" cy="12" r="10"/>
-        <line x1="12" y1="8" x2="12" y2="8.01"/>
-        <line x1="12" y1="12" x2="12" y2="16"/>
+        <circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 010 18a15 15 0 010-18"/>
       </svg>
     </div>
-    Details
+    Site
+  </button>
+  <button type="button" class="mnav-btn" data-section="reel" id="mnav-reel" aria-label="Same Day Edit" hidden>
+    <div class="mnav-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3z"/>
+      </svg>
+    </div>
+    Reel
+  </button>
+  <button type="button" class="mnav-btn" id="mnav-more" aria-label="Settings">
+    <div class="mnav-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.9-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1A1.7 1.7 0 006.9 19a1.7 1.7 0 00-1.9.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.9 1.7 1.7 0 00-1.5-1H1a2 2 0 110-4h.1A1.7 1.7 0 002.6 8a1.7 1.7 0 00-.3-1.9l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.9.3H7a1.7 1.7 0 001-1.5V2a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.9-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.9V8a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/>
+      </svg>
+    </div>
+    Settings
   </button>
 </nav>
-<script>
-(function () {
-  document.getElementById('mnav-home').addEventListener('click', function () {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  });
-  document.getElementById('mnav-qr').addEventListener('click', function () {
-    var el = document.getElementById('qr-wrap');
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  });
-  document.getElementById('mnav-details').addEventListener('click', function () {
-    var el = document.getElementById('details-card');
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  });
-}());
-</script>
 
 </body>
 </html>

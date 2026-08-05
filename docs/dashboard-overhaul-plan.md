@@ -2,7 +2,7 @@
 
 **Target:** `frontend/dashboard.html` (8,502 lines — the production file)
 **Created:** 2026-08-06
-**Status:** Phase 0 complete, Phases 1–6 pending
+**Status:** Phases 0–1 complete, Phases 2–6 pending
 
 > **Cold start:** read "The diagnosis" then jump to the first unchecked phase.
 > Every item cites a file:line so you can start without re-deriving anything.
@@ -73,9 +73,12 @@ density, but the absence of boundaries.
 
 ## Scope decisions
 
-- **Same Day Edit is NOT shipped.** No nav item, no hero, no promotion. It stays
-  behind its existing flag. The Feature pin (which only sets `sde_pinned`) is
-  hidden until SDE launches.
+- **Same Day Edit is NOT shipped.** No hero, no promotion. It stays behind its
+  existing beta allowlist — invisible to every host not on it. Allowlisted hosts
+  keep the full working feature, so the Feature pin (which only sets
+  `sde_pinned`) and the `Reel` nav item are gated on that same flag rather than
+  hidden outright: hiding the pin from a beta host would remove their only way
+  to curate the reel.
 - **No dark mode.** Considered and dropped.
 - **The design system is retained.** Fraunces / Inter / JetBrains Mono, cream
   paper, terracotta accent, rounded panels, soft shadows. Nothing here changes the
@@ -89,7 +92,7 @@ density, but the absence of boundaries.
 | Phase | Theme | Effort | Status |
 |---|---|---:|---|
 | **0** | Quick wins | 2 hrs | ✅ done |
-| **1** | Section routing (the overhaul) | 1 day | ☐ |
+| **1** | Section routing (the overhaul) | 1 day | ✅ done |
 | **2** | Three states | 2 days | ☐ |
 | **3** | Live & mobile triage | 2 days | ☐ |
 | **4** | Content density | 1.5 days | ☐ |
@@ -133,7 +136,7 @@ to 3:1 in Phase 5.
 
 ---
 
-## Phase 1 — Section routing ☐
+## Phase 1 — Section routing ✅
 
 **The overhaul.** Replaces the accordion cards with a top navigation.
 
@@ -145,7 +148,22 @@ to 3:1 in Phase 5.
 | 14 | Cut tab depth 4 → 2 | Header pill + poll sub-tabs + stream switcher + status tabs → section nav + gallery filter |
 | 15 | Dead right column resolved | Falls out of 11–13 |
 | 16 | Retire the Event info strip | Reads as a second stats row. `Plan`/`Wall expires` → Settings; `Download all` → Gallery sidebar |
-| 17 | Mobile bottom nav = section nav | `Photos · Polls · Site · More`. Replaces Home/QR/Details scroll shortcuts (`:8453`) |
+| 17 | Mobile bottom nav = section nav | `Photos · Polls · Site · Settings` + pending badge. Replaced Home/QR/Details scroll shortcuts |
+
+**Shipped notes**
+
+- Sections live in `.col-main` as `<section class="dash-section" data-section="...">`; the
+  router sets `document.body.dataset.section`, which drives the sidebar
+  (Gallery only) and the single-column layout for every other section.
+- The sticky bar is `position: fixed` + `translateY`, not `sticky` + `hidden` —
+  toggling a sticky element in and out of flow shifts everything below it by its
+  own height at the moment it appears.
+- Panels auto-expand on section entry via a `dash:section` CustomEvent, so the
+  three isolated modules keep their separate scopes.
+- **Corrected from Phase 0:** the Feature pin had been hard-disabled, which
+  removed reel curation for SDE beta hosts. The allowlist moved into the main
+  module as the single source of truth and is published on `window.__sdeBeta`;
+  the pin, the "Featured" tab and the new Reel section all gate on it.
 
 **Result: 9,492 px → ~1,900 px default view. Photos move from the 88% scroll mark to the top.**
 
