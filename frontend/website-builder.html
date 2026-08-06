@@ -450,8 +450,22 @@
       .actions { justify-content: flex-start; width: 100%; }
       .shell { grid-template-columns: 1fr; }
       .side { position: static; }
-      .tabs { display: flex; overflow-x: auto; padding-bottom: 2px; }
-      .tab { flex: 0 0 auto; width: auto; white-space: nowrap; }
+      .tabs {
+        display: flex; overflow-x: auto; padding: 2px 4px 6px;
+        scroll-snap-type: x proximity;
+        /* Hide the native scrollbar (matches the horizontal-scroll
+           treatment already used on the guest site's nav chips) and
+           fade the trailing edge instead, so it reads as "more tabs
+           this way" rather than a bare, cramped scrollbar. */
+        scrollbar-width: none;
+        mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
+        -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
+      }
+      .tabs::-webkit-scrollbar { display: none; }
+      .tab {
+        flex: 0 0 auto; width: auto; white-space: nowrap;
+        scroll-snap-align: start;
+      }
       .grid { grid-template-columns: 1fr; }
       .feature-list { grid-template-columns: 1fr; }
       .panel-head { flex-direction: column; }
