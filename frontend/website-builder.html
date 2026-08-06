@@ -546,6 +546,15 @@
       location.replace('/login?next=' + encodeURIComponent(location.pathname + location.search));
       throw new Error('redirecting to login');
     }
+    if (token && !slug) {
+      // Logged-in visitor landed on the bare builder URL with no event
+      // context -- e.g. this page shared as a public link, opened in a
+      // browser where they're already signed in from a prior session.
+      // Send them to pick/create an event rather than a dead-end
+      // "missing event" card with no obvious next step.
+      location.replace('/my-events');
+      throw new Error('redirecting to dashboard');
+    }
 
     const $ = id => document.getElementById(id);
     const editor = $('editor');
@@ -557,15 +566,6 @@
     const dashboardLink = $('dashboard-link');
     const backLink = $('back-link');
     const locked = $('locked');
-
-    if (!ANONYMOUS && !slug) {
-      publishBtn.disabled = true;
-      locked.classList.remove('hidden');
-      locked.innerHTML = '<strong>Missing event.</strong> Open this page from an event dashboard.';
-      statusPill.textContent = 'Unavailable';
-      statusNote.textContent = 'No event slug was provided.';
-      throw new Error('missing slug');
-    }
 
     let guestUrl = slug ? `/e/${encodeURIComponent(slug)}` : '';
     let dashboardUrl = slug ? `/dashboard?slug=${encodeURIComponent(slug)}#website` : '/my-events';
