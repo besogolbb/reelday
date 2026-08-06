@@ -16,7 +16,7 @@
        window's. On the real guest page #app fills the viewport so this
        is unchanged behavior; it's what lets the website-builder preview
        render true mobile layout inside a narrow phone-mockup frame. */
-    #app { container-type: inline-size; }
+    #app { container-type: inline-size; width: 100%; min-width: 0; overflow-x: hidden; box-sizing: border-box; }
 
     /* ── Loading + state ───────────────────────────────── */
     .es-state {
@@ -328,6 +328,12 @@
       display: flex; flex-direction: column; align-items: center;
       justify-content: center; text-align: center;
       gap: 22px;
+      /* min-width: 0 overrides the flex/grid default automatic minimum
+         size (== content's own width), which otherwise wins over the
+         container's available space and pushes wide hero-name text
+         past the edge instead of wrapping -- only visible at narrow
+         (e.g. phone-mockup preview) widths. */
+      width: 100%; min-width: 0; box-sizing: border-box;
     }
     .es-hero-kicker {
       display: inline-block; margin: 24px auto 0;
@@ -339,11 +345,13 @@
     }
     .es-hero-lockup {
       animation: fadeUp 1s .25s both;
+      width: 100%; min-width: 0; box-sizing: border-box;
     }
     .es-hero-names {
       font-family: var(--display); font-weight: 400;
       font-size: clamp(3.2rem, 11cqw, 7.5rem); line-height: 1;
       letter-spacing: -.02em; margin: 0;
+      overflow-wrap: break-word;
     }
     .es-hero-names .amp {
       font-style: italic; font-weight: 300;
