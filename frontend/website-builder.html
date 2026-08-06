@@ -342,6 +342,81 @@
       font-weight: 800;
     }
     .hidden { display: none !important; }
+
+    /* ── Anonymous-mode preview pane ────────────────────────
+       Plain DOM text/background updates, not an iframe render of the
+       real public site -- deliberately cheap, same reasoning as
+       start.html's personalize-slide preview. */
+    .anon-preview { margin-bottom: 24px; }
+    .anon-preview-card {
+      border-radius: var(--r);
+      padding: clamp(24px, 4vw, 40px) 24px;
+      min-height: 200px;
+      background: linear-gradient(155deg, var(--ink) 0%, #3a2a22 100%);
+      background-size: cover;
+      background-position: center;
+      color: #fff;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    .anon-preview-kicker {
+      font-family: var(--mono); font-size: 10px; letter-spacing: .2em;
+      text-transform: uppercase; opacity: .7; margin-bottom: 10px;
+    }
+    .anon-preview-names { font-family: var(--display); font-style: italic; font-size: clamp(22px, 4vw, 30px); }
+    .anon-preview-date {
+      font-family: var(--mono); font-size: 11px; letter-spacing: .1em;
+      text-transform: uppercase; opacity: .75; margin-top: 10px;
+    }
+    .anon-preview-venue { font-size: 13px; opacity: .85; margin-top: 4px; }
+    .anon-preview-story {
+      font-family: var(--display); font-style: italic; font-size: 13px; line-height: 1.5;
+      opacity: .9; margin-top: 16px; max-width: 34ch; margin-left: auto; margin-right: auto;
+    }
+    .anon-preview-story:empty, .anon-preview-venue:empty { display: none; }
+    .anon-preview-album {
+      padding: 18px; border-radius: 16px; border: 1px solid var(--line); background: #fff;
+    }
+    .anon-preview-album-copy { margin: 10px 0 0; font-size: 12px; color: var(--ink-soft); }
+
+    /* Memory Album teaser cards -- reuses the exact blurred/desaturated
+       treatment already shipped on the public site
+       (event-site.html's .es-album-teaser) rather than a second style. */
+    .es-album-teaser { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .es-album-teaser-card {
+      aspect-ratio: 1; border-radius: 12px;
+      background: linear-gradient(155deg, var(--accent) 0%, var(--paper-2) 100%);
+      filter: blur(2px) saturate(.55) brightness(1.04);
+      opacity: .8; position: relative; overflow: hidden;
+    }
+    .es-album-teaser-card::after {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(circle at 30% 25%, rgba(255,255,255,.35), transparent 60%);
+    }
+    .es-album-teaser-lock {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 10px; letter-spacing: .16em;
+      text-transform: uppercase; color: var(--accent); margin-bottom: 10px;
+    }
+
+    /* ── Finish panel (anonymous mode "Save your event website") ── */
+    .finish-overlay {
+      position: fixed; inset: 0; z-index: 50;
+      background: rgba(47, 33, 27, .45);
+      display: flex; align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    .finish-overlay.hidden { display: none; }
+    .finish-card {
+      background: #fff; border-radius: var(--r);
+      padding: clamp(24px, 4vw, 36px);
+      max-width: 420px; width: 100%;
+      box-shadow: 0 30px 80px rgba(47, 33, 27, .28);
+    }
+    .finish-card h2 { font-size: clamp(24px, 4vw, 30px); }
+    .finish-actions { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+    .finish-actions .btn { flex: 1 1 auto; }
+    .finish-reassure { margin: 14px 0 0; font-size: 12px; color: var(--ink-faint); text-align: center; }
     @media (max-width: 860px) {
       .topbar { align-items: flex-start; flex-direction: column; }
       .actions { justify-content: flex-start; width: 100%; }
@@ -386,18 +461,72 @@
         </div>
       </div>
       <div id="locked" class="notice hidden"></div>
+      <div id="anon-preview" class="anon-preview hidden" aria-hidden="true">
+        <div class="anon-preview-card" id="anon-preview-card">
+          <div class="anon-preview-kicker">You're invited</div>
+          <div class="anon-preview-names" id="anon-preview-names">Your event</div>
+          <div class="anon-preview-date" id="anon-preview-date"></div>
+          <div class="anon-preview-venue" id="anon-preview-venue"></div>
+          <div class="anon-preview-story" id="anon-preview-story"></div>
+        </div>
+        <div class="anon-preview-album">
+          <div class="es-album-teaser-lock">🔒 Memory Album</div>
+          <div class="es-album-teaser">
+            <div class="es-album-teaser-card"></div>
+            <div class="es-album-teaser-card"></div>
+            <div class="es-album-teaser-card"></div>
+          </div>
+          <p class="anon-preview-album-copy">Guests can share photos and videos here once you unlock the full Memory Album.</p>
+        </div>
+      </div>
       <div id="editor"></div>
       <div id="upgrade-panel" class="upgrade-panel hidden"></div>
     </section>
   </main>
 
-  <script type="module">
-    const params = new URLSearchParams(location.search);
-    const slug = params.get('event') || params.get('slug');
-    const token = localStorage.getItem('reelday_token');
-    const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
+  <div id="finish-modal" class="finish-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="finish-title">
+    <div class="finish-card">
+      <h2 id="finish-title">Save your event website</h2>
+      <p class="sub">Add your email so your invitation, RSVP setup, and edits don't get lost.</p>
+      <div class="field">
+        <label for="fin-name">Full name</label>
+        <input type="text" id="fin-name" autocomplete="name" />
+      </div>
+      <div class="field">
+        <label for="fin-email">Email</label>
+        <input type="email" id="fin-email" autocomplete="email" />
+      </div>
+      <div class="field">
+        <label for="fin-pw">Password</label>
+        <input type="password" id="fin-pw" autocomplete="new-password" placeholder="At least 8 characters" />
+      </div>
+      <div id="fin-error" class="error hidden"></div>
+      <div class="finish-actions">
+        <button type="button" class="btn btn-ghost" id="fin-cancel">Continue editing</button>
+        <button type="button" class="btn btn-accent" id="fin-submit">Save my website</button>
+      </div>
+      <p class="finish-reassure">Free to publish. Upgrade only when you want guest photo and video collection.</p>
+    </div>
+  </div>
 
-    if (!token) {
+  <script type="module">
+    import { saveAuth } from '/js/auth.js';
+
+    const params = new URLSearchParams(location.search);
+    let slug  = params.get('event') || params.get('slug');
+    let token = localStorage.getItem('reelday_token');
+    let authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
+
+    // Anonymous mode: no token AND no slug means a fresh visitor building
+    // a site before ever creating an account -- the funnel's free-hook
+    // entry point (docs/WEBSITE_BUILDER_FUNNEL_HANDOFF.md). A slug with
+    // no token means someone is trying to EDIT a real event with no
+    // session -- that stays a hard redirect, unchanged from before.
+    // slug/token/authHeaders are `let`, not `const`: once an anonymous
+    // visitor saves (see the finish panel below), they become real.
+    const ANONYMOUS = !token && !slug;
+
+    if (!token && slug) {
       location.replace('/login?next=' + encodeURIComponent(location.pathname + location.search));
       throw new Error('redirecting to login');
     }
@@ -413,7 +542,7 @@
     const backLink = $('back-link');
     const locked = $('locked');
 
-    if (!slug) {
+    if (!ANONYMOUS && !slug) {
       publishBtn.disabled = true;
       locked.classList.remove('hidden');
       locked.innerHTML = '<strong>Missing event.</strong> Open this page from an event dashboard.';
@@ -422,12 +551,19 @@
       throw new Error('missing slug');
     }
 
-    const guestUrl = `/e/${encodeURIComponent(slug)}`;
-    const dashboardUrl = `/dashboard?slug=${encodeURIComponent(slug)}#website`;
-    guestLink.href = guestUrl;
-    guestLink.classList.remove('hidden');
-    dashboardLink.href = dashboardUrl;
-    backLink.href = dashboardUrl;
+    let guestUrl = slug ? `/e/${encodeURIComponent(slug)}` : '';
+    let dashboardUrl = slug ? `/dashboard?slug=${encodeURIComponent(slug)}#website` : '/my-events';
+    if (!ANONYMOUS) {
+      guestLink.href = guestUrl;
+      guestLink.classList.remove('hidden');
+      dashboardLink.href = dashboardUrl;
+      backLink.href = dashboardUrl;
+    } else {
+      // Neither destination applies before an account exists -- both
+      // would otherwise point at /my-events and just bounce to login.
+      backLink.href = '/';
+      dashboardLink.classList.add('hidden');
+    }
 
     const esc = value => String(value == null ? '' : value);
     const get = (obj, path, fallback) => path.split('.').reduce((cur, key) => (
@@ -441,6 +577,14 @@
     let registryLinks = [];
     let cashFunds = [];
     let currentPlan = 'tala';
+
+    // Anonymous-mode-only: picked File objects held in memory until a
+    // real event exists (see the deferred-upload comments above). Never
+    // written into `gallery`/gather()'s output -- those stay real R2 URLs
+    // only, uploaded post-signup.
+    let coverFile = null;
+    let coverPreviewUrl = null;
+    let galleryFiles = [];
 
     function setStatus(message, live) {
       statusPill.textContent = message;
@@ -568,16 +712,65 @@
       });
     }
 
+    // Local-only thumbnail preview for anonymous-mode gallery picks --
+    // blob: URLs, never sent to the server (gather() never reads
+    // galleryFiles). Real upload + real URLs happen post-signup.
+    function drawGalleryAnon(container) {
+      container.textContent = '';
+      galleryFiles.forEach((file, index) => {
+        const box = document.createElement('div');
+        box.className = 'thumb';
+        const img = document.createElement('img');
+        img.src = URL.createObjectURL(file);
+        img.alt = '';
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.textContent = 'x';
+        remove.addEventListener('click', () => {
+          galleryFiles.splice(index, 1);
+          drawGalleryAnon(container);
+        });
+        box.appendChild(img);
+        box.appendChild(remove);
+        container.appendChild(box);
+      });
+    }
+
     function normalizeSchedule(cfg) {
       const raw = Array.isArray(cfg.schedule) ? cfg.schedule : [];
       if (!raw.length) return '';
       return raw.map(item => `${esc(item.time)} | ${esc(item.label || item.title || '')}`).join('\n');
     }
 
+    // Five options, same set start.html's type picker offers -- kept in
+    // sync deliberately since both feed the same events.event_type column.
+    const EVENT_TYPES = [
+      ['wedding', 'Wedding'], ['birthday', 'Birthday'], ['baptism', 'Baptism'],
+      ['corporate', 'Corporate'], ['reunion', 'General Event'],
+    ];
+    function typeSelect(selected) {
+      const el = document.createElement('select');
+      EVENT_TYPES.forEach(([value, label]) => {
+        const opt = document.createElement('option');
+        opt.value = value; opt.textContent = label;
+        if (value === selected) opt.selected = true;
+        el.appendChild(opt);
+      });
+      return el;
+    }
+
     function buildControls(data) {
       const cfg = data.config || {};
       const ev = data.event || {};
       controls = {
+        // Anonymous mode only (rendered conditionally in the Welcome tab
+        // below) -- couple_names/event_date/event_type live on the events
+        // table, not event_sites.config, and don't exist yet pre-signup.
+        // Harmless to always build them; only ANONYMOUS mode appends them
+        // to the visible DOM.
+        basicsName: input(ev.couple_names || '', 'e.g. Andrea & JM'),
+        basicsDate: input(ev.event_date ? String(ev.event_date).slice(0, 10) : '', '', 'date'),
+        basicsType: typeSelect(ev.event_type || params.get('type') || 'wedding'),
         heroKicker: input(get(cfg, 'hero.kicker', ''), "You're invited"),
         storyLabel: input(get(cfg, 'story.label', ''), 'Our Story'),
         storyBody: area(get(cfg, 'story.body', ''), 'How you met, the journey, or a note to guests.', 7),
@@ -645,16 +838,103 @@
       };
     }
 
+    // ── Draft persistence (anonymous mode only) ────────────
+    // Phase 3's personalize slide never needed this -- it lives inside
+    // one continuous wizard session that ends in signup on the same
+    // page. Here a visitor can spend real time on this page and close
+    // the tab, so text content is snapshotted to localStorage.
+    // Client-side only, no backend table (event_sites has a NOT NULL
+    // FK to a real events row -- there is nowhere to write an anonymous
+    // draft server-side without fighting that).
+    const DRAFT_KEY = 'reelday_builder_draft';
+    let draftSaveTimer = null;
+
+    function saveDraftLocal() {
+      if (!ANONYMOUS) return;
+      try {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify({
+          name: controls.basicsName.value,
+          date: controls.basicsDate.value,
+          type: controls.basicsType.value,
+          config: gather(),
+          ts: Date.now(),
+        }));
+      } catch { /* private mode / storage full -- draft just won't persist */ }
+    }
+    function scheduleDraftSave() {
+      if (!ANONYMOUS) return;
+      clearTimeout(draftSaveTimer);
+      draftSaveTimer = setTimeout(saveDraftLocal, 1500);
+    }
+    function restoreDraftLocal() {
+      try {
+        const raw = localStorage.getItem(DRAFT_KEY);
+        return raw ? JSON.parse(raw) : null;
+      } catch { return null; }
+    }
+    function clearDraftLocal() {
+      try { localStorage.removeItem(DRAFT_KEY); } catch {}
+    }
+
+    // ── Soft-gated preview pane (anonymous mode only) ──────
+    // Plain DOM text/background updates, not an iframe render of the
+    // real public site -- same non-iframe approach already used for
+    // start.html's personalize slide, and for the same reason (avoid
+    // per-keystroke full-site render cost). The Memory Album row reuses
+    // the exact blurred-card CSS already shipped on the public site
+    // (.es-album-teaser) rather than inventing a second blur treatment.
+    function syncPreview() {
+      if (!ANONYMOUS) return;
+      const box = $('anon-preview');
+      if (!box) return;
+      box.classList.remove('hidden');
+      $('anon-preview-names').textContent = controls.basicsName.value.trim() || 'Your event';
+      const d = controls.basicsDate.value;
+      $('anon-preview-date').textContent = d
+        ? new Date(d + 'T00:00:00').toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' })
+        : '';
+      const firstVenueLine = (controls.venues.value.split('\n')[0] || '').split('|')[0].trim();
+      $('anon-preview-venue').textContent = firstVenueLine;
+      const story = controls.storyBody.value.trim();
+      $('anon-preview-story').textContent = story
+        ? `"${story.length > 140 ? story.slice(0, 140) + '…' : story}"`
+        : '';
+      const card = $('anon-preview-card');
+      if (card && coverPreviewUrl) {
+        card.style.backgroundImage = `linear-gradient(180deg, rgba(20,12,8,.25), rgba(20,12,8,.65)), url(${coverPreviewUrl})`;
+      }
+    }
+
     const tabSpecs = [
       {
         title: 'Welcome',
         subtitle: 'Set the first impression guests see when they open the invitation.',
         render() {
           const wrap = document.createElement('div');
+          if (ANONYMOUS) {
+            wrap.appendChild(field('Event / couple name', controls.basicsName));
+            wrap.appendChild(field('Event date', controls.basicsDate));
+            wrap.appendChild(field('Event type', controls.basicsType));
+          }
           const coverStatus = document.createElement('p');
           coverStatus.className = 'status-note';
-          coverStatus.textContent = state.event?.cover_photo_url ? 'Cover photo is set.' : 'No cover photo yet.';
+          coverStatus.textContent = ANONYMOUS
+            ? (coverFile ? 'Photo selected.' : 'No cover photo yet.')
+            : (state.event?.cover_photo_url ? 'Cover photo is set.' : 'No cover photo yet.');
           const coverButton = fileButton('Choose cover photo', false, async ([file]) => {
+            if (ANONYMOUS) {
+              // No event exists yet to attach an upload to -- hold the
+              // File in memory and upload it the moment one is created
+              // (see the finish panel below). The page never navigates
+              // away before that point, so this doesn't need to survive
+              // a reload.
+              coverFile = file;
+              if (coverPreviewUrl) URL.revokeObjectURL(coverPreviewUrl);
+              coverPreviewUrl = URL.createObjectURL(file);
+              coverStatus.textContent = 'Photo selected -- it uploads when you save your website.';
+              syncPreview();
+              return;
+            }
             coverStatus.textContent = 'Uploading cover...';
             try {
               const url = await uploadImage(file);
@@ -739,8 +1019,15 @@
           const wrap = document.createElement('div');
           const row = document.createElement('div');
           row.className = 'gallery-row';
-          drawGallery(row);
+          if (ANONYMOUS) drawGalleryAnon(row); else drawGallery(row);
           const add = fileButton('Add gallery photos', true, async files => {
+            if (ANONYMOUS) {
+              // Same deferred-upload reasoning as the cover photo above --
+              // held in memory, uploaded once a real event exists.
+              galleryFiles.push(...files);
+              drawGalleryAnon(row);
+              return;
+            }
             for (const file of files) {
               try {
                 gallery.push(await uploadImage(file));
@@ -814,6 +1101,11 @@
     function renderUpgradePanel() {
       const panel = $('upgrade-panel');
       if (!panel) return;
+      // Nothing to upgrade from yet -- there's no real event or RSVP
+      // count to back the "RSVP ready" checklist item until after
+      // signup. Shows normally once this same page reloads in the
+      // authenticated context post-save.
+      if (ANONYMOUS) { panel.classList.add('hidden'); panel.textContent = ''; return; }
       const isTala = currentPlan === 'tala' || currentPlan === 'demo' || !currentPlan;
       if (!isTala) {
         panel.classList.add('hidden');
@@ -879,9 +1171,167 @@
       }
     }
 
-    publishBtn.addEventListener('click', saveAndPublish);
+    // ── Finish panel (anonymous mode) ──────────────────────
+    const finishModal = $('finish-modal');
+    const finError    = $('fin-error');
+    const finSubmit   = $('fin-submit');
+
+    publishBtn.addEventListener('click', () => {
+      if (ANONYMOUS) {
+        finError.classList.add('hidden');
+        finishModal.classList.remove('hidden');
+        return;
+      }
+      saveAndPublish();
+    });
+
+    $('fin-cancel')?.addEventListener('click', () => {
+      // Nothing is lost by dismissing -- draft persistence (above) already
+      // covers whatever was typed.
+      finishModal.classList.add('hidden');
+    });
+
+    // Same POST /api/event-site/:slug/image call the authenticated path
+    // already makes (uploadImage above) -- these two just run against the
+    // slug/headers a fresh signup just produced, not the module-level
+    // `slug`/`authHeaders` which don't exist yet at the moment a File is
+    // originally picked.
+    async function uploadDeferredImage(newSlug, newAuthHeaders, file) {
+      const body = new FormData();
+      body.append('file', file);
+      const res = await fetch(`/api/event-site/${encodeURIComponent(newSlug)}/image`, {
+        method: 'POST', headers: newAuthHeaders, body,
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data.url || null;
+    }
+
+    finSubmit?.addEventListener('click', async () => {
+      const name  = $('fin-name').value.trim();
+      const email = $('fin-email').value.trim();
+      const pw    = $('fin-pw').value;
+
+      finError.classList.add('hidden');
+      if (!name || !email || !pw) {
+        finError.textContent = 'Please fill in all three fields.';
+        finError.classList.remove('hidden');
+        return;
+      }
+      if (pw.length < 8) {
+        finError.textContent = 'Password must be at least 8 characters.';
+        finError.classList.remove('hidden');
+        return;
+      }
+
+      finSubmit.disabled = true;
+      finSubmit.textContent = 'Saving...';
+      try {
+        const regRes = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password: pw, full_name: name }),
+        });
+        const regData = await regRes.json();
+        if (!regRes.ok) throw new Error(regData.message || 'Registration failed');
+
+        if (!regData.token) {
+          // Anti-enumeration case: email already registered. The draft
+          // stays in localStorage -- ANONYMOUS is re-derived from
+          // !token && !slug on every load, so returning here after
+          // logging in elsewhere picks the draft back up.
+          finError.textContent = 'That email is already registered. Check your email to verify, then log in to finish.';
+          finError.classList.remove('hidden');
+          finSubmit.disabled = false;
+          finSubmit.textContent = 'Save my website';
+          return;
+        }
+
+        saveAuth(regData.token, regData.user);
+        const newAuthHeaders = { Authorization: `Bearer ${regData.token}` };
+
+        const evRes = await fetch('/api/events', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...newAuthHeaders },
+          body: JSON.stringify({
+            couple_names: controls.basicsName.value.trim() || 'My Event',
+            event_type:   controls.basicsType.value,
+            event_date:   controls.basicsDate.value || null,
+            plan: 'tala',
+          }),
+        });
+        const evData = await evRes.json();
+        if (!evRes.ok) throw new Error(evData.message || 'Could not create your event.');
+        const newSlug = evData.event.slug;
+
+        // Account and event are real from this point on. Everything
+        // below is best-effort: if any of it fails, the account/event
+        // still exist and the host can finish setup from the dashboard --
+        // same "soft failure, not a broken signup" reasoning as the
+        // /start personalize slide.
+        if (coverFile) {
+          const url = await uploadDeferredImage(newSlug, newAuthHeaders, coverFile);
+          if (url) {
+            await fetch(`/api/events/${encodeURIComponent(newSlug)}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json', ...newAuthHeaders },
+              body: JSON.stringify({ cover_photo_url: url }),
+            });
+          }
+        }
+        for (const file of galleryFiles) {
+          const url = await uploadDeferredImage(newSlug, newAuthHeaders, file);
+          if (url) gallery.push(url);
+        }
+
+        await fetch(`/api/event-site/${encodeURIComponent(newSlug)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', ...newAuthHeaders },
+          // Always false -- content collected before the host has even
+          // seen their dashboard must never go live on its own. Never a
+          // variable here, per the same rule established for the
+          // /start personalize slide.
+          body: JSON.stringify({ config: gather(), is_published: false }),
+        });
+
+        clearDraftLocal();
+        finishModal.classList.add('hidden');
+        statusPill.textContent = 'Saved';
+        statusNote.textContent = "Your website is saved. Publish it when you're ready.";
+        setTimeout(() => { location.href = `/dashboard?slug=${encodeURIComponent(newSlug)}`; }, 900);
+      } catch (err) {
+        finError.textContent = err.message || 'Something went wrong. Please try again.';
+        finError.classList.remove('hidden');
+        finSubmit.disabled = false;
+        finSubmit.textContent = 'Save my website';
+      }
+    });
 
     (async () => {
+      if (ANONYMOUS) {
+        const draft = restoreDraftLocal();
+        buildControls({
+          config: (draft && draft.config) || {},
+          event: {
+            couple_names: (draft && draft.name) || '',
+            event_date:   (draft && draft.date) || '',
+            event_type:   (draft && draft.type) || params.get('type') || 'wedding',
+          },
+        });
+        currentPlan = 'tala';
+        $('builder-title').textContent = 'Build your free event website';
+        publishBtn.textContent = 'Save your event website';
+        statusPill.textContent = 'Draft';
+        statusNote.textContent = 'Add your details below -- nothing is saved online until you save your website.';
+        render();
+        syncPreview();
+        // Delegated on #editor rather than per-field: every current and
+        // future control renders inside it, so one listener catches all
+        // of them without wiring each tab's fields individually.
+        editor.addEventListener('input', () => { scheduleDraftSave(); syncPreview(); });
+        editor.addEventListener('change', () => { scheduleDraftSave(); syncPreview(); });
+        return;
+      }
       try {
         const res = await fetch(`/api/event-site/${encodeURIComponent(slug)}/admin`, { headers: authHeaders });
         if (res.status === 403) {
