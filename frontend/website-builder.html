@@ -365,6 +365,7 @@
       overflow-y: auto;
       filter: blur(2.5px) saturate(.92);
     }
+    .anon-preview-render.is-live { filter: none; }
     .anon-preview-badge {
       display: flex; align-items: center; gap: 8px;
       padding: 10px 16px;
@@ -441,7 +442,7 @@
       <div id="locked" class="notice hidden"></div>
       <div id="anon-preview" class="anon-preview hidden" aria-hidden="true">
         <div class="anon-preview-frame">
-          <div class="anon-preview-badge"><span class="dot"></span>Live preview -- blurred until you save</div>
+          <div class="anon-preview-badge"><span class="dot"></span><span id="anon-preview-badge-text">Live preview -- blurred until you publish</span></div>
           <div class="anon-preview-render" id="anon-preview-render"></div>
         </div>
       </div>
@@ -842,14 +843,16 @@
       try { localStorage.removeItem(DRAFT_KEY); } catch {}
     }
 
-    // ── Full-fidelity preview pane (anonymous mode only) ───────
+    // ── Full-fidelity preview pane (both modes) ─────────────
     // Runs the exact same rendering code the real /e/:slug guest page
     // uses (shared via /js/event-site-render.js -- see that file's
     // header comment) directly into a Shadow DOM root, so the preview
     // can never visually drift from the real site. Shadow DOM isolates
     // event-site.css's page-level rules (body/a/button/etc.) from this
-    // page's own design system. A permanent light blur (CSS on the
-    // container, not the render) signals "demo" while anonymous.
+    // page's own design system. A light blur (CSS on the container, not
+    // the render) signals "not live yet" for as long as the site is
+    // unpublished -- anonymous drafts are always unpublished; the
+    // authenticated builder lifts it the moment the host publishes.
     let previewApp = null;
     function ensurePreviewApp() {
       if (previewApp) return previewApp;
@@ -875,20 +878,23 @@
         event_type: controls.basicsType.value,
         event_date: controls.basicsDate.value || null,
         event_time: '',
-        plan: 'tala',
-        cover_photo_url: coverPreviewUrl || null,
+        plan: currentPlan,
+        cover_photo_url: coverPreviewUrl || state?.event?.cover_photo_url || null,
         theme: controls.basicsType.value || 'wedding',
         config: gather(),
-        upload_window_starts_at: null,
-        upload_window_ends_at: null,
-        upload_count: 0,
+        upload_window_starts_at: state?.upload_window_starts_at || null,
+        upload_window_ends_at: state?.upload_window_ends_at || null,
+        upload_count: state?.upload_count || 0,
       };
     }
     function syncPreview() {
-      if (!ANONYMOUS) return;
       const box = $('anon-preview');
       if (!box) return;
       box.classList.remove('hidden');
+      const isLive = !ANONYMOUS && !!(state && state.is_published);
+      $('anon-preview-render').classList.toggle('is-live', isLive);
+      const badge = $('anon-preview-badge-text');
+      if (badge) badge.textContent = isLive ? 'This is your live site' : 'Live preview -- blurred until you publish';
       ReelEventRender.render(buildPreviewData(), ensurePreviewApp(), { preview: true });
     }
     // Debounced separately from scheduleDraftSave() -- a live preview
@@ -896,7 +902,6 @@
     // only needs to survive a closed tab (1.5s is plenty).
     let previewSyncTimer = null;
     function schedulePreviewSync() {
-      if (!ANONYMOUS) return;
       clearTimeout(previewSyncTimer);
       previewSyncTimer = setTimeout(syncPreview, 250);
     }
@@ -942,6 +947,7 @@
               if (!res.ok) throw new Error('cover patch failed');
               state.event.cover_photo_url = url;
               coverStatus.textContent = 'Cover photo updated.';
+              syncPreview();
             } catch {
               coverStatus.innerHTML = '<span class="error">Cover upload failed.</span>';
             }
@@ -1160,6 +1166,7 @@
         state.is_published = true;
         setStatus('Live', true);
         publishBtn.textContent = 'Update live site';
+        syncPreview();
       } catch {
         statusNote.textContent = 'Save failed. Please try again.';
       } finally {
@@ -1303,6 +1310,13 @@
       }
     });
 
+    // Delegated on #editor rather than per-field: every current and
+    // future control renders inside it, so one listener catches all of
+    // them without wiring each tab's fields individually. Runs in both
+    // modes -- scheduleDraftSave() itself no-ops outside ANONYMOUS.
+    editor.addEventListener('input', () => { scheduleDraftSave(); schedulePreviewSync(); });
+    editor.addEventListener('change', () => { scheduleDraftSave(); schedulePreviewSync(); });
+
     (async () => {
       if (ANONYMOUS) {
         const draft = restoreDraftLocal();
@@ -1321,11 +1335,6 @@
         statusNote.textContent = 'Add your details below -- nothing is saved online until you save your website.';
         render();
         syncPreview();
-        // Delegated on #editor rather than per-field: every current and
-        // future control renders inside it, so one listener catches all
-        // of them without wiring each tab's fields individually.
-        editor.addEventListener('input', () => { scheduleDraftSave(); schedulePreviewSync(); });
-        editor.addEventListener('change', () => { scheduleDraftSave(); schedulePreviewSync(); });
         return;
       }
       try {
@@ -1347,6 +1356,7 @@
         publishBtn.textContent = state.is_published ? 'Update live site' : 'Save & publish';
         setStatus(state.is_published ? 'Live' : 'Draft', !!state.is_published);
         render();
+        syncPreview();
       } catch {
         locked.classList.remove('hidden');
         locked.innerHTML = '<strong>Could not load the website builder.</strong> Please refresh or return to the dashboard.';
