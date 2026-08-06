@@ -2,7 +2,7 @@
 
 **Target:** `frontend/dashboard.html` (8,502 lines — the production file)
 **Created:** 2026-08-06
-**Status:** Phases 0–1 complete, Phases 2–6 pending
+**Status:** Phases 0–2 complete, Phases 3–6 pending
 
 > **Cold start:** read "The diagnosis" then jump to the first unchecked phase.
 > Every item cites a file:line so you can start without re-deriving anything.
@@ -93,7 +93,7 @@ density, but the absence of boundaries.
 |---|---|---:|---|
 | **0** | Quick wins | 2 hrs | ✅ done |
 | **1** | Section routing (the overhaul) | 1 day | ✅ done |
-| **2** | Three states | 2 days | ☐ |
+| **2** | Three states | 2 days | ✅ done |
 | **3** | Live & mobile triage | 2 days | ☐ |
 | **4** | Content density | 1.5 days | ☐ |
 | **5** | Correctness & accessibility | 1.5 days | ☐ |
@@ -190,7 +190,7 @@ shared scope (`:7201`, `:8020`), so this is mostly show/hide plus hash handling.
 
 ---
 
-## Phase 2 — Three states ☐
+## Phase 2 — Three states ✅
 
 | # | Item | Detail |
 |---|---|---|
@@ -369,3 +369,35 @@ labels, the live badge, tab counts, `HOST RECAP`, `CLEAR RESULTS`, `SELECT`,
 
 Guest-side flows (upload page, wall), pricing surfaces, and the Same Day Edit
 feature itself. Revisit SDE promotion once it ships.
+
+---
+
+## Phase 2 — shipped notes
+
+- `computeDashState(event)` is the single source of truth: `complete` if
+  `archived_at` or the window has closed, `upcoming` if it hasn't opened,
+  otherwise `live`. Legacy events with no window dates read `live`, matching
+  backend behaviour. `document.body.dataset.state` carries it to CSS.
+- **`daysUntil` counts calendar days, not elapsed milliseconds.** A ms-based
+  `ceil` told a host on 6 Aug that a 15 Aug window opened "in 10 days" as soon
+  as the clock passed the opening time-of-day. Local midnights are compared
+  instead.
+- **`↑ N in last hour` was never computed** — the span was hardcoded `0` in
+  markup, so it read "↑ 0 in last hour" permanently. Now derived from
+  `created_at` and hidden entirely at zero.
+- The informational banner tone (`.lock-banner.is-info`) already existed for the
+  Tala demo branch; "Uploads open soon" simply never used it. Applied for paid
+  hosts — an unpaid host still needs the warning plus the upgrade CTA.
+- The readiness checklist covers what the main module can answer alone. The
+  Website and Polls modules are in separate scopes, so they announce via a
+  `dash:ready-item` CustomEvent and get spliced in; a locked plan never fires
+  and the row simply never appears.
+- The Wall music row is skipped on Tala, where walls are silent by design —
+  otherwise it would be a task the host cannot complete.
+
+### Verification
+
+`computeDashState` is extracted from the shipped page and exercised against a
+frozen clock at the capture timestamp, covering both real captures plus
+archived, legacy-no-window, Tala in/after demo, and the opens-tomorrow boundary.
+Run: `node state.test.mjs` (scratchpad).
