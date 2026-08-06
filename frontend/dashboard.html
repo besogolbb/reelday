@@ -483,6 +483,14 @@
        doubles as first-run onboarding. */
     .readiness { max-width: 1200px; margin: -72px auto 0; padding: 0 28px; position: relative; z-index: 5; }
     .readiness[hidden] { display: none; }
+
+    /* The checklist and the stats row occupy the SAME slot — both pull
+       up over the header with margin-top:-72px. If both are ever visible
+       they overlap rather than stack, so mutual exclusion is enforced
+       here in CSS as well as in applyDashState. !important because
+       .stats carries an inline display style. */
+    body[data-state="upcoming"] .stats { display: none !important; }
+    body:not([data-state="upcoming"]) .readiness { display: none !important; }
     .readiness-card {
       background: var(--dash-surface);
       border: 1px solid var(--dash-border);
@@ -7434,7 +7442,8 @@
     renderGallery(uploads);
     pageLoading.style.display = 'none';
     dashHeader.style.display  = 'block';
-    document.getElementById('stats-row').style.display = 'grid';
+    // (stats-row visibility is owned by applyDashState — it is hidden in
+    //  the upcoming state, where the readiness checklist takes its slot.)
     document.getElementById('info-hero').style.display  = 'block';
     dashMain.style.display    = 'grid';
     showSection(currentSectionFromHash(), false);
@@ -7523,7 +7532,8 @@
 
       pageLoading.style.display = 'none';
       dashHeader.style.display  = 'block';
-      document.getElementById('stats-row').style.display = 'grid';
+      // (stats-row visibility is owned by applyDashState — hidden in
+      //  the upcoming state, where the readiness checklist takes its slot.)
       document.getElementById('info-hero').style.display  = 'block';
       dashMain.style.display    = 'grid';
       showSection(currentSectionFromHash(), false);
