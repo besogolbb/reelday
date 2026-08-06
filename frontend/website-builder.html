@@ -173,6 +173,35 @@
       border-bottom: 1px solid var(--line);
       padding-bottom: 18px;
     }
+    /* Step progress -- mobile-only substitute for the sidebar tab list
+       (see .step-nav below). Desktop keeps the sidebar as its primary
+       way to jump between sections; on mobile there's no tab list at
+       all, just this "Step X of N" readout plus Back/Continue. */
+    .step-progress { display: none; margin: -8px 0 20px; }
+    .step-progress-label {
+      font-size: 12px; font-weight: 800; letter-spacing: .06em;
+      text-transform: uppercase; color: var(--ink-faint);
+      margin-bottom: 8px;
+    }
+    .step-progress-bar {
+      height: 6px; border-radius: 999px;
+      background: var(--paper-2);
+      overflow: hidden;
+    }
+    .step-progress-fill {
+      height: 100%; border-radius: 999px;
+      background: var(--accent);
+      transition: width .25s ease;
+    }
+    /* Step nav -- Back/Continue, shown everywhere (a linear way through
+       the form even when the sidebar is also available). Continue
+       becomes the actual publish action on the last step. */
+    .step-nav {
+      display: flex; justify-content: space-between; gap: 12px;
+      margin-top: 32px; padding-top: 20px;
+      border-top: 1px solid var(--line);
+    }
+    .step-nav .btn { min-width: 120px; }
     h1, h2 {
       margin: 0;
       font-family: var(--display);
@@ -450,22 +479,12 @@
       .actions { justify-content: flex-start; width: 100%; }
       .shell { grid-template-columns: 1fr; }
       .side { position: static; }
-      .tabs {
-        display: flex; overflow-x: auto; padding: 2px 4px 6px;
-        scroll-snap-type: x proximity;
-        /* Hide the native scrollbar (matches the horizontal-scroll
-           treatment already used on the guest site's nav chips) and
-           fade the trailing edge instead, so it reads as "more tabs
-           this way" rather than a bare, cramped scrollbar. */
-        scrollbar-width: none;
-        mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
-        -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
-      }
-      .tabs::-webkit-scrollbar { display: none; }
-      .tab {
-        flex: 0 0 auto; width: auto; white-space: nowrap;
-        scroll-snap-align: start;
-      }
+      /* No tab list on mobile at all -- a horizontally-scrolling row of
+         8 small chips isn't a friendly way to navigate a form on a
+         phone. .step-progress + .step-nav (Back/Continue) below replace
+         it with a single, linear path through the sections instead. */
+      .tabs { display: none; }
+      .step-progress { display: block; }
       .grid { grid-template-columns: 1fr; }
       .feature-list { grid-template-columns: 1fr; }
       .panel-head { flex-direction: column; }
@@ -502,6 +521,10 @@
           <p class="sub" id="page-sub">Build the invitation guests will open before the celebration.</p>
         </div>
       </div>
+      <div class="step-progress" id="step-progress">
+        <div class="step-progress-label" id="step-progress-label">Step 1 of 8</div>
+        <div class="step-progress-bar"><div class="step-progress-fill" id="step-progress-fill"></div></div>
+      </div>
       <div id="locked" class="notice hidden"></div>
       <div id="anon-preview" class="anon-preview hidden" aria-hidden="true">
         <div class="anon-preview-label"><span class="dot"></span>Live Preview</div>
@@ -511,6 +534,10 @@
       </div>
       <div id="editor"></div>
       <div id="upgrade-panel" class="upgrade-panel hidden"></div>
+      <div class="step-nav" id="step-nav">
+        <button type="button" class="btn btn-ghost" id="step-back">Back</button>
+        <button type="button" class="btn btn-accent" id="step-next">Continue</button>
+      </div>
     </section>
   </main>
 
@@ -1203,7 +1230,38 @@
       editor.textContent = '';
       editor.appendChild(tab.render());
       renderUpgradePanel();
+      updateStepNav();
     }
+
+    // Linear Back/Continue path through the same tabSpecs the sidebar
+    // uses -- the sidebar stays the primary way to jump around on
+    // desktop, but on mobile (where the tab list is hidden entirely,
+    // see the @media block above) this is the only way to move between
+    // sections, so it needs to always be usable on its own.
+    function updateStepNav() {
+      const total = tabSpecs.length;
+      const label = $('step-progress-label');
+      if (label) label.textContent = `Step ${currentTab + 1} of ${total}`;
+      const fill = $('step-progress-fill');
+      if (fill) fill.style.width = `${((currentTab + 1) / total) * 100}%`;
+      const back = $('step-back');
+      const next = $('step-next');
+      if (back) back.disabled = currentTab === 0;
+      if (next) next.textContent = currentTab === total - 1 ? publishBtn.textContent : 'Continue';
+    }
+    function goToStep(index) {
+      currentTab = Math.max(0, Math.min(tabSpecs.length - 1, index));
+      render();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    $('step-back').addEventListener('click', () => goToStep(currentTab - 1));
+    $('step-next').addEventListener('click', () => {
+      // Last step's Continue IS the publish action (label already
+      // mirrors publishBtn's own text) -- no separate "now go publish"
+      // hop needed.
+      if (currentTab === tabSpecs.length - 1) { publishBtn.click(); return; }
+      goToStep(currentTab + 1);
+    });
 
     function featureItem(label, ready) {
       const item = document.createElement('div');
