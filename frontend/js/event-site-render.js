@@ -271,10 +271,17 @@
     var cfg = data.config || {};
     var app = container || document.getElementById('app');
     app.textContent = '';
+    // data-theme is the event-TYPE palette (wedding/debut/birthday/...,
+    // defined in shared.css). data-template is a second, independent
+    // dimension -- the host-chosen aesthetic preset for the invitation
+    // itself (defined in event-site.css); "classic" needs no override
+    // block since it's just whatever data-theme already provides.
     if (PREVIEW_MODE) {
       app.setAttribute('data-theme', data.theme || 'wedding');
+      app.setAttribute('data-template', cfg.template || 'classic');
     } else {
       document.documentElement.setAttribute('data-theme', data.theme || 'wedding');
+      document.documentElement.setAttribute('data-template', cfg.template || 'classic');
     }
 
     // Nav structure — on desktop the chip row carries the links;

@@ -244,6 +244,37 @@
       font-size: 14px;
     }
     .check-row input { width: 17px; height: 17px; accent-color: var(--accent); }
+    .template-picker {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .template-option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      border: 1px solid var(--line-2);
+      border-radius: 12px;
+      cursor: pointer;
+      text-transform: none;
+      letter-spacing: 0;
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--ink);
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .template-option:has(input:checked) {
+      border-color: rgba(196, 90, 58, .62);
+      box-shadow: 0 0 0 3px rgba(196, 90, 58, .12);
+    }
+    .template-option input { width: auto; margin: 0; accent-color: var(--accent); }
+    .template-swatch {
+      width: 20px; height: 20px; border-radius: 50%;
+      flex: 0 0 auto;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.08);
+    }
     .gallery-row {
       display: flex;
       gap: 10px;
@@ -614,6 +645,46 @@
       return el;
     }
 
+    // Style template -- a second, independent dimension from event
+    // type (see event-site.css's [data-template] blocks). Rendered as
+    // radio inputs, not custom buttons, so the existing delegated
+    // #editor input/change listeners (draft save + live preview) pick
+    // up a selection for free without any extra wiring.
+    const TEMPLATES = [
+      ['classic', 'Classic Elegance', '#b85230'],
+      ['modern', 'Modern Minimal', '#1a1a1a'],
+      ['romantic', 'Romantic Blush', '#c07f82'],
+      ['bold', 'Bold Jewel', '#1f4d3d'],
+    ];
+    function templatePicker(selected) {
+      const wrap = document.createElement('div');
+      wrap.className = 'template-picker';
+      TEMPLATES.forEach(([value, label, swatch]) => {
+        const id = `tpl-${value}`;
+        const opt = document.createElement('label');
+        opt.className = 'template-option';
+        opt.htmlFor = id;
+        const radio = document.createElement('input');
+        radio.type = 'radio';
+        radio.name = 'template';
+        radio.id = id;
+        radio.value = value;
+        radio.checked = value === (selected || 'classic');
+        const chip = document.createElement('span');
+        chip.className = 'template-swatch';
+        chip.style.background = swatch;
+        opt.appendChild(radio);
+        opt.appendChild(chip);
+        opt.appendChild(document.createTextNode(label));
+        wrap.appendChild(opt);
+      });
+      return wrap;
+    }
+    function getTemplate() {
+      const checked = controls.template?.querySelector('input[name="template"]:checked');
+      return checked ? checked.value : 'classic';
+    }
+
     function fileButton(label, multiple, onPick) {
       const buttonLabel = document.createElement('label');
       buttonLabel.className = 'btn btn-ghost';
@@ -759,6 +830,7 @@
         basicsName: input(ev.couple_names || '', 'e.g. Andrea & JM'),
         basicsDate: input(ev.event_date ? String(ev.event_date).slice(0, 10) : '', '', 'date'),
         basicsType: typeSelect(ev.event_type || params.get('type') || 'wedding'),
+        template: templatePicker(cfg.template || 'classic'),
         heroKicker: input(get(cfg, 'hero.kicker', ''), "You're invited"),
         storyLabel: input(get(cfg, 'story.label', ''), 'Our Story'),
         storyBody: area(get(cfg, 'story.body', ''), 'How you met, the journey, or a note to guests.', 7),
@@ -789,6 +861,7 @@
 
     function gather() {
       return {
+        template: getTemplate(),
         hero: { kicker: controls.heroKicker.value.trim() },
         story: { label: controls.storyLabel.value.trim(), body: controls.storyBody.value },
         schedule: parseScheduleInput(controls.schedule.value),
@@ -929,6 +1002,7 @@
         subtitle: 'Set the first impression guests see when they open the invitation.',
         render() {
           const wrap = document.createElement('div');
+          wrap.appendChild(field('Website template', controls.template));
           if (ANONYMOUS) {
             wrap.appendChild(field('Event / couple name', controls.basicsName));
             wrap.appendChild(field('Event date', controls.basicsDate));

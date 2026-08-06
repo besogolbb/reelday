@@ -18,6 +18,38 @@
        render true mobile layout inside a narrow phone-mockup frame. */
     #app { container-type: inline-size; width: 100%; min-width: 0; overflow-x: hidden; box-sizing: border-box; }
 
+    /* ── Style templates ──────────────────────────────────
+       A second, independent dimension from data-theme (the event-TYPE
+       palette in shared.css) -- these are host-chosen aesthetic presets
+       for the invitation itself. "classic" is the default look and
+       needs no override block here. Only --accent/--gold/--motif-color
+       and --display (the heading/display font) are touched, matching
+       the existing per-event-type theme pattern -- many surfaces below
+       use literal colors rather than --paper/--ink, so a full palette
+       swap per template isn't safe without touching those directly. */
+    [data-template="modern"] {
+      --accent:      #1a1a1a;
+      --accent-deep: #000000;
+      --accent-soft: #9a9a9a;
+      --gold:        #b8b8b8;
+      --motif-color: rgba(0,0,0,.06);
+      --display:     'Inter', system-ui, sans-serif;
+    }
+    [data-template="romantic"] {
+      --accent:      #c07f82;
+      --accent-deep: #8a4d50;
+      --accent-soft: #e8c3c4;
+      --gold:        #cfae82;
+      --motif-color: rgba(192,127,130,.08);
+    }
+    [data-template="bold"] {
+      --accent:      #1f4d3d;
+      --accent-deep: #0f2a20;
+      --accent-soft: #7fae97;
+      --gold:        #c9a24a;
+      --motif-color: rgba(31,77,61,.08);
+    }
+
     /* ── Loading + state ───────────────────────────────── */
     .es-state {
       min-height: 70vh; display: flex; align-items: center;
