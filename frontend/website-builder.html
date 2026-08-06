@@ -58,12 +58,9 @@
       flex-direction: column;
       gap: 2px;
       min-width: 0;
+      text-decoration: none;
     }
-    .brand strong {
-      font-family: var(--display);
-      font-size: 24px;
-      line-height: 1;
-    }
+    .brand-img { height: 40px; width: auto !important; max-width: none !important; display: block; }
     .brand span {
       color: var(--ink-soft);
       font-size: 13px;
@@ -465,7 +462,7 @@
 <body>
   <header class="topbar">
     <a class="brand" id="back-link" href="/my-events" aria-label="Back to dashboard">
-      <strong>Reelday</strong>
+      <img src="/images/LOGO.png?v=2" alt="Reelday.ph" class="brand-img" />
       <span id="builder-title">Event Website Builder</span>
     </a>
     <div class="actions">

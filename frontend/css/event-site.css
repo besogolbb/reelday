@@ -942,7 +942,13 @@
       background: rgba(176,48,34,.08);
       border: 1px solid rgba(176,48,34,.25);
       border-radius: 12px;
-      font-family: var(--display); font-size: 1rem; color: #7a2418;
+      font-family: var(--display); font-size: 1rem;
+      /* Was a fixed dark maroon (#7a2418) -- readable on the light
+         templates' near-white background, but on Bold Jewel's dark
+         surface it was nearly the same value as the background itself,
+         making the text disappear. A brighter red keeps solid contrast
+         against both light and dark surfaces. */
+      color: #d43838;
       text-align: center;
     }
     /* Deadline notice — small line under the RSVP form when one is set. */
