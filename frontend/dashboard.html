@@ -29,7 +29,16 @@
       --dash-surface: #ffffff;
       --dash-border: #e0d2c0;
       --dash-shadow: 0 18px 38px rgba(63,35,24,.10);
-      --dash-muted: #7f6b62;
+      /* Ink ramp, measured on --dash-surface (#fff), values are computed
+         WCAG contrast ratios (not estimates):
+           --ink        #241611  headings          17.5:1
+           --ink-body   #4a382f  body text          11.1:1
+           --dash-muted #6e5b4e  labels, metadata    6.4:1
+         The global --ink-faint (#6a5447 on --paper) sits around 4.4:1 on
+         white and is left alone here — it is a shared.css token used by
+         other pages, and this pass only touches dashboard-local vars. */
+      --ink-body: #4a382f;
+      --dash-muted: #6e5b4e;
       --dash-green: #2d7a4a;
       --dash-danger: #b42318;   /* warm brick — replaces off-palette #dc3545 */
     }
@@ -70,7 +79,10 @@
     /* ── Event header ─────────────────────────────── */
     .event-header {
       background: var(--ink); color: var(--paper);
-      padding: 28px 28px 124px;
+      /* Was 28/28/124 with an 82px h1 — roughly 760px of chrome before a
+         single useful pixel, for a name and a date. Trimmed to ~390px;
+         the signature overlapping stat cards are untouched. */
+      padding: 22px 28px 96px;
       position: relative; overflow: hidden;
     }
     .event-header::before {
@@ -302,9 +314,9 @@
 
     .event-header h1 {
       font-family: var(--display); font-weight: 400;
-      font-size: clamp(48px, 6vw, 82px);
+      font-size: clamp(40px, 5vw, 66px);
       line-height: 1; letter-spacing: -.025em;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
     }
     .event-header h1 em { font-style: italic; color: var(--accent-soft); }
 
@@ -690,8 +702,10 @@
     }
     .panel-head h2 { font-family: var(--display); font-size: 22px; font-weight: 500; letter-spacing: -.01em; color: var(--ink); }
     .panel-head-copy { grid-area: sub; min-width: 0; }
-    .panel-head-copy p { margin: 0; font-size: 13px; color: var(--dash-muted); line-height: 1.55; }
-    #stream-sub { margin: 0; font-size: 13px; color: var(--dash-muted); line-height: 1.55; }
+    /* Was 13px on --dash-muted for the copy explaining what each panel
+       does — the second-lightest colour on the page, on running prose. */
+    .panel-head-copy p { margin: 0; font-size: 14px; color: var(--ink-body); line-height: 1.55; }
+    #stream-sub { margin: 0; font-size: 14px; color: var(--ink-body); line-height: 1.55; }
     .panel-head > .pill,
     .panel-head > .approve-toggle,
     .panel-head > .message-burst-controls { grid-area: actions; justify-self: end; }
@@ -1073,8 +1087,8 @@
       appearance: none; background: transparent;
       border: 1px solid rgba(176,48,34,.35); color: #b03022;
       border-radius: 999px; padding: 7px 16px;
-      font-family: var(--mono); font-size: 11px; font-weight: 700;
-      letter-spacing: .1em; text-transform: uppercase; cursor: pointer;
+      font-family: var(--sans); font-size: 13px; font-weight: 600;
+      cursor: pointer;
       transition: background .15s, color .15s;
       min-height: 36px;
     }
@@ -1173,13 +1187,55 @@
       position: relative;
       background: linear-gradient(180deg, #ffffff 0%, #fffaf3 100%);
       border: 1px solid rgba(83,48,33,.08);
-      border-radius: 18px; padding: 18px 20px 18px 24px;
+      border-radius: 18px; padding: 0;
       box-shadow:
         0 1px 2px rgba(63,35,24,.04),
         0 6px 18px rgba(63,35,24,.06),
         inset 0 1px 0 rgba(255,255,255,.9);
-      display: flex; flex-direction: column; gap: 12px;
       overflow: hidden;
+    }
+    /* Collapsed by default — 21 expanded cards ran to ~6,690px, 76% of
+       the whole page, for a log the host consults occasionally. */
+    .lb-q-summary {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 18px 14px 20px; cursor: pointer;
+      list-style: none;
+    }
+    .lb-q-summary::-webkit-details-marker { display: none; }
+    .lb-q-summary:hover { background: rgba(196,90,58,.04); }
+    .lb-q-sum-text {
+      flex: 1; min-width: 0; font-size: 14px; color: var(--ink);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .lb-q-sum-win {
+      font-size: 13px; color: var(--dash-green); white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis; max-width: 38%;
+    }
+    .lb-q-sum-win.empty { color: var(--ink-faint); }
+    .lb-q-sum-chev {
+      color: var(--accent); font-size: 15px; transition: transform .18s ease;
+      flex-shrink: 0;
+    }
+    .lb-q-card[open] .lb-q-sum-chev { transform: rotate(180deg); }
+    .lb-q-body {
+      display: flex; flex-direction: column; gap: 12px;
+      padding: 4px 20px 18px 24px;
+      border-top: 1px solid rgba(83,48,33,.07);
+      margin-top: 2px;
+    }
+    .lb-head-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .lb-expand-btn {
+      appearance: none; background: transparent;
+      border: 1px solid var(--dash-border); color: var(--ink-body, var(--ink-soft));
+      border-radius: 999px; padding: 7px 16px; min-height: 36px;
+      font-size: 13px; font-weight: 500; cursor: pointer;
+      transition: background .15s;
+    }
+    .lb-expand-btn:hover { background: var(--paper-2); }
+    @media (max-width: 640px) {
+      .lb-q-sum-win { display: none; }
+      .lb-q-summary { padding: 12px 14px; gap: 8px; }
+      .lb-q-body { padding: 4px 14px 14px 16px; }
     }
     /* Status stripe: gold for cards with a winner, grey otherwise. */
     .lb-q-card::before {
@@ -3170,8 +3226,11 @@
       border: 1px solid rgba(196,90,58,.32);
       border-radius: 999px;
       color: var(--accent-deep);
-      font-family: var(--mono); font-size: 11px; font-weight: 700;
-      letter-spacing: .12em; text-transform: uppercase;
+      /* Mono uppercase is a label voice — the download all (.zip) button
+         is one of the most important actions on the page post-event,
+         and set as a caption it stopped reading as clickable. */
+      font-family: var(--sans); font-size: 13px; font-weight: 600;
+      letter-spacing: normal; text-transform: none;
       cursor: pointer;
       transition: background .15s, border-color .15s;
     }
@@ -3589,7 +3648,7 @@
           <button type="button" data-cols="4" class="active" title="Medium">▦</button>
           <button type="button" data-cols="6" title="Small">▨</button>
         </div>
-        <button type="button" id="btn-select-mode" style="font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;padding:5px 12px;border-radius:999px;border:1px solid var(--dash-border);background:transparent;color:var(--ink-soft);cursor:pointer;">Select</button>
+        <button type="button" id="btn-select-mode" style="font-family:var(--sans);font-size:13px;font-weight:500;padding:5px 14px;border-radius:999px;border:1px solid var(--dash-border);background:transparent;color:var(--ink-soft);cursor:pointer;">Select</button>
       </div>
       <div class="photo-grid" id="photo-grid"></div>
     </div>
@@ -6674,7 +6733,10 @@
             ? `Recap of every trivia question — fastest correct answer wins. ${withAnswers.length} of ${questions.length} answered, across ${totalRuns} run${totalRuns === 1 ? '' : 's'}.`
             : 'Create a Question and run it to see winners here.'}
         </div>
-        <button type="button" class="lb-clear-btn" id="lb-clear-btn" ${withAnswers.length ? '' : 'disabled'}>Clear results</button>
+        <div class="lb-head-actions">
+          ${hasAny ? `<button type="button" class="lb-expand-btn" id="lb-expand-btn" aria-expanded="false">Expand all</button>` : ''}
+          <button type="button" class="lb-clear-btn" id="lb-clear-btn" ${withAnswers.length ? '' : 'disabled'}>Clear results</button>
+        </div>
       </div>`;
     if (!hasAny) {
       pollsLeaderboard.innerHTML = head + '<div class="polls-empty">No trivia questions yet.</div>';
@@ -6772,20 +6834,32 @@
         </details>
       ` : '';
 
+      // Collapsed by default. 21 questions rendered fully expanded came
+      // to ~6,690px — 76% of the whole dashboard — for a backtrack log
+      // the host consults occasionally. The summary line carries the
+      // answer at a glance; the card opens for the full history.
+      const summaryWinner = winner
+        ? `<span class="lb-q-sum-win"><b>${escapeHtml(winner.guest_name || 'Anonymous')}</b> · ${winner.response_seconds}s</span>`
+        : `<span class="lb-q-sum-win empty">${answered ? 'No correct answer' : 'Not answered'}</span>`;
       return `
-        <div class="lb-q-card ${winner ? 'lb-q-won' : ''}">
-          <div class="lb-q-head">
+        <details class="lb-q-card ${winner ? 'lb-q-won' : ''}">
+          <summary class="lb-q-summary">
             <span class="lb-q-num">Q${num}</span>
-            <div class="lb-q-text">${escapeHtml(q.question || '')}</div>
+            <span class="lb-q-sum-text">${escapeHtml(q.question || '')}</span>
+            ${summaryWinner}
+            <span class="lb-q-sum-chev" aria-hidden="true">▾</span>
+          </summary>
+          <div class="lb-q-body">
+            ${correctLabel ? `<div class="lb-q-correct"><span aria-hidden="true">✓</span> ${escapeHtml(correctLabel)}</div>` : ''}
+            ${winnerBlock}
+            ${tally}
+            ${runsBlock}
           </div>
-          ${correctLabel ? `<div class="lb-q-correct"><span aria-hidden="true">✓</span> ${escapeHtml(correctLabel)}</div>` : ''}
-          ${winnerBlock}
-          ${tally}
-          ${runsBlock}
-        </div>`;
+        </details>`;
     }).join('');
     pollsLeaderboard.innerHTML = head + summaryBlock + body;
     bindLbClear();
+    bindLbExpandAll();
   }
   function formatLeaderboardRunStamp(ts) {
     if (!ts) return 'Earlier run';
@@ -6850,11 +6924,31 @@
       .slice(0, 6);
     return { totalWinningRuns, rows };
   }
+  function bindLbExpandAll() {
+    const btn = document.getElementById('lb-expand-btn');
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+      const cards = pollsLeaderboard.querySelectorAll('details.lb-q-card');
+      const open = btn.getAttribute('aria-expanded') === 'true';
+      cards.forEach(c => { c.open = !open; });
+      btn.setAttribute('aria-expanded', String(!open));
+      btn.textContent = open ? 'Expand all' : 'Collapse all';
+    });
+  }
+
   function bindLbClear() {
     const btn = document.getElementById('lb-clear-btn');
     if (!btn) return;
     btn.addEventListener('click', async () => {
-      if (!confirm('Clear all historical trivia results for this event?\nLive polls are untouched.')) return;
+      // Wipes every recorded winner for the event and cannot be undone.
+      // It used to sit beside a benign button with identical weight and a
+      // one-click confirm; typing makes the intent explicit.
+      const answer = prompt(
+        'Clear ALL historical trivia results for this event?\n\n' +
+        'Every recorded winner and run is deleted permanently. Live polls ' +
+        'and your saved questions are untouched.\n\nType CLEAR to confirm:',
+      );
+      if (String(answer || '').trim().toUpperCase() !== 'CLEAR') return;
       btn.disabled = true;
       try {
         const res = await fetch(`/api/events/${slug}/polls/leaderboard`, {
