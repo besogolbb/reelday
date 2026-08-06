@@ -528,6 +528,30 @@
       transition: width .4s ease;
     }
     .readiness-list { list-style: none; margin: 0; padding: 0; }
+    /* Finished items collapse into this one row instead of each keeping
+       a full-height slot — five done rows above the two that matter was
+       most of the card's height and pushed everything else off screen. */
+    .readiness-done-row { padding: 0; border-top: 1px solid var(--dash-border); }
+    .readiness-done-toggle {
+      width: 100%; display: flex; align-items: center; gap: 12px;
+      padding: 11px 0; background: none; border: 0; cursor: pointer;
+      text-align: left; font: inherit; color: inherit;
+    }
+    .readiness-done-toggle .readiness-check.done {
+      background: var(--dash-green); border-color: var(--dash-green); color: #fff;
+    }
+    .readiness-done-toggle .readiness-label { color: var(--dash-muted); }
+    .readiness-done-names {
+      flex: 1; min-width: 0; font-size: 12px; color: var(--ink-faint);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .readiness-chev { color: var(--ink-faint); font-size: 13px; transition: transform .15s; flex-shrink: 0; }
+    .readiness-done-toggle[aria-expanded="true"] .readiness-chev { transform: rotate(180deg); }
+    .readiness-done-list { border-top: 1px dashed var(--dash-border); }
+    .readiness-done-list .readiness-item { padding-left: 8px; }
+    @media (max-width: 640px) {
+      .readiness-done-names { display: none; }
+    }
     .readiness-item {
       display: flex; align-items: center; gap: 12px;
       padding: 11px 0; border-top: 1px solid var(--dash-border);
@@ -5154,8 +5178,7 @@
     // and it is the whole point of the pre-event dashboard.
     items.push({ label: 'Share the QR with guests', done: false, share: true });
 
-    list.innerHTML = '';
-    for (const it of items) {
+    function buildRow(it) {
       const li = document.createElement('li');
       li.className = 'readiness-item' + (it.done ? ' done' : '');
 
@@ -5210,7 +5233,47 @@
         wrap.appendChild(go);
         li.appendChild(wrap);
       }
+      return li;
+    }
+
+    // A checklist's job is to show what's LEFT — showing five finished
+    // rows above the two that actually need the host meant the card ate
+    // the whole first screen, pushing the QR, event info and the photo
+    // stream below the fold. Pending items render in full; finished ones
+    // collapse into one row that expands on request.
+    list.innerHTML = '';
+    const pending = items.filter(it => !it.done);
+    const finished = items.filter(it => it.done);
+
+    for (const it of pending) list.appendChild(buildRow(it));
+
+    if (finished.length) {
+      const li = document.createElement('li');
+      li.className = 'readiness-item readiness-done-row';
+
+      const toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.className = 'readiness-done-toggle';
+      toggle.setAttribute('aria-expanded', 'false');
+      toggle.innerHTML =
+        `<span class="readiness-check done">✓</span>` +
+        `<span class="readiness-label">${finished.length} already done</span>` +
+        `<span class="readiness-done-names">${finished.map(f => f.label).join(' · ')}</span>` +
+        `<span class="readiness-chev" aria-hidden="true">▾</span>`;
+      li.appendChild(toggle);
       list.appendChild(li);
+
+      const sub = document.createElement('ul');
+      sub.className = 'readiness-list readiness-done-list';
+      sub.hidden = true;
+      for (const it of finished) sub.appendChild(buildRow(it));
+      list.appendChild(sub);
+
+      toggle.addEventListener('click', () => {
+        const open = toggle.getAttribute('aria-expanded') === 'true';
+        toggle.setAttribute('aria-expanded', String(!open));
+        sub.hidden = open;
+      });
     }
 
     const countable = items.filter(i => !i.share);
