@@ -425,11 +425,64 @@ Validation run:
   `state.plan === 'tala' || state.plan === 'demo'`) is applied consistently
   across `event-site.html`, `dashboard.html`, and `website-builder.html`.
 
+## Phase 3 Shipped
+
+Phase 3 implements the "No-Signup Builder" (§2 above), but via a materially
+different mechanism than originally sketched — two assumptions in this doc
+turned out to be wrong when checked against the actual code rather than a
+comment:
+
+- **Anonymous event creation does not work today.** `tryGetUser()` in
+  `backend/routes/events.js` (the source of this doc's "Anonymous event
+  creation is still allowed (legacy)" claim) is dead code — never called.
+  `POST /api/events` is hard-gated by `fastify.authenticate`; no token means
+  a 401 before any handler logic runs.
+- **There is no "claim an anonymous draft" mechanism anywhere**, and one
+  built by inserting a null-`user_id` `events` row would fight the existing
+  codebase: `uploads.js` explicitly 403s any orphan event, and every
+  ownership check compares `user_id = $2`, which `NULL` can never satisfy.
+
+Instead of new anonymous-draft infrastructure, Phase 3 extends `/start`'s
+own proven pattern: it already collects event type, name, date, and plan
+with zero account, and already stashes state in `sessionStorage` across a
+full navigation to checkout and back for paid plans. **No new database
+table, no new backend routes, no new unauthenticated write surface** — the
+existing `POST /api/events` and `PUT /api/event-site/:slug` endpoints are
+called slightly earlier in the existing flow.
+
+Changed files: `frontend/start.html` only. No backend changes.
+
+What shipped:
+
+- One new optional, skippable slide ("Make it feel like yours") between the
+  plan picker and account creation, collecting cover photo, venue, and a
+  short story — the emotionally resonant fields, not the operational ones
+  (schedule/FAQ/RSVP settings stay in the real builder, post-signup).
+- A static hero-preview card (plain DOM text/background updates, not an
+  iframe render of the real public site) — per this doc's own caution
+  against per-keystroke full-site iframe previews.
+- Cover photo needs no new anonymous upload endpoint: on the free/Tala path
+  the picked `File` survives in memory for the whole page load, uploaded via
+  the existing authenticated image endpoint immediately after the event is
+  created. Not offered on the paid path (navigates away to checkout; a
+  `File` object doesn't survive that) — paid hosts add it in the builder
+  afterward, which they reach regardless.
+- The write-back always sends `is_published: false`, exactly once,
+  immediately after the event is created — content collected before a host
+  has seen their dashboard must never go live on its own.
+- Logged-in hosts starting a new event never see this slide — they already
+  have an account and land straight in the full builder.
+
+Not done (unchanged from Phase 2's open items):
+
+- Seat-list import / RSVP CSV migration into the standalone builder.
+- Deleting the dormant dashboard wizard — still gated on manual QA.
+
 ## Next Phase Recommendation (updated)
 
-With Phase 2's conversion/trust surfaces in place, the next real decision is
-whether to invest in the no-signup public builder (§2 above) or in moving
-seat import / RSVP CSV into the standalone builder — both are still open.
-Recommend gathering a signal first (e.g. drop-off rate on `/start`'s signup
-step, or hosts asking for seat-list editing outside the dashboard) before
-committing to either, rather than building speculatively.
+With the no-signup personalization slide shipped, the remaining open item is
+moving seat import / RSVP CSV into the standalone builder — still marked
+optional pending a real signal (e.g. hosts asking for seat-list editing
+outside the dashboard) rather than being built speculatively. Deleting the
+dormant dashboard wizard remains blocked on manual in-browser QA of the
+full `/website-builder` flow, now including this new slide's write-back.
