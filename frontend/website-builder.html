@@ -650,16 +650,20 @@
     // radio inputs, not custom buttons, so the existing delegated
     // #editor input/change listeners (draft save + live preview) pick
     // up a selection for free without any extra wiring.
+    // [value, label, accent, paper] -- accent/paper mirror the same
+    // custom properties event-site.css's [data-template] blocks set,
+    // so the swatch is an honest preview (paper color visible too, not
+    // just the accent dot -- matters now that "bold" is a dark surface).
     const TEMPLATES = [
-      ['classic', 'Classic Elegance', '#b85230'],
-      ['modern', 'Modern Minimal', '#1a1a1a'],
-      ['romantic', 'Romantic Blush', '#c07f82'],
-      ['bold', 'Bold Jewel', '#1f4d3d'],
+      ['classic', 'Classic Elegance', '#b85230', '#fbf5ec'],
+      ['modern', 'Modern Minimal', '#1a1a1a', '#ffffff'],
+      ['romantic', 'Romantic Blush', '#c07f82', '#fdf5f4'],
+      ['bold', 'Bold Jewel', '#2f6b52', '#0f1a16'],
     ];
     function templatePicker(selected) {
       const wrap = document.createElement('div');
       wrap.className = 'template-picker';
-      TEMPLATES.forEach(([value, label, swatch]) => {
+      TEMPLATES.forEach(([value, label, accent, paper]) => {
         const id = `tpl-${value}`;
         const opt = document.createElement('label');
         opt.className = 'template-option';
@@ -672,7 +676,8 @@
         radio.checked = value === (selected || 'classic');
         const chip = document.createElement('span');
         chip.className = 'template-swatch';
-        chip.style.background = swatch;
+        chip.style.background = paper;
+        chip.style.boxShadow = `inset 0 0 0 1px rgba(0,0,0,.08), inset 0 0 0 5px ${accent}`;
         opt.appendChild(radio);
         opt.appendChild(chip);
         opt.appendChild(document.createTextNode(label));

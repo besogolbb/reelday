@@ -16,38 +16,76 @@
        window's. On the real guest page #app fills the viewport so this
        is unchanged behavior; it's what lets the website-builder preview
        render true mobile layout inside a narrow phone-mockup frame. */
-    #app { container-type: inline-size; width: 100%; min-width: 0; overflow-x: hidden; box-sizing: border-box; }
+    #app {
+      container-type: inline-size; width: 100%; min-width: 0;
+      overflow-x: hidden; box-sizing: border-box;
+      /* Opaque card/field surface color -- was hardcoded #fff at every
+         call site (venue cards, form fields, footer, etc.), which is
+         why the earlier template pass could only ever tint the accent
+         color: templates couldn't touch surfaces without this. */
+      --card: #fff;
+    }
 
     /* ── Style templates ──────────────────────────────────
        A second, independent dimension from data-theme (the event-TYPE
-       palette in shared.css) -- these are host-chosen aesthetic presets
-       for the invitation itself. "classic" is the default look and
-       needs no override block here. Only --accent/--gold/--motif-color
-       and --display (the heading/display font) are touched, matching
-       the existing per-event-type theme pattern -- many surfaces below
-       use literal colors rather than --paper/--ink, so a full palette
-       swap per template isn't safe without touching those directly. */
+       accent color in shared.css) -- these are host-chosen aesthetic
+       presets for the invitation itself. "classic" is the default look
+       and needs no override block here.
+       Every section's surface (--paper/--paper-2/--paper-3), body text
+       (--ink/--ink-soft/--ink-faint), borders (--line/--line-2) and
+       card/field backgrounds (--card, added above) all read from these
+       variables already -- see the .es-hero comment below for the one
+       intentional exception -- so overriding them here genuinely
+       restyles the page instead of only tinting the accent color. */
     [data-template="modern"] {
+      --paper:       #ffffff;
+      --paper-2:     #f6f6f6;
+      --paper-3:     #ececec;
+      --ink:         #141414;
+      --ink-soft:    #4d4d4d;
+      --ink-faint:   #7a7a7a;
+      --line:        rgba(0,0,0,.10);
+      --line-2:      rgba(0,0,0,.18);
+      --card:        #ffffff;
       --accent:      #1a1a1a;
       --accent-deep: #000000;
       --accent-soft: #9a9a9a;
-      --gold:        #b8b8b8;
-      --motif-color: rgba(0,0,0,.06);
       --display:     'Inter', system-ui, sans-serif;
     }
     [data-template="romantic"] {
+      --paper:       #fdf5f4;
+      --paper-2:     #f8e9e7;
+      --paper-3:     #f0d7d3;
+      --ink:         #4a3330;
+      --ink-soft:    #7d5f5a;
+      --ink-faint:   #9c8480;
+      --line:        rgba(122,60,55,.12);
+      --line-2:      rgba(122,60,55,.20);
+      --card:        #fffaf9;
       --accent:      #c07f82;
       --accent-deep: #8a4d50;
       --accent-soft: #e8c3c4;
-      --gold:        #cfae82;
-      --motif-color: rgba(192,127,130,.08);
     }
+    /* Genuinely dark -- the one template that inverts paper/ink rather
+       than just tinting them. Safe because every surface below already
+       reads var(--paper*)/var(--ink*)/var(--card) instead of a literal
+       color (the earlier, accent-only template pass is what those
+       variables were introduced to fix). Accent stays a mid-tone
+       green rather than the brighter --gold so white button text keeps
+       WCAG-AA contrast (same reasoning as shared.css's birthday theme). */
     [data-template="bold"] {
-      --accent:      #1f4d3d;
-      --accent-deep: #0f2a20;
-      --accent-soft: #7fae97;
-      --gold:        #c9a24a;
-      --motif-color: rgba(31,77,61,.08);
+      --paper:       #0f1a16;
+      --paper-2:     #16241f;
+      --paper-3:     #1e332b;
+      --ink:         #f3efe6;
+      --ink-soft:    #cbd3cd;
+      --ink-faint:   #93a29a;
+      --line:        rgba(255,255,255,.12);
+      --line-2:      rgba(255,255,255,.20);
+      --card:        #16241f;
+      --accent:      #2f6b52;
+      --accent-deep: #194a37;
+      --accent-soft: #8fc4a4;
     }
 
     /* ── Loading + state ───────────────────────────────── */
@@ -199,7 +237,7 @@
     }
     .es-menu-list a:active span.arr,
     .es-menu-list a:focus-visible span.arr {
-      background: #fff; color: var(--accent);
+      background: var(--card); color: var(--accent);
     }
     @keyframes menuRowIn {
       to { opacity: 1; transform: translateY(0); }
@@ -320,6 +358,12 @@
          cue beneath the countdown so the two never overlap on short
          viewports (was 60px → countdown ended up touching SCROLL). */
       padding: 80px 28px 130px;
+      /* Intentionally NOT theme-variable-driven: with a cover photo the
+         hero is always a dark photo overlay with white text (the vignette
+         below needs a fixed dark base regardless of template), and
+         .es-hero.no-bg further down swaps in var(--paper)/var(--ink) for
+         the no-photo case -- so this fixed dark gradient only ever shows
+         through a translucent photo overlay, never as a bare surface. */
       color: #fff;
       background:
         linear-gradient(180deg, rgba(20,12,8,.10) 0%, rgba(20,12,8,.18) 35%, rgba(20,12,8,.78) 100%),
@@ -608,7 +652,7 @@
       .es-venues.two { grid-template-columns: 1fr 1fr; }
     }
     .es-venue {
-      background: #fff;
+      background: var(--card);
       border: 1px solid var(--line);
       border-radius: 18px; overflow: hidden;
       box-shadow: 0 12px 36px rgba(42,26,20,.06);
@@ -656,7 +700,7 @@
     .es-stay {
       display: flex; align-items: center; gap: 12px;
       padding: 12px 14px;
-      background: #fff;
+      background: var(--card);
       border: 1px solid var(--line);
       border-radius: 12px;
       color: var(--ink);
@@ -780,7 +824,7 @@
     .es-form-wrap { max-width: 460px; margin: 0 auto; }
     .es-field {
       width: 100%; padding: 16px 18px;
-      background: #fff;
+      background: var(--card);
       border: 1px solid var(--line-2);
       border-radius: 14px;
       font-family: var(--display); font-size: 1rem;
@@ -814,7 +858,7 @@
 
     .es-result { text-align: center; margin-top: 22px; min-height: 24px; }
     .es-result .seat-card {
-      background: #fff;
+      background: var(--card);
       border: 1px solid var(--line);
       border-radius: 16px;
       padding: 22px;
@@ -1021,7 +1065,7 @@
     }
     .es-reg-cash .number-row {
       display: flex; align-items: center; gap: 10px;
-      background: #fff; border: 1px dashed rgba(196,90,58,.30);
+      background: var(--card); border: 1px dashed rgba(196,90,58,.30);
       border-radius: 12px; padding: 12px 14px;
       margin-bottom: 12px;
     }
@@ -1043,7 +1087,7 @@
     .es-reg-cash .copy-btn.done { background: #2d6a4a; }
     .es-reg-cash .qr {
       margin-top: 6px;
-      background: #fff;
+      background: var(--card);
       border: 1px solid var(--line);
       border-radius: 12px;
       padding: 8px;
@@ -1158,7 +1202,7 @@
     /* ── Footer ────────────────────────────────────────── */
     .es-foot {
       text-align: center; padding: 80px 28px 100px;
-      background: #fff;
+      background: var(--card);
       border-top: 1px solid var(--line);
     }
     .es-foot-eyebrow {
