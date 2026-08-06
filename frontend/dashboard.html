@@ -389,8 +389,8 @@
     /* The sidebar (QR, event info, details form) belongs to Gallery.
        Every other section gets the full width — the website form and
        the poll manager both need it. */
-    body:not([data-section="gallery"]) .body { grid-template-columns: 1fr; }
-    body:not([data-section="gallery"]) .sidebar-stack { display: none; }
+    body:not([data-view="gallery"]) .body { grid-template-columns: 1fr; }
+    body:not([data-view="gallery"]) .sidebar-stack { display: none; }
 
     /* Inside a dedicated section the panel is the whole point, so drop
        the outer card's own margin — it no longer sits in a stack. */
@@ -4095,6 +4095,7 @@
   // destinations now. Hash-driven so back/forward and refresh work, and
   // so an email can deep-link a host straight to #website.
   const SECTIONS = ['gallery', 'polls', 'website', 'reel'];
+  const NAV_TRIGGER_SEL = 'a[data-section], button[data-section]';
   function currentSectionFromHash() {
     const h = (location.hash || '').replace('#', '');
     return SECTIONS.includes(h) ? h : 'gallery';
@@ -4103,12 +4104,17 @@
     if (!SECTIONS.includes(name)) name = 'gallery';
     if (name === 'reel' && !SDE_SHIPPED) name = 'gallery';
 
-    document.body.dataset.section = name;
+    // NB: this is `data-view`, deliberately NOT `data-section`. Marking
+    // <body> with the same attribute the nav triggers use made <body>
+    // itself match `closest('[data-section]')`, so the delegated handler
+    // below fired preventDefault() on every click anywhere in the
+    // document — killing the Wall/Upload links, the logo, the poster
+    // link and the settings checkboxes. Two concepts, two attributes.
+    document.body.dataset.view = name;
     document.querySelectorAll('.dash-section').forEach(sec => {
       sec.hidden = sec.dataset.section !== name;
     });
-    document.querySelectorAll('[data-section]').forEach(el => {
-      if (el.classList.contains('dash-section')) return;
+    document.querySelectorAll(NAV_TRIGGER_SEL).forEach(el => {
       el.classList.toggle('active', el.dataset.section === name);
     });
 
@@ -4123,10 +4129,13 @@
   }
 
   // One delegated handler covers the header nav, the sticky nav and the
-  // mobile bar — they all share the data-section contract.
+  // mobile bar. Scoped to anchors and buttons specifically: a bare
+  // `[data-section]` also matches the <section> wrappers and anything
+  // else that ever carries the attribute, and a stray match here means
+  // preventDefault() on an unrelated click.
   document.addEventListener('click', (e) => {
-    const trigger = e.target.closest('[data-section]');
-    if (!trigger || trigger.classList.contains('dash-section')) return;
+    const trigger = e.target.closest(NAV_TRIGGER_SEL);
+    if (!trigger) return;
     e.preventDefault();
     showSection(trigger.dataset.section);
   });
