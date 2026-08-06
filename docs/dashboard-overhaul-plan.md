@@ -2,7 +2,7 @@
 
 **Target:** `frontend/dashboard.html` (8,502 lines — the production file)
 **Created:** 2026-08-06
-**Status:** Phases 0–3 complete (item 33 deferred), Phases 4–6 pending
+**Status:** Phases 0–4 complete (items 33, 39, 40 deferred), Phases 5–6 pending
 
 > **Cold start:** read "The diagnosis" then jump to the first unchecked phase.
 > Every item cites a file:line so you can start without re-deriving anything.
@@ -95,7 +95,7 @@ density, but the absence of boundaries.
 | **1** | Section routing (the overhaul) | 1 day | ✅ done |
 | **2** | Three states | 2 days | ✅ done |
 | **3** | Live & mobile triage | 2 days | ✅ done (33 deferred) |
-| **4** | Content density | 1.5 days | ☐ |
+| **4** | Content density | 1.5 days | ✅ done (39, 40 deferred) |
 | **5** | Correctness & accessibility | 1.5 days | ☐ |
 | **6** | Trust & polish | 2.5 days | ☐ |
 
@@ -264,7 +264,7 @@ one-handed, in a dim venue.
 
 ---
 
-## Phase 4 — Content density ☐
+## Phase 4 — Content density ✅
 
 | # | Item | Detail |
 |---|---|---|
@@ -448,3 +448,45 @@ alongside Phase 4's poll-recap work.
 touch-reveal gating, bulk wiring and endpoint parity, undo-only-where-possible,
 the `advanceAfterAction` neighbour rule (middle / first / last / only), and
 shortcut guards. Run alongside `nav`, `router` and `state` suites.
+
+---
+
+## Phase 4 — shipped notes
+
+Scoped to the five self-contained items (38, 41–44); the two form refactors
+(39: 9-step website wizard, 40: merge sidebar + Settings modal) are large
+enough to need their own pass and are deferred alongside item 33.
+
+- **Poll recap cards are `<details>` now, collapsed by default.** 21 expanded
+  cards measured ~6,690px — 76% of the whole dashboard — for a backtrack log
+  the host consults occasionally. Each collapsed row shows the question, the
+  winner (or "Not answered"), and a chevron; opening reveals the full history.
+  An "Expand all" toggle sits beside Clear results for the rare full-scan.
+- **Clear results now requires typing `CLEAR`.** It permanently deletes every
+  recorded winner and previously sat beside the benign "Host recap" button
+  with identical weight behind a one-click `confirm()`. Bulk delete's
+  type-the-count pattern (Phase 3) is the template — same reasoning: a
+  one-word confirm is too cheap for an action with no undo.
+- **Header compressed.** `padding: 28px 28px 124px` → `22px 28px 96px`; h1
+  clamp `48–82px` → `40–66px`. Roughly halves the chrome before the first
+  useful pixel; the overlapping stat cards are untouched.
+- **Mono → Inter on buttons that act.** `.info-download-btn` (Download all
+  .zip — one of the most important post-event actions, previously reading as
+  a caption), `#btn-select-mode`, `.lb-clear-btn`. Mono uppercase stays for
+  labels/metadata/badges; sentence-case Inter is now the rule for anything
+  clickable. Button label text was already sentence case in markup — only
+  the CSS was shouting.
+- **Ink ramp added as dashboard-local tokens**, not edits to the shared
+  `--ink-faint` (a `shared.css` token other pages depend on):
+  `--ink-body #4a382f` (11.1:1 on white) and `--dash-muted` darkened from
+  `#7f6b62` to `#6e5b4e` (6.4:1). Panel description copy — `.panel-head-copy
+  p`, `#stream-sub` — moved off `--dash-muted` onto `--ink-body` and 13px→14px.
+
+### Verification
+
+`density.test.mjs` — 17 checks: recap collapse structure, the CLEAR
+confirmation gate (and that the old one-click confirm is gone), the header
+compression values, that the three named buttons carry no mono/uppercase
+styling, and the two new ink tokens computed against real WCAG contrast math
+(both clear 4.5:1 AA on white — 11.06:1 and 6.42:1 respectively, better than
+first drafted). nav/router/state/triage suites still pass.
