@@ -563,6 +563,108 @@
        applies it to the "Uploads open soon" branch, which was wearing
        the warning-amber treatment for what is good news.) */
 
+    /* ── Bulk action bar ───────────────────────────────────
+       Select mode used to offer exactly one action, and it was the
+       irreversible one. The common batch intent is "approve these 30",
+       so Delete is now last, separated, and styled as the exception. */
+    .bulk-btn {
+      background: rgba(255,255,255,.15); border: none; color: #fff;
+      border-radius: 999px; padding: 6px 14px; cursor: pointer;
+      font-family: var(--mono); font-size: 11px; letter-spacing: .1em;
+      white-space: nowrap; transition: background .15s, opacity .15s;
+    }
+    .bulk-btn:hover:not(:disabled) { background: rgba(255,255,255,.26); }
+    .bulk-btn:disabled { opacity: .45; cursor: default; }
+    .bulk-btn.primary { background: var(--dash-green); font-weight: 600; }
+    .bulk-btn.primary:hover:not(:disabled) { background: #24623b; }
+    .bulk-btn.danger { background: transparent; color: #ff9d94; box-shadow: inset 0 0 0 1px rgba(255,157,148,.45); }
+    .bulk-btn.danger:hover:not(:disabled) { background: var(--dash-danger); color: #fff; box-shadow: none; }
+    .bulk-sep { width: 1px; align-self: stretch; background: rgba(255,255,255,.20); margin: 0 2px; }
+    @media (max-width: 640px) {
+      #bulk-bar { left: 12px; right: 12px; transform: none !important; border-radius: 18px;
+                  flex-wrap: wrap; justify-content: center; gap: 8px !important; padding: 12px 14px !important; }
+      .bulk-sep { display: none; }
+    }
+
+    /* ── Preview modal navigation ──────────────────────────
+       Clearing a pending queue meant open → act → modal closes → find
+       the next tile → open again. Arrows plus auto-advance turn ~4
+       interactions per item into 1. */
+    .preview-nav {
+      position: absolute; top: 50%; transform: translateY(-50%);
+      width: 44px; height: 44px; border-radius: 50%;
+      background: rgba(0,0,0,.55); color: #fff; border: 1px solid rgba(255,255,255,.25);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; line-height: 1; cursor: pointer; z-index: 4;
+      transition: background .15s, opacity .15s;
+    }
+    .preview-nav:hover:not(:disabled) { background: rgba(0,0,0,.78); }
+    .preview-nav:disabled { opacity: .28; cursor: default; }
+    .preview-nav.prev { left: 10px; }
+    .preview-nav.next { right: 10px; }
+    .preview-position {
+      font-family: var(--mono); font-size: 11px; letter-spacing: .12em;
+      color: var(--ink-faint); text-transform: uppercase;
+    }
+    @media (max-width: 640px) {
+      .preview-nav { width: 38px; height: 38px; font-size: 17px; }
+      .preview-nav.prev { left: 4px; }
+      .preview-nav.next { right: 4px; }
+    }
+
+    /* ── Pending as the alert ──────────────────────────────
+       Pending is the only stat that demands an action, but it rendered
+       identically at 0 and at 3, and wasn't clickable. */
+    .stat.stat-action { cursor: pointer; text-align: left; width: 100%; font: inherit; }
+    /* Children are spans (phrasing content, required inside <button>), so
+       they need the block layout the divs used to give for free. */
+    .stat.stat-action .lbl,
+    .stat.stat-action .num,
+    .stat.stat-action .delta { display: block; }
+    .stat.is-alert { border-color: rgba(196,90,58,.55); }
+    .stat.is-alert::after { background: linear-gradient(180deg, var(--accent), var(--accent)); width: 5px; }
+    .stat.is-alert .num em { color: var(--accent); }
+    .stat.is-alert .delta { color: var(--accent); font-weight: 600; }
+    .pending-cta {
+      display: none; width: 100%; margin: 0 0 16px;
+      padding: 14px 18px; border-radius: 18px; border: 0;
+      background: var(--accent); color: #fff; cursor: pointer;
+      font-size: 15px; font-weight: 600;
+      box-shadow: 0 10px 24px rgba(196,90,58,.28);
+    }
+    .pending-cta:hover { background: var(--accent-deep); }
+    body[data-view="gallery"] .pending-cta.on { display: block; }
+
+    /* ── Gallery empty state ───────────────────────────────
+       It told the host to share the QR and gave them nothing to do it
+       with — on mobile the QR card is a long scroll away. */
+    .empty-state { grid-column: 1/-1; text-align: center; padding: 40px 16px; }
+    .empty-state .es-qr {
+      width: 168px; height: 168px; margin: 0 auto 16px; padding: 10px;
+      background: #fff; border: 1px solid var(--dash-border); border-radius: 16px;
+    }
+    .empty-state .es-qr img { width: 100%; height: 100%; object-fit: contain; }
+    .empty-state h4 { font-family: var(--display); font-size: 20px; font-weight: 600; margin-bottom: 6px; color: var(--ink); }
+    .empty-state p { font-size: 14px; color: var(--dash-muted); margin-bottom: 18px; }
+    .empty-state .es-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+
+    /* ── Grid density ──────────────────────────────────────── */
+    .photo-grid { grid-template-columns: repeat(var(--grid-cols, 4), 1fr); }
+    .density-toggle { display: inline-flex; gap: 2px; margin-left: 8px; }
+    .density-toggle button {
+      width: 28px; height: 26px; border-radius: 8px; cursor: pointer;
+      border: 1px solid var(--dash-border); background: transparent;
+      color: var(--ink-soft); font-size: 12px; line-height: 1;
+    }
+    .density-toggle button.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+    .grid-filter {
+      flex: 1 1 150px; min-width: 110px; max-width: 220px;
+      padding: 6px 12px; border-radius: 999px;
+      border: 1px solid var(--dash-border); background: transparent;
+      font-size: 13px; color: var(--ink);
+    }
+    .grid-filter::placeholder { color: var(--ink-faint); }
+
     /* ── Body grid ────────────────────────────────────────── */
     .body {
       max-width: 1200px; margin: 32px auto 0;
@@ -2007,14 +2109,33 @@
       font-style: italic;
       box-shadow: 0 14px 28px rgba(42,26,20,.10);
     }
+    /* The overlay carries the Approve / Unhide action. It used to be
+       opacity:0 revealed only by :hover, with no hover-capability guard —
+       so on a phone the host had no one-tap approve at all and had to
+       open the modal for every single pending item. Default is now
+       VISIBLE; hover-capable pointers get the reveal-on-hover behaviour
+       back, and keyboard users get it via :focus-within. */
     .photo-grid > div .actions-overlay {
       position: absolute; inset: 0;
-      background: linear-gradient(180deg, rgba(0,0,0,0) 50%, rgba(0,0,0,.6) 100%);
-      opacity: 0; transition: opacity .2s ease;
+      background: linear-gradient(180deg, rgba(0,0,0,0) 45%, rgba(0,0,0,.62) 100%);
+      opacity: 1; transition: opacity .2s ease;
       display: flex; align-items: flex-end; justify-content: space-between;
       padding: 8px;
+      /* The bottom-left Feature pin sits in this corner too; keep the
+         uploader name clear of it. */
+      padding-left: 8px;
     }
-    .photo-grid > div:hover .actions-overlay { opacity: 1; }
+    /* Uploader name moves to the top on touch so the Feature pin can own
+       the bottom-left corner without overlapping it. */
+    .photo-grid > div .actions-overlay .uploader {
+      position: absolute; left: 10px; top: 8px;
+      text-shadow: 0 1px 3px rgba(0,0,0,.6);
+    }
+    @media (hover: hover) and (pointer: fine) {
+      .photo-grid > div .actions-overlay { opacity: 0; }
+      .photo-grid > div:hover .actions-overlay,
+      .photo-grid > div:focus-within .actions-overlay { opacity: 1; }
+    }
     .photo-grid > div img {
       position: absolute;
       inset: 0;
@@ -3330,11 +3451,13 @@
     <div class="num"><em id="stat-guests">0</em></div>
     <div class="delta">Unique guests</div>
   </div>
-  <div class="stat">
-    <div class="lbl">Pending review</div>
-    <div class="num"><em id="stat-pending">0</em></div>
-    <div class="delta">Awaiting approval</div>
-  </div>
+  <!-- A real <button> so it is keyboard reachable, which means the
+       children must be phrasing content — spans, not divs. -->
+  <button type="button" class="stat stat-action" id="stat-pending-card">
+    <span class="lbl">Pending review</span>
+    <span class="num"><em id="stat-pending">0</em></span>
+    <span class="delta" id="stat-pending-delta">Awaiting approval</span>
+  </button>
 </div>
 
 <!-- ── Readiness checklist (upcoming state) ────────────────
@@ -3370,6 +3493,9 @@
     <!-- Gallery is the default section: the photos are the product, so
          they load at the top instead of below three expandable panels. -->
     <section class="dash-section" id="sec-gallery" data-section="gallery">
+    <!-- Shown only while something is waiting. Pending is the one number
+         on this dashboard that demands an action. -->
+    <button type="button" class="pending-cta" id="pending-cta">Review 0 pending →</button>
     <div class="lock-banner hidden" id="lock-banner">
       <div class="lb-icon" id="lb-icon">⚠</div>
       <div class="lb-body">
@@ -3456,7 +3582,14 @@
         <span class="tab" data-tab="pending">Pending <span id="tab-pending-count">0</span></span>
         <span class="tab" data-tab="featured">Featured <span id="tab-featured-count">0</span></span>
         <span class="tab" data-tab="hidden">Hidden <span id="tab-hidden-count">0</span></span>
-        <button type="button" id="btn-select-mode" style="margin-left:auto;font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;padding:5px 12px;border-radius:999px;border:1px solid var(--dash-border);background:transparent;color:var(--ink-soft);cursor:pointer;">Select</button>
+        <input type="search" class="grid-filter" id="grid-filter"
+               placeholder="Find a guest…" aria-label="Filter uploads by guest name" />
+        <div class="density-toggle" id="density-toggle" role="group" aria-label="Grid density">
+          <button type="button" data-cols="2" title="Large">▢</button>
+          <button type="button" data-cols="4" class="active" title="Medium">▦</button>
+          <button type="button" data-cols="6" title="Small">▨</button>
+        </div>
+        <button type="button" id="btn-select-mode" style="font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;padding:5px 12px;border-radius:999px;border:1px solid var(--dash-border);background:transparent;color:var(--ink-soft);cursor:pointer;">Select</button>
       </div>
       <div class="photo-grid" id="photo-grid"></div>
     </div>
@@ -3464,8 +3597,13 @@
     <!-- Bulk-delete floating bar -->
     <div id="bulk-bar" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:999;background:var(--ink);color:#fff;border-radius:999px;padding:10px 20px;display:none;align-items:center;gap:16px;box-shadow:0 8px 32px rgba(0,0,0,.35);font-family:var(--mono);font-size:11px;letter-spacing:.1em;white-space:nowrap;">
       <span id="bulk-count">0 selected</span>
-      <button type="button" id="btn-bulk-cancel" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:999px;padding:5px 14px;cursor:pointer;font-family:var(--mono);font-size:11px;letter-spacing:.1em;">Cancel</button>
-      <button type="button" id="btn-bulk-delete" style="background:var(--dash-danger);border:none;color:#fff;border-radius:999px;padding:5px 14px;cursor:pointer;font-family:var(--mono);font-size:11px;letter-spacing:.1em;font-weight:600;">Delete selected</button>
+      <button type="button" class="bulk-btn" id="btn-bulk-select-all">All</button>
+      <button type="button" class="bulk-btn primary" id="btn-bulk-approve">✓ Approve</button>
+      <button type="button" class="bulk-btn" id="btn-bulk-feature">★ Feature</button>
+      <button type="button" class="bulk-btn" id="btn-bulk-hide">Hide</button>
+      <button type="button" class="bulk-btn" id="btn-bulk-cancel">Cancel</button>
+      <span class="bulk-sep" aria-hidden="true"></span>
+      <button type="button" class="bulk-btn danger" id="btn-bulk-delete">Delete</button>
     </div>
     </section>
 
@@ -3730,9 +3868,12 @@
       <div class="preview-waveform" id="preview-waveform"></div>
       <span class="preview-audio-label">🎙</span>
     </div>
+    <button type="button" class="preview-nav prev" id="preview-prev" aria-label="Previous upload">‹</button>
+    <button type="button" class="preview-nav next" id="preview-next" aria-label="Next upload">›</button>
     <div class="preview-modal-meta">
       <div class="uploader" id="preview-modal-uploader">Guest</div>
       <div class="when"     id="preview-modal-when">—</div>
+      <div class="preview-position" id="preview-position"></div>
       <div class="msg"      id="preview-modal-msg" style="display:none"></div>
     </div>
     <div class="preview-modal-actions">
@@ -4228,11 +4369,44 @@
     return `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
   }
 
+  let toastTimer = null;
   function showToast(msg) {
+    clearTimeout(toastTimer);
     toast.textContent = msg;
     toast.className   = 'toast';
     requestAnimationFrame(() => toast.classList.add('show'));
-    setTimeout(() => toast.classList.remove('show'), 3000);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 3000);
+  }
+
+  // Same toast plus a reversal. Only offered for genuinely reversible
+  // actions — delete removes the object from R2 and cannot be undone, so
+  // that path keeps its confirm instead.
+  function showToastWithUndo(msg, onUndo, ms = 6000) {
+    clearTimeout(toastTimer);
+    toast.textContent = '';
+    toast.className   = 'toast';
+
+    const label = document.createElement('span');
+    label.textContent = msg;
+    toast.appendChild(label);
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = 'Undo';
+    btn.style.cssText =
+      'margin-left:14px;background:rgba(255,255,255,.20);border:0;color:#fff;' +
+      'border-radius:999px;padding:4px 12px;cursor:pointer;font:inherit;font-weight:600;';
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      clearTimeout(toastTimer);
+      toast.classList.remove('show');
+      try { await onUndo(); showToast('Undone'); }
+      catch { showToast('Could not undo — try again'); }
+    });
+    toast.appendChild(btn);
+
+    requestAnimationFrame(() => toast.classList.add('show'));
+    toastTimer = setTimeout(() => toast.classList.remove('show'), ms);
   }
 
   function escapeHtml(value) {
@@ -5303,6 +5477,109 @@
     return true;
   }
 
+  // ── What the grid is currently showing ─────────────────
+  // The stream → tab → search chain was duplicated in renderGallery, the
+  // tile click handler and the bulk handler, and the three had to agree
+  // because the click handler maps a tile's DOM index back to an upload.
+  // One function, one answer.
+  let gridFilterText = '';
+  function visibleUploads() {
+    let list = filterUploads(filterByStream(allUploads), currentTab);
+    const q = gridFilterText.trim().toLowerCase();
+    if (q) {
+      list = list.filter(u => (u.uploader_name || 'guest').toLowerCase().includes(q));
+    }
+    return list;
+  }
+
+  // ── Empty state ────────────────────────────────────────
+  // The "all" case is the single most important screen a host sees: it
+  // decides whether the event gets any uploads at all. It used to say
+  // "Share the QR code with your guests!" and give them nothing to do it
+  // with, while the QR card sat a long scroll away on mobile.
+  function renderEmptyState() {
+    const noun = currentStream === 'video' ? 'videos' : currentStream === 'message' ? 'video messages' : 'photos';
+
+    if (gridFilterText.trim()) {
+      photoGrid.innerHTML = '';
+      const box = document.createElement('div');
+      box.className = 'empty-state';
+      box.innerHTML = '<h4>No matches</h4>';
+      const p = document.createElement('p');
+      p.textContent = `No ${noun} from a guest matching “${gridFilterText.trim()}”.`;
+      box.appendChild(p);
+      const clear = document.createElement('button');
+      clear.className = 'btn btn-ghost';
+      clear.textContent = 'Clear search';
+      clear.addEventListener('click', () => {
+        const input = $('grid-filter');
+        if (input) input.value = '';
+        gridFilterText = '';
+        renderGallery(allUploads);
+      });
+      box.appendChild(clear);
+      photoGrid.appendChild(box);
+      return;
+    }
+
+    // A non-"all" tab that's empty is just a filter with no results.
+    if (currentTab !== 'all') {
+      photoGrid.innerHTML =
+        `<div class="empty-state"><h4>Nothing here yet</h4><p>No ${noun} in this category.</p></div>`;
+      return;
+    }
+
+    photoGrid.innerHTML = '';
+    const box = document.createElement('div');
+    box.className = 'empty-state';
+
+    const qrSrc = qrImg?.getAttribute('src');
+    if (qrSrc) {
+      const frame = document.createElement('div');
+      frame.className = 'es-qr';
+      const img = document.createElement('img');
+      img.src = qrSrc;
+      img.alt = 'Event QR code';
+      frame.appendChild(img);
+      box.appendChild(frame);
+    }
+
+    const h = document.createElement('h4');
+    h.textContent = 'No photos yet';
+    box.appendChild(h);
+    const p = document.createElement('p');
+    p.textContent = 'Guests upload by scanning this code — share it and the first photos land here.';
+    box.appendChild(p);
+
+    const actions = document.createElement('div');
+    actions.className = 'es-actions';
+    const share = document.createElement('button');
+    share.className = 'btn btn-accent';
+    share.textContent = navigator.share ? 'Share link' : 'Copy link';
+    share.addEventListener('click', shareUploadLink);
+    actions.appendChild(share);
+    const poster = document.createElement('a');
+    poster.className = 'btn btn-ghost';
+    poster.textContent = 'Download poster .pdf';
+    poster.target = '_blank';
+    poster.rel = 'noopener';
+    poster.href = slug ? `/poster/${encodeURIComponent(slug)}` : '#';
+    actions.appendChild(poster);
+    box.appendChild(actions);
+
+    photoGrid.appendChild(box);
+  }
+
+  // ── Grid density ───────────────────────────────────────
+  const GRID_COLS_KEY = 'reelday_grid_cols';
+  function setGridCols(n, persist = true) {
+    document.documentElement.style.setProperty('--grid-cols', String(n));
+    document.querySelectorAll('#density-toggle button').forEach(b => {
+      b.classList.toggle('active', Number(b.dataset.cols) === Number(n));
+    });
+    if (persist) { try { localStorage.setItem(GRID_COLS_KEY, String(n)); } catch {} }
+  }
+
   // ── Render QR ─────────────────────────────────────────
   function buildUploadUrl() {
     const base = `${location.protocol}//${location.host}/upload/${slug}`;
@@ -5377,6 +5654,19 @@
       pendingBadge.textContent = pending > 99 ? '99+' : String(pending);
       pendingBadge.hidden = pending === 0;
     }
+    // The card rendered identically at 0 and at 3 and wasn't clickable.
+    // Alert treatment appears only while something is actually waiting.
+    const pendingCard = $('stat-pending-card');
+    if (pendingCard) pendingCard.classList.toggle('is-alert', pending > 0);
+    const pendingDelta = $('stat-pending-delta');
+    if (pendingDelta) {
+      pendingDelta.textContent = pending > 0 ? 'Tap to review →' : 'Awaiting approval';
+    }
+    const cta = $('pending-cta');
+    if (cta) {
+      cta.classList.toggle('on', pending > 0);
+      cta.textContent = `Review ${pending} pending →`;
+    }
 
     // Update tab counts
     updateTabCounts(uploads);
@@ -5430,8 +5720,7 @@
   function renderGallery(uploads) {
     allUploads = uploads;
 
-    const streamScoped    = filterByStream(uploads);
-    const filteredUploads = filterUploads(streamScoped, currentTab);
+    const filteredUploads = visibleUploads();
 
     // Older uploads only saved the guest's message on the FIRST file of a
     // batch. Build a batch_id → message lookup so we can show the message
@@ -5446,13 +5735,7 @@
     const placeholderClasses = ['placeholder--clay', 'placeholder--ochre', 'placeholder--coral', 'placeholder--sage', 'placeholder--ink', 'placeholder--paper'];
 
     if (!filteredUploads.length) {
-      const noun = currentStream === 'video' ? 'videos' : 'photos';
-      const emoji = currentStream === 'video' ? '🎬' : '📭';
-      photoGrid.innerHTML = `
-        <div style="grid-column:1/-1;text-align:center;padding:48px 16px;color:var(--ink-soft);">
-          <div style="font-size:3rem;margin-bottom:12px;">${emoji}</div>
-          <p>No ${noun}${currentTab !== 'all' ? ' in this category' : ''}. ${currentTab === 'all' ? 'Share the QR code with your guests!' : 'Try a different filter.'}</p>
-        </div>`;
+      renderEmptyState();
       return;
     }
 
@@ -7207,6 +7490,7 @@
       : 'Move to Video messages';
 
     previewModal.classList.add('open');
+    syncPreviewNav();
   }
 
   function closePreview() {
@@ -7221,12 +7505,74 @@
     previewingId = null;
   }
 
+  // ── Preview navigation ─────────────────────────────────
+  // Reviewing a queue meant open → act → modal closes → hunt for the
+  // next tile → open again: roughly four interactions per item. Arrows
+  // plus auto-advance after a decision make it one.
+  const previewPrev = document.getElementById('preview-prev');
+  const previewNext = document.getElementById('preview-next');
+  const previewPos  = document.getElementById('preview-position');
+
+  function previewIndex() {
+    if (!previewingId) return -1;
+    return visibleUploads().findIndex(u => String(u.id) === String(previewingId));
+  }
+
+  function syncPreviewNav() {
+    const list = visibleUploads();
+    const i = previewIndex();
+    if (previewPrev) previewPrev.disabled = i <= 0;
+    if (previewNext) previewNext.disabled = i < 0 || i >= list.length - 1;
+    if (previewPos)  previewPos.textContent = i < 0 ? '' : `${i + 1} of ${list.length}`;
+  }
+
+  // step: -1 back, +1 forward. Returns false when there's nowhere to go.
+  function gotoPreview(step) {
+    const list = visibleUploads();
+    const i = previewIndex();
+    if (i < 0) return false;
+    const next = list[i + step];
+    if (!next) return false;
+    openPreview(next);
+    return true;
+  }
+
+  // After a decision the item usually leaves the current filter, so the
+  // NEXT item slides into the same index — land on that rather than
+  // stepping past it. Falls back to closing when the queue is empty.
+  function advanceAfterAction(actedId) {
+    const list = visibleUploads().filter(u => String(u.id) !== String(actedId));
+    if (!list.length) { closePreview(); return; }
+    const prevList = visibleUploads();
+    const i = prevList.findIndex(u => String(u.id) === String(actedId));
+    const target = list[Math.min(Math.max(i, 0), list.length - 1)];
+    if (target) openPreview(target); else closePreview();
+  }
+
+  previewPrev?.addEventListener('click', () => gotoPreview(-1));
+  previewNext?.addEventListener('click', () => gotoPreview(1));
+
   previewClose?.addEventListener('click', closePreview);
   previewModal?.addEventListener('click', e => {
     if (e.target === previewModal) closePreview();
   });
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && previewModal.classList.contains('open')) closePreview();
+    if (!previewModal.classList.contains('open')) return;
+    if (e.key === 'Escape') { closePreview(); return; }
+    // Don't hijack typing, and leave modified keys to the browser.
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const tag = (e.target.tagName || '').toLowerCase();
+    if (tag === 'input' || tag === 'textarea' || e.target.isContentEditable) return;
+
+    if (e.key === 'ArrowLeft')  { e.preventDefault(); gotoPreview(-1); }
+    else if (e.key === 'ArrowRight') { e.preventDefault(); gotoPreview(1); }
+    else if (e.key === 'a' || e.key === 'A') {
+      if (previewApprove && previewApprove.style.display !== 'none') {
+        e.preventDefault(); previewApprove.click();
+      }
+    } else if (e.key === 'h' || e.key === 'H') {
+      e.preventDefault(); previewHide?.click();
+    }
   });
 
   // Moderation PATCH. `body` carries one of:
@@ -7289,7 +7635,9 @@
       await patchModeration(movedId, { is_approved: true });
       applyLocalUploadState(movedId, STATE_APPROVED);
       showToast('Approved · now on the wall');
-      closePreview();
+      // Land on the next item instead of dumping the host back to the
+      // grid — this is what makes clearing a pending queue quick.
+      advanceAfterAction(movedId);
       refreshUploads();
     } catch (err) {
       showToast(err.message);
@@ -7308,8 +7656,17 @@
     try {
       await patchModeration(movedId, { is_hidden: !isUnhide });
       applyLocalUploadState(movedId, isUnhide ? STATE_APPROVED : STATE_HIDDEN);
-      showToast(isUnhide ? 'Unhidden · back on the wall' : 'Hidden from the wall');
-      closePreview();
+      // Hide is reversible, so offer the reversal rather than making the
+      // host find the Hidden tab and unhide by hand.
+      showToastWithUndo(
+        isUnhide ? 'Unhidden · back on the wall' : 'Hidden from the wall',
+        async () => {
+          await patchModeration(movedId, { is_hidden: isUnhide });
+          applyLocalUploadState(movedId, isUnhide ? STATE_HIDDEN : STATE_APPROVED);
+          refreshUploads();
+        },
+      );
+      advanceAfterAction(movedId);
       refreshUploads();
     } catch (err) {
       showToast(err.message);
@@ -7683,19 +8040,140 @@
     if (selectMode) exitSelectMode(); else enterSelectMode();
   });
 
+  // Featuring only means anything once Same Day Edit ships — same gate
+  // as the per-tile pin and the Featured sub-tab.
+  if (!SDE_SHIPPED) {
+    const bf = document.getElementById('btn-bulk-feature');
+    if (bf) bf.hidden = true;
+  }
+
+  // ── Grid toolbar: search + density ─────────────────────
+  const gridFilterInput = document.getElementById('grid-filter');
+  if (gridFilterInput) {
+    let filterDebounce = null;
+    gridFilterInput.addEventListener('input', () => {
+      clearTimeout(filterDebounce);
+      filterDebounce = setTimeout(() => {
+        gridFilterText = gridFilterInput.value;
+        if (selectMode) exitSelectMode();  // indices would no longer line up
+        renderGallery(allUploads);
+      }, 180);
+    });
+  }
+  document.getElementById('density-toggle')?.addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-cols]');
+    if (b) setGridCols(b.dataset.cols);
+  });
+  try {
+    const savedCols = localStorage.getItem(GRID_COLS_KEY);
+    setGridCols(savedCols || 4, false);
+  } catch { setGridCols(4, false); }
+
+  // ── Pending as the alert ───────────────────────────────
+  function jumpToPending() {
+    showSection('gallery');
+    const tab = document.querySelector('.tab[data-tab="pending"]');
+    if (tab) tab.click();
+    document.getElementById('sec-gallery')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  document.getElementById('pending-cta')?.addEventListener('click', jumpToPending);
+  document.getElementById('stat-pending-card')?.addEventListener('click', jumpToPending);
+
   if (btnBulkCancel) btnBulkCancel.addEventListener('click', exitSelectMode);
+
+  // Select-all operates on what's actually on screen (current stream +
+  // tab + search), never the whole library — otherwise "All" while
+  // filtered to Pending would silently pick up approved items too.
+  document.getElementById('btn-bulk-select-all')?.addEventListener('click', () => {
+    const list = visibleUploads();
+    const everySelected = list.length > 0 && list.every(u => selectedIds.has(String(u.id)));
+    selectedIds.clear();
+    if (!everySelected) list.forEach(u => selectedIds.add(String(u.id)));
+    Array.from(photoGrid.children).forEach((tile, i) => {
+      tile.classList.toggle('bulk-selected', !everySelected && !!list[i]);
+    });
+    updateBulkBar();
+  });
+
+  // Shared runner for the reversible bulk actions.
+  async function bulkPatch(btn, label, doneMsg, run) {
+    const ids = Array.from(selectedIds);
+    if (!ids.length) return;
+    const was = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = label;
+    let ok = 0;
+    // Sequential rather than Promise.all: a host clearing 200 pending on
+    // venue wifi should not fire 200 simultaneous requests.
+    for (const id of ids) {
+      try { await run(id); ok++; } catch { /* keep going, report at the end */ }
+    }
+    btn.disabled = false;
+    btn.textContent = was;
+    exitSelectMode();
+    await refreshUploads();
+    showToast(ok === ids.length
+      ? `${doneMsg} ${ok} item${ok > 1 ? 's' : ''}`
+      : `${doneMsg} ${ok} of ${ids.length} — some failed`);
+  }
+
+  document.getElementById('btn-bulk-approve')?.addEventListener('click', function () {
+    bulkPatch(this, 'Approving…', 'Approved', async (id) => {
+      await patchModeration(id, { is_approved: true });
+      applyLocalUploadState(id, STATE_APPROVED);
+    });
+  });
+
+  document.getElementById('btn-bulk-hide')?.addEventListener('click', function () {
+    bulkPatch(this, 'Hiding…', 'Hid', async (id) => {
+      await patchModeration(id, { is_hidden: true });
+      applyLocalUploadState(id, STATE_HIDDEN);
+    });
+  });
+
+  // Same endpoint and payload shape as the per-tile Feature pin
+  // (PATCH /api/events/:slug/sde/clips with {id, state}) — featured is
+  // sde_pinned, so the two paths must not drift apart.
+  document.getElementById('btn-bulk-feature')?.addEventListener('click', function () {
+    bulkPatch(this, 'Featuring…', 'Featured', async (id) => {
+      const res = await fetch(`/api/events/${slug}/sde/clips`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...authHeader() },
+        body: JSON.stringify({ id, state: 'pinned' }),
+      });
+      if (!res.ok) throw new Error('feature failed');
+      const up = (allUploads || []).find(u => String(u.id) === String(id));
+      if (up) { up.sde_pinned = true; up.sde_excluded = false; }
+    });
+  });
 
   if (btnBulkDelete) btnBulkDelete.addEventListener('click', async () => {
     const ids = Array.from(selectedIds);
     if (!ids.length) return;
-    if (!confirm(`Delete ${ids.length} upload${ids.length > 1 ? 's' : ''}? This cannot be undone.`)) return;
+    // Delete removes the object from R2 — there is no undo, so this one
+    // asks the host to type the count rather than click through a
+    // one-word confirm. Everything else in this bar is reversible.
+    const answer = prompt(
+      `Permanently delete ${ids.length} upload${ids.length > 1 ? 's' : ''}?\n\n` +
+      `This removes them from the wall, the dashboard and R2 storage, and it ` +
+      `cannot be undone.\n\nType ${ids.length} to confirm:`,
+    );
+    if (String(answer || '').trim() !== String(ids.length)) return;
+
     btnBulkDelete.disabled = true;
     btnBulkDelete.textContent = 'Deleting…';
-    await Promise.all(ids.map(id =>
-      fetch(`/api/uploads/${id}`, { method: 'DELETE', headers: authHeader() }).catch(() => {}),
-    ));
+    let ok = 0;
+    for (const id of ids) {
+      try {
+        const res = await fetch(`/api/uploads/${id}`, { method: 'DELETE', headers: authHeader() });
+        if (res.ok) ok++;
+      } catch { /* report at the end */ }
+    }
+    btnBulkDelete.disabled = false;
+    btnBulkDelete.textContent = 'Delete';
     exitSelectMode();
     await refreshUploads();
+    showToast(ok === ids.length ? `Deleted ${ok}` : `Deleted ${ok} of ${ids.length} — some failed`);
   });
 
   if (photoGrid) {
@@ -7706,7 +8184,7 @@
         if (!tile) return;
         const grid = Array.from(photoGrid.children);
         const idx  = grid.indexOf(tile);
-        const filtered = filterUploads(filterByStream(allUploads), currentTab);
+        const filtered = visibleUploads();
         const upload = filtered[idx];
         if (!upload) return;
         const id = String(upload.id);
@@ -7742,7 +8220,7 @@
       if (!tile) return;
       const grid = Array.from(photoGrid.children);
       const idx  = grid.indexOf(tile);
-      const filtered = filterUploads(filterByStream(allUploads), currentTab);
+      const filtered = visibleUploads();
       const upload   = filtered[idx];
       if (upload) openPreview(upload);
     });

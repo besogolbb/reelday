@@ -2,7 +2,7 @@
 
 **Target:** `frontend/dashboard.html` (8,502 lines — the production file)
 **Created:** 2026-08-06
-**Status:** Phases 0–2 complete, Phases 3–6 pending
+**Status:** Phases 0–3 complete (item 33 deferred), Phases 4–6 pending
 
 > **Cold start:** read "The diagnosis" then jump to the first unchecked phase.
 > Every item cites a file:line so you can start without re-deriving anything.
@@ -94,7 +94,7 @@ density, but the absence of boundaries.
 | **0** | Quick wins | 2 hrs | ✅ done |
 | **1** | Section routing (the overhaul) | 1 day | ✅ done |
 | **2** | Three states | 2 days | ✅ done |
-| **3** | Live & mobile triage | 2 days | ☐ |
+| **3** | Live & mobile triage | 2 days | ✅ done (33 deferred) |
 | **4** | Content density | 1.5 days | ☐ |
 | **5** | Correctness & accessibility | 1.5 days | ☐ |
 | **6** | Trust & polish | 2.5 days | ☐ |
@@ -243,7 +243,7 @@ single action; Website is one nav tap away and takes zero pixels.
 
 ---
 
-## Phase 3 — Live & mobile triage ☐
+## Phase 3 — Live & mobile triage ✅
 
 The state that matters most is currently served worst — the host is on a phone,
 one-handed, in a dim venue.
@@ -401,3 +401,50 @@ feature itself. Revisit SDE promotion once it ships.
 frozen clock at the capture timestamp, covering both real captures plus
 archived, legacy-no-window, Tala in/after demo, and the opens-tomorrow boundary.
 Run: `node state.test.mjs` (scratchpad).
+
+---
+
+## Phase 3 — shipped notes
+
+- **`visibleUploads()` is the single source of truth** for what the grid shows
+  (stream → tab → guest search). The chain was previously rebuilt by hand in
+  three places, and they *had* to agree because the tile click handler maps a
+  DOM index back into that list — a drift there sends an action to the wrong
+  photo. Written once now; the test asserts the chain appears exactly once.
+- Touch reveal: the overlay defaults to **visible** and the hover-reveal is
+  gated behind `@media (hover: hover) and (pointer: fine)`, with
+  `:focus-within` for keyboard. Previously `opacity: 0` + bare `:hover`, so
+  one-tap approve did not exist on a phone.
+- Bulk actions run **sequentially**, not `Promise.all` — a host clearing 200
+  pending on venue wifi should not fire 200 simultaneous requests.
+- Bulk Feature posts to `PATCH /api/events/:slug/sde/clips` with
+  `{id, state:'pinned'}` — the same endpoint and payload as the per-tile pin.
+  (An earlier draft invented `/api/sde/:slug/clips/:id`; corrected against
+  `handleFeatureToggle`.) Hidden entirely while `SDE_SHIPPED` is false.
+- **Undo is offered only where it is actually possible.** Hide is reversible, so it
+  gets a 6-second Undo toast. Delete removes the object from R2 and cannot be
+  undone, so bulk delete instead requires typing the item count — a one-word
+  confirm is too cheap for an irreversible action on someone's wedding photos.
+- `advanceAfterAction()` lands on the item that *slid into* the acted index
+  rather than stepping past it, clamps at the end of the list, and closes the
+  modal when the queue empties.
+- Keyboard shortcuts bail out inside inputs/textareas/contenteditable and
+  ignore modified keys, so they can't hijack typing.
+- The pending stat card is a real `<button>`, so its children are spans —
+  `<button>` only accepts phrasing content, and `<div>` children are invalid
+  even though browsers tolerate them.
+
+### Deferred
+
+**Item 33 (polls collapse to "▶ Run next question" in the live state)** is not
+done. It needs live-state behaviour that only manifests during an actual event
+and cross-module coordination with the polls manager; shipping it untested
+against a real event is a worse bet than leaving the current panel. Revisit
+alongside Phase 4's poll-recap work.
+
+### Verification
+
+`triage.test.mjs` — 22 checks covering the single-source-of-truth invariant,
+touch-reveal gating, bulk wiring and endpoint parity, undo-only-where-possible,
+the `advanceAfterAction` neighbour rule (middle / first / last / only), and
+shortcut guards. Run alongside `nav`, `router` and `state` suites.
