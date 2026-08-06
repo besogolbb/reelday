@@ -344,39 +344,53 @@
     }
     .hidden { display: none !important; }
 
-    /* ── Anonymous-mode preview pane ────────────────────────
+    /* ── Live preview pane (phone mockup) ────────────────────
        Full-fidelity render: the real event-site.html rendering code
        (shared via /js/event-site-render.js), run directly into a
        Shadow DOM root inside anon-preview-render. Shadow DOM keeps
        event-site.css's page-level rules (body, a, button, etc.) from
        leaking into this page's own design system, and vice versa.
-       A permanent light blur signals "demo" while the visitor is
-       anonymous; it lifts the moment they save and land on their
-       real, sharp site. */
-    .anon-preview { margin-bottom: 24px; }
-    .anon-preview-frame {
-      border-radius: var(--r);
-      border: 1px solid var(--line);
-      overflow: hidden;
-      box-shadow: 0 20px 50px rgba(47, 33, 27, .12);
+       event-site.css's breakpoints are @container queries against
+       #app's own width (see that file's header comment), so sizing
+       this frame to a phone width renders the real mobile layout --
+       not a shrunk desktop layout. */
+    .anon-preview { margin: 0 auto 28px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+    .anon-preview-label {
+      display: flex; align-items: center; gap: 8px;
+      font-family: var(--mono); font-size: 11px; letter-spacing: .18em;
+      text-transform: uppercase; color: var(--ink-soft);
+    }
+    .anon-preview-label .dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--accent, #c45a3a);
+    }
+    .preview-phone {
+      position: relative;
+      width: min(360px, 84vw);
+      aspect-ratio: 390 / 844;
+      background: #17110d;
+      border-radius: 46px;
+      padding: 14px;
+      box-shadow: 0 30px 70px rgba(47, 33, 27, .28), inset 0 0 0 2px rgba(255,255,255,.06);
+    }
+    .preview-phone::after {
+      content: '';
+      position: absolute;
+      top: 14px; left: 50%; transform: translateX(-50%);
+      width: 42%; height: 22px;
+      background: #17110d;
+      border-radius: 0 0 16px 16px;
+      z-index: 2;
     }
     .anon-preview-render {
-      height: min(640px, 70vh);
-      overflow-y: auto;
-      filter: blur(2.5px) saturate(.92);
+      width: 100%; height: 100%;
+      border-radius: 32px;
+      overflow-y: auto; overflow-x: hidden;
+      background: #fff;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
     }
-    .anon-preview-render.is-live { filter: none; }
-    .anon-preview-badge {
-      display: flex; align-items: center; gap: 8px;
-      padding: 10px 16px;
-      background: var(--ink); color: #fff;
-      font-family: var(--mono); font-size: 10px; letter-spacing: .16em;
-      text-transform: uppercase;
-    }
-    .anon-preview-badge .dot {
-      width: 6px; height: 6px; border-radius: 50%;
-      background: var(--accent, #d98a4a);
-    }
+    .anon-preview-render::-webkit-scrollbar { display: none; }
 
     /* ── Finish panel (anonymous mode "Save your event website") ── */
     .finish-overlay {
@@ -441,8 +455,8 @@
       </div>
       <div id="locked" class="notice hidden"></div>
       <div id="anon-preview" class="anon-preview hidden" aria-hidden="true">
-        <div class="anon-preview-frame">
-          <div class="anon-preview-badge"><span class="dot"></span><span id="anon-preview-badge-text">Live preview -- blurred until you publish</span></div>
+        <div class="anon-preview-label"><span class="dot"></span>Live Preview</div>
+        <div class="preview-phone">
           <div class="anon-preview-render" id="anon-preview-render"></div>
         </div>
       </div>
@@ -891,10 +905,6 @@
       const box = $('anon-preview');
       if (!box) return;
       box.classList.remove('hidden');
-      const isLive = !ANONYMOUS && !!(state && state.is_published);
-      $('anon-preview-render').classList.toggle('is-live', isLive);
-      const badge = $('anon-preview-badge-text');
-      if (badge) badge.textContent = isLive ? 'This is your live site' : 'Live preview -- blurred until you publish';
       ReelEventRender.render(buildPreviewData(), ensurePreviewApp(), { preview: true });
     }
     // Debounced separately from scheduleDraftSave() -- a live preview
