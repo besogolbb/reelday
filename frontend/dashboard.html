@@ -458,6 +458,103 @@
     }
     .sidebar-stack .info-card .info-cells { grid-column: 1; }
 
+    /* ── Dashboard state ───────────────────────────────────
+       The badge used to be hardcoded "LIVE · N guests sharing right
+       now" — it showed 12 days before one event and 19 days after
+       another. Three states now, each with its own colour, and the
+       pulse only ever runs when something is genuinely live. */
+    .event-header .badge .dot { animation: none; }               /* default: static */
+    body[data-state="live"] .event-header .badge .dot {
+      animation: pulse 1.5s ease infinite;
+    }
+    body[data-state="upcoming"] .event-header .badge .dot {
+      background: var(--gold);
+      box-shadow: 0 0 0 4px rgba(216,160,90,.28);
+    }
+    body[data-state="complete"] .event-header .badge .dot {
+      background: rgba(251,245,236,.45);
+      box-shadow: 0 0 0 4px rgba(251,245,236,.10);
+    }
+
+    /* ── Readiness checklist (upcoming only) ───────────────
+       Pre-event every stat is zero, so the stats row taught the host
+       the dashboard was empty. This replaces it with the finite list
+       of things that actually need doing before guests arrive — and
+       doubles as first-run onboarding. */
+    .readiness { max-width: 1200px; margin: -72px auto 0; padding: 0 28px; position: relative; z-index: 5; }
+    .readiness[hidden] { display: none; }
+    .readiness-card {
+      background: var(--dash-surface);
+      border: 1px solid var(--dash-border);
+      border-radius: 24px; padding: 22px 24px;
+      box-shadow: var(--dash-shadow);
+    }
+    .readiness-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+    .readiness-head h3 {
+      font-family: var(--display); font-style: italic;
+      font-size: 22px; font-weight: 600; color: var(--ink); letter-spacing: -.01em;
+    }
+    .readiness-progress {
+      font-family: var(--mono); font-size: 11px; letter-spacing: .14em;
+      text-transform: uppercase; color: var(--dash-muted); white-space: nowrap;
+    }
+    .readiness-bar {
+      height: 6px; border-radius: 999px; background: var(--surface-sunk, #efe6d8);
+      margin: 12px 0 4px; overflow: hidden;
+    }
+    .readiness-fill {
+      height: 100%; width: 0%; border-radius: 999px;
+      background: linear-gradient(90deg, var(--accent), var(--accent-soft));
+      transition: width .4s ease;
+    }
+    .readiness-list { list-style: none; margin: 0; padding: 0; }
+    .readiness-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 11px 0; border-top: 1px solid var(--dash-border);
+    }
+    .readiness-item:first-child { border-top: 0; }
+    .readiness-check {
+      width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0;
+      border: 1.5px solid var(--dash-border);
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 11px; color: transparent;
+    }
+    .readiness-item.done .readiness-check {
+      background: var(--dash-green); border-color: var(--dash-green); color: #fff;
+    }
+    .readiness-label { flex: 1; min-width: 0; font-size: 14px; color: var(--ink); }
+    .readiness-item.done .readiness-label { color: var(--dash-muted); }
+    .readiness-note {
+      font-family: var(--mono); font-size: 11px; letter-spacing: .06em;
+      color: var(--dash-muted); white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis; max-width: 40%;
+    }
+    .readiness-actions { display: flex; gap: 8px; flex-shrink: 0; }
+    .readiness-btn {
+      font-size: 12px; font-weight: 500; padding: 7px 14px;
+      border-radius: 999px; border: 1px solid var(--dash-border);
+      background: transparent; color: var(--ink); cursor: pointer; white-space: nowrap;
+      transition: background .15s, border-color .15s;
+    }
+    .readiness-btn:hover { background: var(--paper-2); }
+    .readiness-btn.primary {
+      background: var(--accent); border-color: var(--accent); color: #fff;
+    }
+    .readiness-btn.primary:hover { background: var(--accent-deep); border-color: var(--accent-deep); }
+    @media (max-width: 640px) {
+      .readiness { padding: 0 12px; margin-top: -36px; }
+      .readiness-card { padding: 16px 14px; border-radius: 18px; }
+      .readiness-note { display: none; }
+      .readiness-item { flex-wrap: wrap; }
+      .readiness-actions { width: 100%; padding-left: 32px; }
+      .readiness-btn { flex: 1; }
+    }
+
+    /* (The informational banner tone already exists further down as
+       .lock-banner.is-info — mint tint, no upgrade CTA. Phase 2 just
+       applies it to the "Uploads open soon" branch, which was wearing
+       the warning-amber treatment for what is good news.) */
+
     /* ── Body grid ────────────────────────────────────────── */
     .body {
       max-width: 1200px; margin: 32px auto 0;
@@ -2949,6 +3046,18 @@
       cursor: pointer;
       transition: background .15s, border-color .15s;
     }
+    /* Once the event is over, getting the photos out is the host's job.
+       It was a bordered micro-button while the non-interactive plan
+       badge got a large gold card — the hierarchy was inverted. */
+    .info-download-btn.is-primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      padding: 9px 16px;
+    }
+    .info-download-btn.is-primary:hover:not(:disabled) {
+      background: var(--accent-deep); border-color: var(--accent-deep);
+    }
     .info-download-btn:hover {
       background: rgba(196,90,58,.16);
       border-color: rgba(196,90,58,.5);
@@ -3165,7 +3274,13 @@
       </div>
     </div>
 
-    <div class="badge"><span class="dot"></span>Live · <span id="live-count">0</span> guests sharing right now</div>
+    <!-- State badge. #state-live keeps #live-count mounted so the
+         guest-count poll has a stable target regardless of state. -->
+    <div class="badge" id="state-badge">
+      <span class="dot"></span>
+      <span id="state-live">Live · <span id="live-count">0</span> guests sharing right now</span>
+      <span id="state-other" hidden></span>
+    </div>
     <h1 id="event-names">Andrea <em>&</em> JM</h1>
     <div class="meta">
       <span id="event-date">14 June 2026 · Manila Hotel · Wedding</span>
@@ -3200,7 +3315,7 @@
   <div class="stat">
     <div class="lbl">Total uploads</div>
     <div class="num"><em id="stat-total">0</em></div>
-    <div class="delta">↑ <span id="stat-total-change">0</span> in last hour</div>
+    <div class="delta" id="stat-total-delta" hidden>↑ <span id="stat-total-change">0</span> in last hour</div>
   </div>
   <div class="stat">
     <div class="lbl">Total uploaders</div>
@@ -3211,6 +3326,20 @@
     <div class="lbl">Pending review</div>
     <div class="num"><em id="stat-pending">0</em></div>
     <div class="delta">Awaiting approval</div>
+  </div>
+</div>
+
+<!-- ── Readiness checklist (upcoming state) ────────────────
+     Takes the stats row's slot before the event: pre-event every
+     stat is zero, and "be ready" is a finite list, not a metric. -->
+<div class="readiness" id="readiness" hidden>
+  <div class="readiness-card">
+    <div class="readiness-head">
+      <h3>Get ready</h3>
+      <span class="readiness-progress" id="readiness-progress">—</span>
+    </div>
+    <div class="readiness-bar"><div class="readiness-fill" id="readiness-fill"></div></div>
+    <ul class="readiness-list" id="readiness-list"></ul>
   </div>
 </div>
 
@@ -4652,6 +4781,213 @@
   });
 
   // ── Render quota meter + soft-lock banner ─────────────
+  // ── Dashboard state ────────────────────────────────────
+  // The dashboard had exactly one mode and could not tell before,
+  // during and after an event apart — which is why the "LIVE · N
+  // guests sharing" badge rendered 12 days before one event and 19
+  // days after another. Same window arithmetic renderSidebarState
+  // already does, hoisted so the badge, the stats row and the
+  // sidebar CTAs can all agree on one answer.
+  function computeDashState(event) {
+    const now      = new Date();
+    const plan     = resolvePlan(event.plan);
+    const startsAt = event.upload_window_starts_at ? new Date(event.upload_window_starts_at) : null;
+    const endsAt   = event.upload_window_ends_at   ? new Date(event.upload_window_ends_at)   : null;
+    const demoEnd  = plan.id === 'tala' && event.created_at
+      ? new Date(new Date(event.created_at).getTime() + TALA_DEMO_MS)
+      : null;
+    const demoOpen = !!(demoEnd && demoEnd > now);
+
+    const archived  = !!event.archived_at;
+    const notYetOpen  = !demoOpen && !!(startsAt && startsAt > now);
+    const closed      = !demoOpen && !!(endsAt && endsAt < now);
+
+    let phase = 'live';                       // legacy events with no window
+    if (archived || closed) phase = 'complete';
+    else if (notYetOpen)    phase = 'upcoming';
+
+    // Calendar days until guests can upload, NOT elapsed milliseconds.
+    // A host on 6 Aug whose window opens 15 Aug counts nine sleeps; a
+    // ms-based ceil returns 10 as soon as the clock passes the opening
+    // time-of-day. Compare local midnights so the answer matches what
+    // the host would count on a calendar.
+    const midnight = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const daysUntil = startsAt
+      ? Math.max(0, Math.round((midnight(startsAt) - midnight(now)) / 86_400_000))
+      : 0;
+
+    return { phase, plan, startsAt, endsAt, daysUntil, isTala: plan.id === 'tala' };
+  }
+
+  function applyDashState(event, uploadCount) {
+    const st = computeDashState(event);
+    document.body.dataset.state = st.phase;
+
+    // Badge — one element, three voices.
+    const live  = $('state-live');
+    const other = $('state-other');
+    if (live && other) {
+      const isLive = st.phase === 'live';
+      live.hidden  = !isLive;
+      other.hidden = isLive;
+      if (!isLive) {
+        other.textContent = st.phase === 'upcoming'
+          ? (st.daysUntil === 0 ? 'Uploads open today'
+            : st.daysUntil === 1 ? 'Uploads open tomorrow'
+            : `Opens in ${st.daysUntil} days`)
+          : 'Event complete';
+      }
+    }
+
+    // The stats row is meaningful only once guests exist. Before the
+    // event it is three zeros, so the readiness checklist takes its slot.
+    const statsRow  = $('stats-row');
+    const readiness = $('readiness');
+    const showReadiness = st.phase === 'upcoming';
+    if (statsRow)  statsRow.style.display = showReadiness ? 'none' : 'grid';
+    if (readiness) readiness.hidden = !showReadiness;
+    if (showReadiness) renderReadiness(event, st, uploadCount);
+
+    // "Open upload page" is the loudest sidebar button, and once the
+    // window closes it leads to a page that rejects uploads. After the
+    // event the host's job is getting the photos out instead.
+    const openUpload = $('btn-open-upload');
+    const dlBtn      = $('btn-download-all');
+    if (openUpload) {
+      const dead = st.phase === 'complete';
+      openUpload.classList.toggle('btn-accent', !dead);
+      openUpload.classList.toggle('btn-ghost', dead);
+      openUpload.textContent = dead ? 'View upload page' : 'Open upload page →';
+    }
+    if (dlBtn) dlBtn.classList.toggle('is-primary', st.phase === 'complete');
+
+    return st;
+  }
+
+  // Rows the main module can answer on its own. The Website and Polls
+  // modules live in separate scopes at the end of <body>, so they
+  // announce their own status via `dash:ready-item` and get spliced in
+  // when they arrive — a locked plan simply never fires and the row
+  // never appears.
+  const readinessExtra = new Map();
+  document.addEventListener('dash:ready-item', (e) => {
+    const { key, label, done, note, section } = e.detail || {};
+    if (!key) return;
+    readinessExtra.set(key, { label, done, note, section });
+    if (document.body.dataset.state === 'upcoming' && currentDashEvent) {
+      renderReadiness(currentDashEvent, computeDashState(currentDashEvent), allUploads.length);
+    }
+  });
+
+  function renderReadiness(event, st, uploadCount) {
+    const list = $('readiness-list');
+    if (!list) return;
+
+    const items = [
+      { label: 'Event created', done: true, note: formatDate(event.event_date) },
+      { label: 'Event location', done: !!event.venue, note: event.venue || 'Not set',
+        section: 'gallery', action: 'Add' },
+      { label: 'Welcome message', done: !!event.welcome_message,
+        note: event.welcome_message ? 'Set' : 'Optional', section: 'gallery', action: 'Add' },
+    ];
+    // Tala walls are silent by design, so a music row would be a task
+    // the host cannot complete.
+    if (!st.isTala) {
+      items.push({ label: 'Wall music', done: !!event.music_playlist_id,
+                   note: event.music_playlist_id ? 'Chosen' : 'Silent wall',
+                   section: 'gallery', action: 'Pick' });
+    }
+    for (const x of readinessExtra.values()) items.push(x);
+    items.push({ label: 'Test upload', done: uploadCount > 0,
+                 note: uploadCount > 0 ? `${uploadCount} so far` : 'None yet' });
+    // Never auto-ticks: sharing is the one thing only the host can do,
+    // and it is the whole point of the pre-event dashboard.
+    items.push({ label: 'Share the QR with guests', done: false, share: true });
+
+    list.innerHTML = '';
+    for (const it of items) {
+      const li = document.createElement('li');
+      li.className = 'readiness-item' + (it.done ? ' done' : '');
+
+      const check = document.createElement('span');
+      check.className = 'readiness-check';
+      check.textContent = '✓';
+      check.setAttribute('aria-hidden', 'true');
+      li.appendChild(check);
+
+      const label = document.createElement('span');
+      label.className = 'readiness-label';
+      label.textContent = it.label;
+      li.appendChild(label);
+
+      if (it.note) {
+        const note = document.createElement('span');
+        note.className = 'readiness-note';
+        note.textContent = it.note;
+        li.appendChild(note);
+      }
+
+      if (it.share) {
+        const wrap = document.createElement('div');
+        wrap.className = 'readiness-actions';
+        const copy = document.createElement('button');
+        copy.type = 'button';
+        copy.className = 'readiness-btn primary';
+        copy.textContent = navigator.share ? 'Share link' : 'Copy link';
+        copy.addEventListener('click', shareUploadLink);
+        wrap.appendChild(copy);
+        const poster = document.createElement('a');
+        poster.className = 'readiness-btn';
+        poster.textContent = 'Poster';
+        poster.target = '_blank';
+        poster.rel = 'noopener';
+        poster.href = slug ? `/poster/${encodeURIComponent(slug)}` : '#';
+        wrap.appendChild(poster);
+        li.appendChild(wrap);
+      } else if (!it.done && it.section) {
+        const wrap = document.createElement('div');
+        wrap.className = 'readiness-actions';
+        const go = document.createElement('button');
+        go.type = 'button';
+        go.className = 'readiness-btn';
+        go.textContent = it.action || 'Open';
+        go.addEventListener('click', () => {
+          showSection(it.section);
+          if (it.section === 'gallery') {
+            $('details-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        });
+        wrap.appendChild(go);
+        li.appendChild(wrap);
+      }
+      list.appendChild(li);
+    }
+
+    const countable = items.filter(i => !i.share);
+    const done = countable.filter(i => i.done).length;
+    const prog = $('readiness-progress');
+    const fill = $('readiness-fill');
+    if (prog) prog.textContent = `${done} of ${countable.length} done`;
+    if (fill) fill.style.width = `${Math.round((done / Math.max(1, countable.length)) * 100)}%`;
+  }
+
+  // Web Share where available — in PH this hands straight to Viber and
+  // Messenger, which is how the link actually reaches guests.
+  async function shareUploadLink(e) {
+    const btn = e.currentTarget;
+    const url = new URL(buildUploadUrl(), location.origin).href;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: 'Share your photos', url });
+        return;
+      }
+      await navigator.clipboard.writeText(url);
+      const was = btn.textContent;
+      btn.textContent = 'Copied ✓';
+      setTimeout(() => { btn.textContent = was; }, 1800);
+    } catch { /* dismissed the share sheet or denied clipboard */ }
+  }
+
   function renderSidebarState(event) {
     const now           = new Date();
     const startsAt      = event.upload_window_starts_at ? new Date(event.upload_window_starts_at) : null;
@@ -4883,6 +5219,15 @@
         // host gets a pre-window upload allowance (capped at
         // HOST_PREVIEW_CAP) to test/pre-fill; an unpaid host is told it
         // unlocks on payment. Mirrors the backend host-preview gate.
+        //
+        // This is good news on a schedule, not a problem, but it was
+        // rendering with the amber ⚠ treatment — visually identical to
+        // "Upload window closed". Paid hosts get the informational tone;
+        // an unpaid host still needs the warning + upgrade CTA.
+        if (event.is_paid) {
+          banner.classList.add('is-info');
+          if (lbIcon) lbIcon.textContent = '📅';
+        }
         $('lb-title').textContent = 'Uploads open soon';
         // Emphasize the count with a pill so the host's pre-window allowance
         // stands out from the guest-window prose. Only dates/numbers go into
@@ -4980,6 +5325,21 @@
     const total = uploads.length;
     $('stat-total').textContent = total;
 
+    // "↑ N in last hour" was hardcoded to 0 in markup and never
+    // computed, so it read "↑ 0 in last hour" forever. Compute it, and
+    // hide the line entirely when nothing arrived — a zero delta is
+    // noise, not information.
+    const hourAgo = Date.now() - 3_600_000;
+    const lastHour = uploads.reduce((n, u) => {
+      const t = u.created_at ? Date.parse(u.created_at) : NaN;
+      return n + (Number.isFinite(t) && t >= hourAgo ? 1 : 0);
+    }, 0);
+    const deltaEl = $('stat-total-delta');
+    if (deltaEl) {
+      $('stat-total-change').textContent = lastHour;
+      deltaEl.hidden = lastHour === 0;
+    }
+
     // Unique uploaders card — count by guest_id (stable per-device ID)
     // so the same guest uploading under different names counts once, and
     // multiple anonymous guests don't collapse into a single "Anonymous".
@@ -5005,7 +5365,10 @@
     updateTabCounts(uploads);
 
     // Phase 2: refresh quota meter + soft-lock banner
-    if (currentDashEvent) renderQuota(currentDashEvent, uploads.length);
+    if (currentDashEvent) {
+      renderQuota(currentDashEvent, uploads.length);
+      applyDashState(currentDashEvent, uploads.length);
+    }
   }
 
   // Guest count arrives piggy-backed on the existing refreshUploads() response.
@@ -5716,6 +6079,14 @@
       else if (draft || ended) pollsSummary.textContent = `${draft + ended} saved · tap to expand`;
       else             pollsSummary.textContent = 'Tap to add your first';
       syncPollsSummaryVerb();  // "expand" vs "collapse" must match reality
+
+      // Feed the pre-event readiness checklist.
+      const saved = draft + ended + live;
+      document.dispatchEvent(new CustomEvent('dash:ready-item', { detail: {
+        key: 'polls', label: 'Questions & polls', section: 'polls',
+        done: saved > 0, action: 'Add',
+        note: saved > 0 ? `${saved} saved` : 'None yet',
+      } }));
 
       // First time we see something live, pop the panel open. Once the
       // host has clicked the chevron themselves we leave their choice alone.
@@ -7049,6 +7420,7 @@
     renderHeader(demoEvent);
     renderQR(null);
     renderSidebarState(demoEvent);
+    applyDashState(demoEvent, uploads.length);
     renderStats(uploads);
     renderGallery(uploads);
     pageLoading.style.display = 'none';
@@ -7136,6 +7508,7 @@
       renderHeader(event);
       renderQR(qr_code);
       renderSidebarState(event);
+      applyDashState(event, merged.length);
       renderStats(merged);
       renderGallery(merged);
 
@@ -7633,7 +8006,18 @@
       if (!r.ok) throw new Error('upload failed');
       return (await r.json()).url;
     }
-    function setSummary(text) { esiteBase = text; renderEsiteSummary(); }
+    function setSummary(text) {
+      esiteBase = text;
+      renderEsiteSummary();
+      // Report into the pre-event readiness checklist, which lives in the
+      // main module and can't see this scope.
+      if (!/unavailable|locked/i.test(text)) {
+        document.dispatchEvent(new CustomEvent('dash:ready-item', { detail: {
+          key: 'website', label: 'Event website', section: 'website',
+          done: /published/i.test(text), note: text, action: 'Set up',
+        } }));
+      }
+    }
 
     function buildEditor(state) {
       const cfg = state.config || {};
