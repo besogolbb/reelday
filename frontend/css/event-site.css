@@ -352,7 +352,16 @@
        matter what the host uploaded. Background-color placeholder
        paints instantly so the hero is never empty paper. */
     .es-hero {
-      position: relative; min-height: 100dvh;
+      position: relative;
+      /* --preview-vh is unset on the real guest page, so this falls
+         back to 100dvh there (unchanged behavior). The website-builder
+         preview sets it to the phone-frame's actual pixel height --
+         dvh/vh always resolve against the real browser window, which
+         inside a small embedded preview is nowhere near the visible
+         frame, so without this override the hero (and everything
+         anchored to its bottom, like the countdown/CTA row) rendered
+         far taller than the frame and looked disconnected/misplaced. */
+      min-height: var(--preview-vh, 100dvh);
       display: grid; grid-template-rows: 1fr auto;
       /* Generous bottom padding reserves space for the absolute scroll
          cue beneath the countdown so the two never overlap on short

@@ -990,8 +990,17 @@
       const box = $('anon-preview');
       if (!box) return;
       box.classList.remove('hidden');
+      const host = $('anon-preview-render');
+      // event-site.css's .es-hero reads this to fill exactly the visible
+      // frame height -- dvh/vh inside the phone mockup would otherwise
+      // resolve against the real browser window, not this small embedded
+      // box (see that file's comment). Recomputed on every sync since
+      // .preview-phone's width -- and so its aspect-ratio height -- can
+      // change on window resize.
+      host.style.setProperty('--preview-vh', host.clientHeight + 'px');
       ReelEventRender.render(buildPreviewData(), ensurePreviewApp(), { preview: true });
     }
+    window.addEventListener('resize', () => schedulePreviewSync());
     // Debounced separately from scheduleDraftSave() -- a live preview
     // wants to feel responsive (~250ms) while the local draft snapshot
     // only needs to survive a closed tab (1.5s is plenty).
