@@ -318,6 +318,67 @@
 
   #google-btn { display: flex; justify-content: center; }
 
+  /* ── Personalize slide ──────────────────────── */
+  .personalize-grid { display: grid; grid-template-columns: 1fr; gap: 28px; }
+  @media (min-width: 760px) { .personalize-grid { grid-template-columns: 1.1fr 1fr; align-items: start; } }
+  .personalize-form { display: flex; flex-direction: column; gap: 18px; }
+  .pz-field label {
+    font-family: var(--mono); font-size: 11px; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--ink-soft); margin-bottom: 6px; display: block;
+  }
+  .pz-field input[type="text"], .pz-field textarea {
+    width: 100%; background: #fff; border: 1.5px solid var(--line-2);
+    border-radius: var(--r); padding: 14px 16px; font-size: 16px;
+    font-family: var(--sans); color: var(--ink); outline: none;
+    transition: border-color .2s; resize: vertical;
+  }
+  .pz-field input[type="text"]:focus, .pz-field textarea:focus { border-color: var(--accent); }
+  .pz-photo-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 100%; min-height: 50px; border-radius: var(--r);
+    border: 1.5px dashed var(--line-2); background: #fff;
+    color: var(--ink-soft); font-family: var(--sans); font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: border-color .2s, color .2s;
+  }
+  .pz-photo-btn:hover { border-color: var(--accent); color: var(--accent-deep); }
+  .pz-photo-btn.has-photo { border-style: solid; color: var(--ink); }
+
+  /* Static hero-card preview — plain DOM updated via textContent, NOT
+     an iframe render of the real public site. Deliberately cheap: see
+     docs/WEBSITE_BUILDER_FUNNEL_HANDOFF.md's caution against per-
+     keystroke full-site iframe previews. */
+  .pz-preview-frame {
+    border-radius: 20px; padding: 36px 28px; min-height: 280px;
+    background: linear-gradient(155deg, var(--ink) 0%, #3a2a22 100%);
+    background-size: cover; background-position: center;
+    color: #fff; display: flex; flex-direction: column; justify-content: center;
+    text-align: center; box-shadow: 0 18px 40px rgba(42,26,20,.18);
+  }
+  .pz-preview-kicker {
+    font-family: var(--mono); font-size: 10px; letter-spacing: .2em;
+    text-transform: uppercase; opacity: .7; margin-bottom: 10px;
+  }
+  .pz-preview-names { font-family: var(--display); font-style: italic; font-size: clamp(24px, 4vw, 32px); line-height: 1.15; }
+  .pz-preview-date { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; opacity: .75; margin-top: 10px; }
+  .pz-preview-venue { font-size: 13px; opacity: .85; margin-top: 4px; }
+  .pz-preview-story {
+    font-family: var(--display); font-style: italic; font-size: 14px; line-height: 1.5;
+    opacity: .9; margin-top: 18px; max-width: 34ch; margin-left: auto; margin-right: auto;
+  }
+  .pz-preview-story:empty, .pz-preview-venue:empty { display: none; }
+
+  .pz-actions-right { display: flex; align-items: center; gap: 16px; }
+  .pz-skip {
+    background: none; border: none; color: var(--ink-soft);
+    font-family: var(--sans); font-size: 14px; font-weight: 600;
+    cursor: pointer; text-decoration: underline; text-underline-offset: 3px;
+  }
+  .pz-skip:hover { color: var(--ink); }
+  @media (max-width: 560px) {
+    .slide-actions:has(.pz-actions-right) { flex-wrap: wrap; }
+    .pz-actions-right { width: 100%; justify-content: space-between; }
+  }
+
   /* ── Slide actions ──────────────────────────── */
   .slide-actions {
     display: flex; justify-content: space-between; align-items: center; gap: 12px;
@@ -693,6 +754,7 @@
     <div class="pip"></div>
     <div class="pip"></div>
     <div class="pip"></div>
+    <div class="pip"></div>
   </div>
   <button class="wizard-back" id="btn-back" disabled>← Back</button>
 </header>
@@ -853,8 +915,57 @@
       </div>
     </section>
 
-    <!-- Slide 5: Account -->
+    <!-- Slide 5: Personalize (optional, skippable). Builds emotional
+         investment in the event website before asking for an email —
+         see docs/WEBSITE_BUILDER_FUNNEL_HANDOFF.md. Nothing here is
+         required; the hero preview is a plain updating card, not a
+         live render of the real public site (deliberately, per that
+         doc's own caution against heavy per-keystroke previews). -->
     <section class="slide" data-slide="4">
+      <h1>Make it <em>feel like yours.</em></h1>
+      <p class="sub">Optional — add a few personal touches now, or skip and do this later from your dashboard.</p>
+
+      <div class="personalize-grid">
+        <div class="personalize-form">
+          <div class="pz-field">
+            <label for="pz-cover-btn">Cover photo</label>
+            <button type="button" class="pz-photo-btn" id="pz-cover-btn">
+              <span id="pz-cover-label">+ Choose a photo</span>
+            </button>
+            <input type="file" id="pz-cover-input" accept="image/*" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;" />
+          </div>
+          <div class="pz-field">
+            <label for="pz-venue">Venue</label>
+            <input type="text" id="pz-venue" placeholder="e.g. Manila Hotel" maxlength="200" autocomplete="off" />
+          </div>
+          <div class="pz-field">
+            <label for="pz-story">A short story or welcome message</label>
+            <textarea id="pz-story" rows="4" maxlength="600" placeholder="How you met, the journey, or a note to your guests..."></textarea>
+          </div>
+        </div>
+
+        <div class="pz-preview" aria-hidden="true">
+          <div class="pz-preview-frame" id="pz-preview-frame">
+            <div class="pz-preview-kicker">You're invited</div>
+            <div class="pz-preview-names" id="pz-preview-names">Your event</div>
+            <div class="pz-preview-date" id="pz-preview-date"></div>
+            <div class="pz-preview-venue" id="pz-preview-venue"></div>
+            <div class="pz-preview-story" id="pz-preview-story"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="slide-actions">
+        <button class="btn-back-slide" type="button" data-back>← Back</button>
+        <div class="pz-actions-right">
+          <button class="pz-skip" type="button" data-next>Skip for now</button>
+          <button class="btn-next" type="button" data-next>Continue →</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 6: Account -->
+    <section class="slide" data-slide="5">
       <h1>Save your <em>Reelday.</em></h1>
       <p class="sub">Create a free account so you can manage your event and download photos.</p>
 
@@ -957,6 +1068,12 @@
     type:  params.get('type') || 'wedding',
     name:  '',
     date:  '',
+    // Personalize slide — all optional, never required. coverFile is
+    // kept OUTSIDE this object deliberately: it's a File, not
+    // JSON-serializable, and must never end up inside stashPendingEvent's
+    // sessionStorage payload.
+    story: '',
+    venue: '',
     plan,
   };
 
@@ -966,7 +1083,8 @@
     pill.textContent = PLAN_LABELS[plan].label;
     pill.style.display = '';
   }
-  const totalSlides = isLoggedIn ? 4 : 5;   // skip auth if already signed in
+  // Slides: 0 type, 1 name, 2 date, 3 plan, 4 personalize, 5 account.
+  const totalSlides = isLoggedIn ? 4 : 6;   // skip personalize + auth if already signed in
 
   let currentSlide = 0;
 
@@ -977,8 +1095,12 @@
   const finishBtn  = document.getElementById('btn-finish');
   const toastEl    = document.getElementById('toast');
 
-  // Hide the auth pip + slide when already logged in
+  // Hide the personalize + auth pips/slides when already logged in — a
+  // logged-in host isn't the "no-signup" audience this slide exists for,
+  // and they already land straight in the full dashboard builder.
   if (isLoggedIn) {
+    progress[5]?.remove();
+    slides[5]?.remove();
     progress[4]?.remove();
     slides[4]?.remove();
     // Last slide (plan selection, index 3) Continue → Create button
@@ -1013,11 +1135,19 @@
     btnBack.disabled = index === 0;
     currentSlide = index;
 
+    // Names/date are already known from earlier slides by the time a host
+    // reaches the personalize slide — show them immediately rather than
+    // waiting for the host to type into venue/story first.
+    if (index === 4) syncHeroPreview();
+
     // Auto-focus inputs on each step
     setTimeout(() => {
       if (index === 1) document.getElementById('event-name')?.focus();
       if (index === 2) document.getElementById('event-date')?.focus();
-      if (index === 4) document.getElementById('a-name')?.focus();
+      // index 4 (personalize) intentionally gets no auto-focus — it's
+      // optional and low-pressure; popping a mobile keyboard unprompted
+      // would work against that.
+      if (index === 5) document.getElementById('a-name')?.focus();
     }, 350);
   }
 
@@ -1066,6 +1196,15 @@
       return true;
     }
 
+    if (currentSlide === 4) {
+      // Fully optional — never blocks. Just capture whatever was typed,
+      // same pattern as the required slides above, so state.venue/story
+      // are available later when building the write-back payload.
+      state.venue = document.getElementById('pz-venue').value.trim();
+      state.story = document.getElementById('pz-story').value.trim();
+      return true;
+    }
+
     return true;
   }
 
@@ -1110,6 +1249,50 @@
   // Enter-key advances slides 1 & 2
   document.getElementById('event-name')?.addEventListener('keydown', e => {
     if (e.key === 'Enter') { e.preventDefault(); slides[1].querySelector('[data-next]').click(); }
+  });
+
+  // ── Personalize slide (optional) ───────────────
+  // Plain DOM text/background updates, not an iframe render of the real
+  // public site — deliberately cheap, see the CSS comment on
+  // .pz-preview-frame and docs/WEBSITE_BUILDER_FUNNEL_HANDOFF.md.
+  let coverFile = null;   // File object — never serialized, see state comment above
+  let coverPreviewUrl = null;
+
+  function syncHeroPreview() {
+    const namesEl = document.getElementById('pz-preview-names');
+    const dateEl  = document.getElementById('pz-preview-date');
+    const venueEl = document.getElementById('pz-preview-venue');
+    const storyEl = document.getElementById('pz-preview-story');
+    if (!namesEl) return;
+
+    namesEl.textContent = state.name || 'Your event';
+    dateEl.textContent = state.date
+      ? new Date(state.date + 'T00:00:00').toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' })
+      : '';
+    venueEl.textContent = document.getElementById('pz-venue')?.value.trim() || '';
+    const story = document.getElementById('pz-story')?.value.trim() || '';
+    storyEl.textContent = story ? `"${story.length > 140 ? story.slice(0, 140) + '…' : story}"` : '';
+  }
+
+  document.getElementById('pz-venue')?.addEventListener('input', syncHeroPreview);
+  document.getElementById('pz-story')?.addEventListener('input', syncHeroPreview);
+
+  const coverBtn   = document.getElementById('pz-cover-btn');
+  const coverInput = document.getElementById('pz-cover-input');
+  const coverLabel = document.getElementById('pz-cover-label');
+  coverBtn?.addEventListener('click', () => coverInput.click());
+  coverInput?.addEventListener('change', () => {
+    const file = coverInput.files?.[0];
+    if (!file) return;
+    coverFile = file;
+    if (coverPreviewUrl) URL.revokeObjectURL(coverPreviewUrl);
+    coverPreviewUrl = URL.createObjectURL(file);
+    const frame = document.getElementById('pz-preview-frame');
+    if (frame) {
+      frame.style.backgroundImage = `linear-gradient(180deg, rgba(20,12,8,.25), rgba(20,12,8,.65)), url(${coverPreviewUrl})`;
+    }
+    coverBtn.classList.add('has-photo');
+    coverLabel.textContent = file.name.length > 28 ? file.name.slice(0, 25) + '…' : file.name;
   });
 
   // ── Type selection ─────────────────────────────
@@ -1287,6 +1470,69 @@
     return data;
   }
 
+  // ── Personalize write-back ──────────────────────
+  // Turns whatever the host filled on the (optional, skippable)
+  // personalize slide into the exact config shape
+  // website-builder.html's gather() already produces, so the real
+  // builder reads it back with no special-casing. Returns null when
+  // there's nothing to write (host skipped entirely).
+  function buildSiteConfig() {
+    if (!state.story && !state.venue) return null;
+    const config = {};
+    if (state.story) config.story = { label: '', body: state.story };
+    if (state.venue) config.venue = [{ name: state.venue, address: state.venue, mapQuery: state.venue }];
+    return config;
+  }
+
+  // Same call website-builder.html's Welcome tab already makes
+  // (POST /api/event-site/:slug/image → PATCH /api/events/:slug). Only
+  // reachable on the free/Tala path, where the picked File survives in
+  // memory for the whole page lifetime — the paid path navigates away to
+  // checkout and back, and a File object doesn't survive that, so cover
+  // photo is simply not offered there (see stashPendingEvent below).
+  async function uploadCoverPhoto(slug, file) {
+    const token = getToken();
+    const body = new FormData();
+    body.append('file', file);
+    const res = await fetch(`/api/event-site/${encodeURIComponent(slug)}/image`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body,
+    });
+    if (!res.ok) return null;
+    const { url } = await res.json();
+    if (!url) return null;
+    await fetch(`/api/events/${encodeURIComponent(slug)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ cover_photo_url: url }),
+    });
+    return url;
+  }
+
+  // Writes the personalize slide's content into the just-created event's
+  // site config. Always fires with is_published:false — content
+  // collected before the host has even seen their dashboard must never
+  // go live on its own; see docs/WEBSITE_BUILDER_FUNNEL_HANDOFF.md.
+  // Best-effort and silent on failure: the account and event are already
+  // real either way, so losing this optional content is a soft failure,
+  // not a broken signup (same reasoning as the "Skip for now" option —
+  // personalization was never required).
+  async function writeBackPersonalization(slug, withCoverPhoto) {
+    const config = buildSiteConfig();
+    if (!config) return;
+    try {
+      await fetch(`/api/event-site/${encodeURIComponent(slug)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({ config, is_published: false }),
+      });
+      if (withCoverPhoto && coverFile) {
+        await uploadCoverPhoto(slug, coverFile);
+      }
+    } catch { /* best-effort — see comment above */ }
+  }
+
   async function createEventAndGo(button) {
     button.disabled = true;
     button.classList.add('loading');
@@ -1354,9 +1600,15 @@
   function stashPendingEvent() {
     try {
       sessionStorage.setItem('reelday:pendingEvent', JSON.stringify({
-        type: state.type,
-        name: state.name,
-        date: state.date,
+        type:  state.type,
+        name:  state.name,
+        date:  state.date,
+        // Personalize slide content — small strings only. Cover photo
+        // deliberately excluded: a File can't survive JSON.stringify,
+        // and the paid path navigates away to checkout and back anyway
+        // (see writeBackPersonalization's resumeCreate call site).
+        story: state.story,
+        venue: state.venue,
         ts:   Date.now(),
       }));
     } catch { /* private mode / storage full — fall back to manual re-create */ }
@@ -1591,9 +1843,11 @@
         // 30-minute TTL — PayMongo sessions expire well before this; a
         // stash older than that is almost certainly an unrelated tab.
         if (Date.now() - (payload.ts || 0) < 30 * 60 * 1000) {
-          state.type = payload.type || state.type;
-          state.name = payload.name || '';
-          state.date = payload.date || '';
+          state.type  = payload.type  || state.type;
+          state.name  = payload.name  || '';
+          state.date  = payload.date  || '';
+          state.story = payload.story || '';
+          state.venue = payload.venue || '';
           sessionStorage.removeItem('reelday:pendingEvent');
 
           // Overlay so the user sees we're not idle while the POST flies.
@@ -1617,6 +1871,10 @@
             }).catch(() => {/* non-fatal — createEvent may still work if webhook fired */});
 
             const { event } = await createEvent(params.get('upgraded') || state.plan);
+            // No cover photo here — the picked File didn't survive the
+            // navigation to checkout and back. Story/venue did, via the
+            // sessionStorage stash above.
+            await writeBackPersonalization(event.slug, false);
             location.href = `/dashboard?slug=${event.slug}&upgraded=${params.get('upgraded') || ''}`;
             // `return` would be a SyntaxError at module top-level. The
             // browser is navigating away — any remaining init below is
@@ -1678,6 +1936,7 @@
       saveAuth(data.token, data.user);
       if (!PLAN_LABELS[state.plan]?.paid) {
         const { event } = await createEvent();
+        await writeBackPersonalization(event.slug, true);
         location.href = `/dashboard?slug=${event.slug}`;
       } else {
         stashPendingEvent();
@@ -1714,6 +1973,7 @@
       saveAuth(data.token, data.user);
       if (!PLAN_LABELS[state.plan]?.paid) {
         const { event } = await createEvent();
+        await writeBackPersonalization(event.slug, true);
         location.href = `/dashboard?slug=${event.slug}`;
       } else {
         stashPendingEvent();
