@@ -370,6 +370,7 @@ async function buildPayload(db, gate) {
     event_type: e.event_type,
     event_date: e.event_date,
     event_time: e.event_time,
+    plan: gate.effectiveTier,
     cover_photo_url: e.cover_photo_url,
     theme: e.theme_override || e.event_type || 'wedding',
     config: e.config || {},
@@ -553,6 +554,7 @@ export default async function eventSiteRoutes(fastify) {
 
     return {
       slug: ev.slug,
+      plan: ev.effectiveTier,
       is_published: r.is_published ?? false,
       config: r.config ?? {},
       seats: seatRows,

@@ -1,0 +1,913 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Event Website Builder - Reelday</title>
+  <link rel="icon" href="/favicon.ico" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --paper: #fbf5ee;
+      --paper-2: #fffaf5;
+      --card: #fff;
+      --ink: #2f211b;
+      --ink-soft: #765f54;
+      --ink-faint: #9a877d;
+      --line: rgba(88, 55, 38, .14);
+      --line-2: rgba(88, 55, 38, .22);
+      --accent: #c45a3a;
+      --accent-deep: #9d3f27;
+      --sage: #3d7356;
+      --amber: #a66317;
+      --danger: #b03022;
+      --r: 14px;
+      --display: "Playfair Display", Georgia, serif;
+      --sans: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--sans);
+    }
+    a { color: inherit; }
+    button, input, textarea, select { font: inherit; }
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 16px clamp(16px, 4vw, 38px);
+      background: rgba(251, 245, 238, .92);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(16px);
+    }
+    .brand {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+    .brand strong {
+      font-family: var(--display);
+      font-size: 24px;
+      line-height: 1;
+    }
+    .brand span {
+      color: var(--ink-soft);
+      font-size: 13px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 42px;
+      padding: 10px 16px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      font-weight: 800;
+      font-size: 13px;
+      letter-spacing: .04em;
+      text-decoration: none;
+      cursor: pointer;
+      transition: transform .15s ease, background .15s ease, border-color .15s ease;
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn:disabled { opacity: .55; cursor: not-allowed; transform: none; }
+    .btn-accent { background: var(--accent); color: #fff; }
+    .btn-accent:hover { background: var(--accent-deep); }
+    .btn-ghost { background: rgba(255,255,255,.68); color: var(--ink); border-color: var(--line-2); }
+    .shell {
+      display: grid;
+      grid-template-columns: 240px minmax(0, 1fr);
+      gap: 22px;
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 26px clamp(16px, 4vw, 38px) 44px;
+    }
+    .side {
+      position: sticky;
+      top: 88px;
+      align-self: start;
+      display: grid;
+      gap: 14px;
+    }
+    .status-card, .panel {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--r);
+      box-shadow: 0 10px 30px rgba(63, 35, 24, .08);
+    }
+    .status-card { padding: 16px; }
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 7px 10px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      background: rgba(166, 99, 23, .12);
+      color: var(--amber);
+    }
+    .status-pill.live {
+      background: rgba(61, 115, 86, .13);
+      color: var(--sage);
+    }
+    .status-note {
+      margin: 10px 0 0;
+      color: var(--ink-soft);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    .tabs {
+      display: grid;
+      gap: 8px;
+    }
+    .tab {
+      width: 100%;
+      text-align: left;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(255,255,255,.68);
+      color: var(--ink-soft);
+      padding: 12px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .tab.active {
+      background: #fff;
+      border-color: rgba(196, 90, 58, .42);
+      color: var(--accent-deep);
+      box-shadow: inset 4px 0 0 var(--accent);
+    }
+    .panel {
+      min-height: 560px;
+      padding: clamp(20px, 4vw, 34px);
+    }
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 18px;
+    }
+    h1, h2 {
+      margin: 0;
+      font-family: var(--display);
+      line-height: 1;
+      letter-spacing: 0;
+    }
+    h1 { font-size: clamp(34px, 7vw, 58px); }
+    h2 { font-size: clamp(28px, 5vw, 38px); }
+    .sub {
+      margin: 8px 0 0;
+      color: var(--ink-soft);
+      line-height: 1.55;
+      max-width: 680px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    .field {
+      display: grid;
+      gap: 7px;
+      margin-bottom: 16px;
+    }
+    .field.full { grid-column: 1 / -1; }
+    label {
+      color: var(--ink);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .11em;
+      text-transform: uppercase;
+    }
+    .hint {
+      color: var(--ink-faint);
+      font-weight: 500;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+    input, textarea, select {
+      width: 100%;
+      border: 1px solid var(--line-2);
+      border-radius: 12px;
+      background: #fff;
+      color: var(--ink);
+      padding: 12px 13px;
+      outline: none;
+    }
+    textarea { min-height: 120px; resize: vertical; line-height: 1.5; }
+    input:focus, textarea:focus, select:focus {
+      border-color: rgba(196, 90, 58, .62);
+      box-shadow: 0 0 0 3px rgba(196, 90, 58, .12);
+    }
+    .check-row {
+      display: flex;
+      gap: 18px;
+      flex-wrap: wrap;
+      margin: 4px 0 18px;
+    }
+    .check-row label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--ink-soft);
+      letter-spacing: 0;
+      text-transform: none;
+      font-size: 14px;
+    }
+    .check-row input { width: 17px; height: 17px; accent-color: var(--accent); }
+    .gallery-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+    .thumb {
+      position: relative;
+      width: 78px;
+      height: 78px;
+    }
+    .thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: var(--paper-2);
+    }
+    .thumb button {
+      position: absolute;
+      top: -7px;
+      right: -7px;
+      width: 24px;
+      height: 24px;
+      border: 0;
+      border-radius: 999px;
+      background: var(--danger);
+      color: #fff;
+      font-weight: 900;
+      cursor: pointer;
+    }
+    .notice {
+      padding: 14px;
+      border-radius: 12px;
+      background: rgba(196, 90, 58, .08);
+      border: 1px solid rgba(196, 90, 58, .18);
+      color: var(--ink-soft);
+      line-height: 1.5;
+    }
+    .upgrade-panel {
+      margin-top: 26px;
+      padding: clamp(18px, 3vw, 24px);
+      border-radius: var(--r);
+      border: 1px solid rgba(196, 90, 58, .24);
+      background: linear-gradient(135deg, rgba(255,255,255,.96), rgba(255,250,245,.96));
+      box-shadow: 0 12px 34px rgba(63, 35, 24, .08);
+    }
+    .upgrade-panel h2 { font-size: clamp(26px, 4vw, 34px); }
+    .upgrade-panel .sub { max-width: 760px; }
+    .upgrade-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 18px 0;
+    }
+    .feature-list {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 16px;
+    }
+    .feature-item {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      min-height: 44px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: #fff;
+      border: 1px solid var(--line);
+      color: var(--ink-soft);
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .feature-item.ready { color: var(--sage); }
+    .feature-item.locked { color: var(--accent-deep); }
+    .feature-dot {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 21px;
+      height: 21px;
+      flex: 0 0 21px;
+      border-radius: 999px;
+      background: rgba(196, 90, 58, .12);
+      color: var(--accent-deep);
+      font-size: 12px;
+      font-weight: 900;
+    }
+    .feature-item.ready .feature-dot {
+      background: rgba(61, 115, 86, .14);
+      color: var(--sage);
+    }
+    .error {
+      color: var(--danger);
+      font-weight: 800;
+    }
+    .hidden { display: none !important; }
+    @media (max-width: 860px) {
+      .topbar { align-items: flex-start; flex-direction: column; }
+      .actions { justify-content: flex-start; width: 100%; }
+      .shell { grid-template-columns: 1fr; }
+      .side { position: static; }
+      .tabs { display: flex; overflow-x: auto; padding-bottom: 2px; }
+      .tab { flex: 0 0 auto; width: auto; white-space: nowrap; }
+      .grid { grid-template-columns: 1fr; }
+      .feature-list { grid-template-columns: 1fr; }
+      .panel-head { flex-direction: column; }
+      .btn { flex: 1 1 auto; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" id="back-link" href="/my-events" aria-label="Back to dashboard">
+      <strong>Reelday</strong>
+      <span id="builder-title">Event Website Builder</span>
+    </a>
+    <div class="actions">
+      <a class="btn btn-ghost" id="dashboard-link" href="/my-events">Dashboard</a>
+      <a class="btn btn-ghost hidden" id="guest-link" target="_blank" rel="noopener">Open site</a>
+      <button class="btn btn-accent" type="button" id="publish-btn">Save & publish</button>
+    </div>
+  </header>
+
+  <main class="shell">
+    <aside class="side">
+      <div class="status-card">
+        <span class="status-pill" id="status-pill">Loading</span>
+        <p class="status-note" id="status-note">Loading your event website.</p>
+      </div>
+      <nav class="tabs" id="tabs" aria-label="Website builder sections"></nav>
+    </aside>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h1 id="page-heading">Event Website</h1>
+          <p class="sub" id="page-sub">Build the invitation guests will open before the celebration.</p>
+        </div>
+      </div>
+      <div id="locked" class="notice hidden"></div>
+      <div id="editor"></div>
+      <div id="upgrade-panel" class="upgrade-panel hidden"></div>
+    </section>
+  </main>
+
+  <script type="module">
+    const params = new URLSearchParams(location.search);
+    const slug = params.get('event') || params.get('slug');
+    const token = localStorage.getItem('reelday_token');
+    const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
+
+    if (!token) {
+      location.replace('/login?next=' + encodeURIComponent(location.pathname + location.search));
+      throw new Error('redirecting to login');
+    }
+
+    const $ = id => document.getElementById(id);
+    const editor = $('editor');
+    const tabsEl = $('tabs');
+    const statusPill = $('status-pill');
+    const statusNote = $('status-note');
+    const publishBtn = $('publish-btn');
+    const guestLink = $('guest-link');
+    const dashboardLink = $('dashboard-link');
+    const backLink = $('back-link');
+    const locked = $('locked');
+
+    if (!slug) {
+      publishBtn.disabled = true;
+      locked.classList.remove('hidden');
+      locked.innerHTML = '<strong>Missing event.</strong> Open this page from an event dashboard.';
+      statusPill.textContent = 'Unavailable';
+      statusNote.textContent = 'No event slug was provided.';
+      throw new Error('missing slug');
+    }
+
+    const guestUrl = `/e/${encodeURIComponent(slug)}`;
+    const dashboardUrl = `/dashboard?slug=${encodeURIComponent(slug)}#website`;
+    guestLink.href = guestUrl;
+    guestLink.classList.remove('hidden');
+    dashboardLink.href = dashboardUrl;
+    backLink.href = dashboardUrl;
+
+    const esc = value => String(value == null ? '' : value);
+    const get = (obj, path, fallback) => path.split('.').reduce((cur, key) => (
+      cur && cur[key] != null ? cur[key] : undefined
+    ), obj) ?? fallback;
+
+    let state = null;
+    let currentTab = 0;
+    let controls = {};
+    let gallery = [];
+    let registryLinks = [];
+    let cashFunds = [];
+    let currentPlan = 'tala';
+
+    function setStatus(message, live) {
+      statusPill.textContent = message;
+      statusPill.classList.toggle('live', !!live);
+      statusNote.textContent = live
+        ? `Guests can view ${location.origin}${guestUrl}.`
+        : 'Your website is saved as a draft until you publish it.';
+    }
+
+    function field(labelText, control, hintText) {
+      const wrap = document.createElement('div');
+      wrap.className = 'field';
+      const label = document.createElement('label');
+      label.textContent = labelText;
+      if (hintText) {
+        const hint = document.createElement('span');
+        hint.className = 'hint';
+        hint.textContent = ' - ' + hintText;
+        label.appendChild(hint);
+      }
+      wrap.appendChild(label);
+      wrap.appendChild(control);
+      return wrap;
+    }
+
+    function input(value, placeholder, type = 'text') {
+      const el = document.createElement('input');
+      el.type = type;
+      el.value = esc(value);
+      if (placeholder) el.placeholder = placeholder;
+      return el;
+    }
+
+    function area(value, placeholder, rows = 4) {
+      const el = document.createElement('textarea');
+      el.value = esc(value);
+      el.rows = rows;
+      if (placeholder) el.placeholder = placeholder;
+      return el;
+    }
+
+    function fileButton(label, multiple, onPick) {
+      const buttonLabel = document.createElement('label');
+      buttonLabel.className = 'btn btn-ghost';
+      buttonLabel.style.cursor = 'pointer';
+      buttonLabel.textContent = label;
+      const picker = document.createElement('input');
+      picker.type = 'file';
+      picker.accept = 'image/*';
+      picker.multiple = !!multiple;
+      picker.style.cssText = 'position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;';
+      picker.addEventListener('change', () => {
+        if (picker.files.length) onPick(Array.from(picker.files));
+        picker.value = '';
+      });
+      buttonLabel.appendChild(picker);
+      return buttonLabel;
+    }
+
+    function parseList(text, sep, keys) {
+      return String(text || '').split('\n').map(line => line.trim()).filter(Boolean).map(line => {
+        const parts = line.split(sep);
+        const out = {};
+        keys.forEach((key, index) => { out[key] = (parts[index] || '').trim(); });
+        return out;
+      });
+    }
+
+    function parseScheduleInput(text) {
+      const lines = String(text || '').split('\n').map(line => line.trim()).filter(Boolean);
+      if (!lines.length) return [];
+      if (lines.some(line => line.includes('|'))) {
+        return lines.map(line => {
+          const parts = line.split('|');
+          return { time: (parts[0] || '').trim(), label: (parts[1] || '').trim() };
+        });
+      }
+      const timeRe = /^\s*(\d{1,2}(:\d{2})?\s*(am|pm|AM|PM))|^\s*(\d{1,2}:\d{2})\b/;
+      const out = [];
+      let current = null;
+      lines.forEach(token => {
+        if (timeRe.test(token)) {
+          if (current) out.push(current);
+          current = { time: token, label: '' };
+        } else if (current) {
+          current.label = current.label ? current.label + ' - ' + token : token;
+        } else {
+          out.push({ time: '', label: token });
+        }
+      });
+      if (current) out.push(current);
+      return out;
+    }
+
+    async function uploadImage(file) {
+      const body = new FormData();
+      body.append('file', file);
+      const res = await fetch(`/api/event-site/${encodeURIComponent(slug)}/image`, {
+        method: 'POST',
+        headers: authHeaders,
+        body,
+      });
+      if (!res.ok) throw new Error('upload failed');
+      return (await res.json()).url;
+    }
+
+    function drawGallery(container) {
+      container.textContent = '';
+      gallery.forEach((url, index) => {
+        const box = document.createElement('div');
+        box.className = 'thumb';
+        const img = document.createElement('img');
+        img.src = url;
+        img.alt = '';
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.textContent = 'x';
+        remove.addEventListener('click', () => {
+          gallery.splice(index, 1);
+          drawGallery(container);
+        });
+        box.appendChild(img);
+        box.appendChild(remove);
+        container.appendChild(box);
+      });
+    }
+
+    function normalizeSchedule(cfg) {
+      const raw = Array.isArray(cfg.schedule) ? cfg.schedule : [];
+      if (!raw.length) return '';
+      return raw.map(item => `${esc(item.time)} | ${esc(item.label || item.title || '')}`).join('\n');
+    }
+
+    function buildControls(data) {
+      const cfg = data.config || {};
+      const ev = data.event || {};
+      controls = {
+        heroKicker: input(get(cfg, 'hero.kicker', ''), "You're invited"),
+        storyLabel: input(get(cfg, 'story.label', ''), 'Our Story'),
+        storyBody: area(get(cfg, 'story.body', ''), 'How you met, the journey, or a note to guests.', 7),
+        schedule: area(normalizeSchedule(cfg), '3:00 PM | Ceremony\n5:00 PM | Cocktails\n7:00 PM | Reception', 6),
+        venues: area((cfg.venue || []).map(v => `${esc(v.name)} | ${esc(v.address || v.mapQuery || '')}`).join('\n') || (ev.venue ? `${ev.venue} | ${ev.venue}` : ''), 'Manila Cathedral | Intramuros, Manila', 5),
+        dressCode: input(get(cfg, 'dressCode.note', ''), 'Formal / Filipiniana'),
+        parking: area(get(cfg, 'parking.note', ''), 'Parking, valet, shuttle, or drop-off notes.', 4),
+        faq: area((cfg.faq || []).map(f => `${esc(f.q)} || ${esc(f.a)}`).join('\n'), 'Is there a shuttle? || Yes, from the hotel lobby at 2 PM.', 5),
+        entourage: area((cfg.entourage || []).map(g => `${esc(g.group)}: ${(g.people || []).join(', ')}`).join('\n'), 'Principal Sponsors: Mr. & Mrs. Cruz, Mr. & Mrs. Reyes', 4),
+        goodToKnow: area(esc(cfg.goodToKnow || ''), 'Dress code || Formal attire please.\n\nParking || Free parking is available.', 6),
+        rsvpDeadline: input(cfg.rsvpDeadline ? String(cfg.rsvpDeadline).slice(0, 10) : '', '', 'date'),
+        seatEnabled: input('', '', 'checkbox'),
+        rsvpEnabled: input('', '', 'checkbox'),
+        registryEnabled: input('', '', 'checkbox'),
+        registryMessage: area(get(cfg, 'registry.message', ''), 'Your presence is enough, but if you wish to send a gift...', 4),
+        registryLinks: area('', 'Lazada | https://...\nSM Gift Registry | https://...', 4),
+        cashFunds: area('', 'GCash | 09171234567 | Ana Reyes\nMaya | 09181234567 | Miguel Santos', 4),
+      };
+      controls.seatEnabled.checked = cfg.seatEnabled !== false;
+      controls.rsvpEnabled.checked = cfg.rsvpEnabled !== false;
+      controls.registryEnabled.checked = get(cfg, 'registry.enabled', true) !== false;
+      gallery = (get(cfg, 'gallery.images', []) || []).slice();
+      registryLinks = get(cfg, 'registry.links', []) || [];
+      cashFunds = get(cfg, 'registry.cashFunds', []) || [];
+      controls.registryLinks.value = registryLinks.map(link => `${esc(link.label)} | ${esc(link.url)}`).join('\n');
+      controls.cashFunds.value = cashFunds.map(fund => `${esc(fund.label || fund.type)} | ${esc(fund.account)} | ${esc(fund.name)}`).join('\n');
+    }
+
+    function gather() {
+      return {
+        hero: { kicker: controls.heroKicker.value.trim() },
+        story: { label: controls.storyLabel.value.trim(), body: controls.storyBody.value },
+        schedule: parseScheduleInput(controls.schedule.value),
+        venue: parseList(controls.venues.value, '|', ['name', 'address']).map(venue => ({
+          name: venue.name,
+          address: venue.address,
+          mapQuery: venue.address,
+        })),
+        dressCode: { note: controls.dressCode.value.trim() },
+        parking: { note: controls.parking.value },
+        gallery: { images: gallery },
+        faq: parseList(controls.faq.value, '||', ['q', 'a']),
+        entourage: controls.entourage.value.split('\n').map(line => line.trim()).filter(Boolean).map(line => {
+          const index = line.indexOf(':');
+          return index < 0
+            ? { group: line, people: [] }
+            : { group: line.slice(0, index).trim(), people: line.slice(index + 1).split(',').map(name => name.trim()).filter(Boolean) };
+        }),
+        goodToKnow: controls.goodToKnow.value,
+        seatEnabled: controls.seatEnabled.checked,
+        rsvpEnabled: controls.rsvpEnabled.checked,
+        rsvpDeadline: controls.rsvpDeadline.value || null,
+        registry: {
+          enabled: controls.registryEnabled.checked,
+          message: controls.registryMessage.value.trim(),
+          links: parseList(controls.registryLinks.value, '|', ['label', 'url']).filter(link => link.url),
+          cashFunds: parseList(controls.cashFunds.value, '|', ['label', 'account', 'name']).filter(fund => fund.account).map(fund => ({
+            type: fund.label.toLowerCase(),
+            label: fund.label,
+            account: fund.account,
+            name: fund.name,
+            qrUrl: null,
+          })),
+        },
+      };
+    }
+
+    const tabSpecs = [
+      {
+        title: 'Welcome',
+        subtitle: 'Set the first impression guests see when they open the invitation.',
+        render() {
+          const wrap = document.createElement('div');
+          const coverStatus = document.createElement('p');
+          coverStatus.className = 'status-note';
+          coverStatus.textContent = state.event?.cover_photo_url ? 'Cover photo is set.' : 'No cover photo yet.';
+          const coverButton = fileButton('Choose cover photo', false, async ([file]) => {
+            coverStatus.textContent = 'Uploading cover...';
+            try {
+              const url = await uploadImage(file);
+              const res = await fetch(`/api/events/${encodeURIComponent(slug)}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', ...authHeaders },
+                body: JSON.stringify({ cover_photo_url: url }),
+              });
+              if (!res.ok) throw new Error('cover patch failed');
+              state.event.cover_photo_url = url;
+              coverStatus.textContent = 'Cover photo updated.';
+            } catch {
+              coverStatus.innerHTML = '<span class="error">Cover upload failed.</span>';
+            }
+          });
+          wrap.appendChild(field('Hero kicker', controls.heroKicker, 'Short text above the names'));
+          wrap.appendChild(coverButton);
+          wrap.appendChild(coverStatus);
+          return wrap;
+        },
+      },
+      {
+        title: 'Story',
+        subtitle: 'Add the personal note that makes the page feel yours.',
+        render() {
+          const wrap = document.createElement('div');
+          wrap.appendChild(field('Story heading', controls.storyLabel));
+          wrap.appendChild(field('Your story', controls.storyBody));
+          return wrap;
+        },
+      },
+      {
+        title: 'Schedule & Venue',
+        subtitle: 'Give guests the key logistics in one place.',
+        render() {
+          const wrap = document.createElement('div');
+          wrap.appendChild(field('Order of the day', controls.schedule, 'One per line: TIME | LABEL'));
+          wrap.appendChild(field('Venues', controls.venues, 'One per line: NAME | ADDRESS'));
+          return wrap;
+        },
+      },
+      {
+        title: 'Details',
+        subtitle: 'Answer common guest questions before they ask.',
+        render() {
+          const wrap = document.createElement('div');
+          wrap.appendChild(field('Dress code', controls.dressCode));
+          wrap.appendChild(field('Parking & directions', controls.parking));
+          wrap.appendChild(field('FAQ', controls.faq, 'One per line: QUESTION || ANSWER'));
+          wrap.appendChild(field('Good to know', controls.goodToKnow, 'Use Title || Body blocks if helpful'));
+          return wrap;
+        },
+      },
+      {
+        title: 'Guests',
+        subtitle: 'Control RSVP and seat-finder behavior for the guest site.',
+        render() {
+          const wrap = document.createElement('div');
+          const checks = document.createElement('div');
+          checks.className = 'check-row';
+          const seatLabel = document.createElement('label');
+          seatLabel.appendChild(controls.seatEnabled);
+          seatLabel.appendChild(document.createTextNode('Enable seat finder'));
+          const rsvpLabel = document.createElement('label');
+          rsvpLabel.appendChild(controls.rsvpEnabled);
+          rsvpLabel.appendChild(document.createTextNode('Enable RSVP'));
+          checks.appendChild(seatLabel);
+          checks.appendChild(rsvpLabel);
+          wrap.appendChild(checks);
+          wrap.appendChild(field('RSVP deadline', controls.rsvpDeadline, 'Optional'));
+          const notice = document.createElement('div');
+          notice.className = 'notice';
+          notice.textContent = 'Seat-list import and RSVP CSV remain available from the dashboard while this builder moves to its own page.';
+          wrap.appendChild(notice);
+          return wrap;
+        },
+      },
+      {
+        title: 'Gallery',
+        subtitle: 'Add pre-event photos to make the invitation feel alive.',
+        render() {
+          const wrap = document.createElement('div');
+          const row = document.createElement('div');
+          row.className = 'gallery-row';
+          drawGallery(row);
+          const add = fileButton('Add gallery photos', true, async files => {
+            for (const file of files) {
+              try {
+                gallery.push(await uploadImage(file));
+                drawGallery(row);
+              } catch {
+                statusNote.textContent = 'One image failed to upload.';
+              }
+            }
+          });
+          wrap.appendChild(add);
+          wrap.appendChild(row);
+          return wrap;
+        },
+      },
+      {
+        title: 'Gifts',
+        subtitle: 'Optional registry and cash-fund details.',
+        render() {
+          const wrap = document.createElement('div');
+          const checks = document.createElement('div');
+          checks.className = 'check-row';
+          const regLabel = document.createElement('label');
+          regLabel.appendChild(controls.registryEnabled);
+          regLabel.appendChild(document.createTextNode('Show gift section'));
+          checks.appendChild(regLabel);
+          wrap.appendChild(checks);
+          wrap.appendChild(field('Gifting message', controls.registryMessage));
+          wrap.appendChild(field('Registry links', controls.registryLinks, 'LABEL | URL'));
+          wrap.appendChild(field('Cash funds', controls.cashFunds, 'LABEL | ACCOUNT | NAME'));
+          return wrap;
+        },
+      },
+    ];
+
+    function renderTabs() {
+      tabsEl.textContent = '';
+      tabSpecs.forEach((tab, index) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'tab' + (index === currentTab ? ' active' : '');
+        btn.textContent = tab.title;
+        btn.addEventListener('click', () => {
+          currentTab = index;
+          render();
+        });
+        tabsEl.appendChild(btn);
+      });
+    }
+
+    function render() {
+      const tab = tabSpecs[currentTab];
+      $('page-heading').textContent = tab.title;
+      $('page-sub').textContent = tab.subtitle;
+      renderTabs();
+      editor.textContent = '';
+      editor.appendChild(tab.render());
+      renderUpgradePanel();
+    }
+
+    function featureItem(label, ready) {
+      const item = document.createElement('div');
+      item.className = 'feature-item ' + (ready ? 'ready' : 'locked');
+      const dot = document.createElement('span');
+      dot.className = 'feature-dot';
+      dot.textContent = ready ? '✓' : '•';
+      item.appendChild(dot);
+      item.appendChild(document.createTextNode(label));
+      return item;
+    }
+
+    function renderUpgradePanel() {
+      const panel = $('upgrade-panel');
+      if (!panel) return;
+      const isTala = currentPlan === 'tala' || currentPlan === 'demo' || !currentPlan;
+      if (!isTala) {
+        panel.classList.add('hidden');
+        panel.textContent = '';
+        return;
+      }
+      panel.classList.remove('hidden');
+      panel.textContent = '';
+      panel.appendChild(Object.assign(document.createElement('h2'), {
+        textContent: 'Your invitation is ready. Want guests to do more than RSVP?',
+      }));
+      panel.appendChild(Object.assign(document.createElement('p'), {
+        className: 'sub',
+        textContent: 'Turn this website into a full guest experience with photo uploads, video greetings, live wall, reactions, polls, music, and a memory album.',
+      }));
+      const actions = document.createElement('div');
+      actions.className = 'upgrade-actions';
+      const upgrade = document.createElement('a');
+      upgrade.className = 'btn btn-accent';
+      upgrade.href = '/#pricing';
+      upgrade.textContent = 'Unlock guest experience';
+      const free = document.createElement('button');
+      free.type = 'button';
+      free.className = 'btn btn-ghost';
+      free.textContent = state?.is_published ? 'Free website is live' : 'Publish free website only';
+      free.addEventListener('click', () => publishBtn.click());
+      actions.appendChild(upgrade);
+      actions.appendChild(free);
+      panel.appendChild(actions);
+      const list = document.createElement('div');
+      list.className = 'feature-list';
+      [
+        ['Website ready', true],
+        ['RSVP ready', true],
+        ['Memory Album locked', false],
+        ['Photo uploads locked', false],
+        ['Video greetings locked', false],
+        ['Live wall locked', false],
+        ['Polls/questions locked', false],
+        ['Reactions locked', false],
+        ['Music locked', false],
+      ].forEach(([label, ready]) => list.appendChild(featureItem(label, ready)));
+      panel.appendChild(list);
+    }
+
+    async function saveAndPublish() {
+      publishBtn.disabled = true;
+      publishBtn.textContent = 'Saving...';
+      try {
+        const res = await fetch(`/api/event-site/${encodeURIComponent(slug)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
+          body: JSON.stringify({ config: gather(), is_published: true }),
+        });
+        if (!res.ok) throw new Error('save failed');
+        state.is_published = true;
+        setStatus('Live', true);
+        publishBtn.textContent = 'Update live site';
+      } catch {
+        statusNote.textContent = 'Save failed. Please try again.';
+      } finally {
+        publishBtn.disabled = false;
+      }
+    }
+
+    publishBtn.addEventListener('click', saveAndPublish);
+
+    (async () => {
+      try {
+        const res = await fetch(`/api/event-site/${encodeURIComponent(slug)}/admin`, { headers: authHeaders });
+        if (res.status === 403) {
+          locked.classList.remove('hidden');
+          locked.textContent = 'Event website is unavailable for this event.';
+          publishBtn.disabled = true;
+          setStatus('Unavailable', false);
+          return;
+        }
+        if (!res.ok) throw new Error('load failed');
+        state = await res.json();
+        currentPlan = state.plan || 'tala';
+        buildControls(state);
+        $('builder-title').textContent = state.event?.couple_names
+          ? `${state.event.couple_names} website`
+          : 'Event Website Builder';
+        publishBtn.textContent = state.is_published ? 'Update live site' : 'Save & publish';
+        setStatus(state.is_published ? 'Live' : 'Draft', !!state.is_published);
+        render();
+      } catch {
+        locked.classList.remove('hidden');
+        locked.innerHTML = '<strong>Could not load the website builder.</strong> Please refresh or return to the dashboard.';
+        publishBtn.disabled = true;
+        setStatus('Unavailable', false);
+      }
+    })();
+  </script>
+</body>
+</html>

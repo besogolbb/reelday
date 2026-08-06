@@ -687,6 +687,35 @@
       box-shadow: 0 0 0 1px var(--line), 0 6px 18px rgba(42,26,20,.12);
     }
 
+    /* ── Memory Album teaser (free/Tala plan only) ──────
+       Decorative-only cards (no real photos, no data) that give the
+       "unlock the full album" copy something to sit under instead of
+       reading as bare text. Desaturated + blurred so it reads as a
+       preview of what's locked, not as a broken gallery. */
+    .es-album-teaser {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 10px; margin-bottom: 18px;
+    }
+    .es-album-teaser-card {
+      aspect-ratio: 1; border-radius: 14px;
+      background: linear-gradient(155deg, var(--accent-soft, var(--accent)) 0%, var(--paper-2) 100%);
+      filter: blur(2px) saturate(.55) brightness(1.04);
+      opacity: .8;
+      position: relative;
+      overflow: hidden;
+    }
+    .es-album-teaser-card::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(circle at 30% 25%, rgba(255,255,255,.35), transparent 60%);
+    }
+    .es-album-teaser-lock {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 10px; letter-spacing: .16em;
+      text-transform: uppercase; color: var(--accent);
+      margin-bottom: 12px;
+    }
+
     /* ── Gallery (varied-aspect masonry) ──────────────── */
     .es-gallery {
       display: grid;
@@ -1752,13 +1781,34 @@
         var startsAt = data.upload_window_starts_at ? new Date(data.upload_window_starts_at).getTime() : null;
         var endsAt = data.upload_window_ends_at ? new Date(data.upload_window_ends_at).getTime() : null;
         var uploading = (startsAt === null || now >= startsAt) && (endsAt === null || now < endsAt);
+        var isFreePlan = data.plan === 'tala' || data.plan === 'demo';
+
+        // Decorative-only teaser row (no photos, no data — see CSS
+        // comment above). Gives the free-plan copy something visual to
+        // sit under instead of reading as bare text. Guest-safe: this
+        // never sells TO the guest, it only illustrates what the host
+        // can unlock, matching the copy immediately below it.
+        if (isFreePlan) {
+          wrap.appendChild(el('div', { class: 'es-album-teaser-lock', text: '🔒 ' + t('memoryAlbum') }));
+          var teaser = el('div', { class: 'es-album-teaser', 'aria-hidden': 'true' });
+          for (var ti = 0; ti < 3; ti++) teaser.appendChild(el('div', { class: 'es-album-teaser-card' }));
+          wrap.appendChild(teaser);
+        }
+
         if (uploading) {
           var count = data.upload_count || 0;
-          wrap.appendChild(el('p', { text: count > 0 ? t('memoryAlbumCountMsg').replace('{count}', count) : t('memoryAlbumLiveMsg') }));
+          wrap.appendChild(el('p', { text: isFreePlan
+            ? 'Share a few event photos here. The host can unlock the full Memory Album for unlimited photos, video greetings, and the live wall.'
+            : (count > 0 ? t('memoryAlbumCountMsg').replace('{count}', count) : t('memoryAlbumLiveMsg')) }));
           var up = el('a', { class: 'es-btn', href: '/upload/' + SLUG, text: t('upload') });
           wrap.appendChild(up);
+          if (isFreePlan && count > 0) {
+            wrap.appendChild(el('p', { text: t('memoryAlbumCountMsg').replace('{count}', count) }));
+          }
         } else {
-          wrap.appendChild(el('p', { text: t('memoryAlbumPreMsg') }));
+          wrap.appendChild(el('p', { text: isFreePlan
+            ? 'The host can unlock the full Memory Album so guests can share photos and video greetings from this event.'
+            : t('memoryAlbumPreMsg') }));
         }
         app.appendChild(section('memory-album', t('eyebrowMemoryAlbum'), t('memoryAlbum'), wrap));
       })();

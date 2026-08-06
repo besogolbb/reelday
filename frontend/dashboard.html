@@ -8536,6 +8536,76 @@
   const slug  = new URLSearchParams(location.search).get('slug');
   const panel = document.getElementById('esite-panel');
   if (slug && panel) {
+    const token = localStorage.getItem('reelday_token');
+    const AH = token ? { 'Authorization': `Bearer ${token}` } : {};
+    const builderUrl = `/website-builder?event=${encodeURIComponent(slug)}`;
+    const guestUrl = `/e/${encodeURIComponent(slug)}`;
+    panel.style.display = '';
+    panel.innerHTML = `
+      <div style="padding:22px;background:var(--paper-2);border-radius:inherit;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+          <div>
+            <h2 class="polls-h2" style="margin:0 0 6px;">Event Website</h2>
+            <p id="esite-launcher-status" style="margin:0;color:var(--ink-soft);font-size:14px;line-height:1.55;">Loading website status...</p>
+            <p id="esite-launcher-upgrade" style="display:none;margin:8px 0 0;color:var(--ink-soft);font-size:13px;line-height:1.5;">
+              Free plan — guests can RSVP and view your invitation.
+              <a href="/#pricing" style="color:var(--accent);font-weight:600;">Upgrade to unlock photo/video uploads, the live wall, and more →</a>
+            </p>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <a class="btn btn-accent" href="${builderUrl}">Edit website</a>
+            <a class="btn btn-ghost" href="${guestUrl}" target="_blank" rel="noopener">Open site</a>
+            <button class="btn btn-ghost" type="button" id="esite-copy-link">Copy link</button>
+          </div>
+        </div>
+        <div style="margin-top:16px;padding:14px;border:1px solid var(--line);border-radius:14px;background:#fff;">
+          <div style="font-family:var(--mono);font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:6px;">Guest invitation link</div>
+          <div style="font-size:15px;color:var(--ink);word-break:break-all;">${location.origin}${guestUrl}</div>
+        </div>
+      </div>
+    `;
+    const statusEl = document.getElementById('esite-launcher-status');
+    const upgradeEl = document.getElementById('esite-launcher-upgrade');
+    const copyBtn = document.getElementById('esite-copy-link');
+    copyBtn?.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(`${location.origin}${guestUrl}`);
+        copyBtn.textContent = 'Copied';
+        setTimeout(() => { copyBtn.textContent = 'Copy link'; }, 1600);
+      } catch {
+        copyBtn.textContent = 'Copy failed';
+        setTimeout(() => { copyBtn.textContent = 'Copy link'; }, 1600);
+      }
+    });
+    try {
+      const r = await fetch(`/api/event-site/${slug}/admin`, { headers: AH });
+      if (r.ok) {
+        const state = await r.json();
+        const live = !!state.is_published;
+        statusEl.textContent = live
+          ? `Live - guests can view /e/${slug}.`
+          : 'Draft - finish setup in the website builder, then publish when ready.';
+        // Today a free-tier host had zero signal in the dashboard that
+        // anything was locked — the free-vs-paid framing only existed
+        // inside the separate builder page's upgrade panel. Same
+        // isFreePlan check as event-site.html's Memory Album teaser.
+        const isFreePlan = state.plan === 'tala' || state.plan === 'demo';
+        if (upgradeEl) upgradeEl.style.display = isFreePlan ? '' : 'none';
+        document.dispatchEvent(new CustomEvent('dash:ready-item', { detail: {
+          key: 'website', label: 'Event website', section: 'website',
+          done: live, note: live ? 'Published' : 'Draft', action: 'Edit',
+        } }));
+      } else if (r.status === 403) {
+        statusEl.textContent = 'Event website is unavailable for this event.';
+      } else {
+        statusEl.textContent = 'Could not load website status. You can still open the builder.';
+      }
+    } catch {
+      statusEl.textContent = 'Could not load website status. You can still open the builder.';
+    }
+  }
+
+  if (false && slug && panel) {
     const token   = localStorage.getItem('reelday_token');
     const AH      = token ? { 'Authorization': `Bearer ${token}` } : {};
     const lockedEl  = document.getElementById('esite-locked');

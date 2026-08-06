@@ -319,6 +319,10 @@ fastify.get('/dashboard', (_request, reply) => {
   reply.sendFile('dashboard.html');
 });
 
+fastify.get('/website-builder', (_request, reply) => {
+  reply.sendFile('website-builder.html');
+});
+
 fastify.get('/admin',            (_r, reply) => reply.sendFile('admin.html'));
 fastify.get('/login',            (_r, reply) => reply.sendFile('login.html'));
 fastify.get('/register',         (_r, reply) => reply.sendFile('register.html'));
