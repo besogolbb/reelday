@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet" />
+  <script src="/js/event-site-render.js"></script>
   <style>
     :root {
       --paper: #fbf5ee;
@@ -344,59 +345,36 @@
     .hidden { display: none !important; }
 
     /* ── Anonymous-mode preview pane ────────────────────────
-       Plain DOM text/background updates, not an iframe render of the
-       real public site -- deliberately cheap, same reasoning as
-       start.html's personalize-slide preview. */
+       Full-fidelity render: the real event-site.html rendering code
+       (shared via /js/event-site-render.js), run directly into a
+       Shadow DOM root inside anon-preview-render. Shadow DOM keeps
+       event-site.css's page-level rules (body, a, button, etc.) from
+       leaking into this page's own design system, and vice versa.
+       A permanent light blur signals "demo" while the visitor is
+       anonymous; it lifts the moment they save and land on their
+       real, sharp site. */
     .anon-preview { margin-bottom: 24px; }
-    .anon-preview-card {
+    .anon-preview-frame {
       border-radius: var(--r);
-      padding: clamp(24px, 4vw, 40px) 24px;
-      min-height: 200px;
-      background: linear-gradient(155deg, var(--ink) 0%, #3a2a22 100%);
-      background-size: cover;
-      background-position: center;
-      color: #fff;
-      text-align: center;
-      margin-bottom: 16px;
+      border: 1px solid var(--line);
+      overflow: hidden;
+      box-shadow: 0 20px 50px rgba(47, 33, 27, .12);
     }
-    .anon-preview-kicker {
-      font-family: var(--mono); font-size: 10px; letter-spacing: .2em;
-      text-transform: uppercase; opacity: .7; margin-bottom: 10px;
+    .anon-preview-render {
+      height: min(640px, 70vh);
+      overflow-y: auto;
+      filter: blur(2.5px) saturate(.92);
     }
-    .anon-preview-names { font-family: var(--display); font-style: italic; font-size: clamp(22px, 4vw, 30px); }
-    .anon-preview-date {
-      font-family: var(--mono); font-size: 11px; letter-spacing: .1em;
-      text-transform: uppercase; opacity: .75; margin-top: 10px;
-    }
-    .anon-preview-venue { font-size: 13px; opacity: .85; margin-top: 4px; }
-    .anon-preview-story {
-      font-family: var(--display); font-style: italic; font-size: 13px; line-height: 1.5;
-      opacity: .9; margin-top: 16px; max-width: 34ch; margin-left: auto; margin-right: auto;
-    }
-    .anon-preview-story:empty, .anon-preview-venue:empty { display: none; }
-    .anon-preview-album {
-      padding: 18px; border-radius: 16px; border: 1px solid var(--line); background: #fff;
-    }
-    .anon-preview-album-copy { margin: 10px 0 0; font-size: 12px; color: var(--ink-soft); }
-
-    /* Memory Album teaser cards -- reuses the exact blurred/desaturated
-       treatment already shipped on the public site
-       (event-site.html's .es-album-teaser) rather than a second style. */
-    .es-album-teaser { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-    .es-album-teaser-card {
-      aspect-ratio: 1; border-radius: 12px;
-      background: linear-gradient(155deg, var(--accent) 0%, var(--paper-2) 100%);
-      filter: blur(2px) saturate(.55) brightness(1.04);
-      opacity: .8; position: relative; overflow: hidden;
-    }
-    .es-album-teaser-card::after {
-      content: ''; position: absolute; inset: 0;
-      background: radial-gradient(circle at 30% 25%, rgba(255,255,255,.35), transparent 60%);
-    }
-    .es-album-teaser-lock {
-      display: inline-flex; align-items: center; gap: 6px;
+    .anon-preview-badge {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 16px;
+      background: var(--ink); color: #fff;
       font-family: var(--mono); font-size: 10px; letter-spacing: .16em;
-      text-transform: uppercase; color: var(--accent); margin-bottom: 10px;
+      text-transform: uppercase;
+    }
+    .anon-preview-badge .dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--accent, #d98a4a);
     }
 
     /* ── Finish panel (anonymous mode "Save your event website") ── */
@@ -462,21 +440,9 @@
       </div>
       <div id="locked" class="notice hidden"></div>
       <div id="anon-preview" class="anon-preview hidden" aria-hidden="true">
-        <div class="anon-preview-card" id="anon-preview-card">
-          <div class="anon-preview-kicker">You're invited</div>
-          <div class="anon-preview-names" id="anon-preview-names">Your event</div>
-          <div class="anon-preview-date" id="anon-preview-date"></div>
-          <div class="anon-preview-venue" id="anon-preview-venue"></div>
-          <div class="anon-preview-story" id="anon-preview-story"></div>
-        </div>
-        <div class="anon-preview-album">
-          <div class="es-album-teaser-lock">🔒 Memory Album</div>
-          <div class="es-album-teaser">
-            <div class="es-album-teaser-card"></div>
-            <div class="es-album-teaser-card"></div>
-            <div class="es-album-teaser-card"></div>
-          </div>
-          <p class="anon-preview-album-copy">Guests can share photos and videos here once you unlock the full Memory Album.</p>
+        <div class="anon-preview-frame">
+          <div class="anon-preview-badge"><span class="dot"></span>Live preview -- blurred until you save</div>
+          <div class="anon-preview-render" id="anon-preview-render"></div>
         </div>
       </div>
       <div id="editor"></div>
@@ -876,33 +842,63 @@
       try { localStorage.removeItem(DRAFT_KEY); } catch {}
     }
 
-    // ── Soft-gated preview pane (anonymous mode only) ──────
-    // Plain DOM text/background updates, not an iframe render of the
-    // real public site -- same non-iframe approach already used for
-    // start.html's personalize slide, and for the same reason (avoid
-    // per-keystroke full-site render cost). The Memory Album row reuses
-    // the exact blurred-card CSS already shipped on the public site
-    // (.es-album-teaser) rather than inventing a second blur treatment.
+    // ── Full-fidelity preview pane (anonymous mode only) ───────
+    // Runs the exact same rendering code the real /e/:slug guest page
+    // uses (shared via /js/event-site-render.js -- see that file's
+    // header comment) directly into a Shadow DOM root, so the preview
+    // can never visually drift from the real site. Shadow DOM isolates
+    // event-site.css's page-level rules (body/a/button/etc.) from this
+    // page's own design system. A permanent light blur (CSS on the
+    // container, not the render) signals "demo" while anonymous.
+    let previewApp = null;
+    function ensurePreviewApp() {
+      if (previewApp) return previewApp;
+      const host = $('anon-preview-render');
+      const root = host.attachShadow({ mode: 'open' });
+      const linkShared = document.createElement('link');
+      linkShared.rel = 'stylesheet';
+      linkShared.href = '/css/shared.css';
+      const linkSite = document.createElement('link');
+      linkSite.rel = 'stylesheet';
+      linkSite.href = '/css/event-site.css';
+      const app = document.createElement('div');
+      app.id = 'app';
+      root.appendChild(linkShared);
+      root.appendChild(linkSite);
+      root.appendChild(app);
+      previewApp = app;
+      return app;
+    }
+    function buildPreviewData() {
+      return {
+        couple_names: controls.basicsName.value.trim() || 'Your event',
+        event_type: controls.basicsType.value,
+        event_date: controls.basicsDate.value || null,
+        event_time: '',
+        plan: 'tala',
+        cover_photo_url: coverPreviewUrl || null,
+        theme: controls.basicsType.value || 'wedding',
+        config: gather(),
+        upload_window_starts_at: null,
+        upload_window_ends_at: null,
+        upload_count: 0,
+      };
+    }
     function syncPreview() {
       if (!ANONYMOUS) return;
       const box = $('anon-preview');
       if (!box) return;
       box.classList.remove('hidden');
-      $('anon-preview-names').textContent = controls.basicsName.value.trim() || 'Your event';
-      const d = controls.basicsDate.value;
-      $('anon-preview-date').textContent = d
-        ? new Date(d + 'T00:00:00').toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' })
-        : '';
-      const firstVenueLine = (controls.venues.value.split('\n')[0] || '').split('|')[0].trim();
-      $('anon-preview-venue').textContent = firstVenueLine;
-      const story = controls.storyBody.value.trim();
-      $('anon-preview-story').textContent = story
-        ? `"${story.length > 140 ? story.slice(0, 140) + '…' : story}"`
-        : '';
-      const card = $('anon-preview-card');
-      if (card && coverPreviewUrl) {
-        card.style.backgroundImage = `linear-gradient(180deg, rgba(20,12,8,.25), rgba(20,12,8,.65)), url(${coverPreviewUrl})`;
-      }
+      ReelEventRender.render(buildPreviewData(), ensurePreviewApp(), { preview: true });
+    }
+    // Debounced separately from scheduleDraftSave() -- a live preview
+    // wants to feel responsive (~250ms) while the local draft snapshot
+    // only needs to survive a closed tab (1.5s is plenty).
+    let previewSyncTimer = null;
+    function schedulePreviewSync() {
+      if (!ANONYMOUS) return;
+      clearTimeout(previewSyncTimer);
+      previewSyncTimer = setTimeout(syncPreview, 250);
     }
 
     const tabSpecs = [
@@ -1328,8 +1324,8 @@
         // Delegated on #editor rather than per-field: every current and
         // future control renders inside it, so one listener catches all
         // of them without wiring each tab's fields individually.
-        editor.addEventListener('input', () => { scheduleDraftSave(); syncPreview(); });
-        editor.addEventListener('change', () => { scheduleDraftSave(); syncPreview(); });
+        editor.addEventListener('input', () => { scheduleDraftSave(); schedulePreviewSync(); });
+        editor.addEventListener('change', () => { scheduleDraftSave(); schedulePreviewSync(); });
         return;
       }
       try {
