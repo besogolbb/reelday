@@ -478,11 +478,83 @@ Not done (unchanged from Phase 2's open items):
 - Seat-list import / RSVP CSV migration into the standalone builder.
 - Deleting the dormant dashboard wizard — still gated on manual QA.
 
+## Phase 4 Shipped
+
+Phase 4 replaces Phase 3 as the primary free-tier entry point. Clarified
+mid-session: the funnel's CTA should route straight into the real builder
+(`frontend/website-builder.html`), matching the QuickWeds reference this
+funnel was modeled on — not through `/start`'s wizard. `index.html`'s
+marketing content is untouched; only where its free-tier CTAs point changed.
+
+Two more assumptions in this doc turned out wrong, found the same way as
+Phase 3's corrections — by reading the actual code, not trusting a comment:
+`POST /api/events`'s `tryGetUser()` "anonymous creation allowed" comment
+is dead code, never called; and an `events` row with `user_id = NULL` is
+actively rejected elsewhere (`uploads.js`'s `orphan_event` 403, every
+`user_id = $2` ownership check). So Phase 4 uses the same mechanism Phase 3
+established — nothing written to the database until a real account exists
+— just applied to the real builder page instead of a wizard slide.
+
+Changed files: `frontend/website-builder.html`, `frontend/index.html`. No
+backend changes.
+
+What shipped:
+
+- `website-builder.html` gains a third gate branch: no token + no slug =
+  anonymous mode, using the real tabbed editor. A slug with no token is
+  unchanged (still redirects to `/login` — editing a real event with no
+  session is a different case).
+- Welcome tab gains three anonymous-only fields (name, date, event type) —
+  the basics `POST /api/events` needs, which live on `events` not
+  `event_sites.config` and don't exist pre-signup.
+- Cover photo and gallery uploads defer into memory (`File` objects, local
+  blob-URL previews only) until a real event exists, then upload through
+  the same authenticated endpoint the existing flow already uses.
+- A static, non-iframe preview pane (names/date/venue/story, updating as
+  typed) plus a Memory Album row reusing the exact blurred-card CSS
+  already shipped on the public site (`event-site.html`'s
+  `.es-album-teaser`) — not a second blur treatment.
+- `localStorage` draft persistence (text only, not photos) — the one
+  genuinely new mechanism this phase needed, since Phase 3's slide never
+  left the page it lived on and so never risked a closed-tab loss.
+- "Save your event website" finish panel: register → create the event →
+  upload deferred photos → write the config with `is_published: false`
+  (always, never a variable) → redirect to the dashboard. A
+  "Continue editing" dismiss loses nothing, since the draft persists.
+- Anonymous visitors' logo/Dashboard-button no longer point at
+  `/my-events` (which would just bounce to `/login`); the upgrade panel
+  is suppressed until there's a real event/RSVP count to back its
+  checklist.
+- `index.html`: hero CTAs, the final CTA, the five demo-type tiles, and
+  the Tala pricing CTA now point at `/website-builder`. Sinag/Dalisay/
+  Hiraya CTAs are untouched — `/start`'s checkout/resume flow keeps
+  working exactly as before.
+
+Phase 3's `/start` personalize slide is not removed — it still serves
+paid-plan signups, which still go through `/start?plan=X`, unchanged. Its
+audience narrows to that group now that free-tier visitors take the Phase 4
+path instead.
+
+Not done (unchanged from Phase 2/3's open items):
+
+- Seat-list import / RSVP CSV migration into the standalone builder.
+- Deleting the dormant dashboard wizard — still gated on manual QA.
+- Google Sign-In in the anonymous builder — stays `/start`-only for now;
+  email/password alone ships for v1.
+- Magic-link signup and optional custom-slug entry at save time — both
+  real ideas, both deferred.
+
 ## Next Phase Recommendation (updated)
 
-With the no-signup personalization slide shipped, the remaining open item is
-moving seat import / RSVP CSV into the standalone builder — still marked
-optional pending a real signal (e.g. hosts asking for seat-list editing
-outside the dashboard) rather than being built speculatively. Deleting the
-dormant dashboard wizard remains blocked on manual in-browser QA of the
-full `/website-builder` flow, now including this new slide's write-back.
+With the real builder now reachable anonymously, the next real decision is
+the same two open items as before, still not built speculatively: moving
+seat import / RSVP CSV into the standalone builder (pending a real signal),
+and deleting the dormant dashboard wizard (pending manual in-browser QA of
+the full anonymous → signup → publish flow, now the more important QA
+target given how much of the funnel now runs through it). A separate,
+larger topic surfaced during Phase 4 planning — new pre-event paid gates on
+currently-free functionality (RSVP caps/export, seat-finder gating, guest
+reminders, QR kits, coordinator mode) — is deliberately out of scope here;
+it's about gating existing free features to create new paid pressure
+points, not about the funnel's entry point, and deserves its own planning
+pass if pursued.
