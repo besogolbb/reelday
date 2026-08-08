@@ -558,3 +558,73 @@ reminders, QR kits, coordinator mode) — is deliberately out of scope here;
 it's about gating existing free features to create new paid pressure
 points, not about the funnel's entry point, and deserves its own planning
 pass if pursued.
+
+## Phase 4.1 Shipped — Template Robustness + Partial Flow QA
+
+Triggered by a direct ask ("can we already share and market this?") rather
+than by this doc's own Phase 4 plan — the answer surfaced real bugs, so the
+work happened before the audit question could be answered honestly.
+
+Changed files: `frontend/css/event-site.css`, `frontend/js/event-site-render.js`,
+`frontend/website-builder.html`, `frontend/dashboard.html`.
+
+What shipped:
+
+- Fixed a chain of template bugs found while making the 4 style templates
+  (Classic/Modern/Romantic/Bold Jewel) genuinely distinct rather than
+  palette swaps: a `--card` cascade bug that left Bold Jewel's form
+  fields/footer white (light text on white = invisible), a duplicated story
+  heading, and the hero itself not reflecting the chosen template at all
+  (the one thing visible without scrolling in the builder's phone preview).
+- Ran an actual computed-WCAG-contrast pass (not eyeballing) across all 4
+  templates. Found and fixed real AA failures: Romantic Blush's accent
+  cleared only 3.18:1 as button text / 2.96:1 as small text on its own
+  background (both fail 4.5:1) — darkened to a same-hue shade that clears
+  ~5:1 in both roles. Bold Jewel's accent was fine as a button fill
+  (6.28:1) but only 2.84:1 as text on its own dark surface, and no single
+  shade of that hue passes both roles at once — split into `--accent` and
+  a new `--accent-text` token (defaults to `--accent` everywhere else) so
+  Bold Jewel's ~25 eyebrows/labels/icons use its existing lighter
+  `--accent-soft` instead. Verified visually via headless-browser
+  screenshots afterward, not just the contrast math.
+- Mobile builder UX: the phone-mockup preview sat inline above the form on
+  every single wizard step, so reaching that step's fields (or Back/
+  Continue past them) meant scrolling past a tall re-rendered mockup every
+  time. Below 860px it's now off-flow until a floating "Preview" button
+  opens it as a full-screen overlay with a close button. Desktop unchanged.
+- Dashboard: added a one-click "Publish now" button to the Event Website
+  launcher card, shown only while draft. Closes a real gap in this doc's
+  own §5/§6 flow — after "Save your event website" redirects here, the
+  only prior path to actually going live was "Edit website" → reopen the
+  entire wizard → hit Save & publish again on content already finished.
+  Deliberately re-PUTs the exact `config` already fetched for the card
+  (unchanged) rather than `{is_published:true}` alone — the endpoint is a
+  full upsert that replaces `config` with whatever's in the body (empty
+  object if omitted), so a naive version would have silently wiped the
+  host's saved content.
+- Found via headless-browser QA of the anonymous builder (not code
+  review): the hero couple-names text could break mid-word around the
+  ampersand ("Amara & Diego" → "Amara &Di" / "ego") on a narrow viewport.
+  `buildCoupleNode()` joined name + `<span class="amp">` + name with no
+  actual whitespace, only the span's CSS padding for visual spacing — one
+  unbroken run with no valid break point once `overflow-wrap:break-word`
+  needed to wrap it. Fixed with real space text nodes around the span.
+  Shared render pipeline — this was live on the real guest page too, not
+  just the preview.
+
+Verification performed: headless-browser pass (Playwright/patchright) against
+production — zero console/page errors, all 4 templates confirmed visually
+distinct via screenshot, mobile floating-preview open/close confirmed
+functional, RSVP form contrast confirmed legible on Romantic Blush and Bold
+Jewel specifically. Production confirmed byte-identical to the repo after
+each fix (diffed served CSS/JS against the committed files).
+
+Not done — the launch/market question is not fully closed by this pass:
+
+- No real end-to-end run of an actual signup → real account → real event →
+  "Publish now" → viewing the live `/e/{slug}` guest page. Everything above
+  verified the anonymous builder's UI and mechanics; it did not exercise a
+  real conversion through account creation, which would create real test
+  data in production and wasn't run without checking first.
+- Deleting the dormant dashboard wizard is still gated on that same
+  end-to-end run, unchanged from the Phase 4 recommendation above.
