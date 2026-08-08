@@ -11,6 +11,20 @@
     button { font: inherit; cursor: pointer; }
     img { display: block; max-width: 100%; }
 
+    /* Opaque card/field surface color -- was hardcoded #fff at every
+       call site (venue cards, form fields, footer, etc.), which is why
+       the earlier template pass could only ever tint the accent color:
+       templates couldn't touch surfaces without this. Declared at :root
+       (not on #app) so [data-template="bold"]'s override -- same
+       specificity, later in source -- actually wins the cascade. A
+       directly-declared custom property on #app itself would always
+       beat an ancestor's override regardless of specificity (a rule
+       matching the element outranks inheritance), which is exactly the
+       bug this had: Bold Jewel's dark --card was being silently
+       discarded and every field/footer surface stayed white while their
+       text switched to the template's light ink -- invisible on white. */
+    :root { --card: #fff; }
+
     /* #app is the query container for every @container rule below --
        every breakpoint responds to #app's own width, not the browser
        window's. On the real guest page #app fills the viewport so this
@@ -19,21 +33,13 @@
     #app {
       container-type: inline-size; width: 100%; min-width: 0;
       overflow-x: hidden; box-sizing: border-box;
-      /* Opaque card/field surface color -- was hardcoded #fff at every
-         call site (venue cards, form fields, footer, etc.), which is
-         why the earlier template pass could only ever tint the accent
-         color: templates couldn't touch surfaces without this. */
-      --card: #fff;
       /* In the website-builder preview, data-template/data-theme land
          on #app itself (see event-site-render.js), not <html>/<body>
          like they do on the real guest page -- so the body { background:
          var(--paper) } rule above never sees the overridden --paper for
-         a template like Bold Jewel (a dark surface). Text colors (--ink
-         etc.) picked up the override fine since they're read on
-         descendants of #app, so the preview showed light-on-white
-         invisible text instead of light-on-dark. Repeating the surface
-         colors here means #app paints itself correctly regardless of
-         which ancestor actually carries the data-template attribute. */
+         a template like Bold Jewel (a dark surface). Repeating the
+         surface colors here means #app paints itself correctly
+         regardless of which ancestor actually carries data-template. */
       background: var(--paper);
       color: var(--ink);
     }
