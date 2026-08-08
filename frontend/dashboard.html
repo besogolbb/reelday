@@ -8553,7 +8553,8 @@
             </p>
           </div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;">
-            <a class="btn btn-accent" href="${builderUrl}">Edit website</a>
+            <button class="btn btn-accent" type="button" id="esite-publish-now" style="display:none;">Publish now</button>
+            <a class="btn btn-accent" href="${builderUrl}" id="esite-edit-link">Edit website</a>
             <a class="btn btn-ghost" href="${guestUrl}" target="_blank" rel="noopener">Open site</a>
             <button class="btn btn-ghost" type="button" id="esite-copy-link">Copy link</button>
           </div>
@@ -8567,6 +8568,8 @@
     const statusEl = document.getElementById('esite-launcher-status');
     const upgradeEl = document.getElementById('esite-launcher-upgrade');
     const copyBtn = document.getElementById('esite-copy-link');
+    const publishNowBtn = document.getElementById('esite-publish-now');
+    const editLink = document.getElementById('esite-edit-link');
     copyBtn?.addEventListener('click', async () => {
       try {
         await navigator.clipboard.writeText(`${location.origin}${guestUrl}`);
@@ -8584,7 +8587,7 @@
         const live = !!state.is_published;
         statusEl.textContent = live
           ? `Live - guests can view /e/${slug}.`
-          : 'Draft - finish setup in the website builder, then publish when ready.';
+          : 'Draft - your content is saved but guests can\'t see it yet.';
         // Today a free-tier host had zero signal in the dashboard that
         // anything was locked — the free-vs-paid framing only existed
         // inside the separate builder page's upgrade panel. Same
@@ -8595,6 +8598,49 @@
           key: 'website', label: 'Event website', section: 'website',
           done: live, note: live ? 'Published' : 'Draft', action: 'Edit',
         } }));
+
+        // "Publish now" -- a fresh signup from the anonymous website
+        // builder always lands here in draft (is_published is forced
+        // false on that first save, on purpose, so nothing goes live
+        // before the host has seen their own dashboard). Previously the
+        // only way to flip it live was "Edit website" -> re-open the
+        // whole multi-step wizard -> hit Save & publish again just to
+        // republish content that was already finished. This re-PUTs the
+        // exact config already on the account (state.config, fetched
+        // above, unchanged) with is_published:true -- same effect as
+        // the builder's own publish button, without re-entering it.
+        if (publishNowBtn) {
+          if (live) {
+            publishNowBtn.style.display = 'none';
+            if (editLink) editLink.className = 'btn btn-accent';
+          } else {
+            publishNowBtn.style.display = '';
+            if (editLink) editLink.className = 'btn btn-ghost';
+            publishNowBtn.addEventListener('click', async () => {
+              publishNowBtn.disabled = true;
+              publishNowBtn.textContent = 'Publishing...';
+              try {
+                const pr = await fetch(`/api/event-site/${encodeURIComponent(slug)}`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json', ...AH },
+                  body: JSON.stringify({ config: state.config, is_published: true }),
+                });
+                if (!pr.ok) throw new Error('publish failed');
+                statusEl.textContent = `Live - guests can view /e/${slug}.`;
+                publishNowBtn.style.display = 'none';
+                if (editLink) editLink.className = 'btn btn-accent';
+                document.dispatchEvent(new CustomEvent('dash:ready-item', { detail: {
+                  key: 'website', label: 'Event website', section: 'website',
+                  done: true, note: 'Published', action: 'Edit',
+                } }));
+              } catch {
+                publishNowBtn.disabled = false;
+                publishNowBtn.textContent = 'Publish now';
+                statusEl.textContent = 'Publish failed. Please try again, or use the website builder.';
+              }
+            });
+          }
+        }
       } else if (r.status === 403) {
         statusEl.textContent = 'Event website is unavailable for this event.';
       } else {
