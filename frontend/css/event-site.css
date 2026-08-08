@@ -35,6 +35,15 @@
       --heading-fw:  400;
       --heading-fs:  normal;
       --heading-ls:  -.01em;
+      /* Small accent-colored TEXT (eyebrows, icons, chevrons, drop caps)
+         needs its own token distinct from --accent: --accent is also
+         used as a solid fill behind white button text, and on Bold
+         Jewel's dark paper no single shade can satisfy both roles at
+         once (the fill needs to stay dark enough for white text; text
+         directly on the dark paper needs to be light enough to read).
+         Default is just --accent itself -- every template except Bold
+         Jewel already has one shade that works for both jobs. */
+      --accent-text: var(--accent);
     }
 
     /* #app is the query container for every @container rule below --
@@ -117,8 +126,14 @@
       --line:        rgba(122,60,55,.12);
       --line-2:      rgba(122,60,55,.20);
       --card:        #fffaf9;
-      --accent:      #c07f82;
-      --accent-deep: #8a4d50;
+      /* Darkened from the original #c07f82 -- that shade only cleared
+         3.18:1 against white button text and 2.96:1 as small text on
+         --paper (both fail WCAG AA's 4.5:1). This shade keeps the same
+         blush hue but passes both roles (~5:1 white-on-accent, ~4.6-
+         5:1 accent-on-paper/paper-2), so eyebrows/labels/RSVP buttons
+         are actually readable, not just decorative. */
+      --accent:      #a45155;
+      --accent-deep: #7a3438;
       --accent-soft: #e8c3c4;
       /* Softer than soft: every corner rounds up further, and the
          section heading leans into a light italic script feel rather
@@ -149,6 +164,15 @@
       --accent:      #2f6b52;
       --accent-deep: #194a37;
       --accent-soft: #8fc4a4;
+      /* --accent (2f6b52) only clears 2.84:1 as text directly on the
+         dark --paper -- fine as a button fill under white text (6.28:1)
+         but fails WCAG AA (4.5:1) for eyebrows/labels/icons sitting on
+         the dark surface itself. No single shade of this hue can pass
+         both roles at once here (lightening it to fix the text role
+         drops the white-fill contrast below 4.5:1 in the same range),
+         so small accent-colored text uses --accent-soft instead
+         (8.99:1 against --paper) via the shared --accent-text token. */
+      --accent-text: var(--accent-soft);
       /* Jewel-cut: sharper, shallower corners than Classic's soft
          rounding (but not as severe as Modern's square edges), and a
          heavier-weight heading with wider tracking for gravitas
@@ -269,7 +293,7 @@
     }
     .es-menu-eyebrow {
       font-family: var(--mono); font-size: 10.5px; letter-spacing: .32em;
-      text-transform: uppercase; color: var(--accent);
+      text-transform: uppercase; color: var(--accent-text);
     }
     .es-menu-close {
       width: 44px; height: 44px;
@@ -311,7 +335,7 @@
     }
     .es-menu-list a:active span.arr,
     .es-menu-list a:focus-visible span.arr {
-      background: var(--card); color: var(--accent);
+      background: var(--card); color: var(--accent-text);
     }
     @keyframes menuRowIn {
       to { opacity: 1; transform: translateY(0); }
@@ -523,7 +547,7 @@
       color: var(--accent-soft);
       padding: 0 .1em;
     }
-    .es-hero.no-bg .es-hero-names .amp { color: var(--accent); }
+    .es-hero.no-bg .es-hero-names .amp { color: var(--accent-text); }
     .es-hero-date {
       font-family: var(--mono); font-size: 12px; letter-spacing: .32em;
       text-transform: uppercase; margin-top: 18px;
@@ -547,10 +571,10 @@
       margin: 0 12px;
     }
     .es-hero-rule {
-      width: 60px; height: 1px; background: var(--accent);
+      width: 60px; height: 1px; background: var(--accent-text);
       opacity: .7; margin: 22px auto 0;
     }
-    .es-hero.no-bg .es-hero-rule { background: var(--accent); opacity: 1; }
+    .es-hero.no-bg .es-hero-rule { background: var(--accent-text); opacity: 1; }
 
     .es-hero-bottom {
       display: flex; flex-direction: column; align-items: center;
@@ -658,7 +682,7 @@
 
     .es-eyebrow {
       font-family: var(--mono); font-size: 11px; letter-spacing: .32em;
-      text-transform: uppercase; color: var(--accent);
+      text-transform: uppercase; color: var(--accent-text);
       text-align: center; margin: 0 0 14px;
     }
     .es-heading {
@@ -686,9 +710,9 @@
     }
     .es-story-side {
       font-family: var(--display); font-style: italic;
-      font-size: 1.4rem; color: var(--accent);
+      font-size: 1.4rem; color: var(--accent-text);
       line-height: 1.4;
-      border-left: 2px solid var(--accent);
+      border-left: 2px solid var(--accent-text);
       padding-left: 22px;
     }
     .es-story-body {
@@ -698,7 +722,7 @@
     }
     .es-story-body p:first-child::first-letter {
       font-family: var(--display); font-size: 4.2rem; font-weight: 500;
-      color: var(--accent); float: left; line-height: .85;
+      color: var(--accent-text); float: left; line-height: .85;
       margin: 6px 12px 0 0;
     }
 
@@ -720,12 +744,12 @@
     .es-tl-row::after {
       content: ''; position: absolute;
       left: 84px; top: 26px; width: 9px; height: 9px;
-      background: var(--paper); border: 2px solid var(--accent);
+      background: var(--paper); border: 2px solid var(--accent-text);
       border-radius: 50%;
     }
     .es-tl-time {
       font-family: var(--mono); font-size: 12px; letter-spacing: .14em;
-      text-transform: uppercase; color: var(--accent); font-weight: 700;
+      text-transform: uppercase; color: var(--accent-text); font-weight: 700;
       padding-top: 4px;
     }
     .es-tl-body { padding-left: 26px; }
@@ -778,7 +802,7 @@
     }
     .es-stays-title {
       font-family: var(--mono); font-size: 10px; letter-spacing: .3em;
-      text-transform: uppercase; color: var(--accent);
+      text-transform: uppercase; color: var(--accent-text);
       margin: 0 0 14px;
     }
     /* auto-fit so the column count matches the *card's* width, not
@@ -823,7 +847,7 @@
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       display: block; margin-top: 2px;
     }
-    .es-stay .chev { flex: 0 0 auto; color: var(--accent); font-family: var(--mono); font-weight: 700; }
+    .es-stay .chev { flex: 0 0 auto; color: var(--accent-text); font-family: var(--mono); font-weight: 700; }
 
     /* ── Dress code & parking strips ──────────────────── */
     .es-note-grid {
@@ -839,7 +863,7 @@
     }
     .es-note h3 {
       font-family: var(--mono); font-size: 11px; letter-spacing: .28em;
-      text-transform: uppercase; color: var(--accent); margin: 0 0 10px;
+      text-transform: uppercase; color: var(--accent-text); margin: 0 0 10px;
     }
     .es-note p {
       font-family: var(--display); font-size: 1.05rem; line-height: 1.55;
@@ -877,7 +901,7 @@
     .es-album-teaser-lock {
       display: inline-flex; align-items: center; gap: 6px;
       font-family: var(--mono); font-size: 10px; letter-spacing: .16em;
-      text-transform: uppercase; color: var(--accent);
+      text-transform: uppercase; color: var(--accent-text);
       margin-bottom: 12px;
     }
 
@@ -926,8 +950,8 @@
       box-sizing: border-box;
     }
     .es-field:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 14%, transparent);
+      border-color: var(--accent-text);
+      box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-text) 14%, transparent);
     }
     .es-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .es-field-row .es-field { margin-bottom: 12px; }
@@ -942,10 +966,10 @@
     }
     .es-btn:hover { transform: translateY(-1px); box-shadow: 0 14px 36px color-mix(in srgb, var(--accent) 36%, transparent); }
     .es-btn.ghost {
-      background: transparent; color: var(--accent);
-      border: 1.5px solid var(--accent); box-shadow: none;
+      background: transparent; color: var(--accent-text);
+      border: 1.5px solid var(--accent-text); box-shadow: none;
     }
-    .es-btn.ghost:hover { background: var(--accent); color: #fff; }
+    .es-btn.ghost:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
     .es-btn[disabled] { opacity: .5; cursor: not-allowed; transform: none; }
 
     .es-result { text-align: center; margin-top: 22px; min-height: 24px; }
@@ -964,7 +988,7 @@
     }
     .es-result .tbl {
       font-family: var(--display); font-weight: 500;
-      font-size: 2.4rem; color: var(--accent);
+      font-size: 2.4rem; color: var(--accent-text);
       letter-spacing: -.01em;
       line-height: 1.1;
     }
@@ -1015,13 +1039,13 @@
     .es-rsvp-success .again {
       margin-top: 6px;
       padding: 10px 18px; border-radius: var(--r-pill);
-      background: transparent; color: var(--accent);
-      border: 1px solid var(--accent);
+      background: transparent; color: var(--accent-text);
+      border: 1px solid var(--accent-text);
       font-family: var(--mono); font-size: 11px; font-weight: 700;
       letter-spacing: .18em; text-transform: uppercase;
       cursor: pointer;
     }
-    .es-rsvp-success .again:hover { background: var(--accent); color: #fff; }
+    .es-rsvp-success .again:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
     .es-rsvp-error {
       margin-top: 14px; padding: 12px 16px;
       background: rgba(176,48,34,.08);
@@ -1042,7 +1066,7 @@
       font-family: var(--mono); font-size: 11px; letter-spacing: .22em;
       text-transform: uppercase; color: var(--ink-faint);
     }
-    .es-rsvp-deadline strong { color: var(--accent); font-weight: 700; }
+    .es-rsvp-deadline strong { color: var(--accent-text); font-weight: 700; }
     /* Closed state — replaces the form once the deadline has passed. */
     .es-rsvp-closed {
       margin: 0 auto; max-width: 460px;
@@ -1058,7 +1082,7 @@
     .es-rsvp-closed .lock {
       width: 48px; height: 48px; margin: 0 auto 14px;
       border-radius: 50%;
-      background: var(--paper-2); color: var(--accent);
+      background: var(--paper-2); color: var(--accent-text);
       display: flex; align-items: center; justify-content: center;
       border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
     }
@@ -1089,7 +1113,7 @@
     .es-faq details summary::-webkit-details-marker { display: none; }
     .es-faq details summary::after {
       content: '+'; margin-left: auto;
-      font-family: var(--mono); font-size: 1.4rem; color: var(--accent);
+      font-family: var(--mono); font-size: 1.4rem; color: var(--accent-text);
       transition: transform .25s;
     }
     .es-faq details[open] summary::after { content: '\2013'; }
@@ -1150,7 +1174,7 @@
       display: block;
     }
     .es-reg-link .chev {
-      flex: 0 0 auto; color: var(--accent);
+      flex: 0 0 auto; color: var(--accent-text);
       font-family: var(--mono); font-size: 1.2rem; font-weight: 700;
     }
 
@@ -1158,7 +1182,7 @@
     .es-reg-cash .type-tag {
       display: inline-block;
       font-family: var(--mono); font-size: 10px; letter-spacing: .28em;
-      text-transform: uppercase; color: var(--accent);
+      text-transform: uppercase; color: var(--accent-text);
       padding: 4px 10px; border: 1px solid currentColor;
       border-radius: var(--r-pill); opacity: .9;
       margin-bottom: 12px;
@@ -1218,7 +1242,7 @@
     }
     .es-gtk-card h4 {
       font-family: var(--mono); font-size: 10.5px; letter-spacing: .22em;
-      text-transform: uppercase; color: var(--accent);
+      text-transform: uppercase; color: var(--accent-text);
       margin: 0 0 10px;
     }
     .es-gtk-card p {
@@ -1262,14 +1286,14 @@
       position: relative;
       text-align: center;
       font-family: var(--mono); font-size: 10.5px; letter-spacing: .32em;
-      text-transform: uppercase; color: var(--accent);
+      text-transform: uppercase; color: var(--accent-text);
       margin: 0 0 6px;
     }
     .es-entourage-flourish {
       position: relative;
       display: flex; align-items: center; justify-content: center;
       gap: 12px; margin: 0 0 38px;
-      color: var(--accent);
+      color: var(--accent-text);
     }
     .es-entourage-flourish::before,
     .es-entourage-flourish::after {
@@ -1286,7 +1310,7 @@
     .es-ent-group { text-align: center; padding: 8px 0; }
     .es-ent-group h4 {
       font-family: var(--mono); font-size: 10.5px; letter-spacing: .28em;
-      text-transform: uppercase; color: var(--accent);
+      text-transform: uppercase; color: var(--accent-text);
       margin: 0 0 14px;
       position: relative; display: inline-block;
       padding: 0 18px;
@@ -1311,7 +1335,7 @@
     }
     .es-foot-eyebrow {
       font-family: var(--mono); font-size: 11px; letter-spacing: .32em;
-      text-transform: uppercase; color: var(--accent);
+      text-transform: uppercase; color: var(--accent-text);
       margin-bottom: 12px;
     }
     .es-foot-title {
@@ -1327,6 +1351,6 @@
       font-family: var(--mono); font-size: 10px; letter-spacing: .24em;
       text-transform: uppercase; color: var(--ink-faint);
     }
-    .es-foot-credit a { color: var(--accent); }
+    .es-foot-credit a { color: var(--accent-text); }
 
     [hidden] { display: none !important; }
