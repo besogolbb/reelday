@@ -24,6 +24,18 @@
          why the earlier template pass could only ever tint the accent
          color: templates couldn't touch surfaces without this. */
       --card: #fff;
+      /* In the website-builder preview, data-template/data-theme land
+         on #app itself (see event-site-render.js), not <html>/<body>
+         like they do on the real guest page -- so the body { background:
+         var(--paper) } rule above never sees the overridden --paper for
+         a template like Bold Jewel (a dark surface). Text colors (--ink
+         etc.) picked up the override fine since they're read on
+         descendants of #app, so the preview showed light-on-white
+         invisible text instead of light-on-dark. Repeating the surface
+         colors here means #app paints itself correctly regardless of
+         which ancestor actually carries the data-template attribute. */
+      background: var(--paper);
+      color: var(--ink);
     }
 
     /* ── Style templates ──────────────────────────────────
