@@ -132,13 +132,21 @@
   }
 
   // Render couple names with the ampersand styled separately.
+  // Real space text nodes (not just the .amp span's CSS padding) around
+  // the ampersand -- without them "Amara" + <span>&</span> + "Diego" is
+  // one unbroken run with no whitespace anywhere in it, so on a narrow
+  // width overflow-wrap:break-word (needed so a single very long name
+  // doesn't overflow the frame) had nowhere valid to break and instead
+  // split a name itself mid-word, e.g. "Di" / "ego".
   function buildCoupleNode(name) {
     var frag = document.createDocumentFragment();
     var parts = String(name || '—').split(/\s*&\s*/);
     parts.forEach(function (p, i) {
       if (i > 0) {
+        frag.appendChild(document.createTextNode(' '));
         var amp = el('span', { class: 'amp', text: '&' });
         frag.appendChild(amp);
+        frag.appendChild(document.createTextNode(' '));
       }
       frag.appendChild(document.createTextNode(p));
     });
