@@ -22,8 +22,20 @@
        matching the element outranks inheritance), which is exactly the
        bug this had: Bold Jewel's dark --card was being silently
        discarded and every field/footer surface stayed white while their
-       text switched to the template's light ink -- invisible on white. */
-    :root { --card: #fff; }
+       text switched to the template's light ink -- invisible on white.
+       The template decorative tokens below (--shadow-c/--r-*/--heading-*)
+       live in the same :root block for the same reason. */
+    :root {
+      --card:        #fff;
+      --shadow-c:    #2a1a14;
+      --r-card:      18px;
+      --r-field:     14px;
+      --r-pill:      999px;
+      --heading-tt:  none;
+      --heading-fw:  400;
+      --heading-fs:  normal;
+      --heading-ls:  -.01em;
+    }
 
     /* #app is the query container for every @container rule below --
        every breakpoint responds to #app's own width, not the browser
@@ -54,7 +66,21 @@
        card/field backgrounds (--card, added above) all read from these
        variables already -- see the .es-hero comment below for the one
        intentional exception -- so overriding them here genuinely
-       restyles the page instead of only tinting the accent color. */
+       restyles the page instead of only tinting the accent color.
+
+       --shadow-c / accent- and card-tinted translucent colors below are
+       produced with color-mix() from these tokens rather than literal
+       rgba() -- chrome that used to be hardcoded to Classic's cream/
+       terracotta values (nav bar, mobile menu sheet, bottom dock, CTA
+       glow, RSVP success/closed cards, registry cards, the entourage
+       card) now actually reskins per template instead of silently
+       staying Classic-colored underneath every other template.
+
+       --r-card/--r-field/--r-pill and the --heading-* set (defaults
+       declared alongside --card above) are the decorative/typographic
+       knobs that make each template more than a palette swap:
+       corner-radius rhythm, and how the big section heading is styled
+       (weight, tracking, case, italic). */
     [data-template="modern"] {
       --paper:       #ffffff;
       --paper-2:     #f6f6f6;
@@ -69,6 +95,17 @@
       --accent-deep: #000000;
       --accent-soft: #9a9a9a;
       --display:     'Inter', system-ui, sans-serif;
+      /* Editorial: square corners everywhere, no pill shapes, and the
+         big serif section heading becomes a tracked uppercase sans
+         line -- reads like a fashion-magazine section marker instead
+         of an invitation. */
+      --shadow-c:    #000000;
+      --r-card:      2px;
+      --r-field:     2px;
+      --r-pill:      2px;
+      --heading-tt:  uppercase;
+      --heading-fw:  600;
+      --heading-ls:  .06em;
     }
     [data-template="romantic"] {
       --paper:       #fdf5f4;
@@ -83,6 +120,14 @@
       --accent:      #c07f82;
       --accent-deep: #8a4d50;
       --accent-soft: #e8c3c4;
+      /* Softer than soft: every corner rounds up further, and the
+         section heading leans into a light italic script feel rather
+         than the Classic template's upright serif. */
+      --shadow-c:    #6b433f;
+      --r-card:      26px;
+      --r-field:     20px;
+      --heading-fs:  italic;
+      --heading-fw:  400;
     }
     /* Genuinely dark -- the one template that inverts paper/ink rather
        than just tinting them. Safe because every surface below already
@@ -104,6 +149,15 @@
       --accent:      #2f6b52;
       --accent-deep: #194a37;
       --accent-soft: #8fc4a4;
+      /* Jewel-cut: sharper, shallower corners than Classic's soft
+         rounding (but not as severe as Modern's square edges), and a
+         heavier-weight heading with wider tracking for gravitas
+         against the dark surface. */
+      --shadow-c:    #000000;
+      --r-card:      6px;
+      --r-field:     10px;
+      --heading-fw:  600;
+      --heading-ls:  .01em;
     }
 
     /* ── Loading + state ───────────────────────────────── */
@@ -125,11 +179,13 @@
       display: flex; align-items: center; gap: 8px;
       padding: 14px 18px;
       background:
-        linear-gradient(180deg, rgba(251,247,238,.96) 0%, rgba(244,234,217,.92) 100%);
+        linear-gradient(180deg,
+          color-mix(in srgb, var(--paper) 96%, transparent) 0%,
+          color-mix(in srgb, var(--paper-2) 92%, transparent) 100%);
       backdrop-filter: saturate(140%) blur(18px);
       -webkit-backdrop-filter: saturate(140%) blur(18px);
-      border-bottom: 1px solid rgba(196,90,58,.22);
-      box-shadow: 0 14px 32px -22px rgba(42,26,20,.30);
+      border-bottom: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+      box-shadow: 0 14px 32px -22px color-mix(in srgb, var(--shadow-c) 30%, transparent);
       transform: translateY(-110%); transition: transform .4s ease;
     }
     nav.es-nav.show { transform: translateY(0); }
@@ -143,9 +199,9 @@
       position: relative; flex: 0 0 auto;
       display: inline-flex; align-items: center;
       padding: 9px 16px;
-      background: rgba(255,255,255,.6);
-      border: 1px solid rgba(196,90,58,.18);
-      border-radius: 999px;
+      background: color-mix(in srgb, var(--card) 60%, transparent);
+      border: 1px solid color-mix(in srgb, var(--accent) 18%, transparent);
+      border-radius: var(--r-pill);
       color: var(--ink); white-space: nowrap;
       font-family: var(--mono); font-size: 12px; font-weight: 600;
       letter-spacing: .14em; text-transform: uppercase;
@@ -156,7 +212,7 @@
       background: var(--accent); color: #fff;
       border-color: var(--accent);
       transform: translateY(-1px);
-      box-shadow: 0 8px 18px -6px rgba(196,90,58,.45);
+      box-shadow: 0 8px 18px -6px color-mix(in srgb, var(--accent) 45%, transparent);
       outline: none;
     }
     .es-nav-inline a:active { transform: translateY(0); }
@@ -171,15 +227,15 @@
     .es-burger {
       display: none;
       width: 44px; height: 44px;
-      border-radius: 14px; border: 1px solid rgba(196,90,58,.25);
-      background: linear-gradient(180deg, #fff 0%, var(--paper-2) 100%);
-      box-shadow: 0 4px 12px -4px rgba(42,26,20,.20),
-                  inset 0 1px 0 rgba(255,255,255,.7);
+      border-radius: var(--r-field); border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+      background: linear-gradient(180deg, var(--card) 0%, var(--paper-2) 100%);
+      box-shadow: 0 4px 12px -4px color-mix(in srgb, var(--shadow-c) 20%, transparent),
+                  inset 0 1px 0 color-mix(in srgb, var(--card) 70%, transparent);
       cursor: pointer;
       align-items: center; justify-content: center;
       transition: transform .15s, box-shadow .15s;
     }
-    .es-burger:hover { transform: translateY(-1px); box-shadow: 0 8px 18px -6px rgba(42,26,20,.25); }
+    .es-burger:hover { transform: translateY(-1px); box-shadow: 0 8px 18px -6px color-mix(in srgb, var(--shadow-c) 25%, transparent); }
     .es-burger:active { transform: translateY(0); }
     .es-burger svg { width: 20px; height: 20px; stroke: var(--ink); }
 
@@ -198,8 +254,8 @@
     .es-menu {
       position: fixed; inset: 0; z-index: 60;
       background:
-        repeating-linear-gradient(135deg, rgba(196,90,58,.02) 0 1px, transparent 1px 14px),
-        radial-gradient(140% 90% at 50% 0%, #fffaf0 0%, #fbf3e2 60%, #f5e9d1 100%);
+        repeating-linear-gradient(135deg, color-mix(in srgb, var(--accent) 2%, transparent) 0 1px, transparent 1px 14px),
+        radial-gradient(140% 90% at 50% 0%, var(--paper) 0%, var(--paper-2) 60%, var(--paper-3) 100%);
       transform: translateX(100%);
       transition: transform .35s cubic-bezier(.4,0,.2,1);
       display: flex; flex-direction: column;
@@ -217,8 +273,8 @@
     }
     .es-menu-close {
       width: 44px; height: 44px;
-      border-radius: 14px; border: 1px solid rgba(196,90,58,.30);
-      background: rgba(255,255,255,.7);
+      border-radius: var(--r-field); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+      background: color-mix(in srgb, var(--card) 70%, transparent);
       display: inline-flex; align-items: center; justify-content: center;
       cursor: pointer;
     }
@@ -227,12 +283,12 @@
     .es-menu-list a {
       display: flex; align-items: center; justify-content: space-between;
       padding: 18px 22px;
-      background: rgba(255,255,255,.7);
-      border: 1px solid rgba(196,90,58,.18);
-      border-radius: 18px;
+      background: color-mix(in srgb, var(--card) 70%, transparent);
+      border: 1px solid color-mix(in srgb, var(--accent) 18%, transparent);
+      border-radius: var(--r-card);
       color: var(--ink);
-      box-shadow: 0 6px 18px -10px rgba(42,26,20,.20),
-                  inset 0 1px 0 rgba(255,255,255,.8);
+      box-shadow: 0 6px 18px -10px color-mix(in srgb, var(--shadow-c) 20%, transparent),
+                  inset 0 1px 0 color-mix(in srgb, var(--card) 80%, transparent);
       transition: transform .18s, background .18s, color .18s, border-color .18s;
       opacity: 0; transform: translateY(12px);
       animation: menuRowIn .45s ease forwards;
@@ -289,18 +345,21 @@
       padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
       gap: 8px;
       background:
-        linear-gradient(180deg, rgba(251,247,238,0) 0%, rgba(251,247,238,.92) 35%, rgba(244,234,217,.96) 100%);
+        linear-gradient(180deg,
+          color-mix(in srgb, var(--paper) 0%, transparent) 0%,
+          color-mix(in srgb, var(--paper) 92%, transparent) 35%,
+          color-mix(in srgb, var(--paper-2) 96%, transparent) 100%);
       backdrop-filter: saturate(140%) blur(18px);
       -webkit-backdrop-filter: saturate(140%) blur(18px);
       transform: translateY(110%); transition: transform .35s cubic-bezier(.4,0,.2,1);
-      box-shadow: 0 -14px 36px -18px rgba(42,26,20,.30);
+      box-shadow: 0 -14px 36px -18px color-mix(in srgb, var(--shadow-c) 30%, transparent);
     }
     .es-dock.show { transform: translateY(0); }
     .es-dock a, .es-dock button {
       flex: 1; min-width: 0;
       display: inline-flex; align-items: center; justify-content: center; gap: 8px;
       padding: 12px 10px;
-      border-radius: 16px;
+      border-radius: var(--r-field);
       border: 0;
       font-family: var(--mono); font-size: 13px; font-weight: 700;
       letter-spacing: .08em; text-transform: uppercase;
@@ -314,10 +373,10 @@
     .es-dock .es-dock-menu {
       flex: 0 0 48px;
       width: 48px; padding: 0;
-      background: rgba(255,255,255,.95);
+      background: color-mix(in srgb, var(--card) 95%, transparent);
       color: var(--ink);
-      border: 1px solid rgba(196,90,58,.30);
-      box-shadow: 0 4px 14px -6px rgba(42,26,20,.20);
+      border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+      box-shadow: 0 4px 14px -6px color-mix(in srgb, var(--shadow-c) 20%, transparent);
     }
     .es-dock .es-dock-menu:active { transform: translateY(1px); }
     .es-dock .es-dock-menu svg { width: 22px; height: 22px; stroke: var(--ink); stroke-width: 2; }
@@ -327,21 +386,23 @@
       border-radius: 8px;
     }
     .es-dock a .ico svg { width: 16px; height: 16px; stroke-width: 2; }
-    /* Secondary — paper-warm chip with an inset accent badge holding
+    /* Secondary — surface-tinted chip with an inset accent badge holding
        the icon. Reads as a deliberate second style next to RSVP's
        solid fill rather than a pale shadow of it. */
     .es-dock .es-dock-secondary {
       background:
-        linear-gradient(180deg, rgba(255,255,255,.96) 0%, rgba(244,234,217,.92) 100%);
+        linear-gradient(180deg,
+          color-mix(in srgb, var(--card) 96%, transparent) 0%,
+          color-mix(in srgb, var(--paper-2) 92%, transparent) 100%);
       color: var(--ink);
-      border: 1.5px solid rgba(196,90,58,.40);
+      border: 1.5px solid color-mix(in srgb, var(--accent) 40%, transparent);
       box-shadow:
-        inset 0 1px 0 rgba(255,255,255,.7),
-        0 6px 18px -8px rgba(196,90,58,.32);
+        inset 0 1px 0 color-mix(in srgb, var(--card) 70%, transparent),
+        0 6px 18px -8px color-mix(in srgb, var(--accent) 32%, transparent);
     }
     .es-dock .es-dock-secondary .ico {
       background: var(--accent);
-      box-shadow: 0 4px 10px -4px rgba(196,90,58,.55);
+      box-shadow: 0 4px 10px -4px color-mix(in srgb, var(--accent) 55%, transparent);
     }
     .es-dock .es-dock-secondary .ico svg { stroke: #fff; }
     .es-dock .es-dock-secondary:active { transform: translateY(1px); }
@@ -349,13 +410,13 @@
     .es-dock .es-dock-primary {
       background: linear-gradient(180deg, var(--accent) 0%, var(--accent-deep) 100%);
       color: #fff;
-      box-shadow: 0 10px 24px -8px rgba(196,90,58,.55);
+      box-shadow: 0 10px 24px -8px color-mix(in srgb, var(--accent) 55%, transparent);
     }
     .es-dock .es-dock-primary .ico {
       background: rgba(255,255,255,.18);
     }
     .es-dock .es-dock-primary .ico svg { stroke: #fff; }
-    .es-dock .es-dock-primary:active { transform: translateY(1px); box-shadow: 0 4px 12px -4px rgba(196,90,58,.45); }
+    .es-dock .es-dock-primary:active { transform: translateY(1px); box-shadow: 0 4px 12px -4px color-mix(in srgb, var(--accent) 45%, transparent); }
     /* Phones only. The full nav handles desktop just fine. */
     @container (max-width: 720px) {
       .es-dock { display: flex; }
@@ -443,7 +504,7 @@
       font-family: var(--mono); font-size: 11px; letter-spacing: .42em;
       text-transform: uppercase; opacity: .82;
       padding: 8px 16px; border: 1px solid currentColor;
-      border-radius: 999px;
+      border-radius: var(--r-pill);
       animation: fadeUp .9s .35s both;
     }
     .es-hero-lockup {
@@ -504,7 +565,7 @@
       min-width: 78px; padding: 12px 10px 10px;
       background: rgba(20,12,8,.55);
       border: 1px solid rgba(255,255,255,.18);
-      border-radius: 14px;
+      border-radius: var(--r-field);
       backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
       box-shadow: 0 8px 24px rgba(0,0,0,.25);
     }
@@ -528,14 +589,14 @@
     .es-hero.no-bg .es-count span { color: var(--ink-faint); }
     .es-cta {
       display: inline-flex; align-items: center; gap: 10px;
-      padding: 14px 28px; border-radius: 999px;
+      padding: 14px 28px; border-radius: var(--r-pill);
       background: var(--accent); color: #fff;
       font-family: var(--mono); font-size: 12px; font-weight: 700;
       letter-spacing: .2em; text-transform: uppercase;
-      box-shadow: 0 12px 32px rgba(196,90,58,.32);
+      box-shadow: 0 12px 32px color-mix(in srgb, var(--accent) 32%, transparent);
       transition: transform .2s, box-shadow .2s;
     }
-    .es-cta:hover { transform: translateY(-2px); box-shadow: 0 16px 40px rgba(196,90,58,.42); }
+    .es-cta:hover { transform: translateY(-2px); box-shadow: 0 16px 40px color-mix(in srgb, var(--accent) 42%, transparent); }
     .es-cta.live { background: #d12d2d; box-shadow: 0 12px 32px rgba(209,45,45,.45); }
     .es-cta.live::before {
       content: ''; width: 8px; height: 8px; border-radius: 50%;
@@ -599,9 +660,11 @@
       text-align: center; margin: 0 0 14px;
     }
     .es-heading {
-      font-family: var(--display); font-weight: 400;
+      font-family: var(--display); font-weight: var(--heading-fw);
+      font-style: var(--heading-fs);
       font-size: clamp(2rem, 6cqw, 3.4rem); line-height: 1.05;
-      letter-spacing: -.01em; text-align: center;
+      letter-spacing: var(--heading-ls); text-transform: var(--heading-tt);
+      text-align: center;
       margin: 0 0 50px; color: var(--ink);
     }
     .es-heading-rule {
@@ -681,8 +744,8 @@
     .es-venue {
       background: var(--card);
       border: 1px solid var(--line);
-      border-radius: 18px; overflow: hidden;
-      box-shadow: 0 12px 36px rgba(42,26,20,.06);
+      border-radius: var(--r-card); overflow: hidden;
+      box-shadow: 0 12px 36px color-mix(in srgb, var(--shadow-c) 6%, transparent);
     }
     .es-venue-head {
       padding: 22px 24px 18px;
@@ -709,7 +772,7 @@
     .es-stays {
       padding: 20px 24px 24px;
       border-top: 1px solid var(--line);
-      background: linear-gradient(180deg, transparent 0%, rgba(244,234,217,.4) 100%);
+      background: linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--paper-2) 40%, transparent) 100%);
     }
     .es-stays-title {
       font-family: var(--mono); font-size: 10px; letter-spacing: .3em;
@@ -729,14 +792,14 @@
       padding: 12px 14px;
       background: var(--card);
       border: 1px solid var(--line);
-      border-radius: 12px;
+      border-radius: var(--r-field);
       color: var(--ink);
       transition: transform .15s, box-shadow .15s, border-color .15s;
     }
     .es-stay:hover {
       transform: translateY(-2px);
-      border-color: rgba(196,90,58,.30);
-      box-shadow: 0 10px 22px -12px rgba(42,26,20,.20);
+      border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+      box-shadow: 0 10px 22px -12px color-mix(in srgb, var(--shadow-c) 20%, transparent);
     }
     .es-stay .brand {
       flex: 0 0 32px; width: 32px; height: 32px; border-radius: 9px;
@@ -768,7 +831,7 @@
     @container (min-width: 760px) { .es-note-grid.two { grid-template-columns: 1fr 1fr; } }
     .es-note {
       background: var(--paper-2);
-      border-radius: 18px;
+      border-radius: var(--r-card);
       padding: 26px 26px 28px;
       border: 1px solid var(--line);
     }
@@ -783,8 +846,8 @@
     .es-swatches { display: flex; gap: 12px; margin-top: 16px; }
     .es-swatch {
       width: 44px; height: 44px; border-radius: 50%;
-      border: 3px solid #fff;
-      box-shadow: 0 0 0 1px var(--line), 0 6px 18px rgba(42,26,20,.12);
+      border: 3px solid var(--card);
+      box-shadow: 0 0 0 1px var(--line), 0 6px 18px color-mix(in srgb, var(--shadow-c) 12%, transparent);
     }
 
     /* ── Memory Album teaser (free/Tala plan only) ──────
@@ -797,7 +860,7 @@
       gap: 10px; margin-bottom: 18px;
     }
     .es-album-teaser-card {
-      aspect-ratio: 1; border-radius: 14px;
+      aspect-ratio: 1; border-radius: var(--r-field);
       background: linear-gradient(155deg, var(--accent-soft, var(--accent)) 0%, var(--paper-2) 100%);
       filter: blur(2px) saturate(.55) brightness(1.04);
       opacity: .8;
@@ -853,7 +916,7 @@
       width: 100%; padding: 16px 18px;
       background: var(--card);
       border: 1px solid var(--line-2);
-      border-radius: 14px;
+      border-radius: var(--r-field);
       font-family: var(--display); font-size: 1rem;
       color: var(--ink); outline: none;
       margin-bottom: 12px;
@@ -862,20 +925,20 @@
     }
     .es-field:focus {
       border-color: var(--accent);
-      box-shadow: 0 0 0 4px rgba(196,90,58,.14);
+      box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 14%, transparent);
     }
     .es-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .es-field-row .es-field { margin-bottom: 12px; }
     .es-btn {
       width: 100%; padding: 16px 22px;
       background: var(--accent); color: #fff;
-      border: 0; border-radius: 14px;
+      border: 0; border-radius: var(--r-field);
       font-family: var(--mono); font-size: 12px; font-weight: 700;
       letter-spacing: .22em; text-transform: uppercase;
-      box-shadow: 0 10px 28px rgba(196,90,58,.28);
+      box-shadow: 0 10px 28px color-mix(in srgb, var(--accent) 28%, transparent);
       transition: transform .15s, box-shadow .15s;
     }
-    .es-btn:hover { transform: translateY(-1px); box-shadow: 0 14px 36px rgba(196,90,58,.36); }
+    .es-btn:hover { transform: translateY(-1px); box-shadow: 0 14px 36px color-mix(in srgb, var(--accent) 36%, transparent); }
     .es-btn.ghost {
       background: transparent; color: var(--accent);
       border: 1.5px solid var(--accent); box-shadow: none;
@@ -887,10 +950,10 @@
     .es-result .seat-card {
       background: var(--card);
       border: 1px solid var(--line);
-      border-radius: 16px;
+      border-radius: var(--r-card);
       padding: 22px;
       margin-top: 14px;
-      box-shadow: 0 8px 24px rgba(42,26,20,.06);
+      box-shadow: 0 8px 24px color-mix(in srgb, var(--shadow-c) 6%, transparent);
     }
     .es-result .seat-name {
       font-family: var(--mono); font-size: 11px; letter-spacing: .26em;
@@ -919,10 +982,12 @@
       gap: 14px;
       margin-top: 18px; padding: 26px 22px;
       background:
-        linear-gradient(180deg, rgba(255,255,255,.85) 0%, rgba(244,234,217,.7) 100%);
-      border: 1px solid rgba(196,90,58,.30);
-      border-radius: 18px;
-      box-shadow: 0 12px 28px -16px rgba(196,90,58,.30);
+        linear-gradient(180deg,
+          color-mix(in srgb, var(--card) 85%, transparent) 0%,
+          color-mix(in srgb, var(--paper-2) 70%, transparent) 100%);
+      border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+      border-radius: var(--r-card);
+      box-shadow: 0 12px 28px -16px color-mix(in srgb, var(--accent) 30%, transparent);
       text-align: center;
       animation: rsvpSuccessIn .45s ease both;
     }
@@ -934,7 +999,7 @@
       width: 52px; height: 52px; border-radius: 50%;
       background: var(--accent); color: #fff;
       display: inline-flex; align-items: center; justify-content: center;
-      box-shadow: 0 10px 24px -8px rgba(196,90,58,.55);
+      box-shadow: 0 10px 24px -8px color-mix(in srgb, var(--accent) 55%, transparent);
     }
     .es-rsvp-success .check svg { width: 26px; height: 26px; stroke: #fff; }
     .es-rsvp-success .msg {
@@ -947,7 +1012,7 @@
     }
     .es-rsvp-success .again {
       margin-top: 6px;
-      padding: 10px 18px; border-radius: 999px;
+      padding: 10px 18px; border-radius: var(--r-pill);
       background: transparent; color: var(--accent);
       border: 1px solid var(--accent);
       font-family: var(--mono); font-size: 11px; font-weight: 700;
@@ -959,7 +1024,7 @@
       margin-top: 14px; padding: 12px 16px;
       background: rgba(176,48,34,.08);
       border: 1px solid rgba(176,48,34,.25);
-      border-radius: 12px;
+      border-radius: var(--r-field);
       font-family: var(--display); font-size: 1rem;
       /* Was a fixed dark maroon (#7a2418) -- readable on the light
          templates' near-white background, but on Bold Jewel's dark
@@ -981,17 +1046,19 @@
       margin: 0 auto; max-width: 460px;
       padding: 30px 26px; text-align: center;
       background:
-        linear-gradient(180deg, rgba(255,255,255,.85) 0%, rgba(244,234,217,.7) 100%);
-      border: 1px solid rgba(196,90,58,.30);
-      border-radius: 18px;
-      box-shadow: 0 12px 28px -16px rgba(196,90,58,.30);
+        linear-gradient(180deg,
+          color-mix(in srgb, var(--card) 85%, transparent) 0%,
+          color-mix(in srgb, var(--paper-2) 70%, transparent) 100%);
+      border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+      border-radius: var(--r-card);
+      box-shadow: 0 12px 28px -16px color-mix(in srgb, var(--accent) 30%, transparent);
     }
     .es-rsvp-closed .lock {
       width: 48px; height: 48px; margin: 0 auto 14px;
       border-radius: 50%;
       background: var(--paper-2); color: var(--accent);
       display: flex; align-items: center; justify-content: center;
-      border: 1px solid rgba(196,90,58,.30);
+      border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
     }
     .es-rsvp-closed .lock svg { width: 20px; height: 20px; stroke: currentColor; }
     .es-rsvp-closed .title {
@@ -1048,15 +1115,17 @@
     .es-reg-link, .es-reg-cash {
       position: relative;
       background:
-        linear-gradient(180deg, rgba(255,255,255,.9) 0%, rgba(244,234,217,.7) 100%);
-      border: 1px solid rgba(196,90,58,.20);
-      border-radius: 18px;
+        linear-gradient(180deg,
+          color-mix(in srgb, var(--card) 90%, transparent) 0%,
+          color-mix(in srgb, var(--paper-2) 70%, transparent) 100%);
+      border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+      border-radius: var(--r-card);
       padding: 22px 24px;
-      box-shadow: 0 10px 26px -16px rgba(42,26,20,.20),
-                  inset 0 1px 0 rgba(255,255,255,.7);
+      box-shadow: 0 10px 26px -16px color-mix(in srgb, var(--shadow-c) 20%, transparent),
+                  inset 0 1px 0 color-mix(in srgb, var(--card) 70%, transparent);
       transition: transform .18s, box-shadow .18s;
     }
-    .es-reg-link:hover { transform: translateY(-2px); box-shadow: 0 14px 32px -16px rgba(196,90,58,.32); }
+    .es-reg-link:hover { transform: translateY(-2px); box-shadow: 0 14px 32px -16px color-mix(in srgb, var(--accent) 32%, transparent); }
     .es-reg-link {
       display: flex; align-items: center; gap: 16px;
       text-decoration: none; color: var(--ink);
@@ -1089,7 +1158,7 @@
       font-family: var(--mono); font-size: 10px; letter-spacing: .28em;
       text-transform: uppercase; color: var(--accent);
       padding: 4px 10px; border: 1px solid currentColor;
-      border-radius: 999px; opacity: .9;
+      border-radius: var(--r-pill); opacity: .9;
       margin-bottom: 12px;
     }
     .es-reg-cash .holder {
@@ -1098,8 +1167,8 @@
     }
     .es-reg-cash .number-row {
       display: flex; align-items: center; gap: 10px;
-      background: var(--card); border: 1px dashed rgba(196,90,58,.30);
-      border-radius: 12px; padding: 12px 14px;
+      background: var(--card); border: 1px dashed color-mix(in srgb, var(--accent) 30%, transparent);
+      border-radius: var(--r-field); padding: 12px 14px;
       margin-bottom: 12px;
     }
     .es-reg-cash .number {
@@ -1109,7 +1178,7 @@
     }
     .es-reg-cash .copy-btn {
       flex: 0 0 auto;
-      padding: 8px 14px; border-radius: 999px; border: 0;
+      padding: 8px 14px; border-radius: var(--r-pill); border: 0;
       background: var(--accent); color: #fff;
       font-family: var(--mono); font-size: 10.5px; font-weight: 700;
       letter-spacing: .14em; text-transform: uppercase;
@@ -1122,7 +1191,7 @@
       margin-top: 6px;
       background: var(--card);
       border: 1px solid var(--line);
-      border-radius: 12px;
+      border-radius: var(--r-field);
       padding: 8px;
       display: inline-block;
     }
@@ -1142,7 +1211,7 @@
     .es-gtk-card {
       background: var(--paper-2);
       border: 1px solid var(--line);
-      border-radius: 14px;
+      border-radius: var(--r-field);
       padding: 22px;
     }
     .es-gtk-card h4 {
@@ -1168,23 +1237,23 @@
       background:
         repeating-linear-gradient(
           135deg,
-          rgba(196,90,58,.025) 0 1px,
+          color-mix(in srgb, var(--accent) 2.5%, transparent) 0 1px,
           transparent 1px 14px
         ),
-        radial-gradient(120% 80% at 50% 0%, #fffaf0 0%, #fbf3e2 60%, #f5e9d1 100%);
+        radial-gradient(120% 80% at 50% 0%, var(--paper) 0%, var(--paper-2) 60%, var(--paper-3) 100%);
       border: 1px solid var(--line);
-      border-radius: 6px;
+      border-radius: var(--r-card);
       box-shadow:
-        0 1px 0 rgba(255,255,255,.7) inset,
-        0 30px 70px -30px rgba(42,26,20,.30),
-        0 8px 24px -12px rgba(42,26,20,.18);
+        0 1px 0 color-mix(in srgb, var(--card) 70%, transparent) inset,
+        0 30px 70px -30px color-mix(in srgb, var(--shadow-c) 30%, transparent),
+        0 8px 24px -12px color-mix(in srgb, var(--shadow-c) 18%, transparent);
     }
     /* Decorative inner hairline frame — classic invitation lockup. */
     .es-entourage-card::before {
       content: '';
       position: absolute; inset: 14px;
-      border: 1px solid rgba(196,90,58,.20);
-      border-radius: 3px;
+      border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+      border-radius: max(3px, calc(var(--r-card) - 3px));
       pointer-events: none;
     }
     .es-entourage-title {
