@@ -456,6 +456,53 @@
     }
     .anon-preview-render::-webkit-scrollbar { display: none; }
 
+    /* Preview close button -- only rendered/usable inside the mobile
+       full-screen overlay mode below; harmless (and hidden) on desktop
+       where the preview is always inline instead. */
+    .preview-close {
+      display: none;
+      position: absolute; top: 18px; right: 18px; z-index: 1;
+      width: 40px; height: 40px; border-radius: 50%;
+      align-items: center; justify-content: center;
+      background: rgba(255,255,255,.92); border: 1px solid var(--line);
+      color: var(--ink); cursor: pointer;
+      box-shadow: 0 8px 20px -8px rgba(47,33,27,.35);
+    }
+    .preview-close svg { width: 18px; height: 18px; stroke: currentColor; }
+
+    /* Floating preview button -- mobile only (see @media block below).
+       On a phone, the always-inline phone mockup pushed every single
+       step's actual form fields (and the Back/Continue buttons) below
+       a tall, re-rendered-on-every-step preview -- so editing meant
+       scrolling past the same phone frame over and over. This collapses
+       the preview off the normal flow and surfaces it on demand instead. */
+    .preview-fab {
+      display: none;
+      position: fixed; right: 18px; bottom: 22px; z-index: 45;
+      align-items: center; gap: 8px;
+      padding: 13px 18px;
+      border-radius: 999px; border: 0;
+      background: linear-gradient(180deg, var(--accent) 0%, var(--accent-deep) 100%);
+      color: #fff; font-weight: 700; font-size: 13px;
+      box-shadow: 0 14px 32px -10px rgba(196,90,58,.55);
+      cursor: pointer;
+    }
+    .preview-fab svg { width: 18px; height: 18px; stroke: #fff; flex: 0 0 auto; }
+    .preview-fab:active { transform: translateY(1px); }
+
+    @media (max-width: 860px) {
+      #anon-preview:not(.open) { display: none; }
+      #anon-preview.open {
+        position: fixed; inset: 0; z-index: 70;
+        margin: 0; padding: 24px 20px calc(24px + env(safe-area-inset-bottom));
+        background: rgba(47, 33, 27, .55);
+        align-items: center; justify-content: center;
+        overflow-y: auto;
+      }
+      .preview-close { display: flex; }
+      .preview-fab:not(.hidden) { display: flex; }
+    }
+
     /* ── Finish panel (anonymous mode "Save your event website") ── */
     .finish-overlay {
       position: fixed; inset: 0; z-index: 50;
@@ -527,11 +574,18 @@
       </div>
       <div id="locked" class="notice hidden"></div>
       <div id="anon-preview" class="anon-preview hidden" aria-hidden="true">
+        <button type="button" class="preview-close" id="preview-close" aria-label="Close preview">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
         <div class="anon-preview-label"><span class="dot"></span>Live Preview</div>
         <div class="preview-phone">
           <div class="anon-preview-render" id="anon-preview-render"></div>
         </div>
       </div>
+      <button type="button" class="preview-fab hidden" id="preview-fab" aria-label="Preview your event website">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+        Preview
+      </button>
       <div id="editor"></div>
       <div id="upgrade-panel" class="upgrade-panel hidden"></div>
       <div class="step-nav" id="step-nav">
@@ -1028,6 +1082,8 @@
       const box = $('anon-preview');
       if (!box) return;
       box.classList.remove('hidden');
+      const fab = $('preview-fab');
+      if (fab) fab.classList.remove('hidden');
       const host = $('anon-preview-render');
       // event-site.css's .es-hero reads this to fill exactly the visible
       // frame height -- dvh/vh inside the phone mockup would otherwise
@@ -1046,6 +1102,26 @@
     function schedulePreviewSync() {
       clearTimeout(previewSyncTimer);
       previewSyncTimer = setTimeout(syncPreview, 250);
+    }
+    // Mobile: the phone mockup is off-flow (display:none) until opened
+    // (see the @media block above), so --preview-vh -- computed from
+    // the host's clientHeight -- would be stale/zero from the last time
+    // it was actually laid out. Resync the instant it opens so the
+    // hero fills the frame correctly on first paint, not just after
+    // the next debounced edit.
+    const previewFab = $('preview-fab');
+    const previewCloseBtn = $('preview-close');
+    const previewBox = $('anon-preview');
+    if (previewFab && previewCloseBtn && previewBox) {
+      previewFab.addEventListener('click', () => {
+        previewBox.classList.add('open');
+        previewBox.setAttribute('aria-hidden', 'false');
+        syncPreview();
+      });
+      previewCloseBtn.addEventListener('click', () => {
+        previewBox.classList.remove('open');
+        previewBox.setAttribute('aria-hidden', 'true');
+      });
     }
 
     const tabSpecs = [
