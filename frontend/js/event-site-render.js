@@ -500,7 +500,10 @@
       });
       grid.appendChild(side);
       grid.appendChild(body);
-      app.appendChild(section('story', t('eyebrowStory'), cfg.story.label || t('story'), grid));
+      // No h2 title here -- .es-story-side already renders this same
+      // label as the section's visual heading (large italic, accent
+      // border), so passing it to section() too printed it twice.
+      app.appendChild(section('story', t('eyebrowStory'), null, grid));
     }
 
     // ── Details: schedule, venues, dress code, parking ──
