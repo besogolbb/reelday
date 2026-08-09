@@ -330,6 +330,15 @@ fastify.get('/free-wedding-website', (_request, reply) => {
   reply.sendFile('free-wedding-website.html');
 });
 
+// Competitor-alternative SEO pages (docs/MARKETING-AUDIT-2026-08.md priority #4).
+// Static pages, same pattern as above.
+fastify.get('/alternatives/zola', (_request, reply) => {
+  reply.sendFile('alternatives-zola.html');
+});
+fastify.get('/alternatives/vowly', (_request, reply) => {
+  reply.sendFile('alternatives-vowly.html');
+});
+
 fastify.get('/admin',            (_r, reply) => reply.sendFile('admin.html'));
 fastify.get('/login',            (_r, reply) => reply.sendFile('login.html'));
 fastify.get('/register',         (_r, reply) => reply.sendFile('register.html'));
