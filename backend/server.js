@@ -32,6 +32,7 @@ import { reconcilePendingTranscodes } from './lib/videoTranscode.js';
 import { startRenewalReminderJob } from './jobs/renewal-reminders.js';
 import { startGalleryCleanupJob }  from './jobs/gallery-cleanup.js';
 import { startSdeLambdaPoller }    from './jobs/sde-lambda-poller.js';
+import { startWeddingWebsiteDripJob } from './jobs/wedding-website-drip.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -495,6 +496,12 @@ try {
   // set. One warning email goes out at the start of the grace window
   // so the host has time to hit "Download all" before deletion.
   startGalleryCleanupJob(fastify);
+
+  // Free-website -> paid-wall upsell drip: day0 / T-30 / T-7 emails for
+  // Tala-plan hosts with a published event website, per
+  // docs/LEAD-MAGNET-PLAN.md §6. CAS-based idempotency on
+  // events.wall_upsell_emails_sent, same pattern as the renewal cron.
+  startWeddingWebsiteDripJob(fastify);
 
   // Poll Remotion Lambda for in-flight SDE renders. No-op when
   // REMOTION_LAMBDA_FUNCTION_NAME isn't set (ECS-only mode).

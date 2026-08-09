@@ -319,6 +319,14 @@ const MIGRATIONS = `
   -- instances or two ticks can never double-fire the same reminder.
   ALTER TABLE users ADD COLUMN IF NOT EXISTS renewal_reminders_sent JSONB NOT NULL DEFAULT '{}'::jsonb;
 
+  -- ── Free-website -> paid-wall upsell drip (backend/jobs/wedding-website-drip.js) ──
+  -- Per-event log of which drip stage emails ('day0' | 't30' | 't7') have
+  -- already been sent, keyed by stage with an ISO-date value. Same CAS
+  -- claim pattern as renewal_reminders_sent above -- the cron flips a key
+  -- from missing to set in one UPDATE before sending, so two instances or
+  -- two ticks can't double-fire the same stage.
+  ALTER TABLE events ADD COLUMN IF NOT EXISTS wall_upsell_emails_sent JSONB NOT NULL DEFAULT '{}'::jsonb;
+
   -- ── Gallery cleanup tracking (backend/jobs/gallery-cleanup.js) ──
   -- archived_at:
   --   Set the moment the cleanup cron hard-deletes an event's R2 files
