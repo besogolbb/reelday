@@ -172,7 +172,7 @@ async function sendDripEmail({ slug, couple_names, email, full_name }, stage, lo
       subject: `Your free event website is live — ${coupleLabel}`,
       headline: 'Your website is live!',
       intro: `Your free Reelday event website for <strong>${escapeHtml(coupleLabel)}</strong> is live — share it with your guests any time.`,
-      body: `When you're ready, you can also add a live guest wall for the event itself: guests upload photos and videos that play on a screen in real time, with reactions and games. No rush — you can add it any time before the big day.`,
+      body: `When you're ready, you can also add a live guest wall for the event itself: guests upload photos and videos that play on a screen in real time, with reactions and games. No rush — you can add it any time before the big day. And if you know another couple planning their own wedding, feel free to send them your site as an example — every Reelday site has a "make yours free" link at the bottom.`,
       ctaLabel: 'View your website',
       ctaUrl: siteUrl,
     },
