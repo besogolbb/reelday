@@ -4186,7 +4186,7 @@
     }
   });
 
-  import { resolvePlan, nextTier, HIRAYA_PUBLIC } from '/js/plans.js';
+  import { resolvePlan, nextTier, HIRAYA_PUBLIC, PLANS } from '/js/plans.js';
   import { captureCouponFromUrl, getActiveCoupon, renderCouponBanner } from '/js/coupon.js';
   captureCouponFromUrl();
   renderCouponBanner();
@@ -7987,6 +7987,21 @@
         const recData = await recRes.json().catch(() => ({}));
         if (recData?.reconciled) {
           showToast(`Upgraded to ${upgradedParam[0].toUpperCase()}${upgradedParam.slice(1)} — enjoy!`);
+          // GA4's recommended ecommerce event name -- lets this show up in
+          // any standard ecommerce/conversion report without custom setup.
+          // This is the funnel's actual revenue milestone: free website ->
+          // ... -> purchase. /payments/reconcile doesn't return the paid
+          // amount, so value comes from the same PLANS price table the UI
+          // already trusts elsewhere -- not fabricated from a response
+          // field that doesn't exist.
+          if (typeof window.gtag === 'function') {
+            window.gtag('event', 'purchase', {
+              event_category: 'lead_magnet_funnel',
+              plan: upgradedParam,
+              currency: 'PHP',
+              value: PLANS?.[upgradedParam]?.price,
+            });
+          }
         } else if (recData?.reason === 'not_paid_yet') {
           showToast('Payment not confirmed yet — refresh in a moment.', 'error');
         }
@@ -8628,6 +8643,9 @@
                 if (!pr.ok) throw new Error('publish failed');
                 statusEl.textContent = `Live - guests can view /e/${slug}.`;
                 publishNowBtn.style.display = 'none';
+                if (typeof window.gtag === 'function') {
+                  window.gtag('event', 'website_published', { event_category: 'lead_magnet_funnel', source: 'dashboard_publish_now' });
+                }
                 if (editLink) editLink.className = 'btn btn-accent';
                 document.dispatchEvent(new CustomEvent('dash:ready-item', { detail: {
                   key: 'website', label: 'Event website', section: 'website',

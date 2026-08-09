@@ -1379,6 +1379,11 @@
       upgrade.className = 'btn btn-accent';
       upgrade.href = '/#pricing';
       upgrade.textContent = 'Unlock guest experience';
+      upgrade.addEventListener('click', () => {
+        if (typeof window.gtag === 'function') {
+          window.gtag('event', 'upgrade_click', { event_category: 'lead_magnet_funnel' });
+        }
+      });
       const free = document.createElement('button');
       free.type = 'button';
       free.className = 'btn btn-ghost';
@@ -1413,10 +1418,19 @@
           body: JSON.stringify({ config: gather(), is_published: true }),
         });
         if (!res.ok) throw new Error('save failed');
+        const wasAlreadyLive = state.is_published;
         state.is_published = true;
         setStatus('Live', true);
         publishBtn.textContent = 'Update live site';
         syncPreview();
+        // Only the first publish is the funnel milestone -- re-publishing
+        // edits to an already-live site isn't a new lead-magnet activation.
+        if (!wasAlreadyLive && typeof window.gtag === 'function') {
+          window.gtag('event', 'website_published', {
+            event_category: 'lead_magnet_funnel',
+            plan: currentPlan || 'tala',
+          });
+        }
       } catch {
         statusNote.textContent = 'Save failed. Please try again.';
       } finally {
@@ -1516,6 +1530,12 @@
         const evData = await evRes.json();
         if (!evRes.ok) throw new Error(evData.message || 'Could not create your event.');
         const newSlug = evData.event.slug;
+        if (typeof window.gtag === 'function') {
+          window.gtag('event', 'free_website_created', {
+            event_category: 'lead_magnet_funnel',
+            event_type: controls.basicsType.value,
+          });
+        }
 
         // Account and event are real from this point on. Everything
         // below is best-effort: if any of it fails, the account/event

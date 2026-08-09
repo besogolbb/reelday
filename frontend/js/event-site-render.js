@@ -882,7 +882,16 @@
             message: msg.value.trim()
           })
         }).then(function (r) {
-          if (r.ok) { showSuccess(); return; }
+          if (r.ok) {
+            if (typeof window.gtag === 'function') {
+              window.gtag('event', 'rsvp_submitted', {
+                event_category: 'lead_magnet_funnel',
+                attending: att.value === 'yes',
+              });
+            }
+            showSuccess();
+            return;
+          }
           // Backend returns 410 when the deadline has passed
           // between page load and submit — swap to the closed
           // state so the guest doesn't keep retrying.
