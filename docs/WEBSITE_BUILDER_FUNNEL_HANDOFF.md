@@ -628,3 +628,30 @@ Not done — the launch/market question is not fully closed by this pass:
   data in production and wasn't run without checking first.
 - Deleting the dormant dashboard wizard is still gated on that same
   end-to-end run, unchanged from the Phase 4 recommendation above.
+
+## Phase 4.2 — E2E Verification + Dormant Wizard Deleted (2026-08)
+
+Both of Phase 4.1's open items closed in the same pass, via a real API-level
+run against production (register → `POST /api/events` with `plan: 'tala'`
+→ `PUT /api/event-site/:slug` with `is_published: true` → `GET /e/:slug`):
+register returned 201 with a token, event creation returned 201 with a
+slug, publish returned 200, and the live guest page rendered 200 with the
+couple name present in the body. Zero errors at any step. Test account was
+a `+`-alias of a real inbox (`you+reelday.e2e.<timestamp>@...`) so it's
+identifiable and disposable; test event slug was prefixed
+`e2e-test-delete-me-`.
+
+With that passing, the dormant `if (false && slug && panel)` wizard branch
+in `frontend/dashboard.html` (the code Phase 1 kept for rollback) was
+deleted — ~845 lines, plus the now-orphaned static markup inside
+`#esite-panel` that the shipped launcher script was overwriting via
+`innerHTML` on every load anyway. `#esite-panel` itself stays as the
+mount point.
+
+Still not done, unchanged: seat-list/RSVP CSV migration into the
+standalone builder (no signal yet it's needed); Google Sign-In and
+magic-link signup in the anonymous builder (deferred, email/password
+covers v1); the new-paid-gates topic flagged after Phase 4 (RSVP
+caps/export, seat-finder gating, guest reminders, QR kits, coordinator
+mode) — still deliberately out of scope, still needs its own planning
+pass if pursued.
