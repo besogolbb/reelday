@@ -1,6 +1,5 @@
 User-agent: *
 Allow: /
-Disallow: /e/
 Disallow: /dashboard
 Disallow: /upload
 Disallow: /account
