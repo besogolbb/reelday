@@ -323,6 +323,12 @@ fastify.get('/website-builder', (_request, reply) => {
   reply.sendFile('website-builder.html');
 });
 
+// SEO landing page for "free wedding website philippines" — LEAD-MAGNET-PLAN.md
+// Loop 1. Static page, no data, so a plain sendFile is enough.
+fastify.get('/free-wedding-website', (_request, reply) => {
+  reply.sendFile('free-wedding-website.html');
+});
+
 fastify.get('/admin',            (_r, reply) => reply.sendFile('admin.html'));
 fastify.get('/login',            (_r, reply) => reply.sendFile('login.html'));
 fastify.get('/register',         (_r, reply) => reply.sendFile('register.html'));
