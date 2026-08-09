@@ -1,6 +1,17 @@
 # REELDAY — FREE EVENT WEBSITE LEAD MAGNET PLAN
 **Draft · Aug 2026 · runs alongside/after "Own the Party" (docs/MARKETING-PLAN.md, window closed Jul 31)**
 
+> **UPDATE (2026-08-09):** most of §2's product scope was already built —
+> see `docs/WEBSITE_BUILDER_FUNNEL_HANDOFF.md`, shipped through Phase 4.1.
+> The anonymous no-signup builder, free-tier `website` flag, "Powered by
+> Reelday" viral footer, and Memory Album upgrade-teaser all exist in
+> production today. §2 below is kept for the record but is **superseded** —
+> read the handoff doc's own "Not done" list for what's actually left
+> before distribution starts. Short version: one real end-to-end signup
+> test, then delete the dormant dashboard wizard. Everything from §3
+> onward (positioning, funnel, distribution loops, email drip) still
+> stands as written.
+
 Owner: Benz · Time budget: evenings + weekends · Cash budget: ≤ ₱5,000 (unspent from prior plan, reset)
 Pricing source of truth: `backend/lib/plans.js`
 
