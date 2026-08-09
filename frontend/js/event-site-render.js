@@ -63,7 +63,10 @@
     eyebrowMemoryAlbum:'— every smile, every laugh —',
     memoryAlbumPreMsg:'Photos and videos from our celebration will appear here after the event. Check back after the celebration to relive every memory.',
     memoryAlbumLiveMsg:'The celebration is happening — add your photos and videos to our shared album.',
-    memoryAlbumCountMsg:'{count} memories shared so far — add yours to the album.'
+    memoryAlbumCountMsg:'{count} memories shared so far — add yours to the album.',
+    memoryAlbumPostMsg:'{count} memories shared by our guests — relive the celebration.',
+    memoryAlbumPostEmptyMsg:'The celebration has wrapped — thank you to everyone who joined us.',
+    viewAlbum:'View the Memory Album'
   };
   function t(k) { return L[k] || k; }
 
@@ -661,6 +664,7 @@
       var startsAt = data.upload_window_starts_at ? new Date(data.upload_window_starts_at).getTime() : null;
       var endsAt = data.upload_window_ends_at ? new Date(data.upload_window_ends_at).getTime() : null;
       var uploading = (startsAt === null || now >= startsAt) && (endsAt === null || now < endsAt);
+      var windowClosed = endsAt !== null && now >= endsAt;
       var isFreePlan = data.plan === 'tala' || data.plan === 'demo';
 
       // Decorative-only teaser row (no photos, no data — see CSS
@@ -675,8 +679,8 @@
         wrap.appendChild(teaser);
       }
 
+      var count = data.upload_count || 0;
       if (uploading) {
-        var count = data.upload_count || 0;
         wrap.appendChild(el('p', { text: isFreePlan
           ? 'Share a few event photos here. The host can unlock the full Memory Album for unlimited photos, video greetings, and the live wall.'
           : (count > 0 ? t('memoryAlbumCountMsg').replace('{count}', count) : t('memoryAlbumLiveMsg')) }));
@@ -684,6 +688,20 @@
         wrap.appendChild(up);
         if (isFreePlan && count > 0) {
           wrap.appendChild(el('p', { text: t('memoryAlbumCountMsg').replace('{count}', count) }));
+        }
+      } else if (windowClosed) {
+        // Upload window has closed (event already happened) — the pre-event
+        // "will appear here after the event" copy is wrong at this point,
+        // and guests with real uploads were seeing a permanently-empty
+        // section. Point them at the wall, which serves approved uploads
+        // regardless of the window (same query buildPayload() uses for
+        // upload_count).
+        wrap.appendChild(el('p', { text: count > 0
+          ? t('memoryAlbumPostMsg').replace('{count}', count)
+          : t('memoryAlbumPostEmptyMsg') }));
+        if (count > 0) {
+          var view = el('a', { class: 'es-btn', href: '/wall/' + ACTIVE_SLUG, text: t('viewAlbum') });
+          wrap.appendChild(view);
         }
       } else {
         wrap.appendChild(el('p', { text: isFreePlan
