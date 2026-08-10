@@ -1530,12 +1530,6 @@
         const evData = await evRes.json();
         if (!evRes.ok) throw new Error(evData.message || 'Could not create your event.');
         const newSlug = evData.event.slug;
-        if (typeof window.gtag === 'function') {
-          window.gtag('event', 'free_website_created', {
-            event_category: 'lead_magnet_funnel',
-            event_type: controls.basicsType.value,
-          });
-        }
 
         // Account and event are real from this point on. Everything
         // below is best-effort: if any of it fails, the account/event
@@ -1571,7 +1565,33 @@
         finishModal.classList.add('hidden');
         statusPill.textContent = 'Saved';
         statusNote.textContent = "Your website is saved. Publish it when you're ready.";
-        setTimeout(() => { location.href = `/dashboard?slug=${encodeURIComponent(newSlug)}`; }, 900);
+
+        // Fire free_website_created and hold the redirect until GA4's
+        // beacon has actually gone out -- confirmed via headless-browser
+        // network capture that the previous fire-and-forget version
+        // (gtag() call immediately followed by a flat 900ms setTimeout)
+        // regularly lost this event: gtag() only queues the hit, and the
+        // async gtag.js library hadn't sent it to /g/collect yet by the
+        // time location.href tore the page down. event_callback is GA4's
+        // own documented pattern for this exact "navigate right after an
+        // event" case. redirected/go() guards against firing twice if
+        // gtag's own event_timeout AND our safety-net setTimeout both
+        // land (e.g. gtag.js never loaded at all -- ad blocker, etc.).
+        let redirected = false;
+        const go = () => {
+          if (redirected) return;
+          redirected = true;
+          location.href = `/dashboard?slug=${encodeURIComponent(newSlug)}`;
+        };
+        if (typeof window.gtag === 'function') {
+          window.gtag('event', 'free_website_created', {
+            event_category: 'lead_magnet_funnel',
+            event_type: controls.basicsType.value,
+            event_callback: go,
+            event_timeout: 1000,
+          });
+        }
+        setTimeout(go, 1200);
       } catch (err) {
         finError.textContent = err.message || 'Something went wrong. Please try again.';
         finError.classList.remove('hidden');
