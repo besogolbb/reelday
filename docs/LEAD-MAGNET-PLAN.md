@@ -1,6 +1,18 @@
 # REELDAY — FREE EVENT WEBSITE LEAD MAGNET PLAN
 **Draft · Aug 2026 · runs alongside/after "Own the Party" (docs/MARKETING-PLAN.md, window closed Jul 31)**
 
+> **UPDATE (2026-08-10):** social accounts already exist and are live —
+> `facebook.com/reelday.ph`, `instagram.com/reelday.ph`,
+> `tiktok.com/@reelday.ph`. The earlier audit's "zero social presence"
+> finding was a search-discoverability gap, not a nonexistence one — IG
+> confirmed at 4 followers, last post ~2 months stale, bio still selling
+> the old "live photo wall" pitch. No new-account decision needed. Done:
+> linked all three from the site footer + Organization JSON-LD `sameAs`
+> (frontend/index.html). Still needed (manual, needs account login):
+> update all 3 bios to the free-website positioning, and resume posting
+> — the weekly content-queue routine (docs/content-queue/, Monday cron)
+> now has somewhere real to post its output.
+
 > **UPDATE (2026-08-09):** most of §2's product scope was already built —
 > see `docs/WEBSITE_BUILDER_FUNNEL_HANDOFF.md`, shipped through Phase 4.1.
 > The anonymous no-signup builder, free-tier `website` flag, "Powered by
