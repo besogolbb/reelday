@@ -11,6 +11,15 @@ import { buildAppUrl } from '../utils/appUrl.js';
 // timing oracle for account enumeration. Generated once at module load.
 const DUMMY_HASH = bcrypt.hashSync(randomBytes(32).toString('hex'), 12);
 
+// Internal inbox for signup/event alerts. Matches events.js.
+const ADMIN_EMAIL = 'admin@reelday.ph';
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"]/g, c => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]
+  ));
+}
+
 function resend() {
   return new Resend(process.env.RESEND_API_KEY);
 }
@@ -137,6 +146,56 @@ async function sendAlreadyRegisteredEmail(email, appUrl) {
   }), 10_000, 'Resend (already-registered)');
 }
 
+// Admin-only "new signup" ping. Mirrors sendAdminNewEventEmail in
+// events.js: accounts that register but never create an event were
+// otherwise invisible, so the admin inbox had no view of the top of
+// the funnel. Plain internal summary, no branding — it's a log line.
+//
+// Only fires for genuinely new rows. The already-exists branch of
+// /register deliberately doesn't call this: it would turn the admin
+// inbox into a mirror of the enumeration probing the generic 201 is
+// there to hide.
+async function sendAdminNewUserEmail(user, log) {
+  const createdAt = new Date().toLocaleString('en-PH', {
+    dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Manila',
+  });
+  const rows = [
+    ['Name',    user.full_name || '(no name)'],
+    ['Email',   user.email],
+    ['Phone',   user.phone || '(none)'],
+    ['User ID', String(user.id)],
+    ['Signed up', `${createdAt} PHT`],
+  ];
+
+  await withTimeout(resend().emails.send({
+    from:    'Reelday Alerts <noreply@reelday.ph>',
+    to:      ADMIN_EMAIL,
+    replyTo: user.email,
+    subject: `New signup: ${user.full_name || user.email}`,
+    text: [
+      'New Reelday account registered.',
+      '',
+      ...rows.map(([k, v]) => `${k}: ${v}`),
+      '',
+      'No event created yet — this is account registration only.',
+    ].join('\n'),
+    html: `
+      <div style="font-family:'SFMono-Regular',Consolas,monospace;max-width:600px;font-size:13px;color:#222">
+        <p style="margin:0 0 14px;font-family:Arial,sans-serif;font-size:15px">
+          <strong>New Reelday account registered.</strong>
+        </p>
+        <table style="border-collapse:collapse;width:100%">
+          ${rows.map(([k, v]) => `
+            <tr>
+              <td style="padding:5px 12px 5px 0;color:#777;white-space:nowrap;vertical-align:top">${escapeHtml(k)}</td>
+              <td style="padding:5px 0;vertical-align:top">${escapeHtml(v)}</td>
+            </tr>`).join('')}
+        </table>
+        <p style="margin:16px 0 0;color:#777">No event created yet — this is account registration only.</p>
+      </div>`,
+  }), 10_000, 'Resend (admin-new-user)');
+}
+
 async function sendResetEmail(email, token, appUrl) {
   const link = `${appUrl}/reset-password?token=${token}`;
   await withTimeout(resend().emails.send({
@@ -232,6 +291,10 @@ export default async function authRoutes(fastify) {
       // never block registration or make the verify email look broken.
       sendWelcomeEmail(email, full_name, buildAppUrl(request)).catch(err => {
         fastify.log.warn({ err: err.message }, 'Failed to send welcome email');
+      });
+      // Admin signup ping — fire-and-forget for the same reason.
+      sendAdminNewUserEmail(user, fastify.log).catch(err => {
+        fastify.log.warn({ err: err.message }, 'Failed to send admin new-user notification');
       });
     } else {
       fastify.log.warn(
