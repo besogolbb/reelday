@@ -212,9 +212,31 @@ fastify.addContentTypeParser(
   },
 );
 
+// Marketing pages with no per-user content, so they're safe to hold in a
+// *shared* cache (Cloudflare's edge) rather than just the browser. Every
+// other .html is an app shell behind a login and stays browser-only.
+const EDGE_CACHEABLE_PAGES = new Set([
+  'index.html',
+  'start.html',
+  'terms.html',
+  'contact.html',
+  'partners.html',
+  'free-wedding-website.html',
+  'alternatives-zola.html',
+  'alternatives-vowly.html',
+]);
+
 await fastify.register(staticFiles, {
   root: join(__dirname, '..', 'frontend'),
   prefix: '/',
+  // @fastify/static sets its own `Cache-Control` (cacheControl defaults to
+  // true, maxAge to 0) and that header *overwrites* whatever setHeaders
+  // below writes. Result: every rule here was silently dead and all HTML,
+  // CSS and JS shipped as `public, max-age=0` — the exact re-download-
+  // everything-every-visit behaviour the rules were added to prevent.
+  // Turning the plugin's own header off makes setHeaders authoritative.
+  // Verified against v9.3.0 on 2026-08-17.
+  cacheControl: false,
   // Per-asset cache policy. Without these every visitor re-downloads
   // every CSS/JS/image/font on every visit, which dominates time-to-
   // interactive on slow PH mobile connections. We *don't* hash filenames
@@ -231,7 +253,16 @@ await fastify.register(staticFiles, {
   setHeaders: (res, filePath) => {
     const lower = filePath.toLowerCase();
     if (lower.endsWith('.html')) {
-      res.setHeader('Cache-Control', 'public, max-age=60, must-revalidate');
+      const base = lower.replace(/\\/g, '/').split('/').pop();
+      // s-maxage lets Cloudflare hold the page at the edge (browsers still
+      // revalidate after 60s so deploys propagate fast), and stale-if-error
+      // keeps those pages answering when the origin is unreachable. On
+      // 2026-08-17 a ~35min transit failure between Cloudflare's North
+      // American PoPs and the Singapore origin returned 522 to every US
+      // visitor purely because the edge had no copy to fall back on.
+      res.setHeader('Cache-Control', EDGE_CACHEABLE_PAGES.has(base)
+        ? 'public, max-age=60, s-maxage=600, stale-while-revalidate=86400, stale-if-error=86400'
+        : 'private, max-age=60, must-revalidate');
     } else if (/\.(png|jpe?g|webp|gif|svg|ico|woff2?|ttf|otf|eot)$/.test(lower)) {
       res.setHeader('Cache-Control', 'public, max-age=2592000, immutable'); // 30 days
     } else if (/\.(css|js|mjs|json)$/.test(lower)) {
