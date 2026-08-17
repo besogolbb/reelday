@@ -139,6 +139,78 @@ async function sendEventCreatedEmail(opts, log) {
   }
 }
 
+// Admin-only "new event created" ping. Separate from the host-facing
+// email above on purpose: paid tiers already BCC admin on the payment
+// receipt (payments.js), but free Tala events and any event created
+// without a checkout step were previously silent. This fires for every
+// tier so the admin inbox sees every signup-to-event conversion.
+//
+// Plain internal summary — no branding, no CTA. It's a log line, not
+// marketing. Fire-and-forget like the host email: a failure here must
+// never affect the create response.
+async function sendAdminNewEventEmail(opts, log) {
+  if (!process.env.RESEND_API_KEY) return;
+  const {
+    hostName, hostEmail, eventLabel, eventType, eventDate, planId, planName,
+    isPaid, slug, dashUrl, uploadUrl,
+  } = opts;
+
+  const fmtDate = value => (value
+    ? new Date(value).toLocaleDateString('en-PH', {
+        year: 'numeric', month: 'short', day: 'numeric', timeZone: 'Asia/Manila',
+      })
+    : 'not set');
+  const createdAt = new Date().toLocaleString('en-PH', {
+    dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Manila',
+  });
+
+  const rows = [
+    ['Host',       `${hostName || '(no name)'} <${hostEmail || 'unknown'}>`],
+    ['Event',      eventLabel || '(untitled)'],
+    ['Type',       eventType || 'wedding'],
+    ['Event date', fmtDate(eventDate)],
+    ['Plan',       `${planName || planId} (${planId})${isPaid ? ' — PAID' : ' — free'}`],
+    ['Slug',       slug],
+    ['Created',    `${createdAt} PHT`],
+  ];
+
+  try {
+    await withTimeout(resend().emails.send({
+      from:    'Reelday Alerts <noreply@reelday.ph>',
+      to:      ADMIN_EMAIL,
+      replyTo: hostEmail || ADMIN_EMAIL,
+      subject: `New event: ${eventLabel || slug} — ${planName || planId}${isPaid ? '' : ' (free)'}`,
+      text: [
+        'New Reelday event created.',
+        '',
+        ...rows.map(([k, v]) => `${k}: ${v}`),
+        '',
+        `Dashboard: ${dashUrl}`,
+        `Upload:    ${uploadUrl}`,
+      ].join('\n'),
+      html: `
+        <div style="font-family:'SFMono-Regular',Consolas,monospace;max-width:600px;font-size:13px;color:#222">
+          <p style="margin:0 0 14px;font-family:Arial,sans-serif;font-size:15px">
+            <strong>New Reelday event created.</strong>
+          </p>
+          <table style="border-collapse:collapse;width:100%">
+            ${rows.map(([k, v]) => `
+              <tr>
+                <td style="padding:5px 12px 5px 0;color:#777;white-space:nowrap;vertical-align:top">${escapeHtml(k)}</td>
+                <td style="padding:5px 0;vertical-align:top">${escapeHtml(v)}</td>
+              </tr>`).join('')}
+          </table>
+          <p style="margin:16px 0 0">
+            <a href="${escapeHtml(dashUrl)}">Dashboard</a> &nbsp;·&nbsp;
+            <a href="${escapeHtml(uploadUrl)}">Upload page</a>
+          </p>
+        </div>`,
+    }), 10_000, 'Resend (admin-new-event)');
+  } catch (err) {
+    log?.warn?.({ err: err.message, slug }, 'admin new-event notification failed');
+  }
+}
+
 // Sanitised, no-suffix slug from the couple/celebrant names. We try this
 // first; only when it collides with an existing event do we append a
 // random suffix (see the INSERT retry loop below). Empty/all-junk input
@@ -490,6 +562,21 @@ export default async function eventRoutes(fastify) {
       eventDate:  event.event_date,
       planId:     planForEvent.id,
       demoDays:   planForEvent.demoDays,
+      dashUrl,
+      uploadUrl,
+    }, request.log).catch(() => {});
+
+    // Admin ping for the same moment — every tier, including free Tala.
+    sendAdminNewEventEmail({
+      hostName:   request.user.full_name,
+      hostEmail:  request.user.email,
+      eventLabel: event.couple_names,
+      eventType:  event.event_type,
+      eventDate:  event.event_date,
+      planId:     planForEvent.id,
+      planName:   planForEvent.name,
+      isPaid:     event.is_paid,
+      slug:       event.slug,
       dashUrl,
       uploadUrl,
     }, request.log).catch(() => {});
