@@ -38,7 +38,7 @@
     "google-auth-library": "^10.6.2",
     "jsonwebtoken": "^9.0.3",
     "nodemailer": "^9.0.1",
-    "openai": "^4.50.0",
+    "openai": "^6.45.0",
     "pg": "^8.12.0",
     "qrcode": "^1.5.4",
     "resend": "^6.12.3",
