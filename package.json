@@ -32,7 +32,7 @@
     "@remotion/lambda-client": "^4.0.0",
     "archiver": "^7.0.1",
     "bcryptjs": "^2.4.3",
-    "dotenv": "^16.4.5",
+    "dotenv": "^17.4.2",
     "fastify": "^5.8.5",
     "fastify-plugin": "^6.0.0",
     "google-auth-library": "^10.6.2",
