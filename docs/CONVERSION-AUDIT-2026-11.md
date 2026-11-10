@@ -1,167 +1,217 @@
-# Reelday.ph — Conversion Audit & Turnaround Plan
+# Reelday.ph — Conversion Audit & Turnaround Plan (FINAL v2)
 
-**Date:** 2026-11-10 · **Scope:** the whole client journey from first visit to paid event, covering activation (sign-ups that never try anything), the free event-website lead magnet, and upgrading to paid.
-**Method:** I read the code of every step a host goes through (`index.html` → `register.html` / `website-builder.html` → `start.html` → `dashboard.html` → `/api/payments/create`), plus the email code (`auth.js` welcome email and `jobs/wedding-website-drip.js`).
-**Not done yet:** I did not query production data. Section 7 has the SQL to run. Every finding below comes from the code, so the numbers in section 7 will show which leaks cost the most.
-
----
-
-## 1. Executive summary
-
-People sign up, but the product never gets them to the moment that sells it: **a photo from their own phone appearing on the live wall.** When someone does want to pay, the path often breaks. There are five root causes:
-
-1. **The homepage and the product promise two different things.** The hero sells a live wall: "Every shot. Every guest. One QR." Every "Start free" button opens a wedding-website form. People who came for the wall get a website builder. People who came for the website read about a QR wall first.
-2. **The free plan punishes people for trying it.** Tala is shown as *"1 free event, ever"*, and that one event is supposed to be both the test and the real party. So people don't test, because a test would use up their only free event. The 48-hour demo window also starts when the event is created. For a website built 6 months before a wedding, it expires before anyone thinks about the wall.
-3. **The upgrade buttons lead to the wrong place (P0 bug).** "Unlock guest experience" in the builder, and the CTAs in the t-30 and t-7 "money" emails, all point to `/#pricing`. From there, "Choose Sinag/Dalisay" opens `/start?plan=…`, which **pays for a brand-new event** instead of upgrading the one the host already built. The website and RSVPs stay on the free event. A host who wants to pay either gets confused or buys the wrong thing.
-4. **Most new sign-ups get no follow-up.** The upsell emails only go to hosts with a *published* free site, but the builder saves new sites as *unpublished drafts*. People who sign up through `/start` or Google get no activation emails at all. Google sign-ups also get **no welcome email and no admin alert**, so your own sign-up count is too low.
-5. **Pricing and trust claims contradict each other.** Dalisay lists "Full event website" as a paid feature even though the website is free. The welcome email says the same. The FAQ says "Do we keep the photos forever? **Yes**", but Tala keeps them 24 hours and Sinag 30 days. The flagship tier lists its headline feature (SDE) as "coming soon". The hero shows **"★★★★★ Trusted by 2,140+ celebrations"**. If that number isn't real, it's a liability (see §5).
-
-**The turnaround in one sentence:** fix the broken upgrade path this week, give every new user a free test that doesn't cost their real event, walk them to "it's on the wall!" in their first 5 minutes, then follow up with emails timed to their event date and a personal Messenger/Viber message from you.
+**Date:** 2026-11-10 · **Status:** final. v2 replaces the first draft (§9 lists what the self-audit changed and why).
+**Scope:** the whole journey from first visit to paid event, covering activation (sign-ups that never try anything), the free event-website lead magnet, and upgrading to paid.
+**Method:** I read the code of every step a host goes through (`index.html` → `register.html` / `website-builder.html` → `start.html` → `dashboard.html` → `/api/uploads` → `/api/payments/create`) and the email code (`auth.js`, `jobs/wedding-website-drip.js`). Every claim below was checked against that code.
+**Not yet done:** production numbers. Run §8 *before* shipping anything, so there's a baseline to measure against.
+**Time budget:** written for evenings and weekends while the job search comes first. About 6–8 hrs/week, with three 2-week sprints plus a "later, only if data says so" list.
 
 ---
 
-## 2. The journey, stage by stage, with leak points
+## 1. Diagnosis (one paragraph)
+
+People sign up, but the product never gets them to the moment that sells it: **"I scanned the QR on my phone and my photo appeared on the big screen."** That moment is never set up for them. The free plan also discourages trying ("1 free event, ever", and a 48-hour demo window that starts when the event is created). When someone does want to pay, **most upgrade buttons send them to the homepage pricing section, which sells a new event instead of upgrading theirs.** A cancelled checkout also lands back on the homepage with no follow-up. Most new sign-ups get no follow-up email at all. And the site makes claims a careful buyer can catch: "2,140+ celebrations", "photos forever", the free website listed as a paid feature, and the main feature of the top tier labelled "coming soon".
+
+---
+
+## 2. The final funnel: two doors, one hallway, one checkout
 
 ```
-Visit ─► Sign up ─► Event created ─► TRIED IT (aha) ─► Shared w/ guests ─► Upgrade intent ─► Checkout ─► Paid
-  L1        L2            L3                L4                  L5                 L6             L7
+ DOOR A — wall intent                 DOOR B — website intent
+ Homepage hero                        /free-wedding-website, nav "Free website"
+ "Try the live wall free"             "Make your free wedding website"
+        │                                     │
+   /start (3 steps,                     /website-builder (anonymous draft)
+   account last, no plan step)          → Save (Google 1-tap or email)
+        │                               → "Preview & publish" screen → share to guests
+        └───────────────┬─────────────────────┘
+                        ▼
+        THE HALLWAY — event dashboard, first screen = "Test it now" card
+        (30-min Test Session: scan with your phone → see it on the wall)   ← AHA
+                        ▼
+        Follow-up by behaviour + RSVP count + event date (§5)
+                        ▼
+        ONE CHECKOUT — in-event upgrade modal
+        /dashboard?slug=X&upgrade=<tier>   (every CTA, every email, every page)
+        cancel → back to the modal, with help · abandoned → reminder email after 1h
+                        ▼
+                    PAID EVENT
 ```
 
-| # | Stage | What happens today | Leak | Severity |
-|---|---|---|---|---|
-| L1 | Homepage → CTA | Hero pitches the QR wall; CTA opens the website builder (`index.html:1031-1053` vs `href="/website-builder"`) | Mismatch between promise and product | **High** |
-| L2 | Sign-up | `register.html` → `/start`; **Google** sign-up ignores `?next=` and lands on an empty `/my-events` (`register.html` `handleGoogleCredential`) | Google users skip onboarding | Medium |
-| L2 | Sign-up | Builder save modal has email+password only, **no Google button**. An already-registered email dead-ends with "check your email… then log in" (`website-builder.html:1511`) | Friction at the most valuable moment | Medium |
-| L3 | Create event | `/start` asks for **plan choice before any value** ("Paid plans go through a quick checkout") and labels Tala "1 free event, ever" (`start.html:854-910`) | Choice paralysis, fear of using up the free event | **High** |
-| L4 | First try | No guided "test it now" moment. The dashboard checklist has "Test upload" as row 6 of 7 with no button (`dashboard.html:5165`). The demo window is 48h from creation | No aha moment → no upgrade desire | **Critical** |
-| L4 | First try | Tala is photo-only, 25 photos, static wall. Video, the most emotional part, can't be tried | The demo shows the weakest version | High |
-| L5 | Website publish | Builder saves the site **unpublished** and redirects to the dashboard. The host has to find "Publish now" | Unpublished sites get no drip emails, no guest traffic, no viral footer | **High** |
-| L6 | Upgrade intent | Builder upsell → `/#pricing` (`website-builder.html:1381`). Homepage pricing has no logged-in variant | Leaves the host's event context | **Critical** |
-| L6 | Upgrade intent | Drip emails t30/t7 CTA → `https://reelday.ph/#pricing` (`wedding-website-drip.js`) | Same broken path, in the "money email" | **Critical** |
-| L7 | Checkout | `/start?plan=sinag` creates a **new** event after payment (`start.html:1558-1570`, `success_path: 'start_resume'`) | Host pays for the wrong event and gets support pain or a refund | **Critical** |
-| L7 | Checkout | No guarantee, no human to ask, no Messenger link. ₱1,490–₱2,990 from a brand with no visible reviews | Trust gap at the moment of payment | High |
-| — | Nurture | Nothing between day 0 and t-30 (could be 6+ months for weddings). `/start` and Google sign-ups get nothing at all | Leads go cold | High |
-| — | Measurement | GA4 only tracks builder events. No `sign_up`, `event_created`, `first_upload`, `wall_opened`, `checkout_started` | You can't see where people drop off | High |
+**Rules that keep it aligned**
 
-The dashboard's own upgrade modal (`dashboard.html:7373`) is fine: it intercepts `/#pricing` and upgrades **this** event via `{ slug, tier }`. The fix for L6/L7 is to send every upgrade CTA through that path.
+1. **Every upgrade CTA goes to the in-event upgrade modal.** Nothing logged-in ever points at `/#pricing` or `/start?plan=`. The modal already upgrades the right event (`dashboard.html:7373`, `{slug, tier}`), and success already returns to the dashboard (`payments.js` `successUrl`).
+2. **Every event starts free; you pay by upgrading it.** You never pay before the event exists. The only exception is a user who has already used their free event (`tala_used`), who still sees the plan step.
+3. **The aha comes before the ask.** No pricing in onboarding. The first upgrade prompt appears after the first test upload or the first RSVPs.
+4. **Every claim has to be true.** Anything you can't prove from the database or the code comes off the site.
+5. **The activation metric:** events with ≥1 Test Session upload within 7 days of sign-up. If this number doesn't move, nothing after it will.
 
 ---
 
-## 3. Why new sign-ups don't upload or try anything (activation)
+## 3. Verified findings, by stage
 
-This is the biggest leak, because everything after it depends on it.
+Severity: **P0** = losing money now · **P1** = big conversion drag · **P2** = polish.
 
-**3.1 The aha moment is never staged.** Reelday's value is felt, not read: *scan QR → photo appears on the TV with your name.* To feel it, a host needs two screens (phone + laptop) and someone has to tell them to do it. Today nobody does. The checklist leads with venue, welcome message, and music, which are admin chores, and "Test upload" has no action button.
-
-**3.2 Scarcity aimed the wrong way.** "1 free event, ever" makes a rational host think: *"I'll save my free event for the real party."* So they create nothing, or create the event and never touch it. The 48-hour demo window makes it worse because it starts at creation, not when they're ready.
-
-**3.3 The free tier demos the weakest product.** Photos only, static slideshow, 25 photos. Video greetings, the cinematic wall, reactions, and polls are what make people say "wow", and none of them can be tried for free.
-
-**3.4 Too many steps before value.** Path A: register (4 fields) → `/start` (type → names → date → **plan** → personalize) → dashboard. Path B (Google): sign up → empty `/my-events`. Neither ends with "scan this now".
-
-**3.5 The welcome email talks about features, not the next step.** It lists limits ("Up to 25 photos", "24-hour retention"), upsells Dalisay with "event website" (which is free), and links to `/dashboard` with no slug. Google users don't receive it at all.
-
-### Fix: a "Try the wall in 60 seconds" sandbox
-
-- On first dashboard load, and as the last step of `/start` and the builder save, show **one full-screen card**: *"See it work — scan this with your phone."* It shows a QR for the host's event, the wall opens in a new tab, and when the first upload arrives the card turns into confetti and *"That's what your guests will see."* Track `first_upload` and `wall_opened`.
-- **Test uploads don't count.** Host uploads during the first session (or uploads flagged `is_test`) don't count toward the 25 limit. Add a "Clear test photos" button.
-- **Reword the scarcity.** Change "1 free event, ever" to *"Free for your first event — test as much as you like."* Keep the real one-event guard. The goal is to stop people being afraid to start.
-- **Demo window = 48h from the first upload**, or reopenable once, instead of 48h from creation.
-- **Unlock everything during the demo.** Video, cinematic wall, reactions, and one poll work during the 48h demo, watermarked "DEMO". The paid tier unlocks the same features for the real day. People buy what they've already seen work.
-
----
-
-## 4. Why the lead magnet (free event website) isn't converting
-
-The website builder is well built (anonymous draft, live preview, 4 templates, RSVP, seat finder, viral footer). The problems are what happens before and after it.
-
-1. **Traffic doesn't match intent.** The homepage sells the wall, so builder visitors often came for the wall. People who *do* want a free wedding website mostly reach `/free-wedding-website`, but `robots`/SEO work is recent, so organic traffic is likely still thin. Check GA4 sessions per landing page.
-2. **The save step goes to the dashboard, not to "your site is live".** The highest-intent moment, when someone has just built something they love, ends on a dense dashboard with the site still an unpublished draft. Instead, **publish on save** (or show a "Publish & share" screen with a preview, a copy-link button and Messenger/Viber share buttons). Sharing is what triggers RSVPs, which in turn trigger the drip and the viral footer.
-3. **No Google sign-in on the save modal.** Most PH mobile users would take one tap over three fields.
-4. **The upsell is generic and comes too early.** The upgrade panel shows immediately, links away to `/#pricing`, and the CTA path breaks (L6/L7). A couple who is 8 months out isn't ready to buy, and when they are ready, the button doesn't work.
-5. **The event's free plan expires on the website's timeline.** The website lives for months but the Tala wall demo expires in 48h, so the "try the wall" hook is gone by the time it matters.
-6. **No reason to come back between now and t-30.** Nothing pulls the couple back to Reelday during the months they spend planning. Each RSVP is a natural reason to email them (see §6 Phase 2).
-7. **`/make-my-event` (uncommitted WIP) isn't live yet** (404 in production). It's a good idea: it qualifies by date and guest count and captures email before the builder. Ship it only after the P0 fixes, or it will feed more people into the same broken path.
-
----
-
-## 5. Pricing, packaging & trust
-
-| Issue | Where | Fix |
+### Acquisition / homepage
+| Finding | Evidence | Sev |
 |---|---|---|
-| Dalisay lists "Full event website" as a paid feature | `index.html` pricing, `start.html:854-910`, welcome email | Replace with "Free event website ✓" on **every** tier, starting with Tala. The free website should be the first line of the free card |
-| Tala card doesn't mention the free website at all | `index.html:1359` | First bullet: "Free event website + RSVP" |
-| "Do we keep the photos forever? Yes." | FAQ, `index.html:1468+` | Make it accurate: "Download everything as a .zip. Gallery stays online 24h (Tala) / 30 days (Sinag) / 90 days (Dalisay)" |
-| "Same Day Edit recap reel (coming soon)" on the flagship tier | pricing | Remove until shipped, or change to "Beta: SDE recap reel included". "Coming soon" on the thing you're selling hurts trust |
-| **"★★★★★ Trusted by 2,140+ celebrations across PH"** | hero, `index.html:1065` | **Verify against `SELECT COUNT(*) FROM events`.** If not real, remove it now. Under the Consumer Act (RA 7394), misleading claims are a liability, and a buyer who can't find a single review will distrust the whole page. Replace with something true: "Built in Laguna for Filipino celebrations", a real event count, or 2-3 named testimonials with photos from andrea-jm and other real events |
-| Lock-banner placeholder says "all 50 uploads" when the limit is 25 | `dashboard.html:3586` | Small fix, but it's inconsistent |
-| Dashboard website card: "Upgrade to unlock photo/video uploads" | `dashboard.html:8557` | Tala *has* photo uploads. Say "unlock video, the cinematic wall and reactions" |
-| Big jump from ₱0 to ₱1,490 with no risk reversal | checkout | Add **"Gumana o refund — if the wall doesn't run on your event day, full refund."** You control the product, so the risk is low and the effect on conversion is high |
-| No human channel | site-wide | Add a **Messenger + Viber "Ask us anything"** button on pricing, dashboard and checkout. PH buyers paying ₱1.5–3k usually want to chat with someone before paying |
+| Hero sells the QR wall but every "Start free" opens the website builder | `index.html:1031-1053`, CTAs `href="/website-builder"` | P1 |
+| "★★★★★ Trusted by 2,140+ celebrations across PH" is unverified | `index.html:1065` (check with §8 query E) | P0 if false |
+| FAQ: "Do we keep the photos forever? Yes." Real retention is 24h (Tala) / 30d / 90d | FAQ vs `plans.js` `galleryDays` | P1 |
+| Free website missing from the Tala card; listed as a Dalisay feature in pricing, `/start`, and the welcome email | `index.html:1359-1387`, `start.html:854-910`, `auth.js:58` | P1 |
+| "Same Day Edit recap reel (coming soon)" on the flagship tier | pricing, `/start` | P2 |
+| No human contact on pricing or checkout (no Messenger/Viber), no risk reversal | site-wide | P1 |
 
-**Packaging experiment (Phase 3):** test a **₱499–₱799 "Event-Day Pass"**: unlimited photos + videos for event day only, 7-day gallery, no polls or SDE. It's a low-commitment first purchase for birthdays and christenings and bridges the ₱0→₱1,490 jump. Run it as a coupon on Sinag first (the coupon system already exists) to test demand before building a tier.
+### Sign-up / onboarding
+| Finding | Evidence | Sev |
+|---|---|---|
+| Google sign-ups get **no welcome email and no admin alert**, so your sign-up count is too low | `auth.js`: `sendWelcomeEmail`/`sendAdminNewUserEmail` only in `/auth/register` | P1 |
+| Google sign-up on `/register` ignores `?next=` and dumps users on an empty `/my-events` | `register.html` `handleGoogleCredential` | P1 |
+| `/start` asks for a plan before any value and labels Tala "1 free event, ever" | `start.html:854-910` | P1 |
+| Builder save modal: no Google sign-in; an already-registered email dead-ends | `website-builder.html:600-620, 1511` | P1 |
+| Builder save → unpublished draft → dense dashboard. Unpublished sites get no drip and no guest traffic | `website-builder.html:1562`, drip `WHERE is_published` | P1 |
 
-**B2B angle (where the repeat revenue is):** couples buy once. Coordinators, photographers and venues buy every month. Hiraya is still hidden behind `HIRAYA_PUBLIC`. Once activation is fixed for single-event hosts, go after 10 coordinators by hand: free comped Hiraya for their next 2 events in exchange for putting the QR poster on their tables and a testimonial. Each coordinator brings 2-4 events a month of qualified guests who see the wall live. This builds on the supplier-led plan in `MARKETING-PLAN.md`.
+### Activation
+| Finding | Evidence | Sev |
+|---|---|---|
+| No guided test. "Test upload" is checklist row 6 of 7 with no button | `dashboard.html:5165` | P1 |
+| **The phone self-test is blocked after 48h.** Scanning your own QR on a phone counts as a *guest* upload, and guest uploads only work in the demo window (48h from `created_at`). The host bypass only applies when logged in on the same device | `uploads.js:327-378`, `plans.js:216` | P1 |
+| Tala demos the weakest product (photos only, static wall, 25 cap) | `plans.js` tala features | P1 |
+
+### Upgrade / checkout
+| Finding | Evidence | Sev |
+|---|---|---|
+| Builder "Unlock guest experience" → `/#pricing` → `/start?plan=` → **pays for a new event** | `website-builder.html:1381`, `start.html:1558-1570` | **P0** |
+| Drip t-30 / t-7 "money emails" CTA → `https://reelday.ph/#pricing` (same broken path) | `wedding-website-drip.js` `pricingUrl` | **P0** |
+| Account page upgrade CTA → `/#pricing` | `account.html:484` | P0 |
+| **Cancelled/abandoned checkout → `cancel_url = /#pricing`** (homepage). No recovery, no reminder | `payments.js` `cancelUrl` | **P0** |
+| PayMongo line item says "account upgrade" for what is a per-event purchase | `payments.js` `description` | P2 |
+| Dashboard website card says "Upgrade to unlock photo/video uploads", but Tala has photo uploads | `dashboard.html:8557` | P2 |
+
+### Nurture & measurement
+| Finding | Evidence | Sev |
+|---|---|---|
+| Only *published* Tala sites get emails. `/start` and Google users get nothing after the welcome email. Nothing between day 0 and t-30 (can be months) | `wedding-website-drip.js` | P1 |
+| GA4 only tracks builder events. No `sign_up`, `event_created`, `test_upload`, `wall_opened`, `checkout_started` | grep `gtag('event'` | P1 |
+
+**What already works (keep it):** the in-event upgrade modal and its success redirect, `/login?next=` handling (so email deep links survive a login), the anonymous builder draft, the RSVP flow, the "Powered by Reelday" footer, coupon infrastructure, and PayMongo GCash/Maya/QRPh.
 
 ---
 
-## 6. Turnaround plan
+## 4. The fixes, designed
 
-### Phase 0 — Stop the bleeding (this week, ~2 evenings)
+### 4.1 One checkout (fixes all P0s)
+- **Deep link:** `/dashboard?slug=X&upgrade=<tier>` opens the upgrade modal with that tier pre-selected. Add a small reader next to `openUpgradeModal()` (`dashboard.html:7138`).
+- **Every CTA uses it:** builder upsell panel, drip t-30/t-7 (`pricingUrl` becomes per-event), account page, dashboard website card.
+- **Logged-in homepage pricing:** if the user has exactly one Tala event, "Choose Dalisay" becomes "Upgrade *Ana & Miguel* →" (deep link). With several events, link to `/my-events?upgrade=<tier>`, where they pick the event. Logged-out visitors keep the current links.
+- **Cancel:** `cancel_url` becomes `/dashboard?slug=X&checkout=cancelled`. Show a small card: "Payment didn't go through? Try GCash QR, or message us — Benz will help." with a Messenger button.
+- **Abandoned-checkout email:** a `payments` row still `pending` after 1h → one email: "Your Dalisay upgrade for *{event}* is waiting" plus the deep link. Send once (same claim-before-send pattern as the drip, so it can't double-send).
+- Line item: `Reelday Dalisay — {event name}`.
 
-| # | Task | File(s) | Effort |
-|---|---|---|---|
-| 0.1 | **Fix upgrade routing.** Every logged-in upgrade CTA (builder panel, drip emails, account page) goes to `/dashboard?slug=<slug>&upgrade=1`, which opens the existing in-event upgrade modal (`{slug, tier}` → `/api/payments/create`). Make the dashboard read `?upgrade=1` | `website-builder.html:1381`, `wedding-website-drip.js` (pricingUrl → per-event URL), `dashboard.html` (auto-open modal) | S |
-| 0.2 | Homepage pricing for **logged-in users with a Tala event**: change "Choose Sinag/Dalisay" to "Upgrade *<event name>*" with the same deep link | `index.html` | S |
-| 0.3 | Send the welcome email **and admin alert** for Google sign-ups too | `auth.js` `/auth/google` (new-user branch) | XS |
-| 0.4 | Google sign-up respects `?next=` and defaults to `/start`, not `/my-events` | `register.html`, `login.html` | XS |
-| 0.5 | Fix the claims: remove or verify "2,140+", fix the FAQ "forever" answer, move "Free event website" onto Tala, remove "coming soon", fix the "50 uploads" copy and the "unlock photo uploads" copy | `index.html`, `start.html`, `auth.js` welcome email, `dashboard.html` | S |
-| 0.6 | Add GA4 events: `sign_up` (method), `event_created` (plan, source), `first_upload`, `wall_opened`, `upgrade_modal_open`, `checkout_started`. `purchase` already exists | register/start/dashboard/wall | S |
-| 0.7 | **Message every sign-up from the last 60 days by hand** (Messenger/Viber/SMS if you have their phone, otherwise email) using the script in §8 | — | 2 hrs |
+### 4.2 Test Session (fixes activation)
+Replaces the 48h-from-creation idea. It works from the host's own phone because it opens the guest window on demand.
+- The dashboard's first card for any event with 0 uploads: **"See it work in 60 seconds."** A **Start test** button opens a 30-minute test session: the guest upload page works for anyone, **all features are unlocked** (video, cinematic wall, reactions), and the wall shows a **"TEST" watermark**. The card shows the QR big enough to scan, plus "Open the wall on your laptop/TV".
+- On the first upload: confetti and "That's exactly what your guests will see." Then: **"For your real day, unlock videos, reactions & the cinematic wall →"** (deep-link upgrade). This is the first upgrade prompt, at the moment they want it most.
+- **Guardrails:** max 15 uploads per session, max 3 sessions per event, test uploads tagged `is_test`, excluded from the 25-photo limit and auto-deleted after 24h. The watermark makes it useless for running a real event.
+- Existing Tala event-day rules stay the same (the actual free event).
+- Copy: "1 free event, ever" becomes **"Your first event is free. Test as many times as you like."**
 
-### Phase 1 — Activation (weeks 2–3)
+### 4.3 Doors
+- **Door A, homepage hero.** Keep the wall pitch (it's what people pay for):
+  - H1: *"Every shot. Every guest. One QR."*
+  - Sub: *"Guests scan, upload, and see it live on the big screen — no app."*
+  - Primary CTA: **"Try the live wall free →"** to `/start`
+  - Secondary: **"Free wedding website →"** to `/free-wedding-website`
+  - Under the buttons: *"Free to start · No card · Pay only when you want video & live wall"*
+- **Door B, lead magnet.** Nav item "Free website" → `/free-wedding-website` → builder. Builder save modal gets **Google 1-tap**. An already-registered email gets **"Log in to save"**, which keeps the draft in localStorage (it's already re-read on load).
+- **After saving in the builder:** a **"Preview & publish"** screen: phone preview of their site, one big **Publish & share** button, then share sheet (Messenger / Viber / copy link). Publishing stays a deliberate click (existing code rule: content never goes live before the host has reviewed it). After publishing, show the Test Session card.
+- **`/start`:** type → names → date → account (if logged out). Remove the plan step, except for `tala_used` users. Finish on the dashboard with the Test Session card.
 
-| # | Task | Expected effect |
-|---|---|---|
-| 1.1 | "Try the wall in 60 seconds" full-screen card on the first dashboard visit + at the end of `/start` and builder save (QR + open-wall button + confetti on first upload) | Biggest single lift in activation |
-| 1.2 | Test uploads don't count toward the limit, plus a "Clear test photos" button | Removes the fear of trying |
-| 1.3 | Demo window starts at the first upload, not at creation. All features unlocked (watermarked) during the demo | People experience video and reactions before paying |
-| 1.4 | Change "1 free event, ever" to "Free for your first event — test as much as you like" | Fewer people skip creating an event |
-| 1.5 | Shorten `/start`: **remove the plan step** (default Tala, upgrade later from the dashboard). Keep `?plan=` for direct paid links | Fewer steps before value |
-| 1.6 | Builder: Google sign-in on the save modal. **Publish on save** → "Your site is live — share it" screen with Messenger/Viber/copy buttons | More published sites, so the drip and viral loop actually run |
-| 1.7 | Reorder the dashboard checklist: **Test upload (with QR button)** → Share link → details. Chores go last | Puts the aha step first |
+### 4.4 Trust & offer (copy-only, ship with Phase 0)
+- Hero proof line: replace "2,140+" with a number you can prove, or *"Made in Laguna for Filipino celebrations · Live at andrea-jm"* (link to the live example).
+- **Guarantee** on pricing cards and in the upgrade modal: *"Gumana o refund. If the wall doesn't run on your event day, full refund."* Refunds already exist in admin.
+- **Messenger + Viber** "Ask Benz" button on pricing, upgrade modal, checkout cancel card, and every email footer.
+- **Pricing cards:**
+  - Tala, first bullet: "Free event website + RSVP".
+  - Remove "Full event website" from Dalisay.
+  - Remove "coming soon" from Dalisay (or show "SDE recap reel — beta").
+  - Under Dalisay: *"Most couples pick Dalisay · ≈ ₱20 per guest for 150 guests"*.
+- FAQ retention answer: *"Download a full-res .zip anytime. Gallery stays online 24h (Tala), 30 days (Sinag), 90 days (Dalisay)."*
 
-### Phase 2 — Lifecycle emails & nurture (weeks 3–5)
+---
 
-Add an **activation track** (based on behaviour) next to the existing **event-date track** (based on the event date):
+## 5. Follow-up emails (one engine, three triggers)
+
+One job (an extension of `wedding-website-drip.js`, same claim-before-send pattern). Every email: one CTA (deep link), a plain-text feel, signed "Benz, founder — reply anytime", plus a Messenger link.
 
 | Trigger | Email | CTA |
 |---|---|---|
-| Signed up, no event after 24h | "Your wall takes 60 seconds — here's a 20s video of it working" | `/start` |
-| Event created, 0 uploads after 24h | "Try this: scan your own QR" (GIF of a phone → TV) | dashboard, test card open |
-| First upload happened | "That's the magic. Here's what it looks like with 80 guests + videos" | dashboard upgrade modal |
-| Site published, every 5 new RSVPs | "12 guests have RSVP'd 🎉 — want them to also send photos?" | in-event upgrade |
-| Site saved but unpublished, 48h | "Your website is ready — one tap to go live" | builder |
-| t-60 | Real wedding story / mini case study (andrea-jm) | live demo |
-| t-30 / t-7 (existing) | Keep, but CTA → **in-event upgrade** + a time-limited coupon (e.g. ₱300 off, 72h) | in-event upgrade |
-| t+1 (paid) | Testimonial + referral ask ("Give ₱300, get ₱300") | review / referral |
+| **Behaviour:** signed up, no event after 24h | "Your wall is 60 seconds away" (GIF: phone → TV) | `/start` |
+| **Behaviour:** event, no test upload after 24h | "Try this: scan your own QR" | dashboard, Test Session |
+| **Behaviour:** site saved, unpublished after 48h | "Your website is ready — one tap to go live" | builder Preview & publish |
+| **Behaviour:** checkout pending 1h | "Your upgrade is waiting" | upgrade deep link |
+| **RSVP milestone:** 10 / 25 / 50 RSVPs | "25 guests are coming 🎉 — let them send photos & video greetings too" | upgrade deep link |
+| **Date:** t-60 | Real event story (andrea-jm) + "what guests see" | live demo |
+| **Date:** t-30 *(existing; fix CTA)* | Money email + ₱300-off coupon valid 72h | upgrade deep link |
+| **Date:** t-7 *(existing; fix CTA)* | "One week to go — setup is a QR code" | upgrade deep link |
+| **Paid, t+1** | Thank-you + testimonial ask + "Give ₱300, get ₱300" | review / referral |
 
-Every email also includes "Reply or message us on Messenger — Benz, founder." For small volumes, replies are the best conversion channel you have.
-
-### Phase 3 — Offer, proof & channel (weeks 5–8)
-
-1. **Refund guarantee** on the pricing cards and checkout.
-2. **Real social proof:** 3 testimonials with photos, plus a 30-second screen recording of a real wall on the hero. Use the Remotion pipeline (`tools/wall-recorder`).
-3. **Split the homepage by intent:** make the hero about the live wall (what people pay for) with "Try the wall free". Give the free website its own entry (`/free-wedding-website`, "Free website" in the nav), each with a matching CTA.
-4. **Test the Event-Day Pass** (₱499–₱799 coupon on Sinag) for birthdays and christenings.
-5. **Coordinator pilot:** 10 coordinators, comped Hiraya for 2 events, QR posters at events, testimonial in exchange.
-6. Then ship `/make-my-event` as the paid-traffic landing page.
+**Welcome email rewrite** (also sent to Google sign-ups): drop the limits table. Subject: *"Kamusta {name} — see your wall work in 60 seconds"*. One CTA: the dashboard Test Session (or `/start` if no event yet).
 
 ---
 
-## 7. Measurement — run these first (production DB)
+## 6. Execution plan (sized for ~6–8 hrs/week)
 
-The repo can't read production data from here, so run these on the VPS (`psql`) and record the numbers in this doc as the baseline.
+### Sprint 0 — Baseline & stop the leaks (this week, ~7 hrs)
+| # | Task | Hrs |
+|---|---|---|
+| 0.1 | Run §8 SQL and record the baseline numbers in this doc | 0.5 |
+| 0.2 | GA4 events: `sign_up{method}`, `event_created{source}`, `test_upload`, `wall_opened`, `upgrade_modal_open{trigger}`, `checkout_started`, `checkout_cancelled` (`purchase` already exists) | 1.5 |
+| 0.3 | **One checkout:** `?upgrade=` deep link; fix builder, drip, account, and dashboard website-card CTAs; `cancel_url` back to the dashboard | 2.5 |
+| 0.4 | Google sign-up → welcome email + admin alert + respect `?next=` | 0.5 |
+| 0.5 | Copy & trust pass (§4.4) + hero CTA relabel (§4.3 Door A) + Messenger/Viber button | 1.5 |
+| 0.6 | **Personal outreach** to every sign-up from the last 60 days (§7), log replies | 1 + replies |
+
+### Sprint 1 — Activation (weeks 2–3, ~12 hrs)
+| # | Task | Hrs |
+|---|---|---|
+| 1.1 | Test Session: backend (`test_session_until`, `is_test` uploads, limits, 24h cleanup) | 4 |
+| 1.2 | Test Session: dashboard card, QR, confetti on first upload, wall "TEST" watermark, post-aha upgrade prompt | 4 |
+| 1.3 | `/start`: remove plan step (keep for `tala_used`), end on Test Session | 1.5 |
+| 1.4 | Builder: Google 1-tap on save, "Log in to save" path, Preview & publish + share screen | 2.5 |
+
+### Sprint 2 — Follow-up & recovery (weeks 4–5, ~10 hrs)
+| # | Task | Hrs |
+|---|---|---|
+| 2.1 | Welcome email rewrite | 1 |
+| 2.2 | Behaviour triggers (no event / no test / unpublished) | 3 |
+| 2.3 | Abandoned-checkout email | 1.5 |
+| 2.4 | RSVP-milestone emails | 2 |
+| 2.5 | t-60 story email + t-30 coupon + t+1 testimonial/referral | 2.5 |
+
+### Later — only if the numbers say so
+| Idea | Do it when… |
+|---|---|
+| ₱499–799 "Event-Day Pass" coupon test (birthdays/christenings) | activation ≥ 30% but free→paid stays low and outreach replies say "too expensive" |
+| Coordinator pilot (10 coordinators, comped Hiraya ×2 events) | the one-checkout flow is stable and you have ≥ 3 real testimonials |
+| Ship `/make-my-event` for paid traffic | Sprints 0–2 are live (otherwise it feeds people into the old leaks) |
+| Real-wall hero video (Remotion) | you have footage from a real event with permission |
+
+---
+
+## 7. Founder outreach (Sprint 0.6, the fastest feedback you can get)
+
+> Hi {first name}! Si Benz ito, founder ng Reelday 👋 Nakita kong nag-sign up ka para sa {event / "your event"}. Kailan ang event mo, at may tanong ka ba? Kung gusto mo, sabay nating i-test ang wall mo in 5 mins over video call — libre — para makita mo mismo bago ang araw mo. 🙂
+
+Log every reply (event date, guest count, objection) in `docs/lead-tracker-template.csv`. What the answers mean:
+- **"Too early / malayo pa"** → follow-up timing matters most (Sprint 2 first).
+- **"Hindi ko na-gets / didn't try"** → activation (Sprint 1 first).
+- **"Mahal / too expensive"** → offer (the Event-Day Pass test).
+- **"Saan ako magbabayad / paano i-upgrade"** → confirms the P0s.
+
+---
+
+## 8. Baseline queries (run on the production DB before Sprint 0 ships)
 
 ```sql
 -- A. Funnel by signup cohort (last 90 days)
@@ -170,8 +220,8 @@ WITH u AS (
   FROM users WHERE created_at > NOW() - INTERVAL '90 days'
 )
 SELECT
-  COUNT(*)                                                         AS signups,
-  COUNT(*) FILTER (WHERE via_google)                               AS google_signups,
+  COUNT(DISTINCT u.id)                                             AS signups,
+  COUNT(DISTINCT u.id) FILTER (WHERE via_google)                   AS google_signups,
   COUNT(DISTINCT e.user_id)                                        AS created_event,
   COUNT(DISTINCT e.user_id) FILTER (WHERE es.is_published)         AS published_site,
   COUNT(DISTINCT e.user_id) FILTER (WHERE up.n > 0)                AS any_upload,
@@ -182,53 +232,53 @@ LEFT JOIN events e       ON e.user_id = u.id
 LEFT JOIN event_sites es ON es.event_id = e.id
 LEFT JOIN LATERAL (SELECT COUNT(*) n FROM uploads WHERE event_id = e.id) up ON true;
 
--- B. Did they come in through the builder (site config present) or /start?
-SELECT (es.config <> '{}'::jsonb) AS via_builder, COUNT(*) events,
+-- B. Builder door vs /start door
+SELECT (es.config IS NOT NULL AND es.config <> '{}'::jsonb) AS via_builder,
+       COUNT(*) events,
        COUNT(*) FILTER (WHERE es.is_published) published,
-       COUNT(*) FILTER (WHERE e.is_paid) paid
+       COUNT(*) FILTER (WHERE e.is_paid)       paid
 FROM events e LEFT JOIN event_sites es ON es.event_id = e.id
 WHERE e.created_at > NOW() - INTERVAL '90 days' GROUP BY 1;
 
--- C. How far out are hosts creating events? (drives nurture timing)
+-- C. Lead time: days from creation to event (drives follow-up timing)
 SELECT width_bucket((event_date - created_at::date), 0, 360, 6) AS bucket_60d, COUNT(*)
 FROM events WHERE created_at > NOW() - INTERVAL '90 days' AND event_date IS NOT NULL
 GROUP BY 1 ORDER BY 1;
 
--- D. Abandoned checkouts (intent that didn't close)
+-- D. Checkout intent vs completion
 SELECT status, plan, COUNT(*) FROM payments
 WHERE created_at > NOW() - INTERVAL '90 days' GROUP BY 1,2 ORDER BY 1,2;
 
--- E. Sanity check for the "2,140+ celebrations" claim
-SELECT COUNT(*) FROM events;
+-- E. Verify the homepage "2,140+ celebrations" claim
+SELECT COUNT(*) AS all_events, COUNT(*) FILTER (WHERE is_paid) AS paid_events FROM events;
 ```
 
-**Targets after Phases 0–2 (8 weeks):**
+**Targets (8 weeks after Sprint 0):**
 
 | Metric | Definition | Target |
 |---|---|---|
-| Activation | sign-ups with ≥1 upload within 7 days | ≥ 40% |
-| Publish rate | builder sign-ups with a published site | ≥ 60% |
-| Free → paid | events with event date passed that paid | ≥ 8–10% |
+| Activation | sign-ups with a test upload ≤ 7 days | ≥ 35% |
+| Publish rate | builder sign-ups with a published site | ≥ 50% |
 | Checkout completion | succeeded / created payments | ≥ 60% |
+| Free → paid | events whose date has passed that paid | ≥ 5% (stretch 10%) |
 
-Look at these weekly. If activation moves but paid doesn't, the problem is the offer or trust (Phase 3). If activation doesn't move, the sandbox isn't being seen, so check `first_upload` vs `wall_opened` in GA4.
-
----
-
-## 8. Founder outreach script (do this now — Phase 0.7)
-
-At this volume, a personal message from you converts better than any automation. Send it to every sign-up from the last 60 days:
-
-> Hi {first name}! Si Benz ito, founder ng Reelday 👋 Nakita kong nag-sign up ka para sa {event / "your event"}. Gusto ko lang i-check — kailan ang event mo, at may tanong ka ba? Kung gusto mo, I can set up your wall and test it with you in 5 mins over video call — libre. Para makita mo mismo bago ang araw mo. 🙂
-
-Record every reply (objection, event date, guest count) in `docs/lead-tracker-template.csv`. **The first 10 replies will tell you more than this audit.** If people mostly say "too early", the nurture timing is the problem. If they say "too expensive", it's the offer. If they say "I didn't get it", it's activation.
+Check weekly. **If activation rises but paid doesn't**, the problem is the offer or trust (Later list). **If activation doesn't rise**, compare `test_upload` with `wall_opened` in GA4 to see whether people find the card but don't complete the test.
 
 ---
 
-## 9. Priority stack (if you only do five things)
+## 9. Self-audit: what changed from the v1 draft and why
 
-1. **Fix the upgrade routing**: builder, drip emails and homepage pricing → in-event upgrade (P0, money is leaking right now).
-2. **Message every recent sign-up yourself** and log the objections.
-3. **"Try the wall in 60 seconds"** card + test uploads not counting toward the limit.
-4. **Fix the false or inconsistent claims** (2,140+, "forever", website listed as Dalisay-only) and add Messenger chat + a refund guarantee.
-5. **Activation and RSVP-triggered emails**, plus Google sign-ups getting the welcome email.
+| v1 said | Problem found | v2 decision |
+|---|---|---|
+| Demo window starts at the first upload | The host's phone scan is a *guest* upload, blocked outside the demo window. The window would never open for the test that matters (`uploads.js:327-378`) | On-demand **Test Session** (§4.2) |
+| Unlock all features during the demo | Someone could run a real small event inside the demo | 30-min sessions, 15-upload cap, **TEST watermark**, 3 sessions max |
+| Publish the builder site on save | Breaks the existing rule that content never goes live before the host reviews it (`website-builder.html:1562` comment) | **Preview & publish** screen, publish stays one deliberate tap |
+| Hero rework, guarantee, Messenger in Phase 3 | These are copy and link changes for high-severity problems; waiting wastes traffic | Moved to **Sprint 0** |
+| "Lock banner says 50 uploads" | False positive: JS overwrites it with the real limit (`dashboard.html:5439`) | Dropped |
+| Upgrade-routing fix covered builder + drip only | Missed **checkout cancel → homepage** and no abandoned-checkout recovery (`payments.js` `cancelUrl`) | Added to the one-checkout design |
+| Remove the plan step from `/start` | Would break users whose free event is already used | Keep it **only** for `tala_used` users |
+| Logged-in pricing → "Upgrade *event*" | Ambiguous for users with several events | One Tala event → deep link; several → `/my-events?upgrade=` picker |
+| Free→paid target 8–10% | Optimistic as a first target | 5% target, 10% stretch |
+| ~25 tasks, no sizing | Doesn't fit evenings/weekends during the job search | 3 sized sprints (~29 hrs) + a "Later, only if data says" list |
+| Ship fixes, then measure | No baseline means you can't tell what worked | Baseline SQL + GA4 events are Sprint 0 steps 1–2 |
+| Event-Day Pass, coordinator pilot, `/make-my-event` as plan items | Unproven; risk of building before you have evidence | Moved to "Later", each with a condition for when to do it |
