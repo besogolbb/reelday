@@ -537,6 +537,117 @@
       .panel-head { flex-direction: column; }
       .btn { flex: 1 1 auto; }
     }
+
+    /* ── New-site flow: Quick start → Reveal → Save ─────────────
+       A visitor with no event yet never sees the 7-step editor. Four
+       answers are enough for a real, shareable invitation (names, date,
+       countdown, venue, RSVP); everything else is optional AFTER save. */
+    .qs, .reveal { max-width: 560px; margin: 0 auto; padding: 22px 16px 140px; }
+    .qs-card {
+      background: var(--card); border: 1px solid var(--line); border-radius: 18px;
+      box-shadow: 0 10px 30px rgba(63, 35, 24, .08);
+      padding: clamp(22px, 5vw, 34px);
+    }
+    .eyebrow {
+      margin: 0 0 10px; color: var(--accent-deep);
+      font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase;
+    }
+    .qs h1, .reveal h1 { font-size: clamp(30px, 8vw, 42px); line-height: 1.05; }
+    .qs .sub { margin-bottom: 22px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip {
+      border: 1px solid var(--line-2); background: #fff; color: var(--ink);
+      border-radius: 999px; padding: 10px 14px; font-weight: 700; font-size: 14px; cursor: pointer;
+    }
+    .chip[aria-pressed="true"] {
+      border-color: var(--accent); background: rgba(196, 90, 58, .1); color: var(--accent-deep);
+    }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .qs input { font-size: 16px; min-height: 48px; } /* 16px stops iOS zoom-on-focus */
+    .btn-big { width: 100%; min-height: 54px; font-size: 15px; margin-top: 6px; }
+    .qs-reassure, .save-note { margin: 12px 0 0; text-align: center; font-size: 13px; color: var(--ink-faint); }
+    .qs-notice { margin: 0 0 18px; }
+    .qs-notice a { color: var(--accent-deep); font-weight: 800; }
+
+    .reveal-head { text-align: center; margin-bottom: 16px; }
+    .reveal-head .sub { margin: 8px auto 0; }
+    #reveal-templates .template-picker { grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0 0 18px; }
+    #reveal-preview-slot #anon-preview {
+      display: flex !important; position: static !important; inset: auto !important;
+      background: none !important; padding: 0 !important; margin: 0 auto 12px;
+    }
+    #reveal-preview-slot .preview-close, #reveal-preview-slot .anon-preview-label { display: none !important; }
+    #reveal-preview-slot .preview-phone { width: min(320px, 78vw); }
+    .link-btn {
+      display: block; margin: 6px auto 0; background: none; border: 0; cursor: pointer;
+      color: var(--ink-soft); font-weight: 700; text-decoration: underline; font-size: 14px;
+    }
+    .save-bar {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+      padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+      background: rgba(255, 250, 245, .96); border-top: 1px solid var(--line);
+      backdrop-filter: blur(12px);
+    }
+    .save-bar-inner { max-width: 560px; margin: 0 auto; }
+    .save-bar .btn { width: 100%; min-height: 52px; font-size: 15px; }
+    .save-bar .save-note { margin-top: 6px; }
+    .reveal-error { margin: 12px 0; }
+
+    /* Save sheet (finish modal) */
+    #g-btn { display: flex; justify-content: center; min-height: 44px; margin: 16px 0 4px; }
+    .or-divider {
+      display: flex; align-items: center; gap: 10px; margin: 14px 0;
+      color: var(--ink-faint); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em;
+    }
+    .or-divider::before, .or-divider::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+    .finish-card input { font-size: 16px; }
+    .finish-card .link-btn { margin-top: 12px; }
+    #fin-error a { color: var(--accent-deep); }
+
+    /* ── Launch card (saved site: publish → share → make it yours) ── */
+    .launch {
+      margin-bottom: 26px; padding: clamp(18px, 4vw, 26px);
+      border-radius: var(--r); border: 1px solid rgba(61, 115, 86, .28);
+      background: linear-gradient(135deg, #fff, #f5faf6);
+    }
+    .shell > .launch { grid-column: 1 / -1; margin-bottom: 0; }
+    .launch h2 { font-size: clamp(24px, 5vw, 32px); }
+    #editor { scroll-margin-top: 100px; }
+    @media (max-width: 860px) {
+      /* The stacked header is ~200px tall on phones; sticky, it hid the
+         first fields of whichever section the host just jumped to. */
+      .topbar { position: static; }
+      #editor { scroll-margin-top: 16px; }
+    }
+    .launch .sub { margin-bottom: 16px; }
+    .launch-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+    .launch-link {
+      display: flex; gap: 8px; margin: 4px 0 12px;
+    }
+    .launch-link input { font-size: 14px; font-weight: 700; color: var(--sage); background: #fff; }
+    .share-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
+    .share-row .btn { width: 100%; }
+    .todo-title { margin: 20px 0 8px; font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); }
+    .todo-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .todo-chip {
+      border: 1px solid var(--line-2); background: #fff; border-radius: 999px;
+      padding: 8px 12px; font-size: 13px; font-weight: 700; cursor: pointer; color: var(--ink);
+    }
+    .todo-chip.done { color: var(--sage); border-color: rgba(61, 115, 86, .35); background: rgba(61, 115, 86, .06); }
+
+    /* ── Row editors (replace "A | B" pipe-syntax textareas) ── */
+    .rows { display: grid; gap: 8px; }
+    .row-line { display: grid; gap: 8px; align-items: center; }
+    .row-line input { min-width: 0; }
+    .row-del {
+      width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line-2);
+      background: #fff; color: var(--ink-soft); cursor: pointer; font-weight: 800;
+    }
+    .row-add { justify-self: start; margin-top: 2px; }
+    @media (max-width: 560px) {
+      .row-line.cols-3 { grid-template-columns: 1fr 1fr 36px !important; }
+      .row-line.cols-3 > input:nth-child(3) { grid-column: 1 / 3; }
+    }
   </style>
 </head>
 <body>
@@ -552,7 +663,61 @@
     </div>
   </header>
 
+  <!-- New-site flow (no event yet): Quick start → Reveal → Save. -->
+  <section id="quick" class="qs hidden" aria-labelledby="qs-title">
+    <div class="qs-card">
+      <p class="eyebrow">Free event website · RSVP included</p>
+      <h1 id="qs-title">Let's make your invitation</h1>
+      <p class="sub">Four quick answers and you'll see your website right away.</p>
+      <div id="qs-notice" class="notice qs-notice hidden"></div>
+      <div class="field">
+        <label id="qs-type-label">What are you celebrating?</label>
+        <div class="chips" id="qs-type" role="group" aria-labelledby="qs-type-label"></div>
+      </div>
+      <div class="field">
+        <label for="qs-name" id="qs-name-label">Couple's names</label>
+        <input id="qs-name" placeholder="e.g. Ana & Miguel" autocomplete="off" />
+      </div>
+      <div class="grid2">
+        <div class="field">
+          <label for="qs-date">Date</label>
+          <input type="date" id="qs-date" />
+        </div>
+        <div class="field">
+          <label for="qs-time">Start time <span class="hint">optional</span></label>
+          <input type="time" id="qs-time" />
+        </div>
+      </div>
+      <div class="field">
+        <label for="qs-venue">Venue <span class="hint">optional</span></label>
+        <input id="qs-venue" placeholder="e.g. Manila Cathedral, Intramuros" autocomplete="off" />
+      </div>
+      <div id="qs-error" class="error hidden"></div>
+      <button type="button" class="btn btn-accent btn-big" id="qs-go">Show me my website →</button>
+      <p class="qs-reassure">No sign-up needed to see it · Free forever</p>
+    </div>
+  </section>
+
+  <section id="reveal" class="reveal hidden" aria-labelledby="reveal-title">
+    <div class="reveal-head">
+      <h1 id="reveal-title">Here's your website ✨</h1>
+      <p class="sub">This is what guests see when they open your link, with RSVP built in. Pick a style:</p>
+    </div>
+    <div id="reveal-templates"></div>
+    <div id="reveal-preview-slot"></div>
+    <button type="button" class="link-btn" id="reveal-edit">← Change details</button>
+    <div id="reveal-error" class="notice reveal-error hidden"></div>
+    <div class="save-bar">
+      <div class="save-bar-inner">
+        <button type="button" class="btn btn-accent" id="reveal-save">Save my free website</button>
+        <p class="save-note" id="reveal-save-note">Free forever · No card · Takes 10 seconds</p>
+      </div>
+    </div>
+  </section>
+
   <main class="shell">
+    <!-- First thing a host sees once the site is saved: publish → share. -->
+    <div id="launch" class="launch hidden"></div>
     <aside class="side">
       <div class="status-card">
         <span class="status-pill" id="status-pill">Loading</span>
@@ -597,26 +762,24 @@
 
   <div id="finish-modal" class="finish-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="finish-title">
     <div class="finish-card">
-      <h2 id="finish-title">Save your event website</h2>
-      <p class="sub">Add your email so your invitation, RSVP setup, and edits don't get lost.</p>
-      <div class="field">
-        <label for="fin-name">Full name</label>
-        <input type="text" id="fin-name" autocomplete="name" />
-      </div>
+      <h2 id="finish-title">Save your website</h2>
+      <p class="sub">So you can edit it, see RSVPs, and get your link to share.</p>
+      <div id="g-btn"></div>
+      <div class="or-divider" id="g-divider">or use email</div>
       <div class="field">
         <label for="fin-email">Email</label>
-        <input type="email" id="fin-email" autocomplete="email" />
+        <input type="email" id="fin-email" autocomplete="email" inputmode="email" />
       </div>
       <div class="field">
-        <label for="fin-pw">Password</label>
+        <label for="fin-pw">Create a password</label>
         <input type="password" id="fin-pw" autocomplete="new-password" placeholder="At least 8 characters" />
       </div>
       <div id="fin-error" class="error hidden"></div>
       <div class="finish-actions">
-        <button type="button" class="btn btn-ghost" id="fin-cancel">Continue editing</button>
         <button type="button" class="btn btn-accent" id="fin-submit">Save my website</button>
       </div>
-      <p class="finish-reassure">Free to publish. Upgrade only when you want guest photo and video collection.</p>
+      <button type="button" class="link-btn" id="fin-cancel">Not now</button>
+      <p class="finish-reassure">Already have an account? <a href="/login?next=%2Fwebsite-builder">Log in</a> and your website comes with you.</p>
     </div>
   </div>
 
@@ -641,15 +804,13 @@
       location.replace('/login?next=' + encodeURIComponent(location.pathname + location.search));
       throw new Error('redirecting to login');
     }
-    if (token && !slug) {
-      // Logged-in visitor landed on the bare builder URL with no event
-      // context -- e.g. this page shared as a public link, opened in a
-      // browser where they're already signed in from a prior session.
-      // Send them to pick/create an event rather than a dead-end
-      // "missing event" card with no obvious next step.
-      location.replace('/my-events');
-      throw new Error('redirecting to dashboard');
-    }
+    // NEW_SITE: no event yet -- anonymous visitor OR a logged-in user who
+    // clicked a "make a free website" CTA. Both get the same Quick start →
+    // Reveal → Save flow; a logged-in user just skips the signup sheet.
+    // (Previously a logged-in visitor here was bounced to /my-events, which
+    // also orphaned the localStorage draft of anyone who logged in to save.)
+    const NEW_SITE = !slug;
+    let me = null; // /api/auth/me payload for logged-in NEW_SITE visitors
 
     const $ = id => document.getElementById(id);
     const editor = $('editor');
@@ -735,6 +896,84 @@
       el.rows = rows;
       if (placeholder) el.placeholder = placeholder;
       return el;
+    }
+
+    // ── Row editor ─────────────────────────────────────────────
+    // Friendly "[time] [what's happening] [x]  + Add" rows in place of the
+    // old one-per-line "TIME | LABEL" textareas, which were hard to type on
+    // a phone keyboard. The original textarea stays the single source of
+    // truth (hidden, kept in sync), so gather() and every parser above are
+    // untouched. Row inputs sync on their own input event, which runs
+    // before the delegated #editor listener (draft save + live preview).
+    function rowsEditor(textarea, { sep, cols, addLabel }) {
+      const wrap = document.createElement('div');
+      wrap.className = 'rows';
+      textarea.style.display = 'none';
+      const list = document.createElement('div');
+      list.className = 'rows';
+      const template = cols.map(c => c.width || '1fr').join(' ') + ' 36px';
+
+      function sync() {
+        textarea.value = [...list.querySelectorAll('.row-line')]
+          .map(line => [...line.querySelectorAll('input')].map(i => i.value.replace(/\|/g, '/').trim()))
+          .filter(values => values.some(Boolean))
+          .map(values => values.join(` ${sep} `))
+          .join('\n');
+      }
+      function addRow(values = [], focus = false) {
+        const line = document.createElement('div');
+        line.className = 'row-line' + (cols.length === 3 ? ' cols-3' : '');
+        line.style.gridTemplateColumns = template;
+        cols.forEach((col, index) => {
+          const cell = document.createElement('input');
+          cell.type = col.type || 'text';
+          cell.placeholder = col.placeholder || '';
+          cell.setAttribute('aria-label', col.label || col.placeholder || '');
+          cell.value = values[index] || '';
+          cell.addEventListener('input', sync);
+          line.appendChild(cell);
+        });
+        const del = document.createElement('button');
+        del.type = 'button';
+        del.className = 'row-del';
+        del.textContent = '×';
+        del.setAttribute('aria-label', 'Remove');
+        del.addEventListener('click', () => {
+          line.remove();
+          if (!list.children.length) addRow();
+          sync();
+          // Removing a row is an edit too: let the delegated listeners
+          // (draft save + live preview) know.
+          textarea.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+        line.appendChild(del);
+        list.appendChild(line);
+        if (focus) line.querySelector('input')?.focus();
+      }
+
+      const existing = String(textarea.value || '').split('\n').map(s => s.trim()).filter(Boolean);
+      existing.forEach(lineText => addRow(lineText.split(sep).map(s => s.trim())));
+      if (!existing.length) addRow();
+
+      const add = document.createElement('button');
+      add.type = 'button';
+      add.className = 'btn btn-ghost row-add';
+      add.textContent = addLabel || '+ Add';
+      add.addEventListener('click', () => addRow([], true));
+
+      wrap.appendChild(list);
+      wrap.appendChild(add);
+      wrap.appendChild(textarea);
+      return wrap;
+    }
+
+    // "15:00" (from <input type=time>) -> "3:00 PM", the format the guest
+    // site shows next to the date and parses for the calendar invite.
+    function fmtTime12(value) {
+      const m = String(value || '').match(/^(\d{1,2}):(\d{2})/);
+      if (!m) return '';
+      const h = Number(m[1]);
+      return `${((h + 11) % 12) + 1}:${m[2]} ${h < 12 ? 'AM' : 'PM'}`;
     }
 
     // Style template -- a second, independent dimension from event
@@ -1008,19 +1247,21 @@
     let draftSaveTimer = null;
 
     function saveDraftLocal() {
-      if (!ANONYMOUS) return;
+      if (!NEW_SITE) return;
       try {
         localStorage.setItem(DRAFT_KEY, JSON.stringify({
           name: controls.basicsName.value,
           date: controls.basicsDate.value,
           type: controls.basicsType.value,
+          time: qsTimeRaw,
+          venue: qsVenueRaw,
           config: gather(),
           ts: Date.now(),
         }));
       } catch { /* private mode / storage full -- draft just won't persist */ }
     }
     function scheduleDraftSave() {
-      if (!ANONYMOUS) return;
+      if (!NEW_SITE) return;
       clearTimeout(draftSaveTimer);
       draftSaveTimer = setTimeout(saveDraftLocal, 1500);
     }
@@ -1030,6 +1271,7 @@
         return raw ? JSON.parse(raw) : null;
       } catch { return null; }
     }
+
     function clearDraftLocal() {
       try { localStorage.removeItem(DRAFT_KEY); } catch {}
     }
@@ -1068,7 +1310,10 @@
         couple_names: controls.basicsName.value.trim() || 'Your event',
         event_type: controls.basicsType.value,
         event_date: controls.basicsDate.value || null,
-        event_time: '',
+        event_time: NEW_SITE ? fmtTime12(qsTimeRaw) : (state?.event?.event_time || ''),
+        // Mirrors the public payload: the seat finder only renders once a
+        // seat list exists, so the preview must not promise one either.
+        has_seats: NEW_SITE ? false : !!(state?.seats && state.seats.length),
         plan: currentPlan,
         cover_photo_url: coverPreviewUrl || state?.event?.cover_photo_url || null,
         theme: controls.basicsType.value || 'wedding',
@@ -1151,7 +1396,7 @@
               coverFile = file;
               if (coverPreviewUrl) URL.revokeObjectURL(coverPreviewUrl);
               coverPreviewUrl = URL.createObjectURL(file);
-              coverStatus.textContent = 'Photo selected -- it uploads when you save your website.';
+              coverStatus.textContent = 'Photo selected. It uploads when you save your website.';
               syncPreview();
               return;
             }
@@ -1171,7 +1416,7 @@
               coverStatus.innerHTML = '<span class="error">Cover upload failed.</span>';
             }
           });
-          wrap.appendChild(field('Hero kicker', controls.heroKicker, 'Short text above the names'));
+          wrap.appendChild(field('Small line above your names', controls.heroKicker, 'optional, e.g. "You\'re invited"'));
           wrap.appendChild(coverButton);
           wrap.appendChild(coverStatus);
           return wrap;
@@ -1192,8 +1437,20 @@
         subtitle: 'Give guests the key logistics in one place.',
         render() {
           const wrap = document.createElement('div');
-          wrap.appendChild(field('Order of the day', controls.schedule, 'One per line: TIME | LABEL'));
-          wrap.appendChild(field('Venues', controls.venues, 'One per line: NAME | ADDRESS'));
+          wrap.appendChild(field('Order of the day', rowsEditor(controls.schedule, {
+            sep: '|', addLabel: '+ Add another',
+            cols: [
+              { placeholder: '3:00 PM', label: 'Time', width: '110px' },
+              { placeholder: 'Ceremony', label: "What's happening" },
+            ],
+          })));
+          wrap.appendChild(field('Venues', rowsEditor(controls.venues, {
+            sep: '|', addLabel: '+ Add another venue',
+            cols: [
+              { placeholder: 'Manila Cathedral', label: 'Venue name' },
+              { placeholder: 'Intramuros, Manila', label: 'Address (used for the map)' },
+            ],
+          }), 'the address opens in Google Maps for guests'));
           return wrap;
         },
       },
@@ -1204,8 +1461,14 @@
           const wrap = document.createElement('div');
           wrap.appendChild(field('Dress code', controls.dressCode));
           wrap.appendChild(field('Parking & directions', controls.parking));
-          wrap.appendChild(field('FAQ', controls.faq, 'One per line: QUESTION || ANSWER'));
-          wrap.appendChild(field('Good to know', controls.goodToKnow, 'Use Title || Body blocks if helpful'));
+          wrap.appendChild(field('Questions guests ask', rowsEditor(controls.faq, {
+            sep: '||', addLabel: '+ Add a question',
+            cols: [
+              { placeholder: 'Can we bring kids?', label: 'Question' },
+              { placeholder: 'Yes, kids are welcome!', label: 'Answer' },
+            ],
+          }), 'optional'));
+          wrap.appendChild(field('Anything else guests should know', controls.goodToKnow, 'optional'));
           return wrap;
         },
       },
@@ -1216,19 +1479,29 @@
           const wrap = document.createElement('div');
           const checks = document.createElement('div');
           checks.className = 'check-row';
-          const seatLabel = document.createElement('label');
-          seatLabel.appendChild(controls.seatEnabled);
-          seatLabel.appendChild(document.createTextNode('Enable seat finder'));
           const rsvpLabel = document.createElement('label');
           rsvpLabel.appendChild(controls.rsvpEnabled);
-          rsvpLabel.appendChild(document.createTextNode('Enable RSVP'));
-          checks.appendChild(seatLabel);
+          rsvpLabel.appendChild(document.createTextNode('Let guests RSVP (recommended)'));
+          const seatLabel = document.createElement('label');
+          seatLabel.appendChild(controls.seatEnabled);
+          seatLabel.appendChild(document.createTextNode('Show "Find your seat"'));
           checks.appendChild(rsvpLabel);
+          checks.appendChild(seatLabel);
           wrap.appendChild(checks);
-          wrap.appendChild(field('RSVP deadline', controls.rsvpDeadline, 'Optional'));
+          wrap.appendChild(field('RSVP deadline', controls.rsvpDeadline, 'optional'));
           const notice = document.createElement('div');
           notice.className = 'notice';
-          notice.textContent = 'Seat-list import and RSVP CSV remain available from the dashboard while this builder moves to its own page.';
+          const hasSeats = !!(state?.seats && state.seats.length);
+          notice.append(hasSeats
+            ? `Your seat list has ${state.seats.length} guests, so they can look up their table on your website.`
+            : '"Find your seat" appears on your website once you upload your seat list. ');
+          if (!hasSeats && slug) {
+            const link = document.createElement('a');
+            link.href = `/dashboard?slug=${encodeURIComponent(slug)}#website`;
+            link.textContent = 'Upload seat list →';
+            link.style.fontWeight = '800';
+            notice.appendChild(link);
+          }
           wrap.appendChild(notice);
           return wrap;
         },
@@ -1276,8 +1549,21 @@
           checks.appendChild(regLabel);
           wrap.appendChild(checks);
           wrap.appendChild(field('Gifting message', controls.registryMessage));
-          wrap.appendChild(field('Registry links', controls.registryLinks, 'LABEL | URL'));
-          wrap.appendChild(field('Cash funds', controls.cashFunds, 'LABEL | ACCOUNT | NAME'));
+          wrap.appendChild(field('Gift registry links', rowsEditor(controls.registryLinks, {
+            sep: '|', addLabel: '+ Add a link',
+            cols: [
+              { placeholder: 'Lazada wishlist', label: 'Name' },
+              { placeholder: 'https://...', label: 'Link', type: 'url' },
+            ],
+          }), 'optional'));
+          wrap.appendChild(field('GCash / Maya / bank', rowsEditor(controls.cashFunds, {
+            sep: '|', addLabel: '+ Add an account',
+            cols: [
+              { placeholder: 'GCash', label: 'Type', width: '96px' },
+              { placeholder: '0917 123 4567', label: 'Number' },
+              { placeholder: 'Ana Reyes', label: 'Account name' },
+            ],
+          }), 'optional · guests tap to copy'));
           return wrap;
         },
       },
@@ -1306,6 +1592,7 @@
       editor.textContent = '';
       editor.appendChild(tab.render());
       renderUpgradePanel();
+      renderLaunch();
       updateStepNav();
     }
 
@@ -1357,9 +1644,11 @@
       // count to back the "RSVP ready" checklist item until after
       // signup. Shows normally once this same page reloads in the
       // authenticated context post-save.
-      if (ANONYMOUS) { panel.classList.add('hidden'); panel.textContent = ''; return; }
+      if (NEW_SITE) { panel.classList.add('hidden'); panel.textContent = ''; return; }
       const isTala = currentPlan === 'tala' || currentPlan === 'demo' || !currentPlan;
-      if (!isTala) {
+      // Not before the site is live: the host's first job is getting their
+      // link out. The upsell lands once they have something to show guests.
+      if (!isTala || !state?.is_published) {
         panel.classList.add('hidden');
         panel.textContent = '';
         return;
@@ -1367,18 +1656,20 @@
       panel.classList.remove('hidden');
       panel.textContent = '';
       panel.appendChild(Object.assign(document.createElement('h2'), {
-        textContent: 'Your invitation is ready. Want guests to do more than RSVP?',
+        textContent: 'Want guests to do more than RSVP?',
       }));
       panel.appendChild(Object.assign(document.createElement('p'), {
         className: 'sub',
-        textContent: 'Turn this website into a full guest experience with photo uploads, video greetings, live wall, reactions, polls, music, and a memory album.',
+        textContent: 'On the day, guests scan one QR and their photos and video greetings play live on the reception screen, then everything is saved in your memory album.',
       }));
       const actions = document.createElement('div');
       actions.className = 'upgrade-actions';
       const upgrade = document.createElement('a');
       upgrade.className = 'btn btn-accent';
-      upgrade.href = '/#pricing';
-      upgrade.textContent = 'Unlock guest experience';
+      // In-event upgrade (dashboard ?upgrade=1 opens the upgrade modal for
+      // THIS event). /#pricing sold a brand-new event instead.
+      upgrade.href = `/dashboard?slug=${encodeURIComponent(slug)}&upgrade=1`;
+      upgrade.textContent = 'See the live photo wall';
       upgrade.addEventListener('click', () => {
         if (typeof window.gtag === 'function') {
           window.gtag('event', 'upgrade_click', { event_category: 'lead_magnet_funnel' });
@@ -1390,7 +1681,6 @@
       free.textContent = state?.is_published ? 'Free website is live' : 'Publish free website only';
       free.addEventListener('click', () => publishBtn.click());
       actions.appendChild(upgrade);
-      actions.appendChild(free);
       panel.appendChild(actions);
       const list = document.createElement('div');
       list.className = 'feature-list';
@@ -1423,6 +1713,8 @@
         setStatus('Live', true);
         publishBtn.textContent = 'Update live site';
         syncPreview();
+        renderLaunch();
+        renderUpgradePanel();
         // Only the first publish is the funnel milestone -- re-publishing
         // edits to an already-live site isn't a new lead-magnet activation.
         if (!wasAlreadyLive && typeof window.gtag === 'function') {
@@ -1438,31 +1730,344 @@
       }
     }
 
-    // ── Finish panel (anonymous mode) ──────────────────────
+    // ── Analytics helper ─────────────────────────────────────
+    // Builder funnel: builder_start → preview_reveal → save_open →
+    // sign_up → free_website_created → website_published → share_click.
+    function track(name, params = {}) {
+      if (typeof window.gtag !== 'function') return;
+      window.gtag('event', name, { event_category: 'lead_magnet_funnel', ...params });
+    }
+
+    // ── Launch card (saved site) ─────────────────────────────
+    // The host's first job after saving is getting the link out, so this
+    // sits above the editor: Publish (one deliberate tap: nothing goes
+    // live before the host has seen it), then share, then optional extras.
+    const TODO = [
+      { label: 'Cover photo', tab: 0, done: () => !!state?.event?.cover_photo_url },
+      { label: 'Your story', tab: 1, done: () => !!controls.storyBody?.value.trim() },
+      { label: 'Schedule & venue', tab: 2, done: () => !!(controls.schedule?.value.trim() || controls.venues?.value.trim()) },
+      { label: 'Dress code & FAQ', tab: 3, done: () => !!(controls.dressCode?.value.trim() || controls.faq?.value.trim()) },
+      { label: 'Photos', tab: 5, done: () => gallery.length > 0 },
+      { label: 'Gifts / GCash', tab: 6, done: () => !!(controls.registryLinks?.value.trim() || controls.cashFunds?.value.trim()) },
+    ];
+    function launchBtn(text, cls, onClick) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = `btn ${cls}`;
+      b.textContent = text;
+      b.addEventListener('click', onClick);
+      return b;
+    }
+    function launchLinkBtn(text, href, channel) {
+      const a = document.createElement('a');
+      a.className = 'btn btn-ghost';
+      a.href = href;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.textContent = text;
+      a.addEventListener('click', () => track('share_click', { channel }));
+      return a;
+    }
+    function openPreview() {
+      if (window.matchMedia('(max-width: 860px)').matches) {
+        previewBox.classList.add('open');
+        previewBox.setAttribute('aria-hidden', 'false');
+      } else {
+        previewBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      syncPreview();
+    }
+    function renderLaunch() {
+      const box = $('launch');
+      if (!box || NEW_SITE || !state) return;
+      box.classList.remove('hidden');
+      box.textContent = '';
+      const live = !!state.is_published;
+      const fullUrl = `${location.origin}${guestUrl}`;
+      const couple = state.event?.couple_names || 'Your event';
+
+      box.appendChild(Object.assign(document.createElement('h2'), {
+        textContent: live ? 'Your website is live 🎉' : 'Your invitation is ready 🎉',
+      }));
+      box.appendChild(Object.assign(document.createElement('p'), {
+        className: 'sub',
+        textContent: live
+          ? 'Send this link to your guests. They can open it on any phone and RSVP in one tap.'
+          : 'Take a quick look, then publish to get the link you send to guests.',
+      }));
+
+      if (!live) {
+        const actions = document.createElement('div');
+        actions.className = 'launch-actions';
+        const pub = launchBtn('Publish & get my link', 'btn-accent', async () => {
+          pub.disabled = true;
+          pub.textContent = 'Publishing...';
+          await saveAndPublish();
+          if (!state.is_published) { pub.disabled = false; pub.textContent = 'Publish & get my link'; }
+        });
+        actions.appendChild(pub);
+        actions.appendChild(launchBtn('Preview', 'btn-ghost', openPreview));
+        box.appendChild(actions);
+      } else {
+        const linkRow = document.createElement('div');
+        linkRow.className = 'launch-link';
+        const linkInput = document.createElement('input');
+        linkInput.readOnly = true;
+        linkInput.value = fullUrl;
+        linkInput.setAttribute('aria-label', 'Your website link');
+        linkInput.addEventListener('focus', () => linkInput.select());
+        const copy = launchBtn('Copy', 'btn-accent', async () => {
+          try { await navigator.clipboard.writeText(fullUrl); }
+          catch { linkInput.select(); document.execCommand?.('copy'); }
+          copy.textContent = 'Copied ✓';
+          track('share_click', { channel: 'copy' });
+          setTimeout(() => { copy.textContent = 'Copy'; }, 2000);
+        });
+        linkRow.appendChild(linkInput);
+        linkRow.appendChild(copy);
+        box.appendChild(linkRow);
+
+        const shareText = `You're invited! ${couple} — details and RSVP here: ${fullUrl}`;
+        const row = document.createElement('div');
+        row.className = 'share-row';
+        if (navigator.share) {
+          row.appendChild(launchBtn('Share…', 'btn-ghost', () => {
+            track('share_click', { channel: 'native' });
+            navigator.share({ title: couple, text: `You're invited! ${couple}`, url: fullUrl }).catch(() => {});
+          }));
+        }
+        row.appendChild(launchLinkBtn('Messenger', `fb-messenger://share/?link=${encodeURIComponent(fullUrl)}`, 'messenger'));
+        row.appendChild(launchLinkBtn('Viber', `viber://forward?text=${encodeURIComponent(shareText)}`, 'viber'));
+        row.appendChild(launchLinkBtn('Open website', guestUrl, 'open'));
+        box.appendChild(row);
+      }
+
+      box.appendChild(Object.assign(document.createElement('p'), {
+        className: 'todo-title',
+        textContent: live ? 'Make it yours (optional)' : 'Add more now or later (optional)',
+      }));
+      const chips = document.createElement('div');
+      chips.className = 'todo-chips';
+      TODO.forEach(item => {
+        const done = item.done();
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'todo-chip' + (done ? ' done' : '');
+        chip.textContent = (done ? '✓ ' : '+ ') + item.label;
+        chip.addEventListener('click', () => {
+          goToStep(item.tab);
+          editor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+        chips.appendChild(chip);
+      });
+      box.appendChild(chips);
+    }
+
+    // ── New-site flow: Quick start → Reveal → Save ───────────
+    const quickEl  = $('quick');
+    const revealEl = $('reveal');
+    const shellEl  = document.querySelector('.shell');
     const finishModal = $('finish-modal');
     const finError    = $('fin-error');
     const finSubmit   = $('fin-submit');
+    let qsTimeRaw  = '';
+    let qsVenueRaw = '';
+    let startedTracked = false;
 
-    publishBtn.addEventListener('click', () => {
-      if (ANONYMOUS) {
-        finError.classList.add('hidden');
-        finishModal.classList.remove('hidden');
-        return;
+    const TYPE_COPY = {
+      wedding:   { chip: 'Wedding',     label: "Couple's names",  ph: 'e.g. Ana & Miguel',            first: 'Ceremony' },
+      birthday:  { chip: 'Birthday',    label: "Celebrant's name", ph: "e.g. Sofia's 7th Birthday",    first: 'Party starts' },
+      baptism:   { chip: 'Christening', label: "Baby's name",      ph: "e.g. Baby Gabriel's Christening", first: 'Christening' },
+      corporate: { chip: 'Company',     label: 'Event name',       ph: 'e.g. Acme Christmas Party',    first: 'Program starts' },
+      reunion:   { chip: 'Other',       label: 'Event name',       ph: 'e.g. Santos Family Reunion',   first: 'Event starts' },
+    };
+    function currentType() { return controls.basicsType?.value || 'wedding'; }
+    function paintTypeChips() {
+      const wrap = $('qs-type');
+      wrap.textContent = '';
+      Object.entries(TYPE_COPY).forEach(([value, copy]) => {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'chip';
+        chip.textContent = copy.chip;
+        chip.setAttribute('aria-pressed', String(value === currentType()));
+        chip.addEventListener('click', () => {
+          controls.basicsType.value = value;
+          paintTypeChips();
+        });
+        wrap.appendChild(chip);
+      });
+      const copy = TYPE_COPY[currentType()] || TYPE_COPY.wedding;
+      $('qs-name-label').textContent = copy.label;
+      $('qs-name').placeholder = copy.ph;
+    }
+
+    function showScreen(which) {
+      quickEl.classList.toggle('hidden', which !== 'quick');
+      revealEl.classList.toggle('hidden', which !== 'reveal');
+      shellEl.classList.add('hidden');
+      window.scrollTo({ top: 0 });
+    }
+
+    function applyQuickStart() {
+      const name = $('qs-name').value.trim();
+      if (!name) {
+        const err = $('qs-error');
+        err.textContent = `Please add the ${(TYPE_COPY[currentType()] || TYPE_COPY.wedding).label.toLowerCase()}.`;
+        err.classList.remove('hidden');
+        $('qs-name').focus();
+        return false;
       }
-      saveAndPublish();
-    });
+      $('qs-error').classList.add('hidden');
+      controls.basicsName.value = name;
+      controls.basicsDate.value = $('qs-date').value;
+      qsTimeRaw  = $('qs-time').value;
+      qsVenueRaw = $('qs-venue').value.trim();
+      // Starter details so the very first version of the site is already
+      // useful to guests: a venue card (with map) and the first schedule
+      // line. Only fills empty fields, so it never overwrites real edits.
+      if (qsVenueRaw && !controls.venues.value.trim()) {
+        controls.venues.value = `${qsVenueRaw} | ${qsVenueRaw}`;
+      }
+      const t12 = fmtTime12(qsTimeRaw);
+      if (t12 && !controls.schedule.value.trim()) {
+        controls.schedule.value = `${t12} | ${(TYPE_COPY[currentType()] || TYPE_COPY.wedding).first}`;
+      }
+      return true;
+    }
 
-    $('fin-cancel')?.addEventListener('click', () => {
-      // Nothing is lost by dismissing -- draft persistence (above) already
-      // covers whatever was typed.
-      finishModal.classList.add('hidden');
-    });
+    function showReveal() {
+      showScreen('reveal');
+      $('reveal-templates').appendChild(controls.template);
+      $('reveal-preview-slot').appendChild(previewBox);
+      previewBox.classList.remove('hidden');
+      $('preview-fab').classList.add('hidden');
+      $('reveal-save').textContent = token ? 'Save my website' : 'Save my free website';
+      $('reveal-save-note').textContent = token && me?.user?.email
+        ? `Saving to ${me.user.email}`
+        : 'Free forever · No card · Takes 10 seconds';
+      saveDraftLocal();
+      syncPreview();
+      // The phone frame's real height is only known once it's visible.
+      requestAnimationFrame(syncPreview);
+      track('preview_reveal', { event_type: currentType() });
+    }
 
-    // Same POST /api/event-site/:slug/image call the authenticated path
-    // already makes (uploadImage above) -- these two just run against the
-    // slug/headers a fresh signup just produced, not the module-level
-    // `slug`/`authHeaders` which don't exist yet at the moment a File is
-    // originally picked.
+    $('qs-go').addEventListener('click', () => { if (applyQuickStart()) showReveal(); });
+    quickEl.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && e.target.tagName === 'INPUT') { e.preventDefault(); $('qs-go').click(); }
+    });
+    quickEl.addEventListener('input', () => {
+      if (!startedTracked) { startedTracked = true; track('builder_start', { event_type: currentType() }); }
+    });
+    $('reveal-edit').addEventListener('click', () => showScreen('quick'));
+    $('reveal-templates').addEventListener('change', () => { schedulePreviewSync(); saveDraftLocal(); });
+
+    // ── Saving ───────────────────────────────────────────────
+    function showSaveProblem(target, nodes) {
+      target.textContent = '';
+      nodes.forEach(n => target.append(n));
+      target.classList.remove('hidden');
+    }
+    function linkTo(href, text) {
+      const a = document.createElement('a');
+      a.href = href;
+      a.textContent = text;
+      a.style.fontWeight = '800';
+      return a;
+    }
+
+    // Free event already used (one Tala event per account). Never a dead
+    // end: point at the existing event's website, keep the draft.
+    async function explainFreeEventUsed(tok, target) {
+      let events = me?.events;
+      if (!events) {
+        try {
+          const r = await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${tok}` } });
+          if (r.ok) events = (await r.json()).events;
+        } catch {}
+      }
+      const active = (events || []).filter(e => e.is_active !== false);
+      const nodes = ['Your free event is already in use, so a new website needs a paid event. '];
+      if (active.length) {
+        nodes.push('You can edit the website of ');
+        active.slice(0, 3).forEach((e, i) => {
+          if (i) nodes.push(', ');
+          nodes.push(linkTo(`/website-builder?event=${encodeURIComponent(e.slug)}`, e.couple_names || e.slug));
+        });
+        nodes.push(' or ');
+      }
+      nodes.push(linkTo('/start', 'create a new event →'));
+      showSaveProblem(target, nodes);
+    }
+
+    // Creates the event + website from the current answers, then hands
+    // off to the launch screen. Shared by every save path (email signup,
+    // Google, already-logged-in).
+    async function createSiteFor(tok, problemTarget) {
+      const H = { Authorization: `Bearer ${tok}` };
+      const evRes = await fetch('/api/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...H },
+        body: JSON.stringify({
+          couple_names: controls.basicsName.value.trim() || 'My Event',
+          event_type:   currentType(),
+          event_date:   controls.basicsDate.value || null,
+          plan: 'tala',
+        }),
+      });
+      const evData = await evRes.json().catch(() => ({}));
+      if (!evRes.ok) {
+        if (evData.code === 'plan_limit_events') {
+          await explainFreeEventUsed(tok, problemTarget);
+          return false;
+        }
+        throw new Error(evData.message || 'Could not create your website.');
+      }
+      const newSlug = evData.event.slug;
+
+      // Best-effort from here: the account + event exist, so a failure in
+      // any step below still leaves something the host can finish.
+      const t12 = fmtTime12(qsTimeRaw);
+      if (qsVenueRaw || t12) {
+        await fetch(`/api/events/${encodeURIComponent(newSlug)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', ...H },
+          body: JSON.stringify({ venue: qsVenueRaw || undefined, event_time: t12 || undefined }),
+        }).catch(() => {});
+      }
+      if (coverFile) {
+        const url = await uploadDeferredImage(newSlug, H, coverFile).catch(() => null);
+        if (url) {
+          await fetch(`/api/events/${encodeURIComponent(newSlug)}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', ...H },
+            body: JSON.stringify({ cover_photo_url: url }),
+          }).catch(() => {});
+        }
+      }
+      for (const file of galleryFiles) {
+        const url = await uploadDeferredImage(newSlug, H, file).catch(() => null);
+        if (url) gallery.push(url);
+      }
+      await fetch(`/api/event-site/${encodeURIComponent(newSlug)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...H },
+        // Saved unpublished: publishing is the host's own deliberate tap
+        // on the launch card (they see it first, right after this).
+        body: JSON.stringify({ config: gather(), is_published: false }),
+      });
+
+      clearDraftLocal();
+      // transport_type 'beacon' survives the immediate redirect below
+      // (see git history: plain gtag() calls raced location.href).
+      track('free_website_created', { event_type: currentType(), transport_type: 'beacon' });
+      location.href = `/website-builder?event=${encodeURIComponent(newSlug)}&launch=1`;
+      return true;
+    }
+
+    // Same POST /api/event-site/:slug/image the authenticated editor uses,
+    // run against the slug/headers a fresh signup just produced.
     async function uploadDeferredImage(newSlug, newAuthHeaders, file) {
       const body = new FormData();
       body.append('file', file);
@@ -1474,122 +2079,129 @@
       return data.url || null;
     }
 
+    // Google one-tap button inside the save sheet. Loaded lazily the first
+    // time the sheet opens; hidden entirely if Google isn't configured.
+    let googleReady = false;
+    async function ensureGoogleButton() {
+      if (googleReady) return;
+      googleReady = true;
+      const target = $('g-btn');
+      const hide = () => { target.classList.add('hidden'); $('g-divider').classList.add('hidden'); };
+      const cfg = await fetch('/api/auth/config').then(r => r.json()).catch(() => ({}));
+      if (!cfg.google_client_id) { hide(); return; }
+      const s = document.createElement('script');
+      s.src = 'https://accounts.google.com/gsi/client';
+      s.onerror = hide;
+      s.onload = () => {
+        google.accounts.id.initialize({
+          client_id: cfg.google_client_id,
+          callback: async ({ credential }) => {
+            finError.classList.add('hidden');
+            try {
+              const res = await fetch('/api/auth/google', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ credential }),
+              });
+              const data = await res.json();
+              if (!res.ok) throw new Error(data.message || 'Google sign-in failed');
+              saveAuth(data.token, data.user);
+              token = data.token;
+              track('sign_up', { method: 'google' });
+              finSubmit.disabled = true;
+              finSubmit.textContent = 'Saving...';
+              await createSiteFor(data.token, finError);
+              finSubmit.disabled = false;
+              finSubmit.textContent = 'Save my website';
+            } catch (err) {
+              finError.textContent = err.message || 'Something went wrong. Please try again.';
+              finError.classList.remove('hidden');
+            }
+          },
+        });
+        google.accounts.id.renderButton(target, {
+          theme: 'outline', size: 'large', text: 'continue_with', shape: 'pill',
+          width: Math.min(340, target.clientWidth || 320),
+        });
+      };
+      document.head.appendChild(s);
+    }
+
+    $('reveal-save').addEventListener('click', async () => {
+      track('save_open', { logged_in: !!token });
+      if (token) {
+        const btn = $('reveal-save');
+        btn.disabled = true;
+        btn.textContent = 'Saving...';
+        try {
+          await createSiteFor(token, $('reveal-error'));
+        } catch (err) {
+          showSaveProblem($('reveal-error'), [err.message || 'Something went wrong. Please try again.']);
+        }
+        btn.disabled = false;
+        btn.textContent = 'Save my website';
+        return;
+      }
+      finError.classList.add('hidden');
+      finishModal.classList.remove('hidden');
+      ensureGoogleButton();
+    });
+    // Desktop header button mirrors the bottom bar while in the new flow.
+    publishBtn.addEventListener('click', () => {
+      if (NEW_SITE) { $('reveal-save').click(); return; }
+      saveAndPublish();
+    });
+    $('fin-cancel')?.addEventListener('click', () => finishModal.classList.add('hidden'));
+
     finSubmit?.addEventListener('click', async () => {
-      const name  = $('fin-name').value.trim();
       const email = $('fin-email').value.trim();
       const pw    = $('fin-pw').value;
-
       finError.classList.add('hidden');
-      if (!name || !email || !pw) {
-        finError.textContent = 'Please fill in all three fields.';
+      if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
+        finError.textContent = 'Please enter a valid email.';
         finError.classList.remove('hidden');
         return;
       }
       if (pw.length < 8) {
-        finError.textContent = 'Password must be at least 8 characters.';
+        finError.textContent = 'Password needs at least 8 characters.';
         finError.classList.remove('hidden');
         return;
       }
-
       finSubmit.disabled = true;
       finSubmit.textContent = 'Saving...';
       try {
+        saveDraftLocal(); // survives the login detour below, if needed
         const regRes = await fetch('/api/auth/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password: pw, full_name: name }),
-        });
-        const regData = await regRes.json();
-        if (!regRes.ok) throw new Error(regData.message || 'Registration failed');
-
-        if (!regData.token) {
-          // Anti-enumeration case: email already registered. The draft
-          // stays in localStorage -- ANONYMOUS is re-derived from
-          // !token && !slug on every load, so returning here after
-          // logging in elsewhere picks the draft back up.
-          finError.textContent = 'That email is already registered. Check your email to verify, then log in to finish.';
-          finError.classList.remove('hidden');
-          finSubmit.disabled = false;
-          finSubmit.textContent = 'Save my website';
-          return;
-        }
-
-        saveAuth(regData.token, regData.user);
-        const newAuthHeaders = { Authorization: `Bearer ${regData.token}` };
-
-        const evRes = await fetch('/api/events', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...newAuthHeaders },
+          // Account name defaults to the event name: one less field between
+          // "I love this" and "it's saved". Editable later in /account.
           body: JSON.stringify({
-            couple_names: controls.basicsName.value.trim() || 'My Event',
-            event_type:   controls.basicsType.value,
-            event_date:   controls.basicsDate.value || null,
-            plan: 'tala',
+            email, password: pw,
+            full_name: controls.basicsName.value.trim() || email.split('@')[0],
           }),
         });
-        const evData = await evRes.json();
-        if (!evRes.ok) throw new Error(evData.message || 'Could not create your event.');
-        const newSlug = evData.event.slug;
+        const regData = await regRes.json().catch(() => ({}));
+        if (!regRes.ok) throw new Error(regData.message || 'Could not create your account.');
 
-        // Account and event are real from this point on. Everything
-        // below is best-effort: if any of it fails, the account/event
-        // still exist and the host can finish setup from the dashboard --
-        // same "soft failure, not a broken signup" reasoning as the
-        // /start personalize slide.
-        if (coverFile) {
-          const url = await uploadDeferredImage(newSlug, newAuthHeaders, coverFile);
-          if (url) {
-            await fetch(`/api/events/${encodeURIComponent(newSlug)}`, {
-              method: 'PATCH',
-              headers: { 'Content-Type': 'application/json', ...newAuthHeaders },
-              body: JSON.stringify({ cover_photo_url: url }),
-            });
-          }
+        if (!regData.token) {
+          // Email already registered (anti-enumeration: no token). Draft is
+          // in localStorage; logging in brings them straight back here and
+          // the logged-in flow saves it in one tap.
+          showSaveProblem(finError, [
+            'This email already has a Reelday account. ',
+            linkTo(`/login?next=${encodeURIComponent('/website-builder')}`, 'Log in to save your website →'),
+          ]);
+          return;
         }
-        for (const file of galleryFiles) {
-          const url = await uploadDeferredImage(newSlug, newAuthHeaders, file);
-          if (url) gallery.push(url);
-        }
-
-        await fetch(`/api/event-site/${encodeURIComponent(newSlug)}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json', ...newAuthHeaders },
-          // Always false -- content collected before the host has even
-          // seen their dashboard must never go live on its own. Never a
-          // variable here, per the same rule established for the
-          // /start personalize slide.
-          body: JSON.stringify({ config: gather(), is_published: false }),
-        });
-
-        clearDraftLocal();
-        finishModal.classList.add('hidden');
-        statusPill.textContent = 'Saved';
-        statusNote.textContent = "Your website is saved. Publish it when you're ready.";
-
-        // Fire free_website_created via transport_type:'beacon' -- confirmed
-        // via headless-browser network capture (checking the real
-        // /g/collect request, not just that gtag() got called) that BOTH
-        // the original fire-and-forget version (gtag() then a flat 900ms
-        // setTimeout) AND an event_callback+event_timeout version still
-        // lost this event: the callback/timeout fires once gtag.js
-        // *decides* to give up waiting, not once the hit is confirmed on
-        // the wire, so a slow first send (gtag.js still initializing this
-        // early on the page) still raced location.href. transport_type:
-        // 'beacon' uses navigator.sendBeacon(), which the browser
-        // guarantees completes even if the page unloads immediately after
-        // the call -- no callback or timeout needed, the redirect can fire
-        // right away.
-        if (typeof window.gtag === 'function') {
-          window.gtag('event', 'free_website_created', {
-            event_category: 'lead_magnet_funnel',
-            event_type: controls.basicsType.value,
-            transport_type: 'beacon',
-          });
-        }
-        location.href = `/dashboard?slug=${encodeURIComponent(newSlug)}`;
+        saveAuth(regData.token, regData.user);
+        token = regData.token;
+        track('sign_up', { method: 'email' });
+        await createSiteFor(regData.token, finError);
       } catch (err) {
         finError.textContent = err.message || 'Something went wrong. Please try again.';
         finError.classList.remove('hidden');
+      } finally {
         finSubmit.disabled = false;
         finSubmit.textContent = 'Save my website';
       }
@@ -1597,29 +2209,70 @@
 
     // Delegated on #editor rather than per-field: every current and
     // future control renders inside it, so one listener catches all of
-    // them without wiring each tab's fields individually. Runs in both
-    // modes -- scheduleDraftSave() itself no-ops outside ANONYMOUS.
-    editor.addEventListener('input', () => { scheduleDraftSave(); schedulePreviewSync(); });
-    editor.addEventListener('change', () => { scheduleDraftSave(); schedulePreviewSync(); });
+    // them without wiring each tab's fields individually.
+    editor.addEventListener('input', () => { scheduleDraftSave(); schedulePreviewSync(); renderLaunchSoon(); });
+    editor.addEventListener('change', () => { scheduleDraftSave(); schedulePreviewSync(); renderLaunchSoon(); });
+    // Keeps the launch card's ✓ chips current while the host edits.
+    let launchTimer = null;
+    function renderLaunchSoon() {
+      if (NEW_SITE) return;
+      clearTimeout(launchTimer);
+      launchTimer = setTimeout(renderLaunch, 600);
+    }
 
+    // ── Init ─────────────────────────────────────────────────
     (async () => {
-      if (ANONYMOUS) {
+      if (NEW_SITE) {
         const draft = restoreDraftLocal();
+        if (token) {
+          try {
+            const r = await fetch('/api/auth/me', { headers: authHeaders });
+            if (r.ok) me = await r.json();
+            else if (r.status === 401) { token = null; authHeaders = {}; }
+          } catch {}
+        }
+        const cfg = (draft && draft.config) || {};
+        // New sites start with the seat finder off: it only makes sense
+        // once a seat list is uploaded (the guest site hides it until then).
+        if (!draft) cfg.seatEnabled = false;
         buildControls({
-          config: (draft && draft.config) || {},
+          config: cfg,
           event: {
             couple_names: (draft && draft.name) || '',
             event_date:   (draft && draft.date) || '',
-            event_type:   (draft && draft.type) || params.get('type') || 'wedding',
+            event_type:   params.get('type') || (draft && draft.type) || 'wedding',
           },
         });
         currentPlan = 'tala';
-        $('builder-title').textContent = 'Build your free event website';
-        publishBtn.textContent = 'Save your event website';
-        statusPill.textContent = 'Draft';
-        statusNote.textContent = 'Add your details below -- nothing is saved online until you save your website.';
-        render();
-        syncPreview();
+        qsTimeRaw  = (draft && draft.time) || '';
+        qsVenueRaw = (draft && draft.venue) || '';
+        $('qs-name').value  = controls.basicsName.value;
+        $('qs-date').value  = controls.basicsDate.value;
+        $('qs-time').value  = qsTimeRaw;
+        $('qs-venue').value = qsVenueRaw;
+        paintTypeChips();
+
+        $('builder-title').textContent = 'Free event website';
+        backLink.href = token ? '/my-events' : '/';
+        publishBtn.classList.add('hidden');
+        if (token) { dashboardLink.classList.remove('hidden'); dashboardLink.href = '/my-events'; }
+
+        // Logged-in host who already used their free event: say so up
+        // front, with links to the website they already have.
+        const activeEvents = (me?.events || []).filter(e => e.is_active !== false);
+        if (me?.user?.tala_used && activeEvents.length) {
+          const n = $('qs-notice');
+          n.append('Already have an event? Edit its website: ');
+          activeEvents.slice(0, 3).forEach((e, i) => {
+            if (i) n.append(' · ');
+            n.appendChild(linkTo(`/website-builder?event=${encodeURIComponent(e.slug)}`, e.couple_names || e.slug));
+          });
+          n.classList.remove('hidden');
+        }
+
+        // Came back from "log in to save" (or reopened the tab) with a
+        // finished draft: go straight to the reveal, one tap from saved.
+        if (draft && draft.name) showReveal(); else showScreen('quick');
         return;
       }
       try {
@@ -1642,6 +2295,11 @@
         setStatus(state.is_published ? 'Live' : 'Draft', !!state.is_published);
         render();
         syncPreview();
+        if (params.get('launch')) {
+          // Fresh from the quick-start save: drop the ?launch flag so a
+          // refresh doesn't look like a new save.
+          history.replaceState(null, '', `/website-builder?event=${encodeURIComponent(slug)}`);
+        }
       } catch {
         locked.classList.remove('hidden');
         locked.innerHTML = '<strong>Could not load the website builder.</strong> Please refresh or return to the dashboard.';

@@ -532,12 +532,27 @@ export default async function authRoutes(fastify) {
          SET google_id   = COALESCE(users.google_id, EXCLUDED.google_id),
              is_verified = true,
              full_name   = COALESCE(users.full_name, EXCLUDED.full_name)
-       RETURNING id, email, full_name, subscription_tier, subscription_expires_at, tala_used`,
+       RETURNING id, email, full_name, subscription_tier, subscription_expires_at, tala_used,
+                 (xmax = 0) AS inserted`,
       [email.toLowerCase(), name ?? email, google_id],
     );
 
-    const user  = rows[0];
+    const { inserted, ...user } = rows[0];
     const token = signToken({ id: user.id, email: user.email, full_name: user.full_name });
+
+    // Brand-new Google accounts get the same welcome email + admin signup
+    // ping as email/password registrations. (xmax = 0) is true only when
+    // the upsert INSERTed, so returning users signing in don't re-trigger
+    // either email. Both fire-and-forget, same as /auth/register.
+    const resendKey = process.env.RESEND_API_KEY ?? '';
+    if (inserted && resendKey.length > 10 && !resendKey.startsWith('re_XXXX')) {
+      sendWelcomeEmail(user.email, user.full_name, buildAppUrl(request)).catch(err =>
+        fastify.log.warn({ err: err.message }, 'Failed to send welcome email (google)'),
+      );
+      sendAdminNewUserEmail(user, fastify.log).catch(err =>
+        fastify.log.warn({ err: err.message }, 'Failed to send admin new-user notification (google)'),
+      );
+    }
 
     return { token, user };
   });

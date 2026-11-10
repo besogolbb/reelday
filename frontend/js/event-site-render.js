@@ -712,7 +712,11 @@
     })();
 
     // ── Find your seat ───────────────────────────────
-    if (cfg.seatEnabled !== false) {
+    // Needs both the host toggle AND an imported seat list. has_seats is
+    // false (not undefined) only when the server checked and found none;
+    // an enabled-but-empty finder just tells every guest "not found".
+    var seatsReady = cfg.seatEnabled !== false && data.has_seats !== false;
+    if (seatsReady) {
       addNav('seat', t('seat'));
       var sw2 = el('div', { class: 'es-form-wrap' });
       var inp = el('input', { class: 'es-field', type: 'text',
@@ -1102,7 +1106,15 @@
     foot.appendChild(actions);
 
     var credit = el('div', { class: 'es-foot-credit' });
-    var creditLink = el('a', { href: '/', text: 'Create your own free event website — reelday.ph' });
+    // Viral loop: guests who want their own site land on the matching
+    // free-website entry (not the wall-first homepage), attributed to
+    // the site that sent them.
+    var creditQs = 'utm_source=event_site&utm_medium=footer&utm_campaign=powered_by&ref=' +
+      encodeURIComponent(ACTIVE_SLUG || '');
+    var creditHref = (data.event_type || 'wedding') === 'wedding'
+      ? '/free-wedding-website?' + creditQs
+      : '/website-builder?type=' + encodeURIComponent(data.event_type) + '&' + creditQs;
+    var creditLink = el('a', { href: creditHref, text: 'Create your own free event website — reelday.ph' });
     credit.appendChild(creditLink);
     foot.appendChild(credit);
     app.appendChild(foot);
@@ -1133,7 +1145,7 @@
       // secondary seat. Just one enabled → that one fills the dock.
       // Skipped in preview mode — it lives on document.body, outside
       // the builder's own preview container.
-      var seatOn = cfg.seatEnabled !== false;
+      var seatOn = seatsReady;
       var rsvpOn = cfg.rsvpEnabled !== false;
       // Dock always renders on phones (it now carries the hamburger);
       // shortcut buttons appear only when their sections are enabled.

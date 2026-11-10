@@ -8524,7 +8524,13 @@
   });
 
   // ── Init ──────────────────────────────────────────────
-  loadAll();
+  // ?upgrade=1 deep link (from the website builder, upsell emails, etc.)
+  // opens the in-event upgrade modal once the event has loaded, so every
+  // upgrade CTA upgrades THIS event instead of bouncing to /#pricing
+  // (which sells a brand-new event).
+  loadAll().then(() => {
+    if (params.get('upgrade') && currentDashEvent) openUpgradeModal();
+  }).catch(() => {});
   setInterval(refreshUploads, 10000);
   refreshWallErrors();
   setInterval(refreshWallErrors, 5000);

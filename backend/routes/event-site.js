@@ -361,7 +361,8 @@ async function loadGate(db, slug) {
 async function buildPayload(db, gate) {
   const e = gate.event;
   const { rows } = await db.query(
-    `SELECT COUNT(*)::int AS count FROM uploads WHERE event_id = $1 AND is_approved = true`,
+    `SELECT (SELECT COUNT(*)::int FROM uploads WHERE event_id = $1 AND is_approved = true) AS count,
+            EXISTS (SELECT 1 FROM event_seats WHERE event_id = $1) AS has_seats`,
     [e.id],
   );
   return {
@@ -377,6 +378,9 @@ async function buildPayload(db, gate) {
     upload_window_starts_at: e.upload_window_starts_at,
     upload_window_ends_at: e.upload_window_ends_at,
     upload_count: rows[0].count,
+    // Find-your-seat only renders when a seat list was imported — an
+    // enabled-but-empty finder just tells every guest "not found".
+    has_seats: rows[0].has_seats,
   };
 }
 

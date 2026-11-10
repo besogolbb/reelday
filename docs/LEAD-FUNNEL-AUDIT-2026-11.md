@@ -5,6 +5,31 @@
 
 ---
 
+## ✅ Shipped 2026-11-10 (L1, L2, L4, L5, most of L6 + G1, G2)
+
+| What | Where |
+|---|---|
+| **Quick start → Reveal → Save** for anyone without an event: 4 answers (type chips, names, date, optional time + venue) → full preview of *their* site with template swatches → sticky "Save my free website" | `website-builder.html` (`#quick`, `#reveal`, `createSiteFor`) |
+| Starter details from the quick start: venue card with map + first schedule line; `events.venue` / `event_time` set ("3:00 PM") | same, `applyQuickStart` |
+| Save sheet: **Google button** + email/password only (account name defaults to the event name). Already-registered email → "Log in to save" (draft kept) | same |
+| **B1/B2 fixed:** logged-in visitors with no event stay in the builder. A returning draft opens straight on the reveal for a one-tap save | same, init |
+| **B3 fixed:** used free event → explains, links to their existing event's website + `/start`. Never a dead end | `explainFreeEventUsed` |
+| **Launch card** after save: *Publish & get my link* (deliberate tap) → link + Copy / Share / Messenger / Viber / Open, plus "Make it yours" ✓-chips to each section | `renderLaunch` |
+| **Row editors** replace all pipe-syntax fields (schedule, venues, FAQ, registry links, GCash/Maya) | `rowsEditor` |
+| Plain-word labels; internal "moves to its own page" note removed | tab specs |
+| **B4 fixed:** seat finder only renders when a seat list exists (`has_seats` in public payload); new sites start with it off | `event-site.js` `buildPayload`, `event-site-render.js` |
+| Upsell only after publish, CTA → `/dashboard?slug=…&upgrade=1` (in-event upgrade modal) | `website-builder.html`, `dashboard.html` |
+| **G1:** guest-site footer → `/free-wedding-website?utm_…&ref=<slug>` (non-weddings → builder with type) | `event-site-render.js` |
+| **G2:** GA4 `builder_start`, `preview_reveal`, `save_open`, `sign_up{method}`, `share_click{channel}` (+ existing `free_website_created`, `website_published`) | `track()` |
+| Google sign-ups now get the welcome email + admin alert | `auth.js` `/auth/google` |
+| Landing copy "Takes about 10 minutes" → "See your website in 30 seconds, no sign-up needed" | `free-wedding-website.html` |
+
+**QA:** headless iPhone-size run against local files with a mocked API. Tested: happy path (quick start → reveal → email save → launch → publish → share links), already-registered email, logged-in one-tap save, used free event, and the guest page (venue/time/schedule/RSVP render, seat finder hidden without seats, footer link). **Not yet tested against the real backend:** Google sign-in (needs the real client ID) and a real production signup. Do one real signup on production after deploy.
+
+**Still open:** L7 (wall card → Test Session, after that ships), L8 (checklist nudge emails), starter story paragraphs (F8).
+
+---
+
 ## 1. The core finding
 
 **Two fields are enough to make the website look great.** With only *names + date*, the live preview already shows a polished invitation: big serif names, the date, "You're invited", and a running countdown. That's the moment the visitor thinks *"I want this."*
