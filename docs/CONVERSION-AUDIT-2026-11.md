@@ -162,7 +162,7 @@ One job (an extension of `wedding-website-drip.js`, same claim-before-send patte
 
 ## 6. Execution plan (sized for ~6–8 hrs/week)
 
-### Sprint 0 — Baseline & stop the leaks (this week, ~7 hrs)
+### Sprint 0 — Baseline & stop the leaks (this week + next, ~12.5 hrs)
 | # | Task | Hrs |
 |---|---|---|
 | 0.1 | Run §8 SQL and record the baseline numbers in this doc | 0.5 |
@@ -171,16 +171,17 @@ One job (an extension of `wedding-website-drip.js`, same claim-before-send patte
 | 0.4 | Google sign-up → welcome email + admin alert + respect `?next=` | 0.5 |
 | 0.5 | Copy & trust pass (§4.4) + hero CTA relabel (§4.3 Door A) + Messenger/Viber button | 1.5 |
 | 0.6 | **Personal outreach** to every sign-up from the last 60 days (§7), log replies | 1 + replies |
+| 0.7 | **Lead-funnel bugs** (`LEAD-FUNNEL-AUDIT-2026-11.md` L1–L3): draft lost when the email is already registered, logged-in visitors bounced off the builder, `tala_used` dead end, seat finder on with no seats, footer link → `/free-wedding-website` + UTM, builder analytics | 5.5 |
 
-### Sprint 1 — Activation (weeks 2–3, ~12 hrs)
+### Sprint 1 — Activation + builder redesign (weeks 2–4, ~23 hrs)
 | # | Task | Hrs |
 |---|---|---|
 | 1.1 | Test Session: backend (`test_session_until`, `is_test` uploads, limits, 24h cleanup) | 4 |
 | 1.2 | Test Session: dashboard card, QR, confetti on first upload, wall "TEST" watermark, post-aha upgrade prompt | 4 |
 | 1.3 | `/start`: remove plan step (keep for `tala_used`), end on Test Session | 1.5 |
-| 1.4 | Builder: Google 1-tap on save, "Log in to save" path, Preview & publish + share screen | 2.5 |
+| 1.4 | **Builder redesign "Website in 60 seconds"** (`LEAD-FUNNEL-AUDIT-2026-11.md` §4, L4–L6): 2-field Quick Start → full-screen preview → Google 1-tap save → Publish & share → optional "Make it yours" checklist with row inputs instead of pipe syntax | 13 |
 
-### Sprint 2 — Follow-up & recovery (weeks 4–5, ~10 hrs)
+### Sprint 2 — Follow-up & recovery (weeks 5–6, ~13.5 hrs; includes lead-funnel L7–L8)
 | # | Task | Hrs |
 |---|---|---|
 | 2.1 | Welcome email rewrite | 1 |
