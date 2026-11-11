@@ -30,7 +30,7 @@
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join, extname } from 'path';
-import { randomUUID } from 'crypto';
+import { randomUUID, createHash } from 'crypto';
 import { gzipSync } from 'zlib';
 import { Resend } from 'resend';
 import { planHasFeature } from '../lib/plans.js';
@@ -445,7 +445,35 @@ function ogImageFor(e, cfg, proto, host) {
     return { url: cover };
   }
   const tpl = OG_TEMPLATES.has(cfg.template) ? cfg.template : 'classic';
-  return { url: `${proto}://${host}/images/og/invite-${tpl}.jpg`, width: 1200, height: 630 };
+  return { url: `${proto}://${host}/images/og/invite-${tpl}.jpg`, width: 1200, height: 630, localCard: tpl };
+}
+
+// The URL put in og:image: a plain same-domain address
+//   https://reelday.ph/api/event-site/<slug>/preview.jpg?v=<hash>
+// rather than the Cloudflare transform URL (another subdomain, commas in
+// the path), which some in-app link fetchers handle badly. ?v changes
+// whenever the cover, focus point or style changes, so every cache
+// (Facebook, Messenger, Cloudflare) sees a new image URL.
+function ogPublicImage(e, cfg, proto, host) {
+  const src = ogImageFor(e, cfg, proto, host);
+  const ver = createHash('sha1').update(src.url).digest('hex').slice(0, 10);
+  return {
+    ...src,
+    url: `${proto}://${host}/api/event-site/${encodeURIComponent(e.slug)}/preview.jpg?v=${ver}`,
+    width: src.width || 1200, height: src.height || 630,
+  };
+}
+
+const OG_CARD_DIR = join(__dirname, '..', '..', 'frontend', 'images', 'og');
+const ogBytes = new Map(); // upstream URL -> Buffer (small: ~35-70 KB each)
+function rememberOg(key, buf) {
+  if (ogBytes.size >= 300) ogBytes.delete(ogBytes.keys().next().value);
+  ogBytes.set(key, buf);
+}
+function localCard(tpl) {
+  const key = `card:${tpl}`;
+  if (!ogBytes.has(key)) rememberOg(key, readFileSync(join(OG_CARD_DIR, `invite-${tpl}.jpg`)));
+  return ogBytes.get(key);
 }
 
 export async function renderEventSitePage(db, slug) {
@@ -475,7 +503,7 @@ export async function renderEventSitePage(db, slug) {
   const desc =
     (typeof cfg.ogDescription === 'string' && cfg.ogDescription) ||
     `${facts ? facts + '. ' : ''}You're invited! Tap for the details and to RSVP.`;
-  const og = ogImageFor(e, cfg, proto, host);
+  const og = ogPublicImage(e, cfg, proto, host);
   const theme = e.theme_override || e.event_type || 'wedding';
 
   const head = [
@@ -558,6 +586,49 @@ export default async function eventSiteRoutes(fastify) {
   }
 
   // ── Public: published site config ──────────────────────────────────
+  // ── Public: link-preview image (og:image) ─────────────────────────
+  // Same-domain JPEG for Messenger/Facebook/Viber previews. Only for
+  // published sites (same gate as the page). Falls back to the style's
+  // invitation card if the cover can't be fetched, so a preview never
+  // ends up without an image.
+  fastify.get('/event-site/:slug/preview.jpg', async (request, reply) => {
+    const gate = await loadGate(fastify.db, request.params.slug);
+    if (!gate || !gate.allowed || !gate.event.is_published) {
+      return reply.code(404).send({ error: true, message: 'Not found' });
+    }
+    const e = gate.event;
+    const cfg = e.config || {};
+    const src = ogImageFor(e, cfg, 'https', absHost());
+    let buf = null;
+    if (src.localCard) {
+      buf = localCard(src.localCard);
+    } else if (ogBytes.has(src.url)) {
+      buf = ogBytes.get(src.url);
+    } else {
+      try {
+        const res = await fetch(src.url, { signal: AbortSignal.timeout(8000) });
+        const type = res.headers.get('content-type') || '';
+        if (res.ok && type.startsWith('image/')) {
+          buf = Buffer.from(await res.arrayBuffer());
+          if (buf.length > 0 && buf.length < 8 * 1024 * 1024) rememberOg(src.url, buf);
+          else buf = null;
+        }
+      } catch (err) {
+        request.log.warn({ err: err.message, slug: e.slug }, 'og preview fetch failed');
+      }
+      if (!buf) {
+        const tpl = OG_TEMPLATES.has(cfg.template) ? cfg.template : 'classic';
+        buf = localCard(tpl);
+      }
+    }
+    // The URL is versioned (?v=hash of the source), so long caching is
+    // safe: a new cover produces a new URL.
+    return reply
+      .header('Cache-Control', 'public, max-age=86400, s-maxage=604800')
+      .type('image/jpeg')
+      .send(buf);
+  });
+
   fastify.get('/event-site/:slug', async (request, reply) => {
     const { slug } = request.params;
 
