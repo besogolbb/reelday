@@ -635,6 +635,22 @@
     }
     .todo-chip.done { color: var(--sage); border-color: rgba(61, 115, 86, .35); background: rgba(61, 115, 86, .06); }
 
+    /* Cover focus picker */
+    .focus-field { margin-top: 14px; }
+    .focus-pick {
+      position: relative; display: block; width: 100%; max-width: 360px;
+      padding: 0; border: 1px solid var(--line-2); border-radius: 12px;
+      overflow: hidden; cursor: crosshair; background: var(--paper-2);
+    }
+    .focus-pick img { display: block; width: 100%; height: auto; }
+    .focus-dot {
+      position: absolute; width: 34px; height: 34px; margin: -17px 0 0 -17px;
+      border-radius: 50%; border: 3px solid #fff; background: rgba(196, 90, 58, .55);
+      box-shadow: 0 0 0 2px rgba(0,0,0,.25), 0 6px 16px rgba(0,0,0,.3);
+      pointer-events: none; transition: left .15s, top .15s;
+    }
+    .focus-dot.unset { opacity: .55; }
+
     /* ── Row editors (replace "A | B" pipe-syntax textareas) ── */
     .rows { display: grid; gap: 8px; }
     .row-line { display: grid; gap: 8px; align-items: center; }
@@ -856,6 +872,10 @@
     // only, uploaded post-signup.
     let coverFile = null;
     let coverPreviewUrl = null;
+    // Cover-photo focus point {x, y} in % (null = centered). Set by tapping
+    // the faces in the picker below the cover button; the guest site uses
+    // it as the photo's object-position so faces survive any crop.
+    let heroFocus = null;
     let galleryFiles = [];
 
     function setStatus(message, live) {
@@ -964,6 +984,52 @@
       wrap.appendChild(list);
       wrap.appendChild(add);
       wrap.appendChild(textarea);
+      return wrap;
+    }
+
+    // ── Cover focus picker ────────────────────────────────────
+    // "Tap the faces": records where the people are in the cover photo so
+    // the guest site crops around them (phones crop the sides, desktops
+    // crop the top/bottom). One optional tap, no settings to learn.
+    function focusPicker(src) {
+      const wrap = document.createElement('div');
+      wrap.className = 'field focus-field';
+      const label = document.createElement('label');
+      label.textContent = 'Tap the faces in your photo';
+      const hint = document.createElement('span');
+      hint.className = 'hint';
+      hint.textContent = ' - keeps them visible on every screen';
+      label.appendChild(hint);
+      const box = document.createElement('button');
+      box.type = 'button';
+      box.className = 'focus-pick';
+      box.setAttribute('aria-label', 'Tap where the faces are in your cover photo');
+      const img = document.createElement('img');
+      img.src = src;
+      img.alt = '';
+      const dot = document.createElement('span');
+      dot.className = 'focus-dot';
+      function place() {
+        const f = heroFocus || { x: 50, y: 50 };
+        dot.style.left = f.x + '%';
+        dot.style.top = f.y + '%';
+        dot.classList.toggle('unset', !heroFocus);
+      }
+      box.addEventListener('click', e => {
+        const r = img.getBoundingClientRect();
+        heroFocus = {
+          x: Math.round(Math.max(0, Math.min(100, ((e.clientX - r.left) / r.width) * 100))),
+          y: Math.round(Math.max(0, Math.min(100, ((e.clientY - r.top) / r.height) * 100))),
+        };
+        place();
+        // Same delegated path as every other edit: draft save + preview.
+        box.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      box.appendChild(img);
+      box.appendChild(dot);
+      place();
+      wrap.appendChild(label);
+      wrap.appendChild(box);
       return wrap;
     }
 
@@ -1189,6 +1255,7 @@
       controls.rsvpEnabled.checked = cfg.rsvpEnabled !== false;
       controls.registryEnabled.checked = get(cfg, 'registry.enabled', true) !== false;
       gallery = (get(cfg, 'gallery.images', []) || []).slice();
+      heroFocus = get(cfg, 'hero.focus', null);
       registryLinks = get(cfg, 'registry.links', []) || [];
       cashFunds = get(cfg, 'registry.cashFunds', []) || [];
       controls.registryLinks.value = registryLinks.map(link => `${esc(link.label)} | ${esc(link.url)}`).join('\n');
@@ -1198,7 +1265,9 @@
     function gather() {
       return {
         template: getTemplate(),
-        hero: { kicker: controls.heroKicker.value.trim() },
+        hero: heroFocus
+          ? { kicker: controls.heroKicker.value.trim(), focus: heroFocus }
+          : { kicker: controls.heroKicker.value.trim() },
         story: { label: controls.storyLabel.value.trim(), body: controls.storyBody.value },
         schedule: parseScheduleInput(controls.schedule.value),
         venue: parseList(controls.venues.value, '|', ['name', 'address']).map(venue => ({
@@ -1397,6 +1466,8 @@
               if (coverPreviewUrl) URL.revokeObjectURL(coverPreviewUrl);
               coverPreviewUrl = URL.createObjectURL(file);
               coverStatus.textContent = 'Photo selected. It uploads when you save your website.';
+              heroFocus = null;
+              render();
               syncPreview();
               return;
             }
@@ -1410,7 +1481,9 @@
               });
               if (!res.ok) throw new Error('cover patch failed');
               state.event.cover_photo_url = url;
-              coverStatus.textContent = 'Cover photo updated.';
+              heroFocus = null;
+              render();
+              $('editor').querySelector('.status-note').textContent = 'Cover photo updated. Tap the faces below so they stay visible.';
               syncPreview();
             } catch {
               coverStatus.innerHTML = '<span class="error">Cover upload failed.</span>';
@@ -1419,6 +1492,8 @@
           wrap.appendChild(field('Small line above your names', controls.heroKicker, 'optional, e.g. "You\'re invited"'));
           wrap.appendChild(coverButton);
           wrap.appendChild(coverStatus);
+          const coverSrc = coverPreviewUrl || state?.event?.cover_photo_url;
+          if (coverSrc) wrap.appendChild(focusPicker(coverSrc));
           return wrap;
         },
       },

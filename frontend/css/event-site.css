@@ -665,6 +665,78 @@
     }
     .es-hero.no-bg .es-hero-scroll-circle svg { stroke: var(--ink); }
 
+    /* ── Photo hero: keep faces clear, keep text readable ──────────
+       Couple/portrait photos put faces in the upper-middle of the frame,
+       which is exactly where the centered lockup used to sit, and the
+       readability vignette (::before, z-index -1) was painted BENEATH the
+       <img> (same z-index, earlier in DOM order), so bright photos left
+       white text on a white background. With a cover photo we now:
+         1. anchor the names/date/venue to the bottom, right above the
+            countdown, so the top ~half of the photo stays clean;
+         2. paint a bottom scrim in ::after, which comes after the <img>
+            in DOM order and so actually sits on top of the photo;
+         3. give small text a shadow + full opacity;
+         4. calm the Ken Burns zoom so it stops cropping heads at the
+            edges. Where the faces are varies per photo, so the crop stays
+            centered by default and the host can set a focus point in the
+            builder (config.hero.focus → inline object-position).
+       No-photo heroes (.no-bg) are untouched. */
+    .es-hero:not(.no-bg) { padding-bottom: 104px; }
+    .es-hero:not(.no-bg)::before { display: none; }
+    .es-hero:not(.no-bg)::after {
+      content: ''; position: absolute; inset: 0; z-index: -1;
+      pointer-events: none;
+      background:
+        linear-gradient(180deg,
+          rgba(12, 7, 5, .18) 0%,
+          rgba(12, 7, 5, 0) 22%,
+          rgba(12, 7, 5, 0) 42%,
+          rgba(12, 7, 5, .55) 66%,
+          rgba(12, 7, 5, .86) 100%);
+    }
+    .es-hero:not(.no-bg) .es-hero-bg {
+      animation-name: heroZoomSoft;
+      /* Zoom toward the focus point, not the frame center, so a set
+         focus stays put while the photo slowly breathes. */
+      transform-origin: var(--hero-focus, 50% 50%);
+    }
+    @keyframes heroZoomSoft {
+      from { transform: scale(1.02); }
+      to   { transform: scale(1.06); }
+    }
+    .es-hero:not(.no-bg) .es-hero-top { justify-content: flex-end; gap: 0; }
+    .es-hero:not(.no-bg) .es-hero-lockup { text-shadow: 0 2px 14px rgba(0, 0, 0, .45); }
+    .es-hero:not(.no-bg) .es-hero-names {
+      /* A touch smaller than the no-photo hero: the names now share the
+         lower band with date/venue/countdown and must stay under the faces. */
+      font-size: clamp(3.2rem, 8.5cqw, 6.2rem);
+      text-shadow: 0 4px 28px rgba(0, 0, 0, .35);
+    }
+    .es-hero:not(.no-bg) .es-hero-date { opacity: 1; font-weight: 600; margin-top: 14px; }
+    .es-hero:not(.no-bg) .es-hero-venue { opacity: 1; }
+    .es-hero:not(.no-bg) .es-hero-venue::before,
+    .es-hero:not(.no-bg) .es-hero-venue::after { opacity: .6; }
+    .es-hero:not(.no-bg) .es-hero-rule { margin-top: 16px; }
+    .es-hero:not(.no-bg) .es-hero-kicker {
+      opacity: 1; margin-top: 16px;
+      background: rgba(12, 7, 5, .28);
+      border-color: rgba(255, 255, 255, .7);
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+      text-shadow: none;
+    }
+    .es-hero:not(.no-bg) .es-hero-bottom { margin-top: 20px; gap: 16px; }
+    @container (max-width: 720px) {
+      .es-hero:not(.no-bg) { padding: 72px 18px 96px; }
+      .es-hero:not(.no-bg) .es-hero-names { font-size: clamp(2.6rem, 13cqw, 4rem); }
+      .es-hero:not(.no-bg) .es-hero-date { font-size: 11px; letter-spacing: .24em; }
+      .es-hero:not(.no-bg) .es-hero-kicker { font-size: 10px; letter-spacing: .3em; padding: 7px 14px; }
+      /* One row of four: two rows of tiles covered half the photo. */
+      .es-hero:not(.no-bg) .es-count { flex-wrap: nowrap; gap: 8px; }
+      .es-hero:not(.no-bg) .es-count > div { min-width: 0; flex: 1 1 0; max-width: 78px; padding: 10px 4px 8px; }
+      .es-hero:not(.no-bg) .es-count b { font-size: 1.6rem; }
+      .es-hero:not(.no-bg) .es-count span { font-size: 8.5px; letter-spacing: .18em; }
+    }
+
     @keyframes fadeUp {
       from { opacity: 0; transform: translateY(20px); }
       to   { opacity: 1; transform: translateY(0); }

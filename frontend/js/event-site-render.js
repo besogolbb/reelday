@@ -114,6 +114,36 @@
   // sized for their viewport instead of the 1.9 MB original PNG.
   // Same pattern the dashboard and wall use (dashboard.html:2120).
   // format=auto returns WebP/AVIF per the visitor's Accept header.
+  // ── Cover focus point ──────────────────────────────────────
+  // Plain object-position N% puts the focus point N% down the frame, so
+  // faces tapped mid-photo landed right behind the names (which sit in
+  // the lower band of a photo hero). Instead compute the exact crop that
+  // places the tapped point at FOCUS_TARGET of the visible frame:
+  // centered horizontally, in the clear upper third vertically, clamped
+  // so the photo never leaves a gap at an edge.
+  var FOCUS_TARGET = { x: 0.5, y: 0.3 };
+  var activeHeroBg = null;
+  var heroResizeBound = false;
+  function positionHeroFocus(img) {
+    if (!img || !img._focus || !img.naturalWidth) return;
+    var cw = img.clientWidth, ch = img.clientHeight;
+    if (!cw || !ch) return;
+    var scale = Math.max(cw / img.naturalWidth, ch / img.naturalHeight);
+    var rw = img.naturalWidth * scale, rh = img.naturalHeight * scale;
+    var ox = Math.min(0, Math.max(cw - rw, FOCUS_TARGET.x * cw - img._focus.x * rw));
+    var oy = Math.min(0, Math.max(ch - rh, FOCUS_TARGET.y * ch - img._focus.y * rh));
+    img.style.objectPosition = Math.round(ox) + 'px ' + Math.round(oy) + 'px';
+  }
+  function ensureHeroResizeListener() {
+    if (heroResizeBound) return;
+    heroResizeBound = true;
+    var t = null;
+    window.addEventListener('resize', function () {
+      clearTimeout(t);
+      t = setTimeout(function () { positionHeroFocus(activeHeroBg); }, 120);
+    });
+  }
+
   function cdnImage(url, width) {
     if (!url) return url;
     if (url.startsWith('data:') || url.startsWith('blob:')) return url;
@@ -371,7 +401,22 @@
         decoding: 'async',
         fetchpriority: 'high'
       });
-      bg.addEventListener('load', function () { bg.classList.add('loaded'); });
+      // Host-set focus point (website builder: "tap the faces") keeps
+      // faces in frame however the viewport crops the photo.
+      var focus = cfg.hero && cfg.hero.focus;
+      if (focus && isFinite(focus.x) && isFinite(focus.y)) {
+        bg._focus = {
+          x: Math.max(0, Math.min(100, Number(focus.x))) / 100,
+          y: Math.max(0, Math.min(100, Number(focus.y))) / 100
+        };
+        bg.style.setProperty('--hero-focus', (bg._focus.x * 100) + '% ' + (bg._focus.y * 100) + '%');
+        activeHeroBg = bg;
+        ensureHeroResizeListener();
+      }
+      bg.addEventListener('load', function () {
+        bg.classList.add('loaded');
+        positionHeroFocus(bg);
+      });
       // Fallback to the original if the CDN transform errors for any
       // reason (e.g. an external cover URL the transform can't reach).
       bg.addEventListener('error', function () {
