@@ -12,7 +12,8 @@
  *   ... --demo                 sample owner data, no database (design check; never sends)
  *
  * From noreply@reelday.ph, with Reply-To admin@reelday.ph so the host can
- * simply reply with questions.
+ * simply reply with questions, and Bcc admin@reelday.ph so admin keeps a
+ * copy of exactly what was sent.
  */
 import pg from 'pg';
 import { Resend } from 'resend';
@@ -114,6 +115,7 @@ console.log(`To:       ${ev.full_name || '(no name)'} <${ev.email}>`);
 console.log(`Event:    ${couple} (${ev.slug})${ev.is_published ? '' : '  [WARNING: site is NOT published]'}`);
 console.log(`Subject:  ${subject}`);
 console.log(`Reply-To: admin@reelday.ph`);
+console.log(`Bcc:      admin@reelday.ph  (your copy; the customer doesn't see it)`);
 console.log('');
 console.log(text);
 
@@ -132,6 +134,7 @@ const { data, error } = await new Resend(process.env.RESEND_API_KEY).emails.send
   from: 'Reelday <noreply@reelday.ph>',
   replyTo: 'admin@reelday.ph',
   to: ev.email,
+  bcc: 'admin@reelday.ph', // admin keeps a copy of what was sent
   subject,
   html,
   text,
