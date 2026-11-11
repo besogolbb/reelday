@@ -3,6 +3,7 @@ import { generateQR } from '../utils/qr.js';
 import { resolvePlan, galleryExpiryFor, uploadWindowStartFor, uploadWindowEndFor, isDemoWindowOpen } from '../lib/plans.js';
 import { verifyToken } from '../plugins/auth.js';
 import { sendBookingConfirmationEmail } from './payments.js';
+import { bustEventSiteCache } from './event-site.js';
 
 // Event dates are admin-managed (the host PATCH can't move them — see the
 // hardcoded NULL $3 in the PATCH below). Hosts request a change here and
@@ -867,6 +868,9 @@ export default async function eventRoutes(fastify) {
       return reply.status(404).send({ error: true, message: 'Event not found' });
     }
 
+    // Cover photo / names / venue / time feed the guest page and its
+    // link preview, which event-site.js caches per slug.
+    bustEventSiteCache(slug);
     return { event: rows[0] };
   });
 

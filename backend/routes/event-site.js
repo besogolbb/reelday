@@ -279,6 +279,11 @@ function bustSlug(slug) {
   siteCache.delete(slug);
   pageCache.delete(slug);
 }
+// For other route files: the /e/:slug page (incl. its link-preview tags)
+// is cached per slug, and events.js PATCH changes the cover photo and
+// names without going through this file. Without this, a new cover never
+// reached Messenger/Facebook until the process restarted.
+export function bustEventSiteCache(slug) { if (slug) bustSlug(slug); }
 
 // Lazily read + memo the static template. Tolerant: if the file isn't
 // there yet (e.g. mid-rollout) we report it rather than crash the boot.
@@ -390,6 +395,59 @@ async function buildPayload(db, gate) {
  * Returns { html } | { notFound:true } | { unavailable:true }.
  * Called from server.js.
  */
+// ── Link-preview helpers ──────────────────────────────────────────
+const INVITE_LABEL = {
+  wedding: 'Wedding Invitation', birthday: 'Birthday Invitation',
+  baptism: 'Christening Invitation', corporate: 'Event Invitation',
+  reunion: 'Invitation',
+};
+const OG_TEMPLATES = new Set(['classic', 'modern', 'romantic', 'bold']);
+
+// DATE columns arrive as a JS Date at local midnight (or a YYYY-MM-DD
+// string): read the calendar fields, then format in UTC so the server's
+// timezone can never shift it to the previous day.
+function fmtLongDate(d) {
+  if (!d) return '';
+  let y, m, day;
+  if (d instanceof Date) { y = d.getFullYear(); m = d.getMonth(); day = d.getDate(); }
+  else {
+    const mt = String(d).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!mt) return '';
+    y = +mt[1]; m = +mt[2] - 1; day = +mt[3];
+  }
+  return new Date(Date.UTC(y, m, day)).toLocaleDateString('en-US', {
+    weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC',
+  });
+}
+
+// Messenger/Facebook's big card is 1.91:1. Cover photos (often portrait)
+// are cropped to 1200x630 by Cloudflare's image resizing on our media
+// host, centred on the host's "tap the faces" focus point when set.
+// No cover: a styled invitation card per website template.
+function ogImageFor(e, cfg, proto, host) {
+  const cover = e.cover_photo_url;
+  if (cover) {
+    try {
+      const u = new URL(cover);
+      if (u.hostname === 'media.reelday.ph' && !u.pathname.startsWith('/cdn-cgi/')) {
+        // Host's tapped focus point wins; otherwise Cloudflare's face
+        // detection (gravity=face, falls back to centre when it finds no
+        // face). Tested on a real portrait cover: 'face' framed both
+        // faces, 'auto' (saliency) cut their heads off.
+        const f = cfg.hero && cfg.hero.focus;
+        const gravity = f && Number.isFinite(+f.x) && Number.isFinite(+f.y)
+          ? `${Math.min(1, Math.max(0, +f.x / 100)).toFixed(2)}x${Math.min(1, Math.max(0, +f.y / 100)).toFixed(2)}`
+          : 'face';
+        const opts = `width=1200,height=630,fit=cover,gravity=${gravity},format=jpeg,quality=82`;
+        return { url: `${u.origin}/cdn-cgi/image/${opts}${u.pathname}`, width: 1200, height: 630 };
+      }
+    } catch { /* not a URL we can transform: use it as-is below */ }
+    return { url: cover };
+  }
+  const tpl = OG_TEMPLATES.has(cfg.template) ? cfg.template : 'classic';
+  return { url: `${proto}://${host}/images/og/invite-${tpl}.jpg`, width: 1200, height: 630 };
+}
+
 export async function renderEventSitePage(db, slug) {
   const cached = pageCache.get(slug);
   if (cached) return { html: cached };
@@ -407,23 +465,43 @@ export async function renderEventSitePage(db, slug) {
   const host = absHost();
   const proto = process.env.NODE_ENV === 'development' ? 'http' : 'https';
   const url = `${proto}://${host}/e/${encodeURIComponent(slug)}`;
-  const title = `${e.couple_names || 'Our Celebration'}`;
+  const cfg = e.config || {};
+  const names = e.couple_names || 'Our Celebration';
+  const title = `${names} · ${INVITE_LABEL[e.event_type] || 'Invitation'}`;
+  // "Saturday, February 20, 2027 · 3:00 PM · Trabiesa Tagaytay" + the ask.
+  const when = [fmtLongDate(e.event_date), e.event_time].filter(Boolean).join(' · ');
+  const where = (Array.isArray(cfg.venue) && cfg.venue[0] && cfg.venue[0].name) || '';
+  const facts = [when, where].filter(Boolean).join(' · ');
   const desc =
-    (e.config && typeof e.config.ogDescription === 'string' && e.config.ogDescription) ||
-    `You're invited — details, gallery, and RSVP.`;
-  const ogImage = e.cover_photo_url
-    ? e.cover_photo_url
-    : `${proto}://${host}/images/LOGO.png`;
+    (typeof cfg.ogDescription === 'string' && cfg.ogDescription) ||
+    `${facts ? facts + '. ' : ''}You're invited! Tap for the details and to RSVP.`;
+  const og = ogImageFor(e, cfg, proto, host);
   const theme = e.theme_override || e.event_type || 'wedding';
 
   const head = [
     `<meta name="robots" content="noindex">`,
     `<meta property="og:type" content="website">`,
+    `<meta property="og:site_name" content="Reelday">`,
+    `<meta property="og:locale" content="en_PH">`,
     `<meta property="og:title" content="${escapeAttr(title)}">`,
     `<meta property="og:description" content="${escapeAttr(desc)}">`,
-    `<meta property="og:image" content="${escapeAttr(ogImage)}">`,
     `<meta property="og:url" content="${escapeAttr(url)}">`,
+    `<meta property="og:image" content="${escapeAttr(og.url)}">`,
+    `<meta property="og:image:secure_url" content="${escapeAttr(og.url)}">`,
+    // Declared size + type let Facebook/Messenger render the big card on
+    // the FIRST share (without them it fetches the image asynchronously
+    // and the first preview often shows no image at all).
+    ...(og.width ? [
+      `<meta property="og:image:type" content="image/jpeg">`,
+      `<meta property="og:image:width" content="${og.width}">`,
+      `<meta property="og:image:height" content="${og.height}">`,
+    ] : []),
+    `<meta property="og:image:alt" content="${escapeAttr(title)}">`,
     `<meta name="twitter:card" content="summary_large_image">`,
+    `<meta name="twitter:title" content="${escapeAttr(title)}">`,
+    `<meta name="twitter:description" content="${escapeAttr(desc)}">`,
+    `<meta name="twitter:image" content="${escapeAttr(og.url)}">`,
+    `<meta name="description" content="${escapeAttr(desc)}">`,
     `<title>${escapeAttr(title)}</title>`,
   ].join('\n  ');
 
