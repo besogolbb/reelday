@@ -23,8 +23,13 @@
        bug this had: Bold Jewel's dark --card was being silently
        discarded and every field/footer surface stayed white while their
        text switched to the template's light ink -- invisible on white.
-       The template decorative tokens below (--shadow-c/--r-*/--heading-*)
-       live in the same :root block for the same reason. */
+       The template decorative tokens below (--shadow-c, the --r- radii,
+       the --heading- tokens) live in the same :root block for the same
+       reason. NOTE: never write a star followed by a slash inside a
+       comment here. The old wording of this comment contained one (a
+       wildcard token name), which closed the comment early, and the
+       browser dropped this whole :root block: none of these tokens
+       (incl. --accent-text) ever applied on any guest site. */
     :root {
       --card:        #fff;
       --shadow-c:    #2a1a14;
@@ -1426,3 +1431,118 @@
     .es-foot-credit a { color: var(--accent-text); }
 
     [hidden] { display: none !important; }
+
+    /* ══ Design polish (2026-11 audit, UI UX Pro Max checklist) ══════════
+       Every generated guest site shares this file, so each rule here fixes
+       all four templates at once. Grouped by the checklist item it serves;
+       placed last so it wins over the original rules without !important. */
+
+    /* Contrast: small text must clear WCAG AA 4.5:1 on every surface
+       (page, cards, notes). Measured failures fixed with the nearest
+       passing shade of the same hue: Modern faint 3.97, Romantic faint
+       2.95, Classic accent labels on note cards 4.11. */
+    [data-template="classic"]  { --accent-text: #ab4c2c; }
+    [data-template="modern"]   { --ink-faint: #6f6f6f; }
+    [data-template="romantic"] { --ink-faint: #786562; }
+
+    /* Readability floor: guests include titas and lolas on small phones.
+       No label under 12px (countdown units, inside their tiles, 10.5px);
+       letter-spacing trimmed so the larger labels keep their width. */
+    .es-eyebrow, .es-foot-eyebrow, .es-stays-title, .es-note h3,
+    .es-entourage-title, .es-ent-group h4, .es-gtk-card h4,
+    .es-album-teaser-lock, .es-menu-eyebrow {
+      font-size: 12px; letter-spacing: .22em;
+    }
+    .es-venue-addr, .es-rsvp-deadline, .es-rsvp-closed .when,
+    .es-note-line, .es-result .seat-name, .es-rsvp-success .sub,
+    .es-rsvp-success .again, .es-reg-link .url, .es-hero-scroll {
+      font-size: 12px; letter-spacing: .14em;
+    }
+    .es-stay .sub, .es-reg-cash .type-tag, .es-menu-foot { font-size: 11.5px; letter-spacing: .16em; }
+    .es-hero-kicker { font-size: 12px; letter-spacing: .3em; }
+    .es-count span { font-size: 10.5px; letter-spacing: .2em; }
+    .es-foot-credit { font-size: 12px; letter-spacing: .12em; }
+    @container (max-width: 720px) {
+      .es-hero:not(.no-bg) .es-hero-date { font-size: 12px; letter-spacing: .16em; }
+      .es-hero:not(.no-bg) .es-hero-kicker { font-size: 11px; letter-spacing: .24em; }
+      .es-hero:not(.no-bg) .es-count span { font-size: 10px; letter-spacing: .14em; }
+    }
+    .es-album-teaser-lock svg { flex: 0 0 auto; }
+
+    /* Link buttons: <a class="es-btn"> was inline, so its 16px padding
+       overlapped the paragraph above it (Memory Album text ran behind
+       "Share your photos"). Block-level, centered, 48px tall. */
+    a.es-btn {
+      display: flex; align-items: center; justify-content: center;
+      box-sizing: border-box; min-height: 48px; text-decoration: none;
+    }
+    .es-note p + .es-btn, .es-note .es-btn + p { margin-top: 18px; }
+
+    /* Forms: visible labels above every RSVP field (placeholder-only
+       labels vanished as soon as a guest started typing). */
+    .es-fieldset { margin-bottom: 16px; }
+    .es-fieldset .es-field { margin-bottom: 0; }
+    .es-label {
+      display: block; margin: 0 0 8px;
+      font-family: var(--mono); font-size: 12px; font-weight: 700;
+      letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft);
+    }
+    .es-label-opt { font-weight: 400; text-transform: none; letter-spacing: .02em; color: var(--ink-faint); }
+    .es-help {
+      margin-top: 6px; font-family: var(--display); font-size: .95rem;
+      line-height: 1.4; color: var(--ink-faint);
+    }
+    .es-field-row { grid-template-columns: 1.6fr 1fr; gap: 12px; }
+    .es-field-row .es-fieldset { margin-bottom: 16px; }
+    @container (max-width: 400px) { .es-field-row { grid-template-columns: 1fr; gap: 0; } }
+    .es-field { font-size: 16px; min-height: 52px; } /* 16px: no iOS zoom-on-focus */
+    textarea.es-field { min-height: 104px; }
+
+    /* GCash / bank numbers never split mid-number: the copy button
+       wraps below on narrow cards instead. */
+    .es-reg-cash .number-row { flex-wrap: wrap; }
+    .es-reg-cash .number {
+      word-break: normal; overflow-wrap: normal; white-space: nowrap;
+      font-size: 1.1rem;
+      /* Never shrink below the full number: when it and the button don't
+         fit on one line, the button wraps under it instead of covering
+         the last digits. */
+      flex: 1 0 auto;
+    }
+    .es-reg-cash .copy-btn { min-height: 44px; padding: 10px 16px; font-size: 12px; }
+
+    /* Touch targets: 44px minimum for anything a thumb taps. */
+    .es-nav-inline a { min-height: 44px; }
+    .es-foot-credit a { display: inline-block; padding: 14px 4px; }
+
+    /* Keyboard focus: a visible ring on every control (only the nav had one). */
+    #app a:focus-visible, #app button:focus-visible, #app summary:focus-visible,
+    #app input:focus-visible, #app select:focus-visible, #app textarea:focus-visible,
+    #app [role="button"]:focus-visible, #app [tabindex]:focus-visible {
+      outline: 3px solid var(--accent-text); outline-offset: 3px;
+    }
+
+    /* One system: the story label sits centered on phones like every
+       other section heading (the left-aligned italic only reads as
+       intentional beside the text, in the desktop two-column layout). */
+    @container (max-width: 879px) {
+      .es-story-side { border-left: 0; padding-left: 0; text-align: center; }
+    }
+
+    /* Rhythm: 220px of air between sections made phone pages feel empty
+       and twice as long; tighter on phones, unchanged on desktop. */
+    @container (max-width: 720px) {
+      .es-section { padding: 72px 20px; }
+      .es-foot { padding-top: 64px; }
+    }
+
+    /* Reduced motion: no zoom, bob, fade or reveal for guests who asked
+       their phone for less motion. Content is never left hidden. */
+    @media (prefers-reduced-motion: reduce) {
+      #app *, #app *::before, #app *::after {
+        animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important;
+      }
+      .es-section { opacity: 1; transform: none; }
+      .es-hero-bg { animation: none !important; }
+    }

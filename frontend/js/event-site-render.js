@@ -39,6 +39,10 @@
     upload:'Share your photos', happening:'Happening now',
     openWall:'Open the live wall', nameLbl:'Your full name',
     emailLbl:'Your email (optional — we’ll send a confirmation)',
+    nameField:'Your name', emailField:'Email', optional:'optional',
+    emailHelp:'We’ll email you a copy of your RSVP.',
+    attendField:'Will you be there?', partyField:'Guests, including you',
+    noteField:'Message for the couple',
     noteHint:'Song request, dietary notes, or a message (optional)',
     rsvpBy:'Please RSVP by',
     rsvpClosed:'RSVPs are closed',
@@ -81,6 +85,23 @@
     (kids || []).forEach(function (c) { if (c) n.appendChild(c); });
     return n;
   }
+  // Visible label above a form control (placeholder-only labels vanish
+  // the moment a guest starts typing). Optional helper line below.
+  function labeled(control, text, help, helpId, optional) {
+    var wrap = el('div', { class: 'es-fieldset' });
+    var lab = el('label', { class: 'es-label', text: text });
+    if (control.id) lab.setAttribute('for', control.id);
+    if (optional) lab.appendChild(el('span', { class: 'es-label-opt', text: ' (' + t('optional') + ')' }));
+    wrap.appendChild(lab);
+    wrap.appendChild(control);
+    if (help) {
+      var h = el('div', { class: 'es-help', text: help });
+      if (helpId) h.id = helpId;
+      wrap.appendChild(h);
+    }
+    return wrap;
+  }
+
   function section(id, eyebrow, title, body) {
     var s = el('section', { class: 'es-section', id: id });
     if (eyebrow) s.appendChild(el('div', { class: 'es-eyebrow', text: eyebrow }));
@@ -588,7 +609,7 @@
       if (Array.isArray(cfg.venue) && cfg.venue.length) {
         var venues = el('div', { class: 'es-venues' + (cfg.venue.length > 1 ? ' two' : '') });
         venues.style.marginTop = sched.length ? '50px' : '0';
-        cfg.venue.forEach(function (v) {
+        cfg.venue.forEach(function (v, vi) {
           var card = el('div', { class: 'es-venue' });
           var head = el('div', { class: 'es-venue-head' });
           if (v.name)    head.appendChild(el('div', { class: 'es-venue-name', text: v.name }));
@@ -601,8 +622,13 @@
               src: 'https://www.google.com/maps?q=' + encodeURIComponent(q) + '&output=embed' });
             card.appendChild(f);
             // Nearby stays — auto-built deep links into the major
-            // booking sites pre-filtered to this venue.
-            card.appendChild(buildNearbyStays(v.name || v.address || q, q));
+            // booking sites pre-filtered to this venue. Only under the
+            // LAST venue (usually the reception, where guests end the
+            // night): repeating the same three cards under every venue
+            // added ~1000px of duplicate links on a phone.
+            if (vi === cfg.venue.length - 1) {
+              card.appendChild(buildNearbyStays(v.name || v.address || q, q));
+            }
           }
           venues.appendChild(card);
         });
@@ -718,7 +744,10 @@
       // never sells TO the guest, it only illustrates what the host
       // can unlock, matching the copy immediately below it.
       if (isFreePlan) {
-        wrap.appendChild(el('div', { class: 'es-album-teaser-lock', text: '🔒 ' + t('memoryAlbum') }));
+        var lock = el('div', { class: 'es-album-teaser-lock' });
+        lock.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+        lock.appendChild(document.createTextNode(t('memoryAlbum')));
+        wrap.appendChild(lock);
         var teaser = el('div', { class: 'es-album-teaser', 'aria-hidden': 'true' });
         for (var ti = 0; ti < 3; ti++) teaser.appendChild(el('div', { class: 'es-album-teaser-card' }));
         wrap.appendChild(teaser);
@@ -849,24 +878,27 @@
 
     function buildRsvpForm(deadlineDate) {
       var form = el('div', { class: 'es-form-wrap' });
-      var name = el('input', { class: 'es-field', type: 'text', placeholder: t('nameLbl') });
+      var name = el('input', { class: 'es-field', type: 'text', id: 'es-rsvp-name',
+        autocomplete: 'name', placeholder: 'e.g. Maria Santos' });
       // Optional email — when provided the backend mails the guest a
       // confirmation. The host always gets notified regardless; this
       // is purely for the guest's own records.
-      var emailIn = el('input', { class: 'es-field', type: 'email',
+      var emailIn = el('input', { class: 'es-field', type: 'email', id: 'es-rsvp-email',
         inputmode: 'email', autocomplete: 'email',
-        placeholder: t('emailLbl') });
+        placeholder: 'you@email.com', 'aria-describedby': 'es-rsvp-email-help' });
       var attRow = el('div', { class: 'es-field-row' });
-      var att = el('select', { class: 'es-field' });
+      var att = el('select', { class: 'es-field', id: 'es-rsvp-attend' });
       att.appendChild(el('option', { value: 'yes', text: t('attending') }));
       att.appendChild(el('option', { value: 'no',  text: t('notAttending') }));
       var party = el('input', { class: 'es-field', type: 'number', min: '1', value: '1',
-        'aria-label': t('party'), placeholder: t('party') });
-      attRow.appendChild(att); attRow.appendChild(party);
+        id: 'es-rsvp-party', inputmode: 'numeric' });
+      attRow.appendChild(labeled(att, t('attendField')));
+      attRow.appendChild(labeled(party, t('partyField')));
       // Note placeholder bumped from generic "A note (optional)" to
       // a concrete prompt — song requests are the most common ask
       // hosts get and naming it raises response quality.
-      var msg = el('textarea', { class: 'es-field', rows: '3', placeholder: t('noteHint') });
+      var msg = el('textarea', { class: 'es-field', rows: '3', id: 'es-rsvp-note',
+        placeholder: 'Song request, dietary notes, or a message' });
       var send = el('button', { class: 'es-btn', text: t('send') });
       // Two slots: a quiet error line below the button (validation /
       // network failures) and a swap area for the prominent success
@@ -956,10 +988,10 @@
           showError('Hmm, that didn’t go through. Please try again.');
         }).finally(function () { /* send.disabled handled per-branch */ });
       });
-      form.appendChild(name);
-      form.appendChild(emailIn);
+      form.appendChild(labeled(name, t('nameField')));
+      form.appendChild(labeled(emailIn, t('emailField'), t('emailHelp'), 'es-rsvp-email-help', true));
       form.appendChild(attRow);
-      form.appendChild(msg);
+      form.appendChild(labeled(msg, t('noteField'), null, null, true));
       form.appendChild(send);
       form.appendChild(errLine);
       // Deadline line — only rendered when the host configured one
@@ -1169,15 +1201,28 @@
     app.hidden = false;
 
     // Reveal sections on scroll (single observer, no per-section listeners).
-    var io = new IntersectionObserver(function (entries) {
-      entries.forEach(function (en) {
-        if (en.isIntersecting) {
-          en.target.classList.add('in');
-          io.unobserve(en.target);
-        }
-      });
-    }, { threshold: 0.12 });
-    app.querySelectorAll('.es-section').forEach(function (s) { io.observe(s); });
+    // Content must never stay hidden: threshold 0 (a 12% threshold could
+    // never be met by a section taller than ~8 screens, e.g. a long
+    // gallery on a phone), no animation at all under reduced motion or
+    // without IntersectionObserver, and a hash link reveals everything.
+    var sections = app.querySelectorAll('.es-section');
+    var revealAll = function () { sections.forEach(function (s) { s.classList.add('in'); }); };
+    var calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (calm || !('IntersectionObserver' in window) || location.hash) {
+      revealAll();
+    } else {
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) {
+          if (en.isIntersecting) {
+            en.target.classList.add('in');
+            io.unobserve(en.target);
+          }
+        });
+      }, { threshold: 0, rootMargin: '0px 0px -8% 0px' });
+      sections.forEach(function (s) { io.observe(s); });
+      // In-page nav jumps past sections faster than the observer fires.
+      window.addEventListener('hashchange', revealAll);
+    }
 
     // Show sticky nav once the hero is mostly out of view.
     var navEl = nav;
