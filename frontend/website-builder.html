@@ -621,7 +621,6 @@
       margin: 18px 0 10px; text-align: center; font-size: 12px; font-weight: 800;
       letter-spacing: .11em; text-transform: uppercase; color: var(--ink-soft);
     }
-    .editor-back { margin: 0 0 16px; }
 
     /* Save sheet (finish modal) */
     #g-btn { display: flex; justify-content: center; min-height: 44px; margin: 16px 0 4px; }
@@ -768,7 +767,7 @@
     <div id="reveal-preview-slot"></div>
     <p class="reveal-label">Pick a style</p>
     <div id="reveal-templates"></div>
-    <button type="button" class="btn btn-ghost pz-more" id="pz-more">Add schedule, entourage, dress code, gifts &amp; more</button>
+    <button type="button" class="btn btn-ghost pz-more" id="pz-more">Save &amp; add schedule, entourage, dress code, gifts</button>
     <button type="button" class="link-btn" id="reveal-edit">← Change names, date or venue</button>
     <div id="reveal-error" class="notice reveal-error hidden"></div>
     <div class="save-bar">
@@ -2089,48 +2088,16 @@
       $('qs-name').placeholder = copy.ph;
     }
 
-    // Where the live preview lives in the full editor, so it can move to
-    // the reveal screen and back.
-    const previewHome = { parent: previewBox.parentNode, next: previewBox.nextSibling };
-
     function showScreen(which) {
       quickEl.classList.toggle('hidden', which !== 'quick');
       revealEl.classList.toggle('hidden', which !== 'reveal');
-      shellEl.classList.toggle('hidden', which !== 'editor');
+      shellEl.classList.add('hidden');
       if (which === 'quick') {
         $('qs-name').value = controls.basicsName.value;
         $('qs-date').value = controls.basicsDate.value;
         paintTypeChips();
       }
       window.scrollTo({ top: 0 });
-    }
-
-    // ── Full editor, before saving ───────────────────────────
-    // "Add schedule, entourage, dress code, gifts & more" opens the same
-    // step-by-step editor a saved site uses, with nothing saved online yet.
-    // Save stays one tap away (header button / last step's Continue).
-    function openFullEditor(tabIndex = 0) {
-      previewHome.parent.insertBefore(previewBox, previewHome.next);
-      previewBox.classList.remove('hidden');
-      $('preview-fab').classList.remove('hidden');
-      publishBtn.classList.remove('hidden');
-      publishBtn.textContent = token ? 'Save my website' : 'Save my free website';
-      statusPill.textContent = 'Not saved yet';
-      statusNote.textContent = 'Everything stays on this device until you save your website.';
-      showScreen('editor');
-      if (!$('editor-back')) {
-        const back = document.createElement('button');
-        back.type = 'button';
-        back.id = 'editor-back';
-        back.className = 'link-btn editor-back';
-        back.textContent = '← Back to my preview';
-        back.addEventListener('click', () => { saveDraftLocal(); showReveal(); });
-        document.querySelector('.panel').prepend(back);
-      }
-      currentTab = tabIndex;
-      render();
-      syncPreview();
-      track('full_editor_open', { from: 'reveal' });
     }
 
     function applyQuickStart() {
@@ -2221,7 +2188,14 @@
       scheduleDraftSave();
       schedulePreviewSync();
     });
-    $('pz-more').addEventListener('click', () => { saveDraftLocal(); openFullEditor(0); });
+    // More details live behind the free account: the funnel's job is a
+    // saved account + event. This button is the reason to save, not a way
+    // around it (after save the host lands in the editor of the new event).
+    $('pz-more').addEventListener('click', () => {
+      saveDraftLocal();
+      track('more_details_click', { logged_in: !!token });
+      openSaveSheet('more');
+    });
 
     $('qs-go').addEventListener('click', () => { if (applyQuickStart()) showReveal(); });
     quickEl.addEventListener('keydown', e => {
@@ -2412,10 +2386,23 @@
         btn.textContent = 'Save my website';
         return;
       }
+      openSaveSheet('save'); // no token here, so this opens the sheet
+    });
+
+    const SAVE_COPY = {
+      save: ['Save your website', 'So you can edit it, see RSVPs, and get your link to share.'],
+      more: ['Save your website to add more',
+        'Create your free account, then add your schedule, entourage, dress code, gifts and photos.'],
+    };
+    function openSaveSheet(reason) {
+      if (token) { $('reveal-save').click(); return; } // logged in: save in one tap
+      const [title, sub] = SAVE_COPY[reason] || SAVE_COPY.save;
+      $('finish-title').textContent = title;
+      finishModal.querySelector('.sub').textContent = sub;
       finError.classList.add('hidden');
       finishModal.classList.remove('hidden');
       ensureGoogleButton();
-    });
+    }
     // Desktop header button mirrors the bottom bar while in the new flow.
     publishBtn.addEventListener('click', () => {
       if (NEW_SITE) { $('reveal-save').click(); return; }
