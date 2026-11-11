@@ -1622,3 +1622,19 @@
       .es-hero:not(.no-bg) .es-hero-bottom { margin: 0; align-items: flex-end; text-align: right; }
       .es-hero:not(.no-bg) .es-count { justify-content: flex-end; }
     }
+
+    /* Event-day / after-event note in place of the countdown (builder
+       preview on the day itself, and every guest site once the event is
+       over). Quiet, in the template's own colours: not the red live CTA. */
+    .es-day-note {
+      display: inline-block; padding: 12px 22px;
+      border: 1px solid currentColor; border-radius: var(--r-pill);
+      font-family: var(--mono); font-size: 12px; font-weight: 700;
+      letter-spacing: .2em; text-transform: uppercase;
+      background: color-mix(in srgb, var(--paper) 14%, transparent);
+    }
+    .es-hero:not(.no-bg) .es-day-note {
+      color: #fff; border-color: rgba(255, 255, 255, .7);
+      background: rgba(12, 7, 5, .28);
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    }

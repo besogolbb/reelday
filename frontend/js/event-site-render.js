@@ -37,6 +37,7 @@
     noSeat:'We couldn’t find that name. Try your first name or last name on its own, or check with the host if the seating list isn’t set up yet.',
     table:'Table', addCal:'Add to calendar', share:'Share',
     upload:'Share your photos', happening:'Happening now',
+    bigDay:'Today’s the day', celebrated:'Thank you for celebrating with us',
     openWall:'Open the live wall', nameLbl:'Your full name',
     emailLbl:'Your email (optional — we’ll send a confirmation)',
     nameField:'Your name', emailField:'Email', optional:'optional',
@@ -519,12 +520,27 @@
       var diff = target.getTime() - Date.now();
       if (diff <= 0) {
         count.hidden = true;
-        if (!ctaWrap.dataset.live) {
-          ctaWrap.dataset.live = '1';
+        // "Live" only while the event is actually on: until the upload
+        // window closes, else 24h after the start. Previously this showed
+        // "Happening now — open the live wall" forever once the date
+        // passed (a month after the wedding, guests still saw it), and in
+        // the builder preview it linked to a wall that doesn't exist yet.
+        var endsAt = data.upload_window_ends_at
+          ? new Date(data.upload_window_ends_at).getTime()
+          : target.getTime() + 24 * 3600 * 1000;
+        var isLive = Date.now() < endsAt;
+        var state = PREVIEW_MODE ? (isLive ? 'preview-day' : 'past') : (isLive ? 'live' : 'past');
+        if (ctaWrap.dataset.state !== state) {
+          ctaWrap.dataset.state = state;
           ctaWrap.textContent = '';
-          var live = el('a', { class: 'es-cta live', href: '/wall/' + ACTIVE_SLUG });
-          live.appendChild(document.createTextNode(t('happening') + ' — ' + t('openWall')));
-          ctaWrap.appendChild(live);
+          if (state === 'live') {
+            var live = el('a', { class: 'es-cta live', href: '/wall/' + ACTIVE_SLUG });
+            live.appendChild(document.createTextNode(t('happening') + ' — ' + t('openWall')));
+            ctaWrap.appendChild(live);
+          } else {
+            ctaWrap.appendChild(el('div', { class: 'es-day-note',
+              text: state === 'preview-day' ? t('bigDay') : t('celebrated') }));
+          }
         }
         return;
       }
