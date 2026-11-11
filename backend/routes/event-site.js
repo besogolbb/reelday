@@ -507,7 +507,6 @@ export async function renderEventSitePage(db, slug) {
   const theme = e.theme_override || e.event_type || 'wedding';
 
   const head = [
-    `<meta name="robots" content="noindex">`,
     `<meta property="og:type" content="website">`,
     `<meta property="og:site_name" content="Reelday">`,
     `<meta property="og:locale" content="en_PH">`,
@@ -531,6 +530,8 @@ export async function renderEventSitePage(db, slug) {
     `<meta name="twitter:image" content="${escapeAttr(og.url)}">`,
     `<meta name="description" content="${escapeAttr(desc)}">`,
     `<title>${escapeAttr(title)}</title>`,
+    // After the preview tags, so preview readers meet those first.
+    `<meta name="robots" content="noindex">`,
   ].join('\n  ');
 
   let html = tpl.replace('<!--EVENT_SITE_HEAD-->', head);
