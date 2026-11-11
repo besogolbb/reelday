@@ -94,7 +94,7 @@ const html = `
   </p>
   <p style="margin:0 0 22px;font-size:14px"><a href="${editUrl}" style="color:#b85230">Edit your website</a></p>
   <p style="margin:0 0 4px">Questions or ideas? Just reply to this email.</p>
-  <p style="margin:0">Benz<br><span style="color:#888">Reelday</span></p>
+  <p style="margin:0">Reelday Admin</p>
 </div>`;
 
 const text = [
@@ -107,7 +107,7 @@ const text = [
   `See your website: ${siteUrl}`,
   `Edit your website: ${editUrl}`, '',
   'Questions or ideas? Just reply to this email.', '',
-  'Benz', 'Reelday',
+  'Reelday Admin',
 ].join('\n');
 
 console.log(`To:       ${ev.full_name || '(no name)'} <${ev.email}>`);
