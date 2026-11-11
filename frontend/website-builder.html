@@ -593,6 +593,36 @@
     .save-bar .save-note { margin-top: 6px; }
     .reveal-error { margin: 12px 0; }
 
+    /* "Make it yours" card on the reveal: photo + story without leaving
+       the funnel, plus a door into the full editor. All optional. */
+    .personalize { margin: 0 0 16px; }
+    .personalize-title {
+      margin: 0 0 12px; font-size: 12px; font-weight: 800; letter-spacing: .11em;
+      text-transform: uppercase; color: var(--ink);
+    }
+    .personalize-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .pz-btn {
+      position: relative; display: flex; align-items: center; justify-content: center; gap: 8px;
+      min-height: 52px; padding: 10px 12px; border-radius: 12px;
+      border: 1.5px dashed rgba(196, 90, 58, .45); background: rgba(196, 90, 58, .05);
+      color: var(--accent-deep); font-weight: 800; font-size: 14px; cursor: pointer;
+      text-transform: none; letter-spacing: 0;
+    }
+    .pz-btn.done { border-style: solid; border-color: rgba(61, 115, 86, .45); background: rgba(61, 115, 86, .07); color: var(--sage); }
+    .pz-btn svg { width: 20px; height: 20px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .pz-btn input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    #pz-photo-status { margin: 10px 0 0; }
+    #pz-focus .focus-pick { max-width: 260px; margin: 0 auto; }
+    #pz-focus .focus-field { margin: 14px 0 0; text-align: center; }
+    #pz-story { margin-top: 14px; }
+    #pz-story textarea { min-height: 140px; font-size: 16px; }
+    .pz-more { display: flex; width: 100%; margin: 4px 0 6px; min-height: 48px; }
+    .reveal-label {
+      margin: 18px 0 10px; text-align: center; font-size: 12px; font-weight: 800;
+      letter-spacing: .11em; text-transform: uppercase; color: var(--ink-soft);
+    }
+    .editor-back { margin: 0 0 16px; }
+
     /* Save sheet (finish modal) */
     #g-btn { display: flex; justify-content: center; min-height: 44px; margin: 16px 0 4px; }
     .or-divider {
@@ -717,11 +747,29 @@
   <section id="reveal" class="reveal hidden" aria-labelledby="reveal-title">
     <div class="reveal-head">
       <h1 id="reveal-title">Here's your website ✨</h1>
-      <p class="sub">This is what guests see when they open your link, with RSVP built in. Pick a style:</p>
+      <p class="sub">This is what guests see when they open your link, with RSVP built in.</p>
     </div>
-    <div id="reveal-templates"></div>
+    <div class="personalize" id="personalize" aria-label="Make it yours (optional)">
+      <div class="personalize-actions">
+        <label class="pz-btn" id="pz-photo-btn">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+          <span id="pz-photo-label">Add your photo</span>
+          <input type="file" accept="image/*" id="pz-photo-input" />
+        </label>
+        <button type="button" class="pz-btn" id="pz-story-btn" aria-expanded="false" aria-controls="pz-story">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13 7l4 4"/></svg>
+          <span>Add your story</span>
+        </button>
+      </div>
+      <div id="pz-photo-status" class="status-note hidden" role="status"></div>
+      <div id="pz-focus" class="hidden"></div>
+      <div id="pz-story" class="hidden"></div>
+    </div>
     <div id="reveal-preview-slot"></div>
-    <button type="button" class="link-btn" id="reveal-edit">← Change details</button>
+    <p class="reveal-label">Pick a style</p>
+    <div id="reveal-templates"></div>
+    <button type="button" class="btn btn-ghost pz-more" id="pz-more">Add schedule, entourage, dress code, gifts &amp; more</button>
+    <button type="button" class="link-btn" id="reveal-edit">← Change names, date or venue</button>
     <div id="reveal-error" class="notice reveal-error hidden"></div>
     <div class="save-bar">
       <div class="save-bar-inner">
@@ -1342,7 +1390,61 @@
     }
 
     function clearDraftLocal() {
-      try { localStorage.removeItem(DRAFT_KEY); } catch {}
+      try { localStorage.removeItem(DRAFT_KEY); localStorage.removeItem(DRAFT_COVER_KEY); } catch {}
+    }
+
+    // ── Draft cover photo (before the event exists) ─────────────
+    // Phone photos are 3-12 MB; shrink to 1800px JPEG first (fast upload,
+    // fits localStorage), then keep it as a data URL so it survives a
+    // reload or the "log in to save" detour. Browsers apply EXIF rotation
+    // when drawing, so portrait shots stay upright.
+    const DRAFT_COVER_KEY = 'reelday_builder_draft_cover';
+    async function shrinkImage(file, max = 1800, quality = 0.85) {
+      const url = URL.createObjectURL(file);
+      try {
+        const img = await new Promise((res, rej) => {
+          const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url;
+        });
+        const scale = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+        const c = document.createElement('canvas');
+        c.width = Math.round(img.naturalWidth * scale);
+        c.height = Math.round(img.naturalHeight * scale);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', quality));
+        return blob ? new File([blob], 'cover.jpg', { type: 'image/jpeg' }) : file;
+      } catch {
+        return file; // unreadable here: upload the original as-is
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    }
+    function fileToDataUrl(file) {
+      return new Promise(res => {
+        const r = new FileReader();
+        r.onload = () => res(r.result);
+        r.onerror = () => res(null);
+        r.readAsDataURL(file);
+      });
+    }
+    async function setDraftCover(file) {
+      const small = await shrinkImage(file);
+      coverFile = small;
+      if (coverPreviewUrl && coverPreviewUrl.startsWith('blob:')) URL.revokeObjectURL(coverPreviewUrl);
+      coverPreviewUrl = URL.createObjectURL(small);
+      heroFocus = null;
+      const dataUrl = await fileToDataUrl(small);
+      try { if (dataUrl) localStorage.setItem(DRAFT_COVER_KEY, dataUrl); } catch { /* too big / private mode */ }
+      track('photo_added', { where: 'cover' });
+    }
+    async function restoreDraftCover() {
+      let dataUrl = null;
+      try { dataUrl = localStorage.getItem(DRAFT_COVER_KEY); } catch {}
+      if (!dataUrl) return;
+      try {
+        const blob = await (await fetch(dataUrl)).blob();
+        coverFile = new File([blob], 'cover.jpg', { type: blob.type || 'image/jpeg' });
+        coverPreviewUrl = URL.createObjectURL(coverFile);
+      } catch {}
     }
 
     // ── Full-fidelity preview pane (both modes) ─────────────
@@ -1445,28 +1547,22 @@
         render() {
           const wrap = document.createElement('div');
           wrap.appendChild(field('Website template', controls.template));
-          if (ANONYMOUS) {
+          if (NEW_SITE) {
             wrap.appendChild(field('Event / couple name', controls.basicsName));
             wrap.appendChild(field('Event date', controls.basicsDate));
             wrap.appendChild(field('Event type', controls.basicsType));
           }
           const coverStatus = document.createElement('p');
           coverStatus.className = 'status-note';
-          coverStatus.textContent = ANONYMOUS
-            ? (coverFile ? 'Photo selected.' : 'No cover photo yet.')
+          coverStatus.textContent = NEW_SITE
+            ? (coverFile ? 'Photo selected. It uploads when you save your website.' : 'No cover photo yet.')
             : (state.event?.cover_photo_url ? 'Cover photo is set.' : 'No cover photo yet.');
-          const coverButton = fileButton('Choose cover photo', false, async ([file]) => {
-            if (ANONYMOUS) {
-              // No event exists yet to attach an upload to -- hold the
-              // File in memory and upload it the moment one is created
-              // (see the finish panel below). The page never navigates
-              // away before that point, so this doesn't need to survive
-              // a reload.
-              coverFile = file;
-              if (coverPreviewUrl) URL.revokeObjectURL(coverPreviewUrl);
-              coverPreviewUrl = URL.createObjectURL(file);
-              coverStatus.textContent = 'Photo selected. It uploads when you save your website.';
-              heroFocus = null;
+          const coverButton = fileButton(coverPreviewUrl || state?.event?.cover_photo_url ? 'Change cover photo' : 'Choose cover photo', false, async ([file]) => {
+            if (NEW_SITE) {
+              // No event exists yet to attach an upload to: shrink it, keep
+              // it locally (survives a reload / login detour) and upload it
+              // the moment the event is created (createSiteFor).
+              await setDraftCover(file);
               render();
               syncPreview();
               return;
@@ -1504,6 +1600,21 @@
           const wrap = document.createElement('div');
           wrap.appendChild(field('Story heading', controls.storyLabel));
           wrap.appendChild(field('Your story', controls.storyBody));
+          return wrap;
+        },
+      },
+      {
+        title: 'Entourage',
+        subtitle: 'Sponsors, best man, maid of honor and everyone walking with you.',
+        render() {
+          const wrap = document.createElement('div');
+          wrap.appendChild(field('Entourage', rowsEditor(controls.entourage, {
+            sep: ':', addLabel: '+ Add a role',
+            cols: [
+              { placeholder: 'Principal Sponsors', label: 'Role', width: 'minmax(0, 2fr)' },
+              { placeholder: 'Mr. & Mrs. Cruz, Mr. & Mrs. Reyes', label: 'Names, separated by commas', width: 'minmax(0, 3fr)' },
+            ],
+          }), 'optional · separate names with commas'));
           return wrap;
         },
       },
@@ -1588,9 +1699,9 @@
           const wrap = document.createElement('div');
           const row = document.createElement('div');
           row.className = 'gallery-row';
-          if (ANONYMOUS) drawGalleryAnon(row); else drawGallery(row);
+          if (NEW_SITE) drawGalleryAnon(row); else drawGallery(row);
           const add = fileButton('Add gallery photos', true, async files => {
-            if (ANONYMOUS) {
+            if (NEW_SITE) {
               // Same deferred-upload reasoning as the cover photo above --
               // held in memory, uploaded once a real event exists.
               galleryFiles.push(...files);
@@ -1820,10 +1931,11 @@
     const TODO = [
       { label: 'Cover photo', tab: 0, done: () => !!state?.event?.cover_photo_url },
       { label: 'Your story', tab: 1, done: () => !!controls.storyBody?.value.trim() },
-      { label: 'Schedule & venue', tab: 2, done: () => !!(controls.schedule?.value.trim() || controls.venues?.value.trim()) },
-      { label: 'Dress code & FAQ', tab: 3, done: () => !!(controls.dressCode?.value.trim() || controls.faq?.value.trim()) },
-      { label: 'Photos', tab: 5, done: () => gallery.length > 0 },
-      { label: 'Gifts / GCash', tab: 6, done: () => !!(controls.registryLinks?.value.trim() || controls.cashFunds?.value.trim()) },
+      { label: 'Entourage', tab: 2, done: () => !!controls.entourage?.value.trim() },
+      { label: 'Schedule & venue', tab: 3, done: () => !!(controls.schedule?.value.trim() || controls.venues?.value.trim()) },
+      { label: 'Dress code & FAQ', tab: 4, done: () => !!(controls.dressCode?.value.trim() || controls.faq?.value.trim()) },
+      { label: 'Photos', tab: 6, done: () => gallery.length > 0 },
+      { label: 'Gifts / GCash', tab: 7, done: () => !!(controls.registryLinks?.value.trim() || controls.cashFunds?.value.trim()) },
     ];
     function launchBtn(text, cls, onClick) {
       const b = document.createElement('button');
@@ -1977,11 +2089,48 @@
       $('qs-name').placeholder = copy.ph;
     }
 
+    // Where the live preview lives in the full editor, so it can move to
+    // the reveal screen and back.
+    const previewHome = { parent: previewBox.parentNode, next: previewBox.nextSibling };
+
     function showScreen(which) {
       quickEl.classList.toggle('hidden', which !== 'quick');
       revealEl.classList.toggle('hidden', which !== 'reveal');
-      shellEl.classList.add('hidden');
+      shellEl.classList.toggle('hidden', which !== 'editor');
+      if (which === 'quick') {
+        $('qs-name').value = controls.basicsName.value;
+        $('qs-date').value = controls.basicsDate.value;
+        paintTypeChips();
+      }
       window.scrollTo({ top: 0 });
+    }
+
+    // ── Full editor, before saving ───────────────────────────
+    // "Add schedule, entourage, dress code, gifts & more" opens the same
+    // step-by-step editor a saved site uses, with nothing saved online yet.
+    // Save stays one tap away (header button / last step's Continue).
+    function openFullEditor(tabIndex = 0) {
+      previewHome.parent.insertBefore(previewBox, previewHome.next);
+      previewBox.classList.remove('hidden');
+      $('preview-fab').classList.remove('hidden');
+      publishBtn.classList.remove('hidden');
+      publishBtn.textContent = token ? 'Save my website' : 'Save my free website';
+      statusPill.textContent = 'Not saved yet';
+      statusNote.textContent = 'Everything stays on this device until you save your website.';
+      showScreen('editor');
+      if (!$('editor-back')) {
+        const back = document.createElement('button');
+        back.type = 'button';
+        back.id = 'editor-back';
+        back.className = 'link-btn editor-back';
+        back.textContent = '← Back to my preview';
+        back.addEventListener('click', () => { saveDraftLocal(); showReveal(); });
+        document.querySelector('.panel').prepend(back);
+      }
+      currentTab = tabIndex;
+      render();
+      syncPreview();
+      track('full_editor_open', { from: 'reveal' });
     }
 
     function applyQuickStart() {
@@ -2021,12 +2170,58 @@
       $('reveal-save-note').textContent = token && me?.user?.email
         ? `Saving to ${me.user.email}`
         : 'Free forever · No card · Takes 10 seconds';
+      paintPersonalize();
       saveDraftLocal();
       syncPreview();
       // The phone frame's real height is only known once it's visible.
       requestAnimationFrame(syncPreview);
-      track('preview_reveal', { event_type: currentType() });
+      if (!revealTracked) { revealTracked = true; track('preview_reveal', { event_type: currentType() }); }
     }
+    let revealTracked = false;
+
+    // ── "Make it yours" on the reveal ────────────────────────
+    function paintPersonalize() {
+      const hasPhoto = !!coverPreviewUrl;
+      $('pz-photo-btn').classList.toggle('done', hasPhoto);
+      $('pz-photo-label').textContent = hasPhoto ? 'Change photo' : 'Add your photo';
+      const focusBox = $('pz-focus');
+      focusBox.textContent = '';
+      focusBox.classList.toggle('hidden', !hasPhoto);
+      if (hasPhoto) focusBox.appendChild(focusPicker(coverPreviewUrl));
+      const hasStory = !!controls.storyBody.value.trim();
+      $('pz-story-btn').classList.toggle('done', hasStory);
+      const storyBox = $('pz-story');
+      if (!storyBox.contains(controls.storyBody)) {
+        storyBox.textContent = '';
+        storyBox.appendChild(field('Your story', controls.storyBody, 'how you met, or a note to your guests'));
+      }
+    }
+    $('pz-photo-input').addEventListener('change', async e => {
+      const file = e.target.files && e.target.files[0];
+      e.target.value = '';
+      if (!file) return;
+      const status = $('pz-photo-status');
+      status.textContent = 'Adding your photo...';
+      status.classList.remove('hidden');
+      await setDraftCover(file);
+      paintPersonalize();
+      syncPreview();
+      status.textContent = 'Looks great. Tap the faces below so they always stay in view.';
+      previewBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+    $('pz-story-btn').addEventListener('click', () => {
+      const box = $('pz-story');
+      const open = box.classList.toggle('hidden') === false;
+      $('pz-story-btn').setAttribute('aria-expanded', String(open));
+      if (open) { controls.storyBody.focus(); track('story_open', { where: 'reveal' }); }
+    });
+    // Story typing + face taps: same draft save + live preview as the editor.
+    $('personalize').addEventListener('input', () => {
+      $('pz-story-btn').classList.toggle('done', !!controls.storyBody.value.trim());
+      scheduleDraftSave();
+      schedulePreviewSync();
+    });
+    $('pz-more').addEventListener('click', () => { saveDraftLocal(); openFullEditor(0); });
 
     $('qs-go').addEventListener('click', () => { if (applyQuickStart()) showReveal(); });
     quickEl.addEventListener('keydown', e => {
@@ -2347,6 +2542,7 @@
 
         // Came back from "log in to save" (or reopened the tab) with a
         // finished draft: go straight to the reveal, one tap from saved.
+        await restoreDraftCover();
         if (draft && draft.name) showReveal(); else showScreen('quick');
         return;
       }
