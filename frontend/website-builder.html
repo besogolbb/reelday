@@ -612,7 +612,10 @@
     .pz-btn svg { width: 20px; height: 20px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
     .pz-btn input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
     #pz-photo-status { margin: 10px 0 0; }
-    #pz-focus .focus-pick { max-width: 260px; margin: 0 auto; }
+    /* Compact: a big thumbnail pushed the phone preview off the first
+       screen on phones right after adding a photo. */
+    #pz-focus .focus-pick { max-width: 150px; margin: 0 auto; }
+    @media (min-width: 960px) { #pz-focus .focus-pick { max-width: 200px; } }
     #pz-focus .focus-field { margin: 14px 0 0; text-align: center; }
     #pz-story { margin-top: 14px; }
     #pz-story textarea { min-height: 140px; font-size: 16px; }
@@ -693,6 +696,206 @@
       .row-line.cols-3 { grid-template-columns: 1fr 1fr 36px !important; }
       .row-line.cols-3 > input:nth-child(3) { grid-column: 1 / 3; }
     }
+
+    /* ══ Funnel redesign (2026-11): modern, premium, light ══════════════
+       Applies to the new-site flow (body.new-site) plus the phone frame,
+       which the saved-site editor shares. Checked against UI UX Pro Max:
+       4.5:1 text, 44px+ targets, visible focus, reduced motion. */
+    body.new-site {
+      background:
+        radial-gradient(1100px 680px at 12% -8%, #fde6d6 0%, rgba(253, 230, 214, 0) 62%),
+        radial-gradient(900px 620px at 104% 6%, #f7e3ec 0%, rgba(247, 227, 236, 0) 58%),
+        radial-gradient(900px 700px at 50% 110%, #f6e7d2 0%, rgba(246, 231, 210, 0) 60%),
+        #fbf6f0;
+      background-attachment: fixed;
+    }
+    .fx-bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+    .fx-bg canvas { display: block; width: 100%; height: 100%; opacity: 0; transition: opacity 1.4s ease; }
+    .fx-bg canvas.on { opacity: 1; }
+    body.new-site .qs, body.new-site .reveal { position: relative; z-index: 1; }
+    body.new-site .topbar {
+      background: rgba(251, 246, 240, .55); border-bottom-color: rgba(88, 55, 38, .08);
+      padding-top: 12px; padding-bottom: 12px;
+    }
+    body.new-site .topbar .brand span { display: none; }
+    @media (max-width: 860px) { body.new-site .topbar { flex-direction: row; align-items: center; } }
+
+    .display { font-family: var(--display); font-weight: 700; letter-spacing: -.015em; }
+    .display em { font-style: italic; font-weight: 600; color: var(--accent-deep); }
+    .glass {
+      background: rgba(255, 255, 255, .74);
+      -webkit-backdrop-filter: blur(18px) saturate(1.15); backdrop-filter: blur(18px) saturate(1.15);
+      border: 1px solid rgba(255, 255, 255, .85);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9),
+                  0 34px 70px -34px rgba(63, 35, 24, .38),
+                  0 10px 26px -14px rgba(63, 35, 24, .16);
+    }
+
+    /* Quick start */
+    .qs { max-width: 1140px; padding: 24px 16px 64px; }
+    .qs-layout { display: grid; gap: 22px; }
+    .qs-intro .eyebrow { margin-bottom: 12px; }
+    .qs-intro h1 { font-size: clamp(34px, 8.4vw, 66px); line-height: 1.02; margin: 0 0 14px; }
+    .qs-intro .lead { font-size: 17px; line-height: 1.55; max-width: 470px; margin: 0; }
+    .qs-benefits { list-style: none; padding: 0; margin: 26px 0 0; display: none; gap: 14px; }
+    .qs-benefits li { display: flex; align-items: center; gap: 12px; font-weight: 650; color: var(--ink); }
+    .qs-benefits svg {
+      width: 26px; height: 26px; flex: 0 0 auto; padding: 5px; border-radius: 50%;
+      background: rgba(196, 90, 58, .12); fill: none; stroke: var(--accent-deep);
+      stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round;
+    }
+    .qs-card.glass { border-radius: 24px; padding: clamp(20px, 4vw, 32px); }
+    @media (min-width: 960px) {
+      .qs-layout { grid-template-columns: minmax(0, 1fr) 470px; gap: 72px; align-items: center; min-height: calc(100vh - 150px); }
+      .qs-benefits { display: grid; }
+      .qs-intro .lead { font-size: 19px; }
+    }
+    .qs input, .qs select { border-radius: 12px; background: rgba(255, 255, 255, .92); }
+    /* Date + time side by side: bottom-align so a wrapped "optional" hint
+       on narrow phones doesn't push one input below the other. */
+    .qs .grid2 { align-items: end; }
+    .chip { transition: border-color .15s, background .15s, transform .15s; min-height: 44px; }
+    .chip:hover { transform: translateY(-1px); border-color: rgba(196, 90, 58, .5); }
+    .btn-big {
+      background: linear-gradient(180deg, #cf6644 0%, var(--accent) 45%, var(--accent-deep) 100%);
+      box-shadow: 0 14px 28px -12px rgba(157, 63, 39, .6), inset 0 1px 0 rgba(255, 255, 255, .25);
+      letter-spacing: .02em; font-size: 16px; text-transform: none;
+    }
+    .btn-big:hover { transform: translateY(-2px); box-shadow: 0 18px 34px -12px rgba(157, 63, 39, .65), inset 0 1px 0 rgba(255, 255, 255, .25); }
+    .btn:focus-visible, .chip:focus-visible, .pz-btn:focus-within, .link-btn:focus-visible {
+      outline: 3px solid rgba(196, 90, 58, .55); outline-offset: 3px;
+    }
+
+    /* Step indicator: where am I, what's next (Details → Preview → Save) */
+    .stepper { list-style: none; display: flex; gap: 8px; padding: 0; margin: 0 0 22px; }
+    .stepper li {
+      flex: 1; display: flex; align-items: center; gap: 8px; padding-bottom: 10px;
+      border-bottom: 2px solid rgba(88, 55, 38, .14);
+      font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
+      color: var(--ink-soft);
+    }
+    .stepper li span {
+      width: 22px; height: 22px; flex: 0 0 auto; display: grid; place-items: center;
+      border-radius: 50%; font-size: 11px; letter-spacing: 0;
+      background: rgba(255, 255, 255, .8); border: 1px solid var(--line-2); color: var(--ink-soft);
+    }
+    .stepper li.on { color: var(--accent-deep); border-bottom-color: var(--accent); }
+    .stepper li.on span { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .stepper li.done { color: var(--sage); border-bottom-color: rgba(61, 115, 86, .55); }
+    .stepper li.done span { background: var(--sage); border-color: var(--sage); color: #fff; }
+
+    /* Reveal: phone on a lit stage; on desktop it stays in view on the
+       right while the host personalises on the left. */
+    .reveal { max-width: 1140px; padding: 18px 16px 150px; }
+    .rv-layout { display: grid; grid-template-columns: minmax(0, 1fr); }
+    .reveal-head { text-align: center; margin-bottom: 18px; }
+    .reveal-head h1 { font-size: clamp(32px, 8vw, 52px); line-height: 1.05; }
+    .rv-stage { position: relative; display: flex; flex-direction: column; align-items: center; padding: 10px 0 6px; }
+    .rv-spot {
+      position: absolute; inset: 2% 4% 12%; z-index: 0; pointer-events: none;
+      background: radial-gradient(closest-side, rgba(207, 102, 68, .28), rgba(240, 163, 122, .14) 55%, rgba(240, 163, 122, 0) 78%);
+      filter: blur(18px);
+    }
+    #reveal-preview-slot { position: relative; z-index: 1; }
+    .rv-floor {
+      position: relative; z-index: 0; width: 58%; height: 30px; margin-top: -10px;
+      background: radial-gradient(closest-side, rgba(47, 33, 27, .32), rgba(47, 33, 27, 0));
+      filter: blur(6px);
+    }
+    #reveal-preview-slot .preview-phone { width: min(300px, 76vw); }
+    .rv-styles, .rv-more { margin-top: 8px; }
+    .reveal .template-option {
+      background: rgba(255, 255, 255, .78); min-height: 52px;
+      transition: border-color .15s, box-shadow .15s, transform .15s;
+    }
+    .reveal .template-option:hover { transform: translateY(-1px); }
+    .pz-btn {
+      border: 1px solid rgba(255, 255, 255, .9); border-style: solid;
+      background: rgba(255, 255, 255, .78);
+      -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+      box-shadow: 0 8px 22px -14px rgba(63, 35, 24, .4);
+      color: var(--ink); transition: transform .15s, box-shadow .15s;
+    }
+    .pz-btn svg {
+      width: 30px; height: 30px; padding: 6px; border-radius: 9px;
+      background: rgba(196, 90, 58, .12); color: var(--accent-deep);
+    }
+    .pz-btn:hover { transform: translateY(-1px); box-shadow: 0 12px 26px -14px rgba(63, 35, 24, .45); }
+    .pz-btn.done { border-color: rgba(61, 115, 86, .4); background: rgba(240, 247, 242, .9); color: var(--sage); }
+    .pz-btn.done svg { background: rgba(61, 115, 86, .14); color: var(--sage); }
+    .pz-more { background: rgba(255, 255, 255, .7); }
+    @media (min-width: 960px) {
+      .reveal { padding-bottom: 56px; }
+      .rv-layout {
+        grid-template-columns: minmax(0, 1fr) 400px;
+        grid-template-rows: repeat(6, auto) 1fr;
+        column-gap: 72px; align-items: start;
+      }
+      .rv-layout > :not(.rv-stage) { grid-column: 1; }
+      .rv-stage { grid-column: 2; grid-row: 1 / 8; position: sticky; top: 84px; padding-top: 0; }
+      #reveal-preview-slot .preview-phone { width: 340px; }
+      .reveal-head { text-align: left; }
+      .reveal-label { text-align: left; }
+      .reveal .save-bar {
+        position: static; margin-top: 18px; padding: 0;
+        background: none; border: 0; -webkit-backdrop-filter: none; backdrop-filter: none;
+      }
+      .reveal .save-bar-inner { max-width: none; }
+      .reveal .save-bar .btn {
+        background: linear-gradient(180deg, #cf6644 0%, var(--accent) 45%, var(--accent-deep) 100%);
+        box-shadow: 0 14px 28px -12px rgba(157, 63, 39, .6);
+        text-transform: none; font-size: 16px; letter-spacing: .02em;
+      }
+      .reveal .save-note { text-align: left; }
+    }
+
+    /* Phone mock-up: reads as a real handset, not a rounded box. Titanium
+       bezel with a polished edge, side buttons, Dynamic Island, a hint of
+       glass glare and the home indicator; deep warm shadow so it lifts off
+       the ivory background. Shared with the saved-site editor preview. */
+    .preview-phone {
+      width: min(340px, 84vw); aspect-ratio: 9 / 19.5; min-height: 0;
+      padding: 11px; border-radius: 58px; overflow: visible;
+      background: linear-gradient(145deg, #5a5a62 0%, #1d1d22 20%, #0c0c0f 50%, #1d1d22 80%, #62626b 100%);
+      box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, .26),
+        inset 0 0 0 3px #08080a,
+        0 0 0 1px rgba(0, 0, 0, .4),
+        0 56px 96px -34px rgba(63, 35, 24, .6),
+        0 24px 44px -24px rgba(0, 0, 0, .55);
+    }
+    .preview-phone::after { top: 21px; width: 31%; height: 27px; z-index: 4; }
+    .anon-preview-render { border-radius: 47px; position: relative; }
+    .phone-btn { position: absolute; width: 4px; border-radius: 2px; background: linear-gradient(90deg, #2b2b31, #6a6a72); z-index: -1; }
+    .phone-btn-action { left: -3px; top: 15%; height: 28px; }
+    .phone-btn-vol { left: -3px; top: 22%; height: 50px; box-shadow: 0 64px 0 #3c3c43; }
+    .phone-btn-power { right: -3px; left: auto; top: 26%; height: 84px; background: linear-gradient(270deg, #2b2b31, #6a6a72); }
+    .phone-glare {
+      position: absolute; inset: 11px; border-radius: 47px; z-index: 3; pointer-events: none;
+      background: linear-gradient(118deg, rgba(255, 255, 255, .18) 0%, rgba(255, 255, 255, 0) 24%,
+                                          rgba(255, 255, 255, 0) 72%, rgba(255, 255, 255, .07) 100%);
+    }
+    .phone-home {
+      position: absolute; left: 50%; bottom: 19px; transform: translateX(-50%); z-index: 3;
+      width: 34%; height: 5px; border-radius: 3px; pointer-events: none;
+      background: rgba(255, 255, 255, .82); box-shadow: 0 0 0 .5px rgba(0, 0, 0, .3);
+    }
+
+    /* Entrance: each screen settles in once (300-450ms, staggered). */
+    @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+    @keyframes phoneIn { from { opacity: 0; transform: translateY(26px) scale(.97); } to { opacity: 1; transform: none; } }
+    body.new-site .qs:not(.hidden) .qs-intro { animation: rise .45s cubic-bezier(.2, .8, .2, 1) both; }
+    body.new-site .qs:not(.hidden) .qs-card { animation: rise .45s .08s cubic-bezier(.2, .8, .2, 1) both; }
+    body.new-site .reveal:not(.hidden) .rv-steps,
+    body.new-site .reveal:not(.hidden) .reveal-head,
+    body.new-site .reveal:not(.hidden) .personalize { animation: rise .4s cubic-bezier(.2, .8, .2, 1) both; }
+    body.new-site .reveal:not(.hidden) .personalize { animation-delay: .06s; }
+    body.new-site .reveal:not(.hidden) .rv-stage { animation: phoneIn .55s .1s cubic-bezier(.2, .8, .2, 1) both; }
+    @media (prefers-reduced-motion: reduce) {
+      body.new-site *, body.new-site *::before, body.new-site *::after {
+        animation: none !important; transition: none !important;
+      }
+    }
   </style>
 </head>
 <body>
@@ -709,71 +912,105 @@
   </header>
 
   <!-- New-site flow (no event yet): Quick start → Reveal → Save. -->
+  <!-- Ambient backdrop (three.js, js/builder-backdrop.js). The static
+       gradient under it is the reduced-motion / no-WebGL experience. -->
+  <div class="fx-bg hidden" id="fx-bg" aria-hidden="true"><canvas id="fx-canvas"></canvas></div>
+
   <section id="quick" class="qs hidden" aria-labelledby="qs-title">
-    <div class="qs-card">
-      <p class="eyebrow">Free event website · RSVP included</p>
-      <h1 id="qs-title">Let's make your invitation</h1>
-      <p class="sub">Four quick answers and you'll see your website right away.</p>
-      <div id="qs-notice" class="notice qs-notice hidden"></div>
-      <div class="field">
-        <label id="qs-type-label">What are you celebrating?</label>
-        <div class="chips" id="qs-type" role="group" aria-labelledby="qs-type-label"></div>
+    <div class="qs-layout">
+      <div class="qs-intro">
+        <p class="eyebrow">Free wedding &amp; event website</p>
+        <h1 id="qs-title" class="display">Your invitation, <em>live in 60&nbsp;seconds.</em></h1>
+        <p class="sub lead">Answer four questions and watch your website appear. RSVP built in, free forever.</p>
+        <ul class="qs-benefits">
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg>RSVP &amp; guest list, built in</li>
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg>Countdown, venue map &amp; schedule</li>
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg>One link for Messenger &amp; Viber</li>
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg>No card, no app for your guests</li>
+        </ul>
       </div>
-      <div class="field">
-        <label for="qs-name" id="qs-name-label">Couple's names</label>
-        <input id="qs-name" placeholder="e.g. Ana & Miguel" autocomplete="off" />
-      </div>
-      <div class="grid2">
+      <div class="qs-card glass">
+        <ol class="stepper" aria-label="Steps">
+          <li class="on" aria-current="step"><span>1</span>Details</li>
+          <li><span>2</span>Preview</li>
+          <li><span>3</span>Save</li>
+        </ol>
+        <div id="qs-notice" class="notice qs-notice hidden"></div>
         <div class="field">
-          <label for="qs-date">Date</label>
-          <input type="date" id="qs-date" />
+          <label id="qs-type-label">What are you celebrating?</label>
+          <div class="chips" id="qs-type" role="group" aria-labelledby="qs-type-label"></div>
         </div>
         <div class="field">
-          <label for="qs-time">Start time <span class="hint">optional</span></label>
-          <input type="time" id="qs-time" />
+          <label for="qs-name" id="qs-name-label">Couple's names</label>
+          <input id="qs-name" placeholder="e.g. Ana & Miguel" autocomplete="off" />
         </div>
+        <div class="grid2">
+          <div class="field">
+            <label for="qs-date">Date</label>
+            <input type="date" id="qs-date" />
+          </div>
+          <div class="field">
+            <label for="qs-time">Start time <span class="hint">optional</span></label>
+            <input type="time" id="qs-time" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="qs-venue">Venue <span class="hint">optional</span></label>
+          <input id="qs-venue" placeholder="e.g. Manila Cathedral, Intramuros" autocomplete="off" />
+        </div>
+        <div id="qs-error" class="error hidden" role="alert"></div>
+        <button type="button" class="btn btn-accent btn-big" id="qs-go">Show me my website →</button>
+        <p class="qs-reassure">No sign-up needed to see it · Free forever</p>
       </div>
-      <div class="field">
-        <label for="qs-venue">Venue <span class="hint">optional</span></label>
-        <input id="qs-venue" placeholder="e.g. Manila Cathedral, Intramuros" autocomplete="off" />
-      </div>
-      <div id="qs-error" class="error hidden"></div>
-      <button type="button" class="btn btn-accent btn-big" id="qs-go">Show me my website →</button>
-      <p class="qs-reassure">No sign-up needed to see it · Free forever</p>
     </div>
   </section>
 
   <section id="reveal" class="reveal hidden" aria-labelledby="reveal-title">
-    <div class="reveal-head">
-      <h1 id="reveal-title">Here's your website ✨</h1>
-      <p class="sub">This is what guests see when they open your link, with RSVP built in.</p>
-    </div>
-    <div class="personalize" id="personalize" aria-label="Make it yours (optional)">
-      <div class="personalize-actions">
-        <label class="pz-btn" id="pz-photo-btn">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
-          <span id="pz-photo-label">Add your photo</span>
-          <input type="file" accept="image/*" id="pz-photo-input" />
-        </label>
-        <button type="button" class="pz-btn" id="pz-story-btn" aria-expanded="false" aria-controls="pz-story">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13 7l4 4"/></svg>
-          <span>Add your story</span>
-        </button>
+    <div class="rv-layout">
+      <ol class="stepper rv-steps" aria-label="Steps">
+        <li class="done"><span>✓</span>Details</li>
+        <li class="on" aria-current="step"><span>2</span>Preview</li>
+        <li><span>3</span>Save</li>
+      </ol>
+      <div class="reveal-head">
+        <h1 id="reveal-title" class="display">Here's your website</h1>
+        <p class="sub">This is exactly what guests see when they open your link, with RSVP built in.</p>
       </div>
-      <div id="pz-photo-status" class="status-note hidden" role="status"></div>
-      <div id="pz-focus" class="hidden"></div>
-      <div id="pz-story" class="hidden"></div>
-    </div>
-    <div id="reveal-preview-slot"></div>
-    <p class="reveal-label">Pick a style</p>
-    <div id="reveal-templates"></div>
-    <button type="button" class="btn btn-ghost pz-more" id="pz-more">Save &amp; add schedule, entourage, dress code, gifts</button>
-    <button type="button" class="link-btn" id="reveal-edit">← Change names, date or venue</button>
-    <div id="reveal-error" class="notice reveal-error hidden"></div>
-    <div class="save-bar">
-      <div class="save-bar-inner">
-        <button type="button" class="btn btn-accent" id="reveal-save">Save my free website</button>
-        <p class="save-note" id="reveal-save-note">Free forever · No card · Takes 10 seconds</p>
+      <div class="personalize" id="personalize" aria-label="Make it yours (optional)">
+        <div class="personalize-actions">
+          <label class="pz-btn" id="pz-photo-btn">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+            <span id="pz-photo-label">Add your photo</span>
+            <input type="file" accept="image/*" id="pz-photo-input" />
+          </label>
+          <button type="button" class="pz-btn" id="pz-story-btn" aria-expanded="false" aria-controls="pz-story">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13 7l4 4"/></svg>
+            <span>Add your story</span>
+          </button>
+        </div>
+        <div id="pz-photo-status" class="status-note hidden" role="status"></div>
+        <div id="pz-focus" class="hidden"></div>
+        <div id="pz-story" class="hidden"></div>
+      </div>
+      <div class="rv-stage">
+        <div class="rv-spot" aria-hidden="true"></div>
+        <div id="reveal-preview-slot"></div>
+        <div class="rv-floor" aria-hidden="true"></div>
+      </div>
+      <div class="rv-styles">
+        <p class="reveal-label">Pick a style</p>
+        <div id="reveal-templates"></div>
+      </div>
+      <div class="rv-more">
+        <button type="button" class="btn btn-ghost pz-more" id="pz-more">Save &amp; add schedule, entourage, dress code, gifts</button>
+        <button type="button" class="link-btn" id="reveal-edit">← Change names, date or venue</button>
+        <div id="reveal-error" class="notice reveal-error hidden"></div>
+      </div>
+      <div class="save-bar">
+        <div class="save-bar-inner">
+          <button type="button" class="btn btn-accent" id="reveal-save">Save my free website</button>
+          <p class="save-note" id="reveal-save-note">Free forever · No card · Takes 10 seconds</p>
+        </div>
       </div>
     </div>
   </section>
@@ -807,7 +1044,12 @@
         </button>
         <div class="anon-preview-label"><span class="dot"></span>Live Preview</div>
         <div class="preview-phone">
+          <span class="phone-btn phone-btn-action" aria-hidden="true"></span>
+          <span class="phone-btn phone-btn-vol" aria-hidden="true"></span>
+          <span class="phone-btn phone-btn-power" aria-hidden="true"></span>
           <div class="anon-preview-render" id="anon-preview-render"></div>
+          <span class="phone-glare" aria-hidden="true"></span>
+          <span class="phone-home" aria-hidden="true"></span>
         </div>
       </div>
       <button type="button" class="preview-fab hidden" id="preview-fab" aria-label="Preview your event website">
@@ -2140,6 +2382,7 @@
       paintPersonalize();
       saveDraftLocal();
       syncPreview();
+      $('anon-preview-render').scrollTop = 0;
       // The phone frame's real height is only known once it's visible.
       requestAnimationFrame(syncPreview);
       if (!revealTracked) { revealTracked = true; track('preview_reveal', { event_type: currentType() }); }
@@ -2173,6 +2416,7 @@
       await setDraftCover(file);
       paintPersonalize();
       syncPreview();
+      $('anon-preview-render').scrollTop = 0;
       status.textContent = 'Looks great. Tap the faces below so they always stay in view.';
       previewBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
@@ -2205,7 +2449,29 @@
       if (!startedTracked) { startedTracked = true; track('builder_start', { event_type: currentType() }); }
     });
     $('reveal-edit').addEventListener('click', () => showScreen('quick'));
-    $('reveal-templates').addEventListener('change', () => { schedulePreviewSync(); saveDraftLocal(); });
+    $('reveal-templates').addEventListener('change', () => {
+      schedulePreviewSync(); saveDraftLocal();
+      backdrop?.setPalette(GLOW[getTemplate()]);
+    });
+
+    // ── Ambient backdrop (js/builder-backdrop.js, three.js) ────
+    // Glow colours follow the chosen style, so switching templates
+    // changes the room's light too.
+    const GLOW = {
+      classic:  ['#c45a3a', '#f0a37a', '#d9a441'],
+      modern:   ['#3a3a3a', '#9a9a9a', '#d0c6bb'],
+      romantic: ['#c07f82', '#e8b9bb', '#d9a6a8'],
+      bold:     ['#2f6b52', '#8fc4a4', '#c9a45c'],
+    };
+    let backdrop = null;
+    function startBackdropWhenIdle() {
+      const go = () => import('/js/builder-backdrop.js')
+        .then(m => m.startBackdrop($('fx-canvas'), GLOW[getTemplate()]))
+        .then(b => { backdrop = b; })
+        .catch(() => { /* decorative only: the CSS gradient stays */ });
+      if ('requestIdleCallback' in window) requestIdleCallback(go, { timeout: 2500 });
+      else setTimeout(go, 1200);
+    }
 
     // ── Saving ───────────────────────────────────────────────
     function showSaveProblem(target, nodes) {
@@ -2510,6 +2776,9 @@
         paintTypeChips();
 
         $('builder-title').textContent = 'Free event website';
+        document.body.classList.add('new-site');
+        $('fx-bg').classList.remove('hidden');
+        startBackdropWhenIdle();
         backLink.href = token ? '/my-events' : '/';
         publishBtn.classList.add('hidden');
         if (token) { dashboardLink.classList.remove('hidden'); dashboardLink.href = '/my-events'; }
