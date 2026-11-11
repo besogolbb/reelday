@@ -740,9 +740,21 @@
       .es-hero:not(.no-bg) .es-hero-date { font-size: 11px; letter-spacing: .24em; }
       .es-hero:not(.no-bg) .es-hero-kicker { font-size: 10px; letter-spacing: .3em; padding: 7px 14px; }
       /* One row of four: two rows of tiles covered half the photo. */
-      .es-hero:not(.no-bg) .es-count { flex-wrap: nowrap; gap: 8px; }
-      .es-hero:not(.no-bg) .es-count > div { min-width: 0; flex: 1 1 0; max-width: 78px; padding: 10px 4px 8px; }
-      .es-hero:not(.no-bg) .es-count b { font-size: 1.6rem; }
+      /* A definite row width: .es-count sat in a centered column, so it
+         shrink-wrapped to its tiles, and flex-basis 0 + min-width 0 then
+         collapsed each tile to ~46px; a three-digit "100" spilled out.
+         Tiles now share a fixed-width row and never go below their own
+         number (min-width: max-content); tabular figures keep the width
+         steady as the seconds tick. */
+      .es-hero:not(.no-bg) .es-count {
+        flex-wrap: nowrap; gap: 8px;
+        width: 100%; max-width: 336px; margin: 0 auto;
+      }
+      .es-hero:not(.no-bg) .es-count > div {
+        flex: 1 1 0; min-width: max-content; max-width: 78px;
+        padding: 10px 6px 8px; box-sizing: border-box;
+      }
+      .es-hero:not(.no-bg) .es-count b { font-size: 1.6rem; font-variant-numeric: tabular-nums; }
       .es-hero:not(.no-bg) .es-count span { font-size: 8.5px; letter-spacing: .18em; }
     }
 
