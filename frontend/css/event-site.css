@@ -1638,3 +1638,95 @@
       background: rgba(12, 7, 5, .28);
       backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
     }
+
+    /* ══ No-photo hero artwork, one per style (2026-11) ═══════════════════
+       Without a cover photo the hero was a flat colour field. Each style
+       now has its own invitation-card artwork, drawn in CSS + inline SVG
+       (no image files, nothing to download, scales to any screen):
+         Classic  warm glow, double frame, leafy sprigs in opposite corners
+         Modern   white, faint concentric circles, thin square frame
+         Romantic blush watercolour washes, arched frame, rose sprigs
+         Bold     emerald glow, gold art-deco sunburst, double gold frame
+       ::before = frame + corner ornaments, ::after = centre artwork. Both
+       sit under the text (z-index -1 inside the hero's isolation). */
+    .es-hero.no-bg::before,
+    .es-hero.no-bg::after {
+      content: ''; display: block; position: absolute; pointer-events: none; z-index: -1;
+    }
+    /* background: none -- the photo hero's dark vignette also lives on
+       ::before; without this reset it reappeared on the no-photo hero and
+       turned Modern's white page grey. */
+    .es-hero.no-bg::before { inset: clamp(14px, 3.2cqw, 30px); background: none; }
+    .es-hero.no-bg::after { inset: 0; }
+
+    /* Classic Elegance */
+    [data-template="classic"] .es-hero.no-bg {
+      background:
+        radial-gradient(70% 46% at 50% 0%, rgba(240, 163, 122, .34), rgba(240, 163, 122, 0) 72%),
+        radial-gradient(55% 40% at 0% 100%, rgba(217, 164, 65, .20), rgba(217, 164, 65, 0) 72%),
+        radial-gradient(55% 40% at 100% 100%, rgba(184, 82, 48, .14), rgba(184, 82, 48, 0) 72%),
+        var(--paper);
+    }
+    [data-template="classic"] .es-hero.no-bg::before {
+      border: 1px solid rgba(171, 76, 44, .38); border-radius: 6px;
+      /* a fine second line inside the frame (outline, not an inset shadow:
+         a transparent shadow can't mask the band under it) */
+      outline: 1px solid rgba(171, 76, 44, .2); outline-offset: -8px;
+      background:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120' fill='none' stroke='%23ab4c2c' stroke-width='1.3' stroke-linecap='round' opacity='.6'%3E%3Cpath d='M10 110C34 78 56 50 112 8'/%3E%3Cpath d='M32 80c-10-2-16-10-16-18 9 1 15 8 16 18zM49 60c-11-1-18-8-19-17 10 0 17 7 19 17zM67 41c-10-1-17-8-18-17 10 0 17 7 18 17zM85 25c-9-1-15-7-16-15 9 0 15 6 16 15z'/%3E%3Cpath d='M32 80c2-10 10-16 18-16-1 9-8 15-18 16zM49 60c2-10 10-16 18-16-1 9-8 15-18 16zM67 41c2-10 10-16 18-16-1 9-8 15-18 16z'/%3E%3C/svg%3E") left 10px top 10px / clamp(72px, 16cqw, 130px) no-repeat,
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120' fill='none' stroke='%23ab4c2c' stroke-width='1.3' stroke-linecap='round' opacity='.6'%3E%3Cg transform='rotate(180 60 60)'%3E%3Cpath d='M10 110C34 78 56 50 112 8'/%3E%3Cpath d='M32 80c-10-2-16-10-16-18 9 1 15 8 16 18zM49 60c-11-1-18-8-19-17 10 0 17 7 19 17zM67 41c-10-1-17-8-18-17 10 0 17 7 18 17zM85 25c-9-1-15-7-16-15 9 0 15 6 16 15z'/%3E%3Cpath d='M32 80c2-10 10-16 18-16-1 9-8 15-18 16zM49 60c2-10 10-16 18-16-1 9-8 15-18 16zM67 41c2-10 10-16 18-16-1 9-8 15-18 16z'/%3E%3C/g%3E%3C/svg%3E") right 10px bottom 10px / clamp(72px, 16cqw, 130px) no-repeat;
+    }
+
+    /* Modern Minimal */
+    [data-template="modern"] .es-hero.no-bg {
+      background:
+        radial-gradient(60% 50% at 50% 42%, rgba(0, 0, 0, .035), rgba(0, 0, 0, 0) 70%),
+        linear-gradient(180deg, #ffffff 0%, #f4f4f2 100%);
+    }
+    [data-template="modern"] .es-hero.no-bg::before { border: 1px solid rgba(20, 20, 20, .14); }
+    [data-template="modern"] .es-hero.no-bg::after {
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 600' fill='none' stroke='%23141414'%3E%3Ccircle cx='300' cy='300' r='130' stroke-opacity='.10'/%3E%3Ccircle cx='300' cy='300' r='195' stroke-opacity='.07'/%3E%3Ccircle cx='300' cy='300' r='262' stroke-opacity='.05'/%3E%3Cpath d='M300 10v80M300 510v80' stroke-opacity='.12'/%3E%3C/svg%3E") 50% 40% / min(760px, 150cqw) no-repeat;
+    }
+
+    /* Romantic Blush */
+    [data-template="romantic"] .es-hero.no-bg {
+      background:
+        radial-gradient(48% 38% at 6% 8%, rgba(232, 185, 187, .55), rgba(232, 185, 187, 0) 70%),
+        radial-gradient(44% 34% at 96% 14%, rgba(246, 205, 184, .45), rgba(246, 205, 184, 0) 70%),
+        radial-gradient(52% 40% at 90% 96%, rgba(222, 170, 176, .45), rgba(222, 170, 176, 0) 70%),
+        radial-gradient(46% 36% at 4% 92%, rgba(250, 222, 205, .55), rgba(250, 222, 205, 0) 70%),
+        var(--paper);
+    }
+    [data-template="romantic"] .es-hero.no-bg::before {
+      border: 1px solid rgba(164, 81, 85, .32);
+      border-radius: 999px 999px 18px 18px / 46cqw 46cqw 18px 18px;
+      background:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120' fill='none' stroke='%23a45155' stroke-width='1.3' stroke-linecap='round' opacity='.55'%3E%3Cpath d='M38 40a7 7 0 1 1-7-7 11 11 0 1 1-11 11 15 15 0 1 1 15 15'/%3E%3Cpath d='M44 52C62 66 74 84 84 110'/%3E%3Cpath d='M60 70c9-6 19-5 25 1-9 5-18 5-25-1zM70 88c-9-3-14-11-13-19 8 3 13 10 13 19z'/%3E%3C/svg%3E") left 18px bottom 18px / clamp(64px, 14cqw, 110px) no-repeat,
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120' fill='none' stroke='%23a45155' stroke-width='1.3' stroke-linecap='round' opacity='.55'%3E%3Cg transform='scale(-1 1) translate(-120 0)'%3E%3Cpath d='M38 40a7 7 0 1 1-7-7 11 11 0 1 1-11 11 15 15 0 1 1 15 15'/%3E%3Cpath d='M44 52C62 66 74 84 84 110'/%3E%3Cpath d='M60 70c9-6 19-5 25 1-9 5-18 5-25-1zM70 88c-9-3-14-11-13-19 8 3 13 10 13 19z'/%3E%3C/g%3E%3C/svg%3E") right 18px bottom 18px / clamp(64px, 14cqw, 110px) no-repeat;
+    }
+
+    /* Bold Jewel */
+    [data-template="bold"] .es-hero.no-bg {
+      background:
+        radial-gradient(70% 55% at 50% 38%, rgba(47, 107, 82, .55), rgba(47, 107, 82, 0) 72%),
+        radial-gradient(60% 40% at 50% 100%, rgba(201, 164, 92, .10), rgba(201, 164, 92, 0) 70%),
+        var(--paper);
+    }
+    [data-template="bold"] .es-hero.no-bg::before {
+      border: 1px solid rgba(201, 164, 92, .55);
+      box-shadow: inset 0 0 0 6px var(--paper), inset 0 0 0 7px rgba(201, 164, 92, .32);
+    }
+    [data-template="bold"] .es-hero.no-bg::after {
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 220' fill='none' stroke='%23c9a45c' stroke-width='1'%3E%3Cg stroke-opacity='.22'%3E%3Cpath d='M200 210L20 150M200 210L50 100M200 210L95 55M200 210L145 22M200 210V10M200 210L255 22M200 210L305 55M200 210L350 100M200 210L380 150'/%3E%3C/g%3E%3Cpath d='M60 210a140 140 0 0 1 280 0M100 210a100 100 0 0 1 200 0M140 210a60 60 0 0 1 120 0' stroke-opacity='.34'/%3E%3C/svg%3E") 50% 22% / min(560px, 110cqw) no-repeat;
+    }
+
+    /* Countdown on phones: same definite-width row as the photo hero, so
+       four tiles stay on one line instead of "4 SEC" wrapping alone. */
+    @container (max-width: 720px) {
+      .es-hero.no-bg .es-count { flex-wrap: nowrap; gap: 8px; width: 100%; max-width: 336px; margin: 0 auto; }
+      .es-hero.no-bg .es-count > div {
+        flex: 1 1 0; min-width: max-content; max-width: 78px;
+        padding: 10px 6px 8px; box-sizing: border-box;
+      }
+      .es-hero.no-bg .es-count b { font-size: 1.6rem; font-variant-numeric: tabular-nums; }
+    }
