@@ -6,7 +6,11 @@
        ───────────────────────────────────────────────────────────────── */
 
     html { scroll-behavior: smooth; }
-    body { margin: 0; background: var(--paper); color: var(--ink); overflow-x: hidden; }
+    /* overflow-x: clip (not hidden): hidden turns body into a scroll
+       container, which silently disables every position: sticky inside
+       (the story's sticky photo column). hidden stays as the fallback
+       for browsers without clip. */
+    body { margin: 0; background: var(--paper); color: var(--ink); overflow-x: hidden; overflow-x: clip; }
     a { color: inherit; text-decoration: none; }
     button { font: inherit; cursor: pointer; }
     img { display: block; max-width: 100%; }
@@ -58,7 +62,7 @@
        render true mobile layout inside a narrow phone-mockup frame. */
     #app {
       container-type: inline-size; width: 100%; min-width: 0;
-      overflow-x: hidden; box-sizing: border-box;
+      overflow-x: hidden; overflow-x: clip; box-sizing: border-box; /* clip: see body */
       /* In the website-builder preview, data-template/data-theme land
          on #app itself (see event-site-render.js), not <html>/<body>
          like they do on the real guest page -- so the body { background:
@@ -1545,4 +1549,64 @@
       }
       .es-section { opacity: 1; transform: none; }
       .es-hero-bg { animation: none !important; }
+    }
+
+    /* ══ Desktop layout pass (2026-11): use the width ═════════════════
+       Story: a long story sat in a ~480px strip centered in a 1080px
+       section, small text, paragraphs run together. Now an editorial
+       two-column spread: sticky heading + first gallery photo on the
+       left, the text at a real reading measure (~62ch) on the right. */
+    .es-story-body { white-space: normal; }
+    .es-story-body p { margin: 0; }
+    .es-story-body p + p { margin-top: 1em; }
+    .es-story-photo {
+      display: block; width: 100%; aspect-ratio: 4 / 5; object-fit: cover;
+      border-radius: var(--r-card); margin-top: 24px;
+      background: var(--paper-2);
+      box-shadow: 0 18px 40px color-mix(in srgb, var(--shadow-c) 14%, transparent);
+    }
+    @container (max-width: 879px) {
+      .es-story-photo { aspect-ratio: 4 / 3; max-width: 520px; margin: 20px auto 0; }
+    }
+    @container (min-width: 880px) {
+      .es-story-grid {
+        max-width: 1080px;
+        grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+        gap: clamp(48px, 6cqw, 96px);
+      }
+      /* Without a photo the aside is just a heading: keep it narrow. */
+      .es-story-grid:not(.has-photo) { max-width: 940px; grid-template-columns: minmax(0, 1fr) minmax(0, 2.4fr); }
+      .es-story-aside { position: sticky; top: 96px; }
+      .es-story-side { font-size: clamp(1.6rem, 2.4cqw, 2.2rem); line-height: 1.25; }
+      .es-story-body { font-size: 1.22rem; line-height: 1.8; max-width: 62ch; }
+    }
+
+    /* Hero (photo, desktop): a "lower third" instead of a tall centered
+       stack. Names, date, venue and kicker left-aligned along the bottom,
+       countdown on the right, so the text takes one band and the photo
+       gets the rest of the screen. Phones keep the centered stack. */
+    @container (min-width: 880px) {
+      .es-hero:not(.no-bg) {
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-rows: 1fr;
+        align-items: end;
+        column-gap: clamp(32px, 5cqw, 80px);
+        padding: 96px clamp(40px, 6cqw, 96px) 104px;
+      }
+      .es-hero:not(.no-bg)::after {
+        background:
+          linear-gradient(180deg, rgba(12, 7, 5, .16) 0%, rgba(12, 7, 5, 0) 20%,
+                                  rgba(12, 7, 5, 0) 52%, rgba(12, 7, 5, .5) 74%, rgba(12, 7, 5, .82) 100%),
+          linear-gradient(90deg, rgba(12, 7, 5, .38) 0%, rgba(12, 7, 5, 0) 55%);
+      }
+      .es-hero:not(.no-bg) .es-hero-top { align-items: flex-start; text-align: left; }
+      .es-hero:not(.no-bg) .es-hero-lockup { text-align: left; max-width: 760px; }
+      .es-hero:not(.no-bg) .es-hero-names { font-size: clamp(3.6rem, 7.5cqw, 7rem); line-height: .95; }
+      .es-hero:not(.no-bg) .es-hero-rule { margin: 18px 0 0; }
+      .es-hero:not(.no-bg) .es-hero-venue { margin-left: 0; margin-right: 0; }
+      .es-hero:not(.no-bg) .es-hero-venue::before { display: none; }
+      .es-hero:not(.no-bg) .es-hero-venue::after { display: none; }
+      .es-hero:not(.no-bg) .es-hero-kicker { margin: 18px 0 0; }
+      .es-hero:not(.no-bg) .es-hero-bottom { margin: 0; align-items: flex-end; text-align: right; }
+      .es-hero:not(.no-bg) .es-count { justify-content: flex-end; }
     }

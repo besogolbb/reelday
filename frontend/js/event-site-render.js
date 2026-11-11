@@ -568,14 +568,31 @@
     if (cfg.story && (cfg.story.body || cfg.story.label)) {
       addNav('story', cfg.story.label || t('story'));
       var grid = el('div', { class: 'es-story-grid' });
+      // Aside = the story's heading plus, when the host has gallery
+      // photos, the first one: on desktop it fills the left column
+      // (sticky) instead of a lone label beside a narrow text strip.
+      var aside = el('div', { class: 'es-story-aside' });
       var side = el('div', { class: 'es-story-side',
         text: cfg.story.label || t('story') });
+      aside.appendChild(side);
+      var storyImgs = (cfg.gallery && Array.isArray(cfg.gallery.images)) ? cfg.gallery.images : [];
+      if (storyImgs[0]) {
+        var sp = el('img', { class: 'es-story-photo', alt: '', loading: 'lazy', decoding: 'async',
+          src: cdnImage(storyImgs[0], 900), srcset: cdnSrcset(storyImgs[0], [480, 720, 960, 1280]),
+          sizes: '(min-width: 900px) 420px, 100vw' });
+        sp.addEventListener('error', function () {
+          if (sp.src !== storyImgs[0]) { sp.removeAttribute('srcset'); sp.src = storyImgs[0]; }
+        });
+        aside.appendChild(sp);
+        grid.classList.add('has-photo');
+      }
       var body = el('div', { class: 'es-story-body' });
-      // Paragraph-split so the drop-cap only hits the first paragraph.
-      String(cfg.story.body || '').split(/\n\s*\n/).forEach(function (para) {
+      // One paragraph per line: hosts type stories on phones with single
+      // line breaks as often as blank lines. The drop cap only hits the first.
+      String(cfg.story.body || '').split(/\n+/).forEach(function (para) {
         if (para.trim()) body.appendChild(el('p', { text: para.trim() }));
       });
-      grid.appendChild(side);
+      grid.appendChild(aside);
       grid.appendChild(body);
       // No h2 title here -- .es-story-side already renders this same
       // label as the section's visual heading (large italic, accent
